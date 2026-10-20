@@ -10,18 +10,18 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 101, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 75, DEFERRED 2
+- By status: NOT_STARTED 97, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 79, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 22 | 10 | 4 | 1 | 7 |
 | Channel Rack | 18 | 10 | 2 | 0 | 6 |
 | Piano Roll | 25 | 5 | 8 | 0 | 12 |
-| Playlist | 26 | 11 | 5 | 1 | 9 |
+| Playlist | 26 | 12 | 5 | 1 | 8 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
 | Instruments | 12 | 5 | 0 | 0 | 7 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
-| Automation | 9 | 0 | 0 | 0 | 9 |
+| Automation | 9 | 3 | 0 | 0 | 6 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
 | Browser | 10 | 1 | 5 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
@@ -129,7 +129,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-012 | Playlist tracks: add, rename, mute | P0 | ✓ | VERIFIED | + Track; double-click to rename; LED mutes the track. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves` |
 | PL-013 | Clip mute | P1 |  | VERIFIED | Clip menu › Mute clip. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves` |
 | PL-014 | Audio clips | P1 |  | VERIFIED | Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.<br>*No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008.* | `limeshot-engine tests/audio.rs::audio_clips_play_their_sample_window_sample_accurately`<br>`limeshot-engine tests/audio.rs::playback_starting_inside_an_audio_clip_starts_the_audio_part_way`<br>`limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it`<br>`limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel`<br>`limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge` |
-| PL-015 | Automation clips | P1 |  | NOT_STARTED | Third clip source type. | — |
+| PL-015 | Automation clips | P1 |  | VERIFIED | Automation clips on the Playlist with a filled curve, points and tension handles; move, resize either edge (trims the curve window), copy/paste and duplicate like other clips. | `limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist` |
 | PL-016 | Markers and loop region / time selection | P1 |  | NOT_STARTED | Markers and a loop range for playback/export. | — |
 | PL-017 | Slip, slice clips | P2 |  | NOT_STARTED | Slip content inside clip; slice clip at a time. | — |
 | PL-018 | Track grouping | P2 |  | NOT_STARTED | Collapsible track groups. | — |
@@ -204,15 +204,15 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| AUT-001 | Automation clips with envelope points | P1 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-002 | Curve shapes and interpolation | P1 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-003 | Automate mixer and channel parameters | P1 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-004 | Record automation from control movements | P2 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-005 | Event editor | P2 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-006 | Parameter linking to controllers | P2 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-007 | LFO / formula / peak controllers | P3 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-008 | Tempo automation | P2 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
-| AUT-009 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned; the model reserves a third clip source type and the engine renders parameter values per block. | — |
+| AUT-001 | Automation clips with envelope points | P1 |  | VERIFIED | Right-click a channel volume/pan knob, a mixer fader/pan or an effect parameter › Create automation clip: a flat curve at the current value spanning the song, on the first free Playlist track. Clips are linked instances (Make unique copies the curve). In the clip: drag a point (snapped; Alt free), left- or right-click the line to add a point, right-click a point to delete it. The picker lists automations to place them; ▾ menu: rename, reset to a flat line, delete automation.<br>*Evidence: docs/research/evidence/screenshots/fl-automation-clip.png. FL also adds an automation-clip channel to the Channel Rack; LimeShot lists automations in the Playlist picker instead (known limitation).* | `limeshot-core automation::tests::curve_holds_outside_and_interpolates_inside`<br>`limeshot-core automation::tests::normalize_sorts_clamps_and_dedups`<br>`limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback`<br>`limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist` |
+| AUT-002 | Curve shapes and interpolation | P1 |  | VERIFIED | Single-curve segments with a tension of −1…1 (power curve), edited by dragging the ○ handle between two points vertically; values hold before the first and after the last point and between clips.<br>*FL's other curve modes (hold, stairs, pulse, wave) are not implemented.* | `limeshot-core automation::tests::curve_holds_outside_and_interpolates_inside`<br>`limeshot-engine tests/audio.rs::mixer_automation_holds_between_clips_and_only_runs_in_song_mode` |
+| AUT-003 | Automate mixer and channel parameters | P1 |  | VERIFIED | Targets: channel volume and pan, mixer track volume and pan (master included), and every insert-effect parameter. Values use the control's own scale (faders cube-root, frequencies logarithmic). Applied in Song mode every 64 frames, also in exports.<br>*Controls do not move on screen while automated. Synth/sampler parameters and tempo (AUT-008) are not automatable yet.* | `limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback`<br>`limeshot-engine tests/audio.rs::mixer_automation_holds_between_clips_and_only_runs_in_song_mode`<br>`limeshot-engine tests/audio.rs::automation_drives_effect_parameters`<br>`limeshot-core automation::tests::mappings_round_trip` |
+| AUT-004 | Record automation from control movements | P2 |  | NOT_STARTED | Planned. | — |
+| AUT-005 | Event editor | P2 |  | NOT_STARTED | Planned. | — |
+| AUT-006 | Parameter linking to controllers | P2 |  | NOT_STARTED | Planned. | — |
+| AUT-007 | LFO / formula / peak controllers | P3 |  | NOT_STARTED | Planned. | — |
+| AUT-008 | Tempo automation | P2 |  | NOT_STARTED | Planned: the engine timeline assumes one tempo; tempo automation needs a tempo map. | — |
+| AUT-009 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned (after plugin hosting). | — |
 
 ## Recording
 

@@ -162,6 +162,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 let r = knob(ui, &mut pan, -1.0, 1.0, 0.0, 24.0, true, pan_text);
                 let cmd = r.changed().then_some(Command::SetChannelPan { channel: ch.id, pan });
                 app.exec_gesture(&r, cmd);
+                crate::automation_ui::menu(app, &r, AutomationTarget::ChannelPan(ch.id));
                 let mut vol = ch.volume;
                 let r = knob(ui, &mut vol, 0.0, 1.25, 0.78, 24.0, false, |v| {
                     format!("Volume {:.0}%", v * 100.0)
@@ -171,6 +172,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     volume: vol,
                 });
                 app.exec_gesture(&r, cmd);
+                crate::automation_ui::menu(app, &r, AutomationTarget::ChannelVolume(ch.id));
                 let mut mt = ch.mixer_track;
                 let r = ui
                     .add_sized(

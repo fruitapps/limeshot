@@ -39,6 +39,9 @@ pub struct UiState {
     /// The editor windows (FL Studio's window model).
     pub workspace: crate::workspace::Workspace,
     pub current_pattern: PatternId,
+    /// What a click on empty Playlist space places: an automation picked in the clip picker, or
+    /// (`None`) the current pattern.
+    pub place: Option<limeshot_core::ClipSource>,
     pub selected_channel: Option<ChannelId>,
     pub snap: Snap,
     pub mode: PlayMode,
@@ -59,6 +62,7 @@ impl UiState {
             show_browser: true,
             workspace: Default::default(),
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
+            place: None,
             selected_channel: project.channels.first().map(|c| c.id),
             snap: Snap::Step,
             mode: PlayMode::Pattern,

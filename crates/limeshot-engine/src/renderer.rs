@@ -13,12 +13,16 @@
 use crate::voice::{NO_CHANNEL, Voice};
 use limeshot_core::{Tick, Timeline};
 use limeshot_dsp::{SampleData, pan_gains};
-use limeshot_sequencer::{Program, Snapshot};
+use limeshot_sequencer::{LaneTarget, Program, Snapshot};
 use std::sync::Arc;
 
 /// Largest block `render` accepts; callers split bigger device buffers.
 pub const MAX_BLOCK: usize = 1024;
 pub const MAX_VOICES: usize = 128;
+/// Channels whose volume and pan automation can drive (more are played at their set values).
+pub const MAX_AUTOMATED_CHANNELS: usize = 1024;
+/// Automation is re-evaluated at least this often (frames).
+const AUTOMATION_INTERVAL: usize = 64;
 /// Events handled per block; more are deferred to the next block (only reachable with absurdly
 /// dense programs).
 const MAX_EVENTS_PER_BLOCK: usize = 512;
@@ -81,6 +85,10 @@ pub struct Renderer {
     /// Start the audio clips that span the position on the next schedule (after play, locate or
     /// a mode change), part-way through.
     chase: bool,
+    /// Channel (volume, pan) and mixer track (gain, pan) in effect: the snapshot's values,
+    /// overridden by automation in Song mode.
+    chan_mix: Vec<(f32, f32)>,
+    track_mix: Vec<(f32, f32)>,
 }
 
 impl Renderer {
@@ -109,6 +117,8 @@ impl Renderer {
             fx: crate::fx::FxRack::new(),
             last_peak: 0.0,
             chase: true,
+            chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
+            track_mix: vec![(1.0, 0.0); limeshot_core::Mixer::MAX_TRACKS],
         }
     }
 
@@ -335,13 +345,16 @@ impl Renderer {
             b[..2 * frames].fill(0.0);
         }
 
+        let automate = self.mode == PlayMode::Song && !self.snapshot.automation.is_empty();
         let mut done = 0;
         while done < frames {
-            let chunk = if self.playing {
-                self.schedule(frames - done)
+            self.apply_controls();
+            let max = if automate {
+                (frames - done).min(AUTOMATION_INTERVAL)
             } else {
                 frames - done
             };
+            let chunk = if self.playing { self.schedule(max) } else { max };
             let chunk = chunk.max(1).min(frames - done);
             // Render voices between actions; `actions` holds offsets relative to `done`.
             let mut cursor = 0;
@@ -366,6 +379,60 @@ impl Renderer {
         }
 
         self.mix(tracks, frames, out);
+    }
+
+    /// Load channel and mixer settings from the snapshot and apply automation at the current
+    /// position (Song mode only).
+    fn apply_controls(&mut self) {
+        let snapshot = self.snapshot.clone();
+        for (m, ch) in self.chan_mix.iter_mut().zip(&snapshot.channels) {
+            *m = (ch.volume, ch.pan);
+        }
+        for (m, t) in self.track_mix.iter_mut().zip(&snapshot.mixer) {
+            *m = (t.gain, t.pan);
+        }
+        if self.mode != PlayMode::Song {
+            return;
+        }
+        let tick = self.position();
+        for lane in &snapshot.automation {
+            let Some(v) = lane.value_at(tick) else { continue };
+            match lane.target {
+                LaneTarget::ChannelVolume(i) => {
+                    if let Some(m) = self.chan_mix.get_mut(i) {
+                        m.0 = v;
+                    }
+                }
+                LaneTarget::ChannelPan(i) => {
+                    if let Some(m) = self.chan_mix.get_mut(i) {
+                        m.1 = v;
+                    }
+                }
+                LaneTarget::MixerVolume(i) => {
+                    if let Some(m) = self.track_mix.get_mut(i) {
+                        m.0 = v;
+                    }
+                }
+                LaneTarget::MixerPan(i) => {
+                    if let Some(m) = self.track_mix.get_mut(i) {
+                        m.1 = v;
+                    }
+                }
+                LaneTarget::EffectParam { track, effect, index } => self.fx.set_param(track, effect, index, v),
+            }
+        }
+    }
+
+    /// The (volume, pan) a channel plays at now, automation included.
+    pub fn channel_mix(&self, channel: usize) -> Option<(f32, f32)> {
+        self.snapshot.channels.get(channel)?;
+        self.chan_mix.get(channel).copied()
+    }
+
+    /// The (gain, pan) a mixer track plays at now, automation included.
+    pub fn track_mix(&self, track: usize) -> Option<(f32, f32)> {
+        self.snapshot.mixer.get(track)?;
+        self.track_mix.get(track).copied()
     }
 
     /// Collect the actions due in the next `max` frames (up to the end of the current pass) into
@@ -523,13 +590,15 @@ impl Renderer {
         let snapshot = &self.snapshot;
         let tracks = snapshot.mixer.len().clamp(1, self.buses.len());
         for v in self.voices.iter_mut().filter(|v| v.is_active()) {
-            let (track, gl, gr, audible) = match snapshot.channels.get(usize::from(v.channel)) {
+            let i = usize::from(v.channel);
+            let (track, gl, gr, audible) = match snapshot.channels.get(i) {
                 Some(ch) => {
-                    let (pl, pr) = pan_gains(ch.pan);
+                    let (volume, pan) = self.chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
+                    let (pl, pr) = pan_gains(pan);
                     (
                         ch.mixer_track.min(tracks - 1),
-                        ch.volume * pl,
-                        ch.volume * pr,
+                        volume * pl,
+                        volume * pr,
                         ch.audible || !v.sequenced,
                     )
                 }
@@ -595,12 +664,9 @@ impl Renderer {
             }
             let Some(t) = snapshot.mixer.get(i) else { continue };
             self.fx.process(i, &mut self.buses[i][..2 * frames]);
-            let (pl, pr) = pan_gains(t.pan);
-            let (gl, gr) = if t.audible {
-                (t.gain * pl, t.gain * pr)
-            } else {
-                (0.0, 0.0)
-            };
+            let (gain, pan) = self.track_mix.get(i).copied().unwrap_or((t.gain, t.pan));
+            let (pl, pr) = pan_gains(pan);
+            let (gl, gr) = if t.audible { (gain * pl, gain * pr) } else { (0.0, 0.0) };
             let mut peak = Peak::default();
             {
                 let bus = &mut self.buses[i];
@@ -631,12 +697,9 @@ impl Renderer {
         let master = &mut self.buses[0];
         self.fx.process(0, &mut master[..2 * frames]);
         let t = &self.snapshot.mixer[0];
-        let (pl, pr) = pan_gains(t.pan);
-        let (gl, gr) = if t.audible {
-            (t.gain * pl, t.gain * pr)
-        } else {
-            (0.0, 0.0)
-        };
+        let (gain, pan) = self.track_mix.first().copied().unwrap_or((t.gain, t.pan));
+        let (pl, pr) = pan_gains(pan);
+        let (gl, gr) = if t.audible { (gain * pl, gain * pr) } else { (0.0, 0.0) };
         let mut peak = Peak::default();
         for f in 0..frames {
             let l = master[2 * f] * gl;

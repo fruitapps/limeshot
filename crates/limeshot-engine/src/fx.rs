@@ -37,10 +37,15 @@ pub fn build_all(snapshot: &Snapshot, sample_rate: u32) -> Vec<(u32, Box<dyn Eff
         .collect()
 }
 
+/// Parameters kept per processor (more than any effect has), so automation can change one.
+const MAX_PARAMS: usize = 16;
+
 struct Proc {
     id: u32,
     fx: Box<dyn Effect>,
     enabled: bool,
+    params: [f32; MAX_PARAMS],
+    n_params: usize,
 }
 
 pub struct FxRack {
@@ -71,7 +76,13 @@ impl FxRack {
     /// Take ownership of a processor for effect `id`; it joins a chain at the next `arrange`.
     pub fn adopt(&mut self, id: u32, fx: Box<dyn Effect>) {
         if self.pool.len() < self.pool.capacity() {
-            self.pool.push(Proc { id, fx, enabled: true });
+            self.pool.push(Proc {
+                id,
+                fx,
+                enabled: true,
+                params: [0.0; MAX_PARAMS],
+                n_params: 0,
+            });
         } else {
             self.retire(fx);
         }
@@ -101,6 +112,8 @@ impl FxRack {
                 if let Some(i) = self.pool.iter().position(|p| p.id == e.id) {
                     let mut p = self.pool.swap_remove(i);
                     p.fx.set_params(&e.params);
+                    p.n_params = e.params.len().min(MAX_PARAMS);
+                    p.params[..p.n_params].copy_from_slice(&e.params[..p.n_params]);
                     p.enabled = e.enabled;
                     if let Some(chain) = self.chains.get_mut(t)
                         && chain.len() < chain.capacity()
@@ -135,6 +148,22 @@ impl FxRack {
             for p in chain.iter_mut().filter(|p| p.enabled) {
                 p.fx.process(buf);
             }
+        }
+    }
+
+    /// Set one parameter of effect `effect` on track `t` (automation). Does nothing when the
+    /// value is unchanged or the effect has no processor yet.
+    pub fn set_param(&mut self, t: usize, effect: u32, index: usize, value: f32) {
+        let Some(p) = self
+            .chains
+            .get_mut(t)
+            .and_then(|c| c.iter_mut().find(|p| p.id == effect))
+        else {
+            return;
+        };
+        if index < p.n_params && p.params[index] != value {
+            p.params[index] = value;
+            p.fx.set_params(&p.params[..p.n_params]);
         }
     }
 

@@ -8,6 +8,7 @@
 //! Structs that users may extend in future versions keep unknown JSON fields in `extra`, so a file
 //! saved by a newer LimeShot is not silently stripped by an older one.
 
+use crate::automation::{Automation, AutomationId};
 use crate::time::{STEP_TICKS, Tempo, Tick, TimeSignature};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::{Map, Value};
@@ -284,6 +285,17 @@ pub enum ClipSource {
     /// As in FL Studio, a sample dropped on the Playlist becomes an audio-clip channel in the
     /// Channel Rack; the channel's volume, pan, sampler settings and mixer track apply.
     Audio(ChannelId),
+    /// An automation curve; clips of the same automation are linked.
+    Automation(AutomationId),
+}
+
+impl ClipSource {
+    pub fn pattern_id(self) -> Option<PatternId> {
+        match self {
+            ClipSource::Pattern(p) => Some(p),
+            _ => None,
+        }
+    }
 }
 
 /// A clip on the Playlist.
@@ -313,6 +325,14 @@ impl Clip {
     pub fn pattern(&self) -> Option<PatternId> {
         match self.source {
             ClipSource::Pattern(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// The automation an automation clip plays.
+    pub fn automation(&self) -> Option<AutomationId> {
+        match self.source {
+            ClipSource::Automation(a) => Some(a),
             _ => None,
         }
     }
@@ -481,6 +501,9 @@ pub struct Project {
     pub patterns: Vec<Pattern>,
     pub playlist: Playlist,
     pub mixer: Mixer,
+    /// Automation curves (FL Studio's automation clips), placed on the Playlist by clips.
+    #[serde(default)]
+    pub automations: Vec<Automation>,
     /// Global swing, 0–1: delays every second 16th note by up to half a step (about 0.67 gives a
     /// triplet feel). FL Studio's Channel Rack swing knob.
     #[serde(default)]
@@ -517,6 +540,7 @@ impl Project {
                 clips: Vec::new(),
             },
             mixer: Mixer::default(),
+            automations: Vec::new(),
             swing: 0.0,
             next_id: 1,
             extra: Extra::new(),
@@ -557,6 +581,14 @@ impl Project {
 
     pub fn pattern_mut(&mut self, id: PatternId) -> Option<&mut Pattern> {
         self.patterns.iter_mut().find(|p| p.id == id)
+    }
+
+    pub fn automation(&self, id: AutomationId) -> Option<&Automation> {
+        self.automations.iter().find(|a| a.id == id)
+    }
+
+    pub fn automation_mut(&mut self, id: AutomationId) -> Option<&mut Automation> {
+        self.automations.iter_mut().find(|a| a.id == id)
     }
 
     pub fn clip(&self, id: ClipId) -> Option<&Clip> {
@@ -671,10 +703,17 @@ impl Project {
             p.notes.sort_by_key(|n| (n.start, n.key, n.id));
             max_id = max_id.max(p.id.0);
         }
+        for a in &mut self.automations {
+            Automation::normalize_points(&mut a.points);
+            a.length = a.length.max(1);
+            max_id = max_id.max(a.id.0);
+        }
         let patterns: Vec<PatternId> = self.patterns.iter().map(|p| p.id).collect();
+        let automations: Vec<AutomationId> = self.automations.iter().map(|a| a.id).collect();
         self.playlist.clips.retain(|c| match c.source {
             ClipSource::Pattern(p) => patterns.contains(&p),
             ClipSource::Audio(ch) => channels.contains(&ch),
+            ClipSource::Automation(a) => automations.contains(&a),
         });
         let max_track = self.playlist.clips.iter().map(|c| c.track).max().unwrap_or(0);
         while self.playlist.tracks.len() <= max_track as usize && self.playlist.tracks.len() < 500 {

@@ -12,6 +12,7 @@ use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RenameTarget {
+    Automation(limeshot_core::AutomationId),
     Pattern(PatternId),
     Channel(ChannelId),
     PlaylistTrack(u32),
@@ -64,6 +65,14 @@ impl Dialog {
         let text = app.project().pattern(id).map(|p| p.name.clone()).unwrap_or_default();
         Dialog::Rename {
             target: RenameTarget::Pattern(id),
+            text,
+        }
+    }
+
+    pub fn rename_automation(app: &LimeShotApp, id: limeshot_core::AutomationId) -> Self {
+        let text = app.project().automation(id).map(|a| a.name.clone()).unwrap_or_default();
+        Dialog::Rename {
+            target: RenameTarget::Automation(id),
             text,
         }
     }
@@ -390,6 +399,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         if !name.is_empty() {
                             app.exec(match target {
                                 RenameTarget::Pattern(pattern) => Command::RenamePattern { pattern, name },
+                                RenameTarget::Automation(automation) => Command::RenameAutomation { automation, name },
                                 RenameTarget::Channel(channel) => Command::RenameChannel { channel, name },
                                 RenameTarget::PlaylistTrack(track) => Command::RenamePlaylistTrack { track, name },
                                 RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },

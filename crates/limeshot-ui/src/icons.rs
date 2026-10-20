@@ -32,6 +32,7 @@ pub enum Icon {
     Restore,
     Detach,
     Attach,
+    Automation,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -160,6 +161,11 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
                 Color32::TRANSPARENT,
                 line,
             ));
+        }
+        Icon::Automation => {
+            p.line_segment([at(-4.5, 3.5), at(4.5, -3.5)], line);
+            p.circle_stroke(at(-5.0, 4.0), 2.0 * u, line);
+            p.circle_stroke(at(5.0, -4.0), 2.0 * u, line);
         }
         Icon::Wave => {
             let pts: Vec<Pos2> = (0..=28)

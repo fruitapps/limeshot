@@ -3,6 +3,7 @@
 //! Every change to a [`Project`] goes through a [`Command`], whether it comes from the UI, a
 //! keyboard shortcut, the CLI or a test. [`crate::Document`] wraps commands with undo/redo.
 
+use crate::automation::*;
 use crate::model::*;
 use crate::time::{STEP_TICKS, Tempo, Tick, TimeSignature};
 use serde::{Deserialize, Serialize};
@@ -187,6 +188,25 @@ pub enum Command {
         length: Tick,
         offset: Tick,
     },
+    /// Create an automation of `target`, flat at the target's current value, and place one clip
+    /// of it (FL Studio's "Create automation clip"). Returns the clip id.
+    AddAutomationClip {
+        target: AutomationTarget,
+        track: u32,
+        start: Tick,
+        length: Tick,
+    },
+    /// Replace an automation's points (they are sorted and clamped).
+    SetAutomationPoints {
+        automation: AutomationId,
+        points: Vec<AutomationPoint>,
+    },
+    RenameAutomation {
+        automation: AutomationId,
+        name: String,
+    },
+    /// Delete an automation and all its clips.
+    RemoveAutomation(AutomationId),
     RemoveClips(Vec<ClipId>),
     MoveClips {
         clips: Vec<ClipId>,
@@ -357,6 +377,10 @@ impl Command {
             SetPatternLength { .. } => "Pattern length",
             AddClip { .. } | PlaceClip { .. } => "Add clip",
             AddAudioClip { .. } => "Add audio clip",
+            AddAutomationClip { .. } => "Create automation clip",
+            SetAutomationPoints { .. } => "Edit automation",
+            RenameAutomation { .. } => "Rename automation",
+            RemoveAutomation(_) => "Delete automation",
             RemoveClips(_) => "Delete clips",
             MoveClips { .. } => "Move clips",
             ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
@@ -410,6 +434,7 @@ impl Command {
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
             ResizeClipStart { clip, .. } => format!("rss{}", clip.0),
+            SetAutomationPoints { automation, .. } => format!("autopts{}", automation.0),
             SetStep {
                 pattern, channel, on, ..
             } => format!("step{}:{}:{on}", pattern.0, channel.0),
@@ -726,6 +751,55 @@ impl Command {
                 length,
                 offset,
             } => return place_clip(p, source, track, start, length, offset),
+            AddAutomationClip {
+                target,
+                track,
+                start,
+                length,
+            } => {
+                let (Some(mapping), Some(value)) = (target.mapping(p), target.current_value(p)) else {
+                    return Err(CommandError::Invalid("that control no longer exists".into()));
+                };
+                if track as usize >= p.playlist.tracks.len() {
+                    return Err(CommandError::NoPlaylistTrack(track));
+                }
+                let id = AutomationId(p.alloc_id());
+                let color = PALETTE[(p.automations.len() + 6) % PALETTE.len()];
+                p.automations.push(Automation {
+                    id,
+                    name: target.label(p),
+                    color,
+                    target,
+                    points: vec![AutomationPoint {
+                        tick: 0,
+                        value: mapping.to_norm(value),
+                        tension: 0.0,
+                    }],
+                    length: length.max(1),
+                    extra: Extra::new(),
+                });
+                return place_clip(p, ClipSource::Automation(id), track, start, length, 0);
+            }
+            SetAutomationPoints { automation, mut points } => {
+                Automation::normalize_points(&mut points);
+                p.automation_mut(automation)
+                    .ok_or_else(|| CommandError::Invalid(format!("no automation {}", automation.0)))?
+                    .points = points;
+            }
+            RenameAutomation { automation, name } => {
+                p.automation_mut(automation)
+                    .ok_or_else(|| CommandError::Invalid(format!("no automation {}", automation.0)))?
+                    .name = name
+            }
+            RemoveAutomation(id) => {
+                let i = p
+                    .automations
+                    .iter()
+                    .position(|a| a.id == id)
+                    .ok_or_else(|| CommandError::Invalid(format!("no automation {}", id.0)))?;
+                p.automations.remove(i);
+                p.playlist.clips.retain(|c| c.automation() != Some(id));
+            }
             RemoveClips(ids) => p.playlist.clips.retain(|c| !ids.contains(&c.id)),
             MoveClips { clips, dt, dtrack } => {
                 let max_track = p.playlist.tracks.len().saturating_sub(1) as i64;
@@ -762,11 +836,24 @@ impl Command {
                 }
             }
             MakeClipUnique(id) => {
-                let pid = p
-                    .clip(id)
-                    .ok_or(CommandError::NoClip(id))?
-                    .pattern()
-                    .ok_or_else(|| CommandError::Invalid("only pattern clips can be made unique".into()))?;
+                let source = p.clip(id).ok_or(CommandError::NoClip(id))?.source;
+                if let ClipSource::Automation(aid) = source {
+                    let mut a = p
+                        .automation(aid)
+                        .cloned()
+                        .ok_or_else(|| CommandError::Invalid(format!("no automation {}", aid.0)))?;
+                    let new = AutomationId(p.alloc_id());
+                    a.id = new;
+                    a.name = format!("{} (copy)", a.name);
+                    p.automations.push(a);
+                    if let Some(c) = p.clip_mut(id) {
+                        c.source = ClipSource::Automation(new);
+                    }
+                    return Ok(Created(Some(new.0)));
+                }
+                let pid = source
+                    .pattern_id()
+                    .ok_or_else(|| CommandError::Invalid("audio clips cannot be made unique".into()))?;
                 let i = p
                     .patterns
                     .iter()
@@ -926,6 +1013,9 @@ fn place_clip(p: &mut Project, source: ClipSource, track: u32, start: Tick, leng
     match source {
         ClipSource::Pattern(id) if p.pattern(id).is_none() => return Err(CommandError::NoPattern(id)),
         ClipSource::Audio(id) if p.channel(id).is_none() => return Err(CommandError::NoChannel(id)),
+        ClipSource::Automation(id) if p.automation(id).is_none() => {
+            return Err(CommandError::Invalid(format!("no automation {}", id.0)));
+        }
         _ => {}
     }
     if track as usize >= p.playlist.tracks.len() {

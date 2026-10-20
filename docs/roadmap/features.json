@@ -2370,19 +2370,24 @@
       "name": "Automation clips",
       "description": "Parameter envelopes on the timeline.",
       "fl_reference": "Automation clips.",
-      "limeshot_behavior": "Third clip source type.",
+      "limeshot_behavior": "Automation clips on the Playlist with a filled curve, points and tension handles; move, resize either edge (trims the curve window), copy/paste and duplicate like other clips.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "AUT-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3952,18 +3957,28 @@
       "category": "Automation",
       "name": "Automation clips with envelope points",
       "description": "Automation clips with envelope points.",
-      "fl_reference": "Automation clips",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "fl_reference": "Right-click a control › Create automation clip (observed in FL Studio 2026.1.1): an automation clip appears in the Channel Rack and the Playlist picker and is placed at bar 1 as a flat line at the control's value. Right-click on the curve adds a point; dragging between points changes the curve tension.",
+      "limeshot_behavior": "Right-click a channel volume/pan knob, a mixer fader/pan or an effect parameter › Create automation clip: a flat curve at the current value spanning the song, on the first free Playlist track. Clips are linked instances (Make unique copies the curve). In the clip: drag a point (snapped; Alt free), left- or right-click the line to add a point, right-click a point to delete it. The picker lists automations to place them; ▾ menu: rename, reset to a flat line, delete automation.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core automation::tests::curve_holds_outside_and_interpolates_inside",
+        "limeshot-core automation::tests::normalize_sorts_clamps_and_dedups",
+        "limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback",
+        "limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3972,7 +3987,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": ""
+      "notes": "Evidence: docs/research/evidence/screenshots/fl-automation-clip.png. FL also adds an automation-clip channel to the Channel Rack; LimeShot lists automations in the Playlist picker instead (known limitation)."
     },
     {
       "id": "AUT-002",
@@ -3980,19 +3995,26 @@
       "name": "Curve shapes and interpolation",
       "description": "Curve shapes and interpolation.",
       "fl_reference": "Step/slide/curve points",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Single-curve segments with a tension of −1…1 (power curve), edited by dragging the ○ handle between two points vertically; values hold before the first and after the last point and between clips.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "AUT-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core automation::tests::curve_holds_outside_and_interpolates_inside",
+        "limeshot-engine tests/audio.rs::mixer_automation_holds_between_clips_and_only_runs_in_song_mode"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4001,7 +4023,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": ""
+      "notes": "FL's other curve modes (hold, stairs, pulse, wave) are not implemented."
     },
     {
       "id": "AUT-003",
@@ -4009,19 +4031,29 @@
       "name": "Automate mixer and channel parameters",
       "description": "Automate mixer and channel parameters.",
       "fl_reference": "Right-click control › Create automation clip",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Targets: channel volume and pan, mixer track volume and pan (master included), and every insert-effect parameter. Values use the control's own scale (faders cube-root, frequencies logarithmic). Applied in Song mode every 64 frames, also in exports.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "AUT-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback",
+        "limeshot-engine tests/audio.rs::mixer_automation_holds_between_clips_and_only_runs_in_song_mode",
+        "limeshot-engine tests/audio.rs::automation_drives_effect_parameters",
+        "limeshot-core automation::tests::mappings_round_trip"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4030,7 +4062,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": ""
+      "notes": "Controls do not move on screen while automated. Synth/sampler parameters and tempo (AUT-008) are not automatable yet."
     },
     {
       "id": "AUT-004",
@@ -4038,7 +4070,7 @@
       "name": "Record automation from control movements",
       "description": "Record automation from control movements.",
       "fl_reference": "Recording filter: automation",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned.",
       "priority": "P2",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -4067,7 +4099,7 @@
       "name": "Event editor",
       "description": "Event editor.",
       "fl_reference": "Event editor window",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned.",
       "priority": "P2",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -4096,7 +4128,7 @@
       "name": "Parameter linking to controllers",
       "description": "Parameter linking to controllers.",
       "fl_reference": "Link to controller, Multilink",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned.",
       "priority": "P2",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -4125,7 +4157,7 @@
       "name": "LFO / formula / peak controllers",
       "description": "LFO / formula / peak controllers.",
       "fl_reference": "Fruity Formula/Peak Controller",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned.",
       "priority": "P3",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -4154,7 +4186,7 @@
       "name": "Tempo automation",
       "description": "Tempo automation.",
       "fl_reference": "Tempo automation clip",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned: the engine timeline assumes one tempo; tempo automation needs a tempo map.",
       "priority": "P2",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -4183,7 +4215,7 @@
       "name": "Plugin parameter automation",
       "description": "Plugin parameter automation.",
       "fl_reference": "Wrapper parameter browse",
-      "limeshot_behavior": "Planned; the model reserves a third clip source type and the engine renders parameter values per block.",
+      "limeshot_behavior": "Planned (after plugin hosting).",
       "priority": "P2",
       "status": "NOT_STARTED",
       "mvp": false,

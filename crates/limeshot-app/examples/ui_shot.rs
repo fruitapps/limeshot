@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -59,6 +59,28 @@ fn main() {
         limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Hat Open.wav"), 5, 2 * bar + bar / 2);
         app.ui.workspace.close(Win::ChannelRack);
         app.ui.playlist.zoom_x = 90.0;
+        app.doc.mark_saved();
+    }
+    if args.iter().any(|a| a == "--automation")
+        && let Some(lead) = app.project().channels.get(3).map(|c| c.id)
+        && let Some(clip) =
+            limeshot_ui::automation_ui::create(&mut app, limeshot_core::AutomationTarget::ChannelPan(lead))
+        && let Some(a) = app.project().clip(clip).and_then(|c| c.automation())
+    {
+        // A pan sweep with a curved segment, as a user would draw it.
+        let bar = app.project().time_signature.ticks_per_bar();
+        let pt = |tick, value, tension| limeshot_core::AutomationPoint { tick, value, tension };
+        app.exec(limeshot_core::Command::SetAutomationPoints {
+            automation: a,
+            points: vec![
+                pt(0, 0.5, 0.0),
+                pt(2 * bar, 0.1, 0.6),
+                pt(5 * bar, 0.9, 0.0),
+                pt(7 * bar, 0.5, -0.5),
+            ],
+        });
+        app.ui.workspace.close(Win::ChannelRack);
+        app.ui.playlist.zoom_x = 30.0;
         app.doc.mark_saved();
     }
     if args.iter().any(|a| a == "--detach") {

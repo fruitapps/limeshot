@@ -11,12 +11,14 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod automation;
 pub mod command;
 pub mod document;
 pub mod effects;
 pub mod model;
 pub mod time;
 
+pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
 pub use command::{Command, CommandError, Created, NewNote};
 pub use document::Document;
 pub use effects::{EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};

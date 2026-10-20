@@ -4,7 +4,7 @@ use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, semibold};
 use crate::widgets::{section, segmented, toggle_label};
 use egui::{CornerRadius, RichText, Stroke, Ui, vec2};
-use limeshot_core::{Command, EffectKind, EffectSlot, MAX_EFFECTS};
+use limeshot_core::{AutomationTarget, Command, EffectKind, EffectSlot, MAX_EFFECTS};
 
 pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
     let t = Theme::current();
@@ -134,6 +134,15 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             value: v,
                         });
                         app.exec_gesture(&r, cmd);
+                        crate::automation_ui::menu(
+                            app,
+                            &r,
+                            AutomationTarget::EffectParam {
+                                track,
+                                effect: e.id,
+                                index: i,
+                            },
+                        );
                     });
                 }
             });

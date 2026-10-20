@@ -13,6 +13,7 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod app;
+pub mod automation_ui;
 pub mod browser;
 pub mod channel_rack;
 pub mod dialogs;

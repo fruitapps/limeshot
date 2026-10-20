@@ -8,7 +8,7 @@ use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, mono, rgb, semibold};
 use crate::widgets::{fader, knob, meter, panel_header, section, toggle_label};
 use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
-use limeshot_core::Command;
+use limeshot_core::{AutomationTarget, Command};
 
 const STRIP_W: f32 = 68.0;
 
@@ -218,6 +218,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     });
     let cmd = r.changed().then_some(Command::SetMixerPan { track: i, pan });
     app.exec_gesture(&r, cmd);
+    crate::automation_ui::menu(app, &r, AutomationTarget::MixerPan(i));
     let fader_h = (ui.available_height() - 86.0).max(80.0);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
@@ -236,6 +237,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         );
         let cmd = r.changed().then_some(Command::SetMixerVolume { track: i, volume: v });
         app.exec_gesture(&r, cmd);
+        crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
     });
     let db = limeshot_dsp::gain_to_db(track.volume);
     ui.label(
@@ -409,10 +411,12 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 volume: if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) },
             });
             app.exec_gesture(&r, cmd);
+            crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
             let mut pan = track.pan;
             let r = ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan"));
             let cmd = crate::widgets::user_changed(&r).then_some(Command::SetMixerPan { track: i, pan });
             app.exec_gesture(&r, cmd);
+            crate::automation_ui::menu(app, &r, AutomationTarget::MixerPan(i));
             ui.add_space(8.0);
             section(ui, "Input");
             let routed = routed(app, i);

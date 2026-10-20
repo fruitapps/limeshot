@@ -17,8 +17,10 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+use limeshot_core::automation::{curve_value, shape as curve_shape};
 use limeshot_core::{
-    ClipSource, Instrument, PPQ, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature, Waveform,
+    AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature,
+    Waveform,
 };
 use limeshot_dsp::osc::Shape;
 use limeshot_dsp::{Adsr, SampleData, db_to_gain};
@@ -130,6 +132,58 @@ pub struct EffectState {
     pub params: Vec<f32>,
 }
 
+/// The parameter an automation lane drives, resolved to snapshot indices.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LaneTarget {
+    ChannelVolume(usize),
+    ChannelPan(usize),
+    MixerVolume(usize),
+    MixerPan(usize),
+    EffectParam { track: usize, effect: u32, index: usize },
+}
+
+/// A breakpoint in song time. `hold` keeps the value until the next point (gaps between clips).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LanePoint {
+    pub tick: Tick,
+    /// Normalised value, 0–1.
+    pub value: f32,
+    pub tension: f32,
+    pub hold: bool,
+}
+
+/// One automation flattened over the arrangement (Song mode only, as in FL Studio).
+#[derive(Debug, Clone, PartialEq)]
+pub struct AutomationLane {
+    pub target: LaneTarget,
+    pub mapping: Mapping,
+    /// Sorted by tick.
+    pub points: Vec<LanePoint>,
+}
+
+impl AutomationLane {
+    /// The parameter value at song tick `tick`, in the parameter's own units. Before the first
+    /// clip the lane takes the first clip's starting value; after the last it holds the last.
+    /// Allocation-free.
+    pub fn value_at(&self, tick: Tick) -> Option<f32> {
+        let first = self.points.first()?;
+        let norm = if tick <= first.tick {
+            first.value
+        } else {
+            let i = self.points.partition_point(|p| p.tick <= tick);
+            match (self.points.get(i.wrapping_sub(1)), self.points.get(i)) {
+                (Some(a), Some(b)) if !a.hold => {
+                    let x = (tick - a.tick) as f32 / (b.tick - a.tick).max(1) as f32;
+                    a.value + (b.value - a.value) * curve_shape(x, a.tension)
+                }
+                (Some(a), _) => a.value,
+                _ => first.value,
+            }
+        };
+        Some(self.mapping.to_value(norm))
+    }
+}
+
 /// Everything the engine needs to play, immutable once built.
 #[derive(Debug, Clone)]
 pub struct Snapshot {
@@ -143,6 +197,8 @@ pub struct Snapshot {
     pub mix_order: Vec<usize>,
     pub pattern: Program,
     pub song: Program,
+    /// Automation applied while in Song mode.
+    pub automation: Vec<AutomationLane>,
 }
 
 impl Default for Snapshot {
@@ -161,6 +217,7 @@ impl Default for Snapshot {
             mix_order: Vec::new(),
             pattern: Program::default(),
             song: Program::default(),
+            automation: Vec::new(),
         }
     }
 }
@@ -326,6 +383,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                 }
                 continue;
             }
+            ClipSource::Automation(_) => continue,
         };
         let window_end = clip.offset.saturating_add(clip.length);
         for n in &p.notes {
@@ -366,7 +424,80 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         mix_order: project.mixer.processing_order(),
         pattern: pattern_program,
         song,
+        automation: automation_lanes(project),
     }
+}
+
+/// Flatten every automation's clips into a lane in song time.
+fn automation_lanes(project: &Project) -> Vec<AutomationLane> {
+    let channel = |c| project.channel_index(c);
+    let track = |t: u16| (usize::from(t) < project.mixer.tracks.len()).then_some(usize::from(t));
+    let mut lanes = Vec::new();
+    for a in &project.automations {
+        let Some(mapping) = a.target.mapping(project) else {
+            continue;
+        };
+        let target = match a.target {
+            AutomationTarget::ChannelVolume(c) => channel(c).map(LaneTarget::ChannelVolume),
+            AutomationTarget::ChannelPan(c) => channel(c).map(LaneTarget::ChannelPan),
+            AutomationTarget::MixerVolume(t) => track(t).map(LaneTarget::MixerVolume),
+            AutomationTarget::MixerPan(t) => track(t).map(LaneTarget::MixerPan),
+            AutomationTarget::EffectParam {
+                track: t,
+                effect,
+                index,
+            } => track(t).map(|track| LaneTarget::EffectParam { track, effect, index }),
+        };
+        let Some(target) = target else { continue };
+        let mut clips: Vec<_> = project
+            .playlist
+            .clips
+            .iter()
+            .filter(|c| c.automation() == Some(a.id) && !c.muted)
+            .filter(|c| project.playlist.tracks.get(c.track as usize).is_some_and(|t| !t.muted))
+            .collect();
+        if clips.is_empty() || a.points.is_empty() {
+            continue;
+        }
+        clips.sort_by_key(|c| c.start);
+        let tension_at = |t: Tick| {
+            let i = a.points.partition_point(|p| p.tick <= t);
+            a.points.get(i.wrapping_sub(1)).map_or(0.0, |p| p.tension)
+        };
+        let value = |t| curve_value(&a.points, t).unwrap_or(0.0);
+        let mut points = Vec::new();
+        for c in clips {
+            let (o, len) = (c.offset, c.length);
+            points.push(LanePoint {
+                tick: c.start,
+                value: value(o),
+                tension: tension_at(o),
+                hold: false,
+            });
+            for p in a.points.iter().filter(|p| p.tick > o && p.tick < o + len) {
+                points.push(LanePoint {
+                    tick: c.start + (p.tick - o),
+                    value: p.value,
+                    tension: p.tension,
+                    hold: false,
+                });
+            }
+            points.push(LanePoint {
+                tick: c.end(),
+                value: value(o + len),
+                tension: 0.0,
+                hold: true,
+            });
+        }
+        // Stable: at a shared tick the next clip's start comes after the previous clip's end.
+        points.sort_by_key(|p| p.tick);
+        lanes.push(AutomationLane {
+            target,
+            mapping,
+            points,
+        });
+    }
+    lanes
 }
 
 #[cfg(test)]

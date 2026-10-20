@@ -876,3 +876,149 @@ fn playback_starting_inside_an_audio_clip_starts_the_audio_part_way() {
         assert!((buf[2 * (block - 1)] - (24_000 + block - 1) as f32 / 48_000.0).abs() < 1e-5);
     }
 }
+
+/// A DC sample (0.5) as an audio clip over bar 1 at 120 BPM (96 000 frames), at unity gains.
+fn dc_clip_doc() -> (Document, ChannelId) {
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let clip = ClipId(
+        doc.execute(Command::AddAudioClip {
+            sample: SampleRef { path: "dc".into() },
+            name: "DC".into(),
+            track: 0,
+            start: 0,
+            length: 2 * 3840,
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    let ch = doc.project().clip(clip).unwrap().audio_channel().unwrap();
+    doc.execute(Command::SetChannelVolume {
+        channel: ch,
+        volume: 1.0,
+    })
+    .unwrap();
+    doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
+    (doc, ch)
+}
+
+fn dc_snapshot(doc: &Document) -> Arc<limeshot_sequencer::Snapshot> {
+    let s = Arc::new(SampleData::from_stereo(SR, vec![0.5; 2 * 4 * 48_000]));
+    let lookup = move |p: &str| (p == "dc").then(|| s.clone());
+    Arc::new(compile(doc.project(), doc.project().patterns[0].id, &lookup))
+}
+
+fn automate(doc: &mut Document, target: AutomationTarget, track: u32, start: Tick, points: &[(Tick, f32)]) {
+    let clip = ClipId(
+        doc.execute(Command::AddAutomationClip {
+            target,
+            track,
+            start,
+            length: 3840,
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    let a = doc.project().clip(clip).unwrap().automation().unwrap();
+    doc.execute(Command::SetAutomationPoints {
+        automation: a,
+        points: points
+            .iter()
+            .map(|&(tick, value)| AutomationPoint {
+                tick,
+                value,
+                tension: 0.0,
+            })
+            .collect(),
+    })
+    .unwrap();
+}
+
+#[test]
+fn automation_sweeps_channel_pan_during_song_playback() {
+    let (mut doc, ch) = dc_clip_doc();
+    // Pan from hard left to hard right over bar 1 (2 s).
+    automate(
+        &mut doc,
+        AutomationTarget::ChannelPan(ch),
+        1,
+        0,
+        &[(0, 0.0), (3840, 1.0)],
+    );
+    for block in [64, 333, 1024] {
+        let (audio, _) = render(dc_snapshot(&doc), ExportRange::Song, block, SR);
+        for f in [0usize, 24_000, 48_000, 72_000, 95_000] {
+            let pan = -1.0 + 2.0 * f as f32 / 96_000.0;
+            let (l, r) = (audio[2 * f], audio[2 * f + 1]);
+            let want = (0.5 * (1.0 - pan).min(1.0), 0.5 * (1.0 + pan).min(1.0));
+            // Automation is evaluated every 64 frames: allow one interval of movement.
+            assert!(
+                (l - want.0).abs() < 2e-3 && (r - want.1).abs() < 2e-3,
+                "frame {f}: {l},{r} vs {want:?}"
+            );
+        }
+        // After the automation clip (bar 2) the last value holds: hard right.
+        let f = 120_000;
+        assert!(
+            audio[2 * f] < 1e-6 && (audio[2 * f + 1] - 0.5).abs() < 1e-6,
+            "block {block}"
+        );
+    }
+}
+
+#[test]
+fn mixer_automation_holds_between_clips_and_only_runs_in_song_mode() {
+    let (mut doc, _) = dc_clip_doc();
+    // Insert 1 at half travel (gain 0.125 × 2.0 = 0.25) from bar 2 on; before its clip the lane
+    // takes its first value too.
+    automate(&mut doc, AutomationTarget::MixerVolume(1), 1, 3840, &[(0, 0.5)]);
+    let snap = dc_snapshot(&doc);
+    let (audio, _) = render(snap.clone(), ExportRange::Song, 512, SR);
+    assert!((audio[2 * 1000] - 0.125).abs() < 1e-6, "{}", audio[2 * 1000]);
+    assert!((audio[2 * 100_000] - 0.125).abs() < 1e-6);
+    // Pattern mode plays the mixer at its set value.
+    let mut r = Renderer::new(SR, snap);
+    assert_eq!(r.track_mix(1), Some((1.0, 0.0)));
+    r.set_mode(PlayMode::Song);
+    let mut buf = vec![0.0; 2 * 64];
+    r.render(&mut buf);
+    assert_eq!(r.track_mix(1), Some((0.25, 0.0)));
+    r.set_mode(PlayMode::Pattern);
+    r.render(&mut buf);
+    assert_eq!(r.track_mix(1), Some((1.0, 0.0)));
+}
+
+#[test]
+fn automation_drives_effect_parameters() {
+    let (mut doc, _) = dc_clip_doc();
+    let fx = doc
+        .execute(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Utility,
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    // Utility gain spans −24…+24 dB: 0.75 of the range is +12 dB.
+    automate(
+        &mut doc,
+        AutomationTarget::EffectParam {
+            track: 1,
+            effect: fx,
+            index: 0,
+        },
+        1,
+        0,
+        &[(0, 0.75)],
+    );
+    let (audio, _) = render(dc_snapshot(&doc), ExportRange::Song, 256, SR);
+    let want = 0.5 * 10f32.powf(12.0 / 20.0);
+    // Well after any parameter smoothing has settled.
+    assert!(
+        (audio[2 * 48_000] - want).abs() < 1e-3,
+        "{} vs {want}",
+        audio[2 * 48_000]
+    );
+}

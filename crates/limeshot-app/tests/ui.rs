@@ -514,3 +514,52 @@ fn samples_become_audio_clips_that_trim_from_the_left_edge() {
         "left edge trimmed the start"
     );
 }
+
+#[test]
+fn automation_clips_are_created_from_controls_and_edited_in_the_playlist() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let clip = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerVolume(1)).expect("created");
+    for _ in 0..3 {
+        h.step();
+    }
+    let c = h.state().project().clip(clip).expect("clip").clone();
+    let a = c.automation().expect("automation clip");
+    let sig = h.state().project().time_signature;
+    assert_eq!((c.start, c.length), (0, h.state().project().playlist.song_length(sig)));
+    assert!(
+        h.state()
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .all(|o| o.id == clip || o.track != c.track),
+        "placed on a free track"
+    );
+    let points = |h: &Harness<'static, LimeShotApp>| h.state().project().automation(a).expect("a").points.clone();
+    // Flat at the fader's position (cube-root scale of a 2.0 travel).
+    let flat = (h.state().project().mixer.tracks[1].volume / 2.0).cbrt();
+    assert_eq!(points(&h).len(), 1);
+    assert!((points(&h)[0].value - flat).abs() < 1e-4);
+
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let top = g.grid.top() + c.track as f32 * g.track_h - g.scroll.y;
+    let (area_top, area_bottom) = (top + 18.0, top + g.track_h - 4.0);
+    let y_of = |v: f32| area_bottom - v * (area_bottom - area_top);
+    let bar = sig.ticks_per_bar();
+    let x = g.pos(2 * bar, c.track).x;
+    // Right-click on the line adds a point there (FL Studio).
+    click(&mut h, egui::pos2(x, y_of(flat)), PointerButton::Secondary);
+    assert_eq!(points(&h).len(), 2, "right-click on the line adds a point");
+    assert!(h.state().project().clip(clip).is_some(), "the clip was not deleted");
+    // Drag the new point to the top: one undo step.
+    let undo = h.state().doc.history().len();
+    drag(&mut h, egui::pos2(x, y_of(flat)), egui::pos2(x, area_top - 2.0));
+    let p = points(&h)[1];
+    assert_eq!((p.tick, p.value), (2 * bar, 1.0));
+    assert_eq!(h.state().doc.history().len(), undo + 1);
+    // Right-click the point deletes it.
+    click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
+    assert_eq!(points(&h).len(), 1);
+}

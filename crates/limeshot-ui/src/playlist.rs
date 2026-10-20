@@ -40,6 +40,19 @@ enum Drag {
     ResizeStart {
         id: ClipId,
     },
+    /// Dragging point `index` of an automation shown by `clip`.
+    AutoPoint {
+        clip: ClipId,
+        automation: AutomationId,
+        index: usize,
+    },
+    /// Dragging the tension handle of the segment after point `index`.
+    AutoTension {
+        automation: AutomationId,
+        index: usize,
+        grab_y: f32,
+        tension: f32,
+    },
     Select {
         from: Pos2,
     },
@@ -220,7 +233,7 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
         .show(ui, |ui| {
             for (id, name, color, uses) in pats {
                 let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
-                let on = id == cur;
+                let on = id == cur && app.ui.place.is_none();
                 if on {
                     ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
                 } else if resp.hovered() {
@@ -249,6 +262,7 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
                 if resp.clicked() {
                     app.set_current_pattern(id);
+                    app.ui.place = None;
                 }
                 if resp.double_clicked() {
                     app.show_window(crate::workspace::Win::PianoRoll);
@@ -274,7 +288,77 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                         }
                     });
             }
+            automation_picker(app, ui);
         });
+}
+
+/// The automation clips in the picker (FL Studio lists them with the patterns): click to place.
+fn automation_picker(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    let autos: Vec<(AutomationId, String, Rgb, usize)> = app
+        .project()
+        .automations
+        .iter()
+        .map(|a| {
+            let uses = app
+                .project()
+                .playlist
+                .clips
+                .iter()
+                .filter(|c| c.automation() == Some(a.id))
+                .count();
+            (a.id, a.name.clone(), a.color, uses)
+        })
+        .collect();
+    if autos.is_empty() {
+        return;
+    }
+    ui.add_space(8.0);
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        section(ui, "Automation");
+    });
+    for (id, name, color, uses) in autos {
+        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+        let on = app.ui.place == Some(ClipSource::Automation(id));
+        if on {
+            ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
+        } else if resp.hovered() {
+            ui.painter().rect_filled(r, 0.0, t.raised);
+        }
+        let icon = Rect::from_min_size(r.min + vec2(8.0, 6.0), vec2(14.0, 14.0));
+        crate::icons::paint(ui.painter(), icon, Icon::Automation, rgb(color));
+        ui.painter().with_clip_rect(r.shrink2(vec2(0.0, 0.0))).text(
+            r.left_center() + vec2(28.0, 0.0),
+            Align2::LEFT_CENTER,
+            &name,
+            crate::theme::prop(12.0),
+            if on { t.text } else { mix(t.text_dim, t.text, 0.5) },
+        );
+        if uses > 0 {
+            ui.painter().text(
+                r.right_center() - vec2(10.0, 0.0),
+                Align2::RIGHT_CENTER,
+                format!("×{uses}"),
+                mono(10.0),
+                t.text_faint,
+            );
+        }
+        if resp.clicked() {
+            app.ui.place = Some(ClipSource::Automation(id));
+        }
+        resp.on_hover_text(format!("{name}\nClick: place this automation clip"))
+            .context_menu(|ui| {
+                if ui.button("Rename…").clicked() {
+                    app.dialog = Some(crate::dialogs::Dialog::rename_automation(app, id));
+                    ui.close();
+                }
+                if ui.button("Delete").clicked() {
+                    app.exec(Command::RemoveAutomation(id));
+                    ui.close();
+                }
+            });
+    }
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -393,8 +477,16 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             .with_clip_rect(rr)
             .text(r.min + vec2(4.0, 0.5), Align2::LEFT_TOP, "▾", mono(10.0), fg);
         let body = Rect::from_min_max(pos2(r.left(), r.top() + 15.0), r.max);
-        if let ClipSource::Audio(ch) = c.source {
-            draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55));
+        match c.source {
+            ClipSource::Audio(ch) => {
+                draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55))
+            }
+            ClipSource::Automation(a) => {
+                if let Some(a) = app.project().automation(a) {
+                    draw_automation(&painter, &view, grid, c, a, r, base);
+                }
+            }
+            ClipSource::Pattern(_) => {}
         }
         // Note preview.
         let p = match c.source {
@@ -476,6 +568,7 @@ fn clip_label(p: &Project, c: &Clip) -> Option<(String, Rgb)> {
     match c.source {
         ClipSource::Pattern(id) => p.pattern(id).map(|x| (x.name.clone(), x.color)),
         ClipSource::Audio(id) => p.channel(id).map(|x| (x.name.clone(), x.color)),
+        ClipSource::Automation(id) => p.automation(id).map(|x| (x.name.clone(), x.color)),
     }
 }
 
@@ -634,6 +727,111 @@ pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32,
     Some(ClipId(id))
 }
 
+/// Where an automation clip draws its curve: below the title strip.
+fn curve_area(r: Rect) -> Rect {
+    Rect::from_min_max(pos2(r.left(), r.top() + 17.0), pos2(r.right(), r.bottom() - 3.0))
+}
+
+fn draw_automation(painter: &egui::Painter, view: &View, grid: Rect, c: &Clip, a: &Automation, r: Rect, base: Color32) {
+    let area = curve_area(r);
+    if area.height() < 6.0 {
+        return;
+    }
+    let y_of = |v: f32| area.bottom() - v.clamp(0.0, 1.0) * area.height();
+    let local = |x: f32| (view.tick_at(x) - c.start as i64 + c.offset as i64).max(0) as u64;
+    let x0 = r.left().max(grid.left());
+    let x1 = r.right().min(grid.right());
+    let line = mix(base, Color32::WHITE, 0.6);
+    let fill = base.gamma_multiply(0.45);
+    let mut pts = Vec::new();
+    let mut x = x0;
+    while x <= x1 {
+        if let Some(v) = a.value_at(local(x)) {
+            let y = y_of(v);
+            painter.rect_filled(
+                Rect::from_min_max(pos2(x, y), pos2((x + 2.0).min(x1), area.bottom())),
+                0.0,
+                fill,
+            );
+            pts.push(pos2(x, y));
+        }
+        x += 2.0;
+    }
+    painter.add(egui::Shape::line(pts, Stroke::new(1.5, line)));
+    let window = c.offset..c.offset + c.length;
+    for (i, p) in a.points.iter().enumerate() {
+        if window.contains(&p.tick) {
+            let x = view.x(c.start + p.tick - c.offset);
+            if x >= grid.left() && x <= grid.right() {
+                painter.circle(pos2(x, y_of(p.value)), 3.5, base, Stroke::new(1.5, line));
+            }
+        }
+        if let Some(n) = a.points.get(i + 1) {
+            let mid = (p.tick + n.tick) / 2;
+            if window.contains(&mid) && n.tick - p.tick > 1 {
+                let x = view.x(c.start + mid - c.offset);
+                if x >= grid.left() && x <= grid.right() && n.tick - p.tick > 0 {
+                    let y = y_of(a.value_at(mid).unwrap_or(p.value));
+                    painter.circle_stroke(pos2(x, y), 2.5, Stroke::new(1.0, line));
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AutoHit {
+    Point(usize),
+    /// The tension handle of the segment after this point.
+    Tension(usize),
+    /// On the line between points: where a new point would go (local tick, value).
+    Curve(Tick, f32),
+}
+
+/// What of an automation curve is under `p`, if any.
+fn automation_hit(app: &LimeShotApp, view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, AutomationId, AutoHit)> {
+    let c = clips.iter().rev().find(|c| view.clip_rect(c).contains(p))?;
+    let aid = c.automation()?;
+    let a = app.project().automation(aid)?;
+    let r = view.clip_rect(c);
+    let area = curve_area(r);
+    if area.height() < 12.0 || p.y < area.top() - 4.0 {
+        return None;
+    }
+    let y_of = |v: f32| area.bottom() - v.clamp(0.0, 1.0) * area.height();
+    let window = c.offset..c.offset + c.length;
+    let near = |q: Pos2, d: f32| q.distance(p) <= d;
+    for (i, pt) in a.points.iter().enumerate() {
+        if window.contains(&pt.tick) && near(pos2(view.x(c.start + pt.tick - c.offset), y_of(pt.value)), 6.0) {
+            return Some((c.clone(), aid, AutoHit::Point(i)));
+        }
+    }
+    for (i, w) in a.points.windows(2).enumerate() {
+        let mid = (w[0].tick + w[1].tick) / 2;
+        if window.contains(&mid) && w[1].tick - w[0].tick > 1 {
+            let q = pos2(
+                view.x(c.start + mid - c.offset),
+                y_of(a.value_at(mid).unwrap_or(w[0].value)),
+            );
+            if near(q, 5.0) {
+                return Some((c.clone(), aid, AutoHit::Tension(i)));
+            }
+        }
+    }
+    // Keep clear of the edges so they still resize the clip.
+    if p.x < r.left() + EDGE || p.x > r.right() - EDGE {
+        return None;
+    }
+    let sig = app.project().time_signature;
+    let local = (view.tick_at(p.x) - c.start as i64 + c.offset as i64).max(0) as u64;
+    let v = a.value_at(local)?;
+    if (y_of(v) - p.y).abs() <= 5.0 {
+        let tick = app.ui.snap.round(local, sig).clamp(c.offset, c.offset + c.length - 1);
+        return Some((c.clone(), aid, AutoHit::Curve(tick, v)));
+    }
+    None
+}
+
 fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: TimeSignature) {
     draw_ruler(&ui.painter_at(ruler), view, ruler, sig);
     let resp = ui.interact(ruler, ui.id().with("pl_ruler"), Sense::click_and_drag());
@@ -732,8 +930,12 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
 /// Make a clicked clip's source the thing being edited: its pattern, or its audio channel.
 fn focus_source(app: &mut LimeShotApp, c: &Clip) {
     match c.source {
-        ClipSource::Pattern(p) => app.set_current_pattern(p),
+        ClipSource::Pattern(p) => {
+            app.set_current_pattern(p);
+            app.ui.place = None;
+        }
         ClipSource::Audio(ch) => app.select_channel(ch),
+        ClipSource::Automation(_) => app.ui.place = Some(c.source),
     }
 }
 
@@ -758,6 +960,94 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     let primary = resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Primary));
     let secondary =
         resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary));
+    // Automation curves take presses on their points, tension handles and line first.
+    let auto = pointer.and_then(|p| automation_hit(app, view, clips, p).map(|h| (p, h)));
+    if let Some((_, (_, a, h))) = &auto
+        && resp.hovered()
+        && app.ui.playlist.drag.is_none()
+    {
+        ui.ctx().set_cursor_icon(match h {
+            AutoHit::Point(_) => egui::CursorIcon::Move,
+            AutoHit::Tension(_) => egui::CursorIcon::ResizeVertical,
+            AutoHit::Curve(..) => egui::CursorIcon::Crosshair,
+        });
+        let name = app.project().automation(*a).map(|a| a.name.clone()).unwrap_or_default();
+        app.hint(format!(
+            "{name} — drag a point · drag ○ between points: curve · left/right-click the line: add a point · right-click a point: delete"
+        ));
+    }
+    let mut primary = primary;
+    let mut secondary = secondary;
+    if (primary || secondary)
+        && !mods.command
+        && let Some((p, (clip, a, h))) = auto
+    {
+        let points = app
+            .project()
+            .automation(a)
+            .map(|a| a.points.clone())
+            .unwrap_or_default();
+        match (h, primary) {
+            (AutoHit::Point(i), true) => {
+                app.doc.begin_gesture();
+                app.ui.playlist.drag = Some(Drag::AutoPoint {
+                    clip: clip.id,
+                    automation: a,
+                    index: i,
+                });
+            }
+            (AutoHit::Point(i), false) => {
+                if points.len() > 1 {
+                    let mut pts = points;
+                    pts.remove(i);
+                    app.exec(Command::SetAutomationPoints {
+                        automation: a,
+                        points: pts,
+                    });
+                }
+            }
+            (AutoHit::Tension(i), true) => {
+                app.doc.begin_gesture();
+                app.ui.playlist.drag = Some(Drag::AutoTension {
+                    automation: a,
+                    index: i,
+                    grab_y: p.y,
+                    tension: points.get(i).map_or(0.0, |x| x.tension),
+                });
+            }
+            (AutoHit::Tension(_), false) => {}
+            (AutoHit::Curve(tick, value), left) => {
+                let mut pts = points;
+                let index = pts.partition_point(|x| x.tick < tick);
+                if pts.get(index).is_none_or(|x| x.tick != tick) {
+                    pts.insert(
+                        index,
+                        AutomationPoint {
+                            tick,
+                            value,
+                            tension: 0.0,
+                        },
+                    );
+                    if left {
+                        app.doc.begin_gesture();
+                    }
+                    app.exec(Command::SetAutomationPoints {
+                        automation: a,
+                        points: pts,
+                    });
+                    if left {
+                        app.ui.playlist.drag = Some(Drag::AutoPoint {
+                            clip: clip.id,
+                            automation: a,
+                            index,
+                        });
+                    }
+                }
+            }
+        }
+        primary = false;
+        secondary = false;
+    }
     if primary && let Some(p) = pointer {
         let st = &mut app.ui.playlist;
         if mods.command {
@@ -809,13 +1099,27 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     if track >= 0 && (track as u32) < tracks {
                         let start = snap.floor(view.tick_at(p.x).max(0) as u64, sig);
                         let pattern = app.current_pattern();
+                        let automation = match app.ui.place {
+                            Some(ClipSource::Automation(a)) => app.project().automation(a).map(|a| (a.id, a.length)),
+                            _ => None,
+                        };
                         app.doc.begin_gesture();
-                        if let Some(id) = app.exec(Command::AddClip {
-                            pattern,
-                            track: track as u32,
-                            start,
-                            length: None,
-                        }) {
+                        let cmd = match automation {
+                            Some((a, length)) => Command::PlaceClip {
+                                source: ClipSource::Automation(a),
+                                track: track as u32,
+                                start,
+                                length,
+                                offset: 0,
+                            },
+                            None => Command::AddClip {
+                                pattern,
+                                track: track as u32,
+                                start,
+                                length: None,
+                            },
+                        };
+                        if let Some(id) = app.exec(cmd) {
                             let id = ClipId(id);
                             app.ui.playlist.selection = vec![id];
                             app.ui.playlist.drag = Some(Drag::Move {
@@ -868,6 +1172,65 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     app.exec(Command::ResizeClip { clip: *id, length: len });
                 }
             }
+            Some(Drag::AutoPoint {
+                clip,
+                automation,
+                index,
+            }) => {
+                if let (Some(c), Some(a)) = (
+                    app.project().clip(*clip).cloned(),
+                    app.project().automation(*automation).cloned(),
+                ) {
+                    let r = view.clip_rect(&c);
+                    let area = curve_area(r);
+                    let local = (view.tick_at(p.x) - c.start as i64 + c.offset as i64).max(0) as u64;
+                    let local = snap.round(local, sig);
+                    let lo = if *index == 0 { 0 } else { a.points[*index - 1].tick + 1 };
+                    let hi = a.points.get(*index + 1).map_or(Tick::MAX, |x| x.tick.saturating_sub(1));
+                    let tick = local.clamp(lo, hi.max(lo));
+                    let value = ((area.bottom() - p.y) / area.height().max(1.0)).clamp(0.0, 1.0);
+                    let mut pts = a.points.clone();
+                    if let Some(pt) = pts.get_mut(*index)
+                        && (pt.tick != tick || pt.value != value)
+                    {
+                        pt.tick = tick;
+                        pt.value = value;
+                        app.exec(Command::SetAutomationPoints {
+                            automation: *automation,
+                            points: pts,
+                        });
+                    }
+                    if let Some(m) = a.target.mapping(app.project()) {
+                        app.hint(format!("{}: {:.3}", a.name, m.to_value(value)));
+                    }
+                }
+            }
+            Some(Drag::AutoTension {
+                automation,
+                index,
+                grab_y,
+                tension,
+            }) => {
+                if let Some(a) = app.project().automation(*automation).cloned()
+                    && let (Some(x), Some(y)) = (a.points.get(*index), a.points.get(*index + 1))
+                {
+                    // Dragging up bends the curve up, whichever way the segment goes.
+                    let dir = if y.value >= x.value { -1.0 } else { 1.0 };
+                    let t = (*tension + dir * (*grab_y - p.y) / 80.0).clamp(-1.0, 1.0);
+                    let mut pts = a.points.clone();
+                    pts[*index].tension = t;
+                    app.exec(Command::SetAutomationPoints {
+                        automation: *automation,
+                        points: pts,
+                    });
+                    app.hint(format!(
+                        "Point {} to {} tension {:.0}%",
+                        *index + 1,
+                        *index + 2,
+                        t * 100.0
+                    ));
+                }
+            }
             Some(Drag::ResizeStart { id }) => {
                 let start = snap.round(view.tick_at(p.x).max(0) as u64, sig);
                 if app.project().clip(*id).is_some_and(|c| c.start != start) {
@@ -905,10 +1268,11 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && part != Part::Menu
     {
         focus_source(app, &c);
-        app.show_window(match c.source {
-            ClipSource::Pattern(_) => crate::workspace::Win::PianoRoll,
-            ClipSource::Audio(_) => crate::workspace::Win::ChannelSettings,
-        });
+        match c.source {
+            ClipSource::Pattern(_) => app.show_window(crate::workspace::Win::PianoRoll),
+            ClipSource::Audio(_) => app.show_window(crate::workspace::Win::ChannelSettings),
+            ClipSource::Automation(_) => {}
+        }
     }
 }
 
@@ -969,6 +1333,42 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                             close = true;
                         }
                     }
+                    ClipSource::Automation(aid) => {
+                        if ui
+                            .add_enabled(users > 1, egui::Button::new("Make unique"))
+                            .on_hover_text("Give this clip its own copy of the automation")
+                            .clicked()
+                        {
+                            app.exec(Command::MakeClipUnique(id));
+                            close = true;
+                        }
+                        if ui.button("Rename automation…").clicked() {
+                            app.dialog = Some(crate::dialogs::Dialog::rename_automation(app, aid));
+                            close = true;
+                        }
+                        if ui.button("Reset to a flat line").clicked() {
+                            let v = app.project().automation(aid).and_then(|a| a.value_at(clip.offset));
+                            if let Some(value) = v {
+                                app.exec(Command::SetAutomationPoints {
+                                    automation: aid,
+                                    points: vec![AutomationPoint {
+                                        tick: 0,
+                                        value,
+                                        tension: 0.0,
+                                    }],
+                                });
+                            }
+                            close = true;
+                        }
+                        if ui
+                            .button(RichText::new("Delete automation").color(Theme::current().danger))
+                            .on_hover_text("Delete the automation and all its clips")
+                            .clicked()
+                        {
+                            app.exec(Command::RemoveAutomation(aid));
+                            close = true;
+                        }
+                    }
                 }
                 if ui
                     .button(if clip.muted { "Unmute clip" } else { "Mute clip" })
@@ -983,6 +1383,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                 let fit = match clip.source {
                     ClipSource::Pattern(_) => "Fit to pattern length",
                     ClipSource::Audio(_) => "Fit to sample length",
+                    ClipSource::Automation(_) => "Fit to automation length",
                 };
                 if ui.button(fit).clicked() {
                     if let Some(len) = source_length(app, &clip) {
@@ -1027,6 +1428,10 @@ fn source_length(app: &LimeShotApp, c: &Clip) -> Option<Tick> {
             let last = f64::from(sp.start.max(sp.end)) * s.frames() as f64;
             Some((((last - first) / per_tick).round() as Tick).max(1))
         }
+        ClipSource::Automation(a) => app.project().automation(a).map(|a| {
+            let last = a.points.last().map_or(0, |p| p.tick + 1);
+            a.length.max(last)
+        }),
     }
 }
 
