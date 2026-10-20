@@ -35,6 +35,14 @@ pub const EDITING: &[(&str, &str)] = &[
     ("Cmd+D", "Deselect"),
     ("Cmd+B", "Duplicate selection to the right"),
     (
+        "Cmd+C / Cmd+X / Cmd+V",
+        "Copy / cut / paste notes, steps (Channel Rack) or clips (Playlist; pastes at the song position in Song mode)",
+    ),
+    (
+        "Alt+Q",
+        "Piano Roll: quantize the selection (or the channel) to the snap",
+    ),
+    (
         "↑ / ↓",
         "Piano Roll: transpose a semitone · Channel Rack: select channel",
     ),

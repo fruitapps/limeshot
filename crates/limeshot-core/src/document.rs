@@ -173,7 +173,7 @@ mod tests {
     use super::*;
     use crate::command::NewNote;
     use crate::model::*;
-    use crate::time::{STEP_TICKS, Tempo};
+    use crate::time::{STEP_TICKS, Tempo, Tick};
 
     fn doc_with_channel() -> (Document, ChannelId, PatternId) {
         let mut d = Document::default();
@@ -380,6 +380,77 @@ mod tests {
         .unwrap();
         let c = d.project().clip(a).unwrap();
         assert_eq!((c.start, c.track), (960, 15));
+    }
+
+    #[test]
+    fn quantize_moves_starts_by_strength_and_rounds_lengths() {
+        let (mut d, ch, pat) = doc_with_channel();
+        let mut ids = Vec::new();
+        for (start, length) in [(250u64, 100u64), (470, 300), (10, 239)] {
+            let id = d
+                .execute(Command::AddNote {
+                    pattern: pat,
+                    note: NewNote {
+                        channel: ch,
+                        key: 60,
+                        start,
+                        length,
+                        velocity: 0.8,
+                    },
+                })
+                .unwrap()
+                .0
+                .unwrap();
+            ids.push(NoteId(id));
+        }
+        d.execute(Command::Quantize {
+            pattern: pat,
+            notes: ids[..2].to_vec(),
+            grid: STEP_TICKS,
+            strength: 0.5,
+            lengths: false,
+        })
+        .unwrap();
+        let starts: Vec<Tick> = d.project().patterns[0].notes.iter().map(|n| n.start).collect();
+        assert_eq!(
+            starts,
+            vec![10, 245, 475],
+            "halfway to 240 and 480; the third note untouched"
+        );
+        d.execute(Command::Quantize {
+            pattern: pat,
+            notes: ids.clone(),
+            grid: STEP_TICKS,
+            strength: 1.0,
+            lengths: true,
+        })
+        .unwrap();
+        let notes: Vec<(Tick, Tick)> = d.project().patterns[0]
+            .notes
+            .iter()
+            .map(|n| (n.start, n.length))
+            .collect();
+        assert_eq!(notes, vec![(0, 240), (240, 240), (480, 240)]);
+        assert!(
+            d.execute(Command::Quantize {
+                pattern: pat,
+                notes: ids,
+                grid: 0,
+                strength: 1.0,
+                lengths: false
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn swing_is_clamped_and_undoable() {
+        let (mut d, _, _) = doc_with_channel();
+        d.execute(Command::SetSwing(3.0)).unwrap();
+        assert_eq!(d.project().swing, 1.0);
+        assert!(d.execute(Command::SetSwing(f32::NAN)).is_err());
+        d.undo();
+        assert_eq!(d.project().swing, 0.0);
     }
 
     #[test]

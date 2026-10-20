@@ -119,6 +119,17 @@ impl UiState {
     }
 }
 
+/// What Cmd+C / Cmd+X put on the (app-internal) clipboard.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Clipboard {
+    /// Notes without a channel: (key, start, length, velocity). Pasted at the same times into the
+    /// channel being edited, as FL Studio does.
+    Notes(Vec<(u8, Tick, Tick, f32)>),
+    /// Clips as (pattern, track, start, length). Pasted at the song position in Song mode (so
+    /// the earliest clip lands there), otherwise at their original times.
+    Clips(Vec<(PatternId, u32, Tick, Tick)>),
+}
+
 /// A file action waiting for "save changes?" to be answered.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pending {
@@ -142,6 +153,7 @@ pub struct LimeShotApp {
     pub ui: UiState,
     pub dialog: Option<dialogs::Dialog>,
     pub toasts: Vec<Toast>,
+    pub clipboard: Option<Clipboard>,
     /// Folder of bundled samples, shown first in the Browser.
     pub bundled_samples: Option<PathBuf>,
     pub export_job: Option<dialogs::ExportJob>,
@@ -191,6 +203,7 @@ impl LimeShotApp {
             ui,
             dialog: None,
             toasts: Vec::new(),
+            clipboard: None,
             bundled_samples,
             export_job: None,
             compiled: None,

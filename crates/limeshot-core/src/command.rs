@@ -42,6 +42,8 @@ pub enum Command {
     SetTitle(String),
     SetTempo(Tempo),
     SetTimeSignature(TimeSignature),
+    /// Global swing, 0–1.
+    SetSwing(f32),
 
     AddChannel {
         name: String,
@@ -134,6 +136,15 @@ pub enum Command {
     ClearChannelNotes {
         pattern: PatternId,
         channel: ChannelId,
+    },
+    /// Move note starts towards the nearest multiple of `grid` ticks by `strength` (0–1); with
+    /// `lengths`, also round note lengths to the grid (minimum one grid unit).
+    Quantize {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        grid: Tick,
+        strength: f32,
+        lengths: bool,
     },
 
     AddPattern {
@@ -258,6 +269,7 @@ impl Command {
             SetTitle(_) => "Rename project",
             SetTempo(_) => "Set tempo",
             SetTimeSignature(_) => "Set time signature",
+            SetSwing(_) => "Swing",
             AddChannel { .. } => "Add channel",
             RemoveChannel(_) => "Delete channel",
             CloneChannel(_) => "Clone channel",
@@ -279,6 +291,7 @@ impl Command {
             SetNoteVelocity { .. } => "Note velocity",
             DuplicateNotes { .. } => "Duplicate notes",
             ClearChannelNotes { .. } => "Clear channel",
+            Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
             ClonePattern(_) => "Clone pattern",
             RemovePattern(_) => "Delete pattern",
@@ -310,6 +323,7 @@ impl Command {
         use Command::*;
         Some(match self {
             SetTempo(_) => "tempo".into(),
+            SetSwing(_) => "swing".into(),
             SetChannelVolume { channel, .. } => format!("chvol{}", channel.0),
             SetChannelPan { channel, .. } => format!("chpan{}", channel.0),
             SetChannelMixerTrack { channel, .. } => format!("chmix{}", channel.0),
@@ -335,6 +349,7 @@ impl Command {
             SetTitle(t) => p.title = t,
             SetTempo(t) => p.tempo = t,
             SetTimeSignature(s) => p.time_signature = TimeSignature::new(s.numerator, s.denominator),
+            SetSwing(v) => p.swing = finite(v)?.clamp(0.0, 1.0),
 
             AddChannel { name, instrument } => {
                 let id = p.alloc_id();
@@ -505,6 +520,28 @@ impl Command {
                 pattern: pid,
                 channel: cid,
             } => pattern(p, pid)?.notes.retain(|n| n.channel != cid),
+            Quantize {
+                pattern: pid,
+                notes,
+                grid,
+                strength,
+                lengths,
+            } => {
+                if grid == 0 {
+                    return Err(CommandError::Invalid("quantize grid must be at least one tick".into()));
+                }
+                let k = f64::from(finite(strength)?.clamp(0.0, 1.0));
+                let pat = pattern(p, pid)?;
+                for n in pat.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
+                    let target = (n.start + grid / 2) / grid * grid;
+                    let moved = n.start as f64 + (target as f64 - n.start as f64) * k;
+                    n.start = moved.round().max(0.0) as Tick;
+                    if lengths {
+                        n.length = ((n.length + grid / 2) / grid * grid).max(grid);
+                    }
+                }
+                sort_notes(pat);
+            }
 
             AddPattern { name } => {
                 let id = p.alloc_id();

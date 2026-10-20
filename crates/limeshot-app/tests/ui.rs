@@ -265,3 +265,74 @@ fn piano_roll_click_adds_drag_moves_delete_removes() {
     h.step();
     assert_eq!(notes(&h).first().map(|n| n.start), Some(STEP_TICKS));
 }
+
+#[test]
+fn copy_paste_and_quantize_in_the_piano_roll() {
+    let mut h = harness(true);
+    let melody = h.state().project().patterns[1].id;
+    let lead = h.state().project().channels[3].id;
+    let bass = h.state().project().channels[4].id;
+    h.state_mut().set_current_pattern(melody);
+    h.state_mut().select_channel(lead);
+    h.state_mut().show_tab(DockTab::PianoRoll);
+    h.step();
+    // Focus follows the last clicked editor; set it as a click would.
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::PianoRoll;
+    let count = |h: &Harness<'static, LimeShotApp>, c| {
+        h.state()
+            .project()
+            .pattern(melody)
+            .map(|p| p.notes_for(c).count())
+            .unwrap_or(0)
+    };
+    assert_eq!((count(&h, lead), count(&h, bass)), (10, 0));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::C);
+    h.step();
+    h.state_mut().select_channel(bass);
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::V);
+    h.step();
+    assert_eq!(count(&h, bass), 10, "pasted into the other channel at the same times");
+    assert_eq!(h.state().ui.piano.selection.len(), 10, "pasted notes are selected");
+    // Nudge the pasted notes off the grid with Alt (no snap) → quantize brings them back.
+    let ids = h.state().ui.piano.selection.clone();
+    h.state_mut().exec(Command::MoveNotes {
+        pattern: melody,
+        notes: ids,
+        dt: 37,
+        dkey: 0,
+    });
+    h.key_press_modifiers(Modifiers::ALT, Key::Q);
+    h.step();
+    let starts: Vec<Tick> = h
+        .state()
+        .project()
+        .pattern(melody)
+        .map(|p| p.notes_for(bass).map(|n| n.start).collect())
+        .unwrap_or_default();
+    assert!(starts.iter().all(|s| s % STEP_TICKS == 0), "{starts:?}");
+}
+
+#[test]
+fn channel_rack_copies_steps_between_channels() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let kick = h.state().project().channels[0].id;
+    let lead = h.state().project().channels[3].id;
+    h.state_mut().select_channel(kick);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::C);
+    h.step();
+    h.state_mut().select_channel(lead);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::V);
+    h.step();
+    let p = h.state().project().pattern(pat).expect("pattern").clone();
+    let root = h.state().project().channel(lead).expect("lead").root_key;
+    assert!(
+        p.is_step_sequence(lead, root),
+        "pasted steps stay steps on the target channel"
+    );
+    assert_eq!(p.notes_for(lead).count(), 4);
+}

@@ -188,6 +188,13 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.label(RichText::new(format!("in {pat_name}")).color(t.text_dim));
                 ui.separator();
                 ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
+                if ui
+                    .small_button("Quantize")
+                    .on_hover_text("Snap the selected notes (or all of this channel's) to the grid (Alt+Q)")
+                    .clicked()
+                {
+                    quantize(app, pid, cid);
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
                         app.ui.piano.zoom_x = (app.ui.piano.zoom_x * 1.25).min(800.0);
@@ -875,6 +882,79 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     }
 }
 
+fn note_ids(app: &LimeShotApp, pid: PatternId) -> Vec<NoteId> {
+    app.project()
+        .pattern(pid)
+        .map(|p| p.notes.iter().map(|n| n.id).collect())
+        .unwrap_or_default()
+}
+
+fn copy_notes(app: &mut LimeShotApp, pid: PatternId, ids: &[NoteId]) {
+    let notes: Vec<(u8, Tick, Tick, f32)> = app
+        .project()
+        .pattern(pid)
+        .map(|p| {
+            p.notes
+                .iter()
+                .filter(|n| ids.contains(&n.id))
+                .map(|n| (n.key, n.start, n.length, n.velocity))
+                .collect()
+        })
+        .unwrap_or_default();
+    let n = notes.len();
+    app.clipboard = Some(crate::app::Clipboard::Notes(notes));
+    app.hint(format!("Copied {n} notes"));
+}
+
+/// Paste clipboard notes into `channel` at their original times and select them.
+pub fn paste_notes(app: &mut LimeShotApp, pid: PatternId, channel: ChannelId) {
+    let Some(crate::app::Clipboard::Notes(notes)) = app.clipboard.clone() else {
+        return;
+    };
+    let before = note_ids(app, pid);
+    let new = notes
+        .iter()
+        .map(|&(key, start, length, velocity)| NewNote {
+            channel,
+            key,
+            start,
+            length,
+            velocity,
+        })
+        .collect();
+    app.exec(Command::AddNotes {
+        pattern: pid,
+        notes: new,
+    });
+    app.ui.piano.selection = note_ids(app, pid)
+        .into_iter()
+        .filter(|id| !before.contains(id))
+        .collect();
+}
+
+/// Quantize the selection (or every note of the channel) to the snap grid.
+pub fn quantize(app: &mut LimeShotApp, pid: PatternId, channel: ChannelId) {
+    let sig = app.project().time_signature;
+    let grid = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS);
+    let notes = if app.ui.piano.selection.is_empty() {
+        app.project()
+            .pattern(pid)
+            .map(|p| p.notes_for(channel).map(|n| n.id).collect())
+            .unwrap_or_default()
+    } else {
+        app.ui.piano.selection.clone()
+    };
+    if !notes.is_empty() {
+        app.exec(Command::Quantize {
+            pattern: pid,
+            notes,
+            grid,
+            strength: 1.0,
+            lengths: false,
+        });
+    }
+}
+
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
     let pid = app.current_pattern();
@@ -896,6 +976,23 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     }
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.piano.selection.clear();
+    }
+    let cut = key(ctx, Modifiers::COMMAND, Key::X);
+    if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {
+        copy_notes(app, pid, &sel);
+        if cut {
+            app.exec(Command::RemoveNotes {
+                pattern: pid,
+                notes: sel.clone(),
+            });
+            app.ui.piano.selection.clear();
+        }
+    }
+    if key(ctx, Modifiers::COMMAND, Key::V) {
+        paste_notes(app, pid, cid);
+    }
+    if key(ctx, Modifiers::ALT, Key::Q) {
+        quantize(app, pid, cid);
     }
     if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
         let before: Vec<NoteId> = app

@@ -823,6 +823,52 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.playlist.selection.clear();
     }
+    let cut = key(ctx, Modifiers::COMMAND, Key::X);
+    if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {
+        let clips: Vec<(PatternId, u32, Tick, Tick)> = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .filter(|c| sel.contains(&c.id))
+            .map(|c| (c.pattern(), c.track, c.start, c.length))
+            .collect();
+        app.clipboard = Some(crate::app::Clipboard::Clips(clips));
+        if cut {
+            app.exec(Command::RemoveClips(sel.clone()));
+            app.ui.playlist.selection.clear();
+        }
+    }
+    if key(ctx, Modifiers::COMMAND, Key::V)
+        && let Some(crate::app::Clipboard::Clips(clips)) = app.clipboard.clone()
+    {
+        let sig = app.project().time_signature;
+        let origin = clips.iter().map(|c| c.2).min().unwrap_or(0);
+        let target = if app.ui.mode == PlayMode::Song {
+            Snap::Bar.floor(app.player.status().position(), sig)
+        } else {
+            origin
+        };
+        let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
+        let cmds = clips
+            .iter()
+            .map(|&(pattern, track, start, length)| Command::AddClip {
+                pattern,
+                track,
+                start: start - origin + target,
+                length: Some(length),
+            })
+            .collect();
+        app.exec(Command::Batch(cmds));
+        app.ui.playlist.selection = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .map(|c| c.id)
+            .filter(|id| !before.contains(id))
+            .collect();
+    }
     if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
         let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
         app.exec(Command::DuplicateClips(sel.clone()));

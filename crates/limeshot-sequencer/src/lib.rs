@@ -17,7 +17,7 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
-use limeshot_core::{Instrument, PatternId, Project, Tempo, Tick, TimeSignature, Waveform};
+use limeshot_core::{Instrument, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature, Waveform};
 use limeshot_dsp::osc::Shape;
 use limeshot_dsp::{Adsr, SampleData, db_to_gain};
 use std::sync::Arc;
@@ -151,6 +151,15 @@ fn shape(w: Waveform) -> Shape {
     }
 }
 
+/// How far swing delays a note starting at pattern tick `start`: only notes exactly on the
+/// second 16th of each pair move, by up to half a step.
+pub fn swing_offset(start: Tick, swing: f32) -> Tick {
+    if swing <= 0.0 || !swing.is_finite() || start % (2 * STEP_TICKS) != STEP_TICKS {
+        return 0;
+    }
+    (f64::from(swing.min(1.0)) * (STEP_TICKS / 2) as f64).round() as Tick
+}
+
 /// Build the playback snapshot. `current_pattern` is what Pattern mode loops; an unknown id falls
 /// back to the first pattern.
 pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn SampleLookup) -> Snapshot {
@@ -208,6 +217,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         .collect::<Vec<_>>();
 
     let channel_index = |id| project.channel_index(id).and_then(|i| u16::try_from(i).ok());
+    let swing = |start: Tick| swing_offset(start, project.swing);
 
     let pattern = project.pattern(current_pattern).or_else(|| project.patterns.first());
     let pattern_program = match pattern {
@@ -218,9 +228,10 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                 .iter()
                 .filter(|n| n.start < length)
                 .filter_map(|n| {
+                    let tick = n.start + swing(n.start);
                     Some(NoteEvent {
-                        tick: n.start,
-                        length: n.length.min(length - n.start),
+                        tick,
+                        length: n.length.min(length.saturating_sub(tick)).max(1),
                         channel: channel_index(n.channel)?,
                         key: n.key,
                         velocity: n.velocity,
@@ -250,7 +261,10 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             let Some(channel) = channel_index(n.channel) else {
                 continue;
             };
-            let tick = clip.start + (n.start - clip.offset);
+            let tick = clip.start + (n.start - clip.offset) + swing(n.start);
+            if tick >= clip.end() {
+                continue;
+            }
             song_events.push(NoteEvent {
                 tick,
                 length: n.length.min(clip.end() - tick),
@@ -326,6 +340,34 @@ mod tests {
         assert_eq!(ticks, vec![0, 960, 1920, 2880]);
         assert_eq!(snap.pattern.length, 3840);
         assert_eq!(snap.pattern.range(900, 1921).len(), 2);
+    }
+
+    #[test]
+    fn swing_delays_every_second_sixteenth() {
+        let (mut d, a, _, pat) = setup();
+        for s in [0, 1, 2, 3] {
+            d.execute(Command::SetStep {
+                pattern: pat,
+                channel: a,
+                step: s,
+                on: true,
+            })
+            .unwrap();
+        }
+        d.execute(Command::SetSwing(0.5)).unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 3840,
+            length: None,
+        })
+        .unwrap();
+        let snap = compile(d.project(), pat, &NoSamples);
+        let ticks: Vec<Tick> = snap.pattern.events.iter().map(|e| e.tick).collect();
+        assert_eq!(ticks, vec![0, 300, 480, 780], "odd steps move by a quarter step at 50%");
+        let song: Vec<Tick> = snap.song.events.iter().map(|e| e.tick).collect();
+        assert_eq!(song, vec![3840, 4140, 4320, 4620]);
+        assert_eq!(swing_offset(250, 1.0), 0, "off-grid notes are left alone");
     }
 
     #[test]

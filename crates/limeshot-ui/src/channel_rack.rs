@@ -81,6 +81,22 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         steps: Some(n),
                     });
                 }
+                ui.add_space(12.0);
+                ui.label(RichText::new("Swing").color(t.text_dim));
+                let mut swing = app.project().swing;
+                let r = knob(ui, &mut swing, 0.0, 1.0, 0.0, 24.0, false, |v| {
+                    format!(
+                        "Swing {:.0}% — delays every second 16th (about 67% is a triplet feel)",
+                        v * 100.0
+                    )
+                });
+                let cmd = r.changed().then_some(Command::SetSwing(swing));
+                app.exec_gesture(&r, cmd);
+                ui.label(
+                    RichText::new(format!("{:.0}%", app.project().swing * 100.0))
+                        .font(crate::theme::mono(10.5))
+                        .color(t.text_dim),
+                );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.menu_button("+ Add channel", |ui| {
                         if ui.button("Sampler").clicked() {
@@ -493,5 +509,56 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         && let Some(c) = app.selected_channel()
     {
         route_to_free(app, c);
+    }
+    // Copy/cut/paste the selected channel's notes in the current pattern (steps included);
+    // pasting replaces the target channel's notes, as in FL Studio.
+    let pid = app.current_pattern();
+    let Some(c) = app.selected_channel() else { return };
+    let cut = key(ctx, Modifiers::COMMAND, Key::X);
+    if cut || key(ctx, Modifiers::COMMAND, Key::C) {
+        let notes: Vec<(u8, Tick, Tick, f32)> = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes_for(c).map(|n| (n.key, n.start, n.length, n.velocity)).collect())
+            .unwrap_or_default();
+        app.clipboard = Some(crate::app::Clipboard::Notes(notes));
+        if cut {
+            app.exec(Command::ClearChannelNotes {
+                pattern: pid,
+                channel: c,
+            });
+        }
+    }
+    if key(ctx, Modifiers::COMMAND, Key::V)
+        && let Some(crate::app::Clipboard::Notes(notes)) = app.clipboard.clone()
+    {
+        let root = app.project().channel(c).map(|ch| ch.root_key).unwrap_or(60);
+        let src_root = notes.iter().map(|n| n.0).min().unwrap_or(root);
+        // Steps copied from another channel play that channel's root key; re-pitch them so they
+        // remain steps on the target channel.
+        let new = notes
+            .iter()
+            .map(|&(key, start, length, velocity)| NewNote {
+                channel: c,
+                key: if notes.iter().all(|n| n.0 == src_root) {
+                    root
+                } else {
+                    key
+                },
+                start,
+                length,
+                velocity,
+            })
+            .collect();
+        app.exec(Command::Batch(vec![
+            Command::ClearChannelNotes {
+                pattern: pid,
+                channel: c,
+            },
+            Command::AddNotes {
+                pattern: pid,
+                notes: new,
+            },
+        ]));
     }
 }

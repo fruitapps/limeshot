@@ -391,6 +391,10 @@ pub struct Project {
     pub patterns: Vec<Pattern>,
     pub playlist: Playlist,
     pub mixer: Mixer,
+    /// Global swing, 0–1: delays every second 16th note by up to half a step (about 0.67 gives a
+    /// triplet feel). FL Studio's Channel Rack swing knob.
+    #[serde(default)]
+    pub swing: f32,
     /// Next free id for channels, patterns, clips and notes.
     pub next_id: u32,
     #[serde(flatten)]
@@ -423,6 +427,7 @@ impl Project {
                 clips: Vec::new(),
             },
             mixer: Mixer::default(),
+            swing: 0.0,
             next_id: 1,
             extra: Extra::new(),
         };
@@ -494,6 +499,7 @@ impl Project {
         if self.mixer.tracks.is_empty() {
             self.mixer = Mixer::default();
         }
+        self.swing = finite(self.swing, 0.0).clamp(0.0, 1.0);
         self.mixer.tracks.truncate(Mixer::MAX_TRACKS);
         let tracks = self.mixer.tracks.len();
         for t in &mut self.mixer.tracks {
