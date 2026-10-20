@@ -22,8 +22,9 @@ cargo fmt --all
 python3 scripts/features.py check        # or `generate` after editing features.json
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
 ```
-**Look at the UI** after UI changes. Render with `ui_shot` and read the PNG (screen capture of a live window may be
-blocked by macOS permissions; with Screen Recording granted, `screencapture -l <window id>` captures the live app). The
+**Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. On the dev Mac, Screen Recording and
+Accessibility are granted: `screencapture -l <window id>` captures the live app and CoreGraphics events can drive it
+(keyboard layout is QWERTZ). The
 headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions from geometry the editors record.
 
 ## Workspace
@@ -60,7 +61,7 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-20, session 2)
+## Current state (2026-10-20, session 4)
 * Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
   yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done.
 * UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
@@ -69,8 +70,8 @@ features as records.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 
 ## Immediate next tasks
-See `docs/development/next-steps.md`: run CI on Windows and Linux, a manual GUI pass, live FL observation with REA,
-then copy/paste, quantize, swing and the effects framework.
+See `docs/development/next-steps.md`: run CI on Windows and Linux, more live FL observation, then mixer sidechain,
+effects polish, audio and automation clips.
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

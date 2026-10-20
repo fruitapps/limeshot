@@ -60,17 +60,26 @@ headers keep the LED at the right.
 - **Key model fact:** "Piano roll mode shows zero-length, on-beat notes as steps". Steps and piano-roll notes are **one note list**. A channel whose notes are not step-like shows a preview instead of step buttons.
 - **Interaction sequence:** add a channel (Add menu or drag a sample in) → select a pattern → click steps → play (Space, PAT mode) → change tempo while playing.
 - **Confidence:** VERIFIED (docs); visual layout not observed live.
+- **OBSERVED live (FL Studio 2026.1.1, Default template, 2026-10-20, `fl-steps-toggle.png`):** the docs' "right-click
+  turns off" is not what the current version does. **Both buttons toggle**: a left- or right-click on an unlit step
+  lights it, on a lit step turns it off. A drag (either button) paints the state the *first* step was switched to, so a
+  drag that starts on a lit step erases the steps it crosses. Each row shows mute LED, pan knob, volume knob, mixer
+  track number, name button, selector LED, then the steps in groups of four with alternating grey/red tints. The
+  Default template has 808 Kick, Clap, HiHat, Snare and a fifth "808 Astronomic" channel at 130 BPM.
 - **LimeShot equivalent:** `ChannelRack` window. Rows carry mute/solo, pan knob, volume knob, mixer-target spinner, name button and step buttons. Steps are notes at `step × 240 ticks` with the channel's root key. Left-click toggles a step on, right-click toggles it off. A channel with non-step notes shows a mini preview (clicking it opens the Piano Roll). Pattern length is Auto or a fixed number of steps.
 
 ## 3. Piano Roll
 - **Expected behaviour (VERIFIED, `pianoroll.htm`):** Pitch is vertical, time horizontal; the ruler shows bars. The target-channel dropdown picks which channel is edited. Tools: Draw (P), Paint (B), Delete (D), Mute (T), Slice (C), Select (E), Zoom (Z), Playback (Y). In Draw, left-click adds a note, dragging moves it, right-click deletes, right-drag deletes many, Alt bypasses snap, Ctrl selects. Resize by dragging the right edge. Shift+arrows nudge. Ctrl+B duplicates the selection. Ghost notes come from other channels. The lower pane edits note properties (velocity, pan, release, Mod X/Y, pitch). Left-clicking the preview keyboard auditions a note. Snap follows the global snap (Main) or a local value; right-click sets the default note length. Double-click a note opens Note Properties. Ctrl+Up/Down transposes by an octave.
 - **Confidence:** VERIFIED (docs).
+- **OBSERVED live (`fl-note-length.png`):** in a fresh project the first note drawn is **two steps** (an eighth note)
+  long with snap "Line". After a note is resized, new notes take that length. Step notes from the Channel Rack show as
+  short notes on the channel's root key (C5); other channels' notes appear as grey ghost notes.
 - **LimeShot equivalent:** custom-painted Piano Roll. Draw-tool semantics (left add/move/resize, right delete, Ctrl rectangle select, Alt no-snap), a velocity lane, keyboard auditioning, horizontal and vertical zoom and scroll, a playhead, Delete, Ctrl+A, Ctrl+B duplicate, Shift+Up/Down transpose by a semitone, Ctrl+Up/Down by an octave. Ghost notes, slice and paint tools are tracked (P1).
 
 ## 4. Playlist and arrangement
 - **Expected behaviour (VERIFIED, `playlist.htm`):** Tracks are generic "clip tracks", not bound to mixer tracks. Clip types: pattern, audio, automation. Pattern clips reference a pattern; editing the pattern changes every instance until **Make unique**. Tools: Draw, Paint, Delete, Mute, Slip, Slice, Select, Zoom, Playback. In Draw, left-click places the current pattern, dragging moves, right-click deletes, Shift-drag on an edge resizes. Ctrl+B duplicates to the right. Snap options include Main/Line/Cell/beats/bar. Markers and time selection live on the timeline. Performance mode and Arrangements exist.
 - **Song vs pattern playback:** the toolbar PAT/SONG switch (L key). SONG plays the Playlist; PAT loops the current pattern (VERIFIED, `toolbar_panels.htm`).
-- **Confidence:** VERIFIED (docs). INFERRED: when a pattern clip is resized longer than its pattern, the extra region plays silence for piano-roll data. Step looping behaviour is not documented on this page and is marked UNKNOWN.
+- **Confidence:** VERIFIED (docs). **OBSERVED live (`fl-clip-no-loop.png`):** a one-bar pattern clip (steps only) dragged out to five bars draws its notes only in the first bar, and playing in SONG mode from bar 4 inside the clip is silent (flat oscilloscope, empty peak meter) while playing from bar 1 sounds. Pattern clips do **not** loop their pattern; the extended region is silence. This confirms decision D14.
 - **LimeShot equivalent:** Playlist window with tracks, pattern clips that reference patterns by `PatternId` (linked by default), "Make unique", draw/move/resize/delete/duplicate, a bar/beat ruler, a playhead, click-to-seek on the ruler, horizontal zoom and scroll, and snap to bar/beat/step. Song mode drives the engine from these clips. A pattern clip in LimeShot plays its pattern **once**, truncated to the clip length (documented choice).
 
 ## 5. Pattern management

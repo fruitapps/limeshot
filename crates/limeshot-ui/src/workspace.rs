@@ -77,7 +77,7 @@ impl Win {
         }
     }
 
-    fn id(self) -> Id {
+    pub fn id(self) -> Id {
         Id::new(("limeshot-window", self.index()))
     }
 
@@ -100,7 +100,7 @@ impl Win {
         }
     }
 
-    fn min_size(self) -> egui::Vec2 {
+    pub fn min_size(self) -> egui::Vec2 {
         match self {
             Win::ChannelSettings => vec2(300.0, 260.0),
             Win::Mixer => vec2(420.0, 300.0),

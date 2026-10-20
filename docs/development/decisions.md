@@ -64,8 +64,8 @@ boosts, so a mix cannot clip from panning alone. A selectable law can come later
 channel gets its own fader and meter. Recorded in `workflow-comparisons.md` W5.
 
 ### D14. Pattern clips play their pattern once (no looping inside a longer clip)
-**Why:** predictable. FL's exact behaviour for piano-roll data in extended clips is not documented on the manual pages
-we read (marked INFERRED/UNKNOWN). Revisit after observing FL directly.
+**Why:** predictable, and it matches FL Studio: observed live on 2026-10-20 (session 4) that a lengthened pattern clip
+is silent after its pattern ends (`fl-studio-analysis.md` §4).
 
 ### D15. Sampler declicks on note-off only
 **Why:** a 1 ms attack shifted the onset by one sample and hid sample-accurate timing. FL documents "Out only" as a
@@ -119,3 +119,8 @@ controls) stays ArtCraft-like. Implementation: `crates/limeshot-ui/src/workspace
 egui sliders can report `changed()` on their own when they round a value to the displayed decimals; viewing the Mixer
 once silently edited the project. Standard egui widgets that issue commands go through `widgets::user_changed`
 (changed and hovered/focused/dragged). A UI test asserts that opening every window leaves the project unmodified.
+
+### D26. Step buttons toggle with either mouse button
+**Why:** observed in FL Studio 2026.1.1 (session 4): right-click on an unlit step lights it, and a drag paints the state
+the first step was switched to. The manual's "right-click turns off" is outdated. LimeShot follows the observed
+behaviour; deleting in the Piano Roll and Playlist stays on right-click, as in FL.

@@ -60,3 +60,11 @@ With FL Studio 26.1.1 running, one main window of 1680×1020 pt (layer 0) was li
 | `.flp` / `.fst` document types | LimeShot uses its own `.lime` project format. Reading `.flp` is tracked as a P3 interoperability feature (the format is proprietary and would need independent documentation). |
 | Name presets for patterns, channels, tracks | Separate stable ids and names for channels, patterns, mixer tracks and playlist tracks. |
 | Export libraries (MP3/FLAC/OGG) | WAV export first (MVP); other formats tracked as P1/P2. |
+
+## Session 4 (2026-10-20): Accessibility granted
+
+The REA MCP tools (`mcp__rea__*`) are loaded in Claude Code and Accessibility is granted. FL Studio draws its own UI
+(see the VCL/Cocoa bridge above), so behaviour was observed by driving it with CoreGraphics mouse/keyboard events at
+coordinates read from screenshots, then capturing the result with `screencapture`. Findings: `fl-studio-analysis.md`
+§2–§4; screenshots `evidence/screenshots/fl-steps-toggle.png`, `fl-clip-no-loop.png`, `fl-note-length.png`. Only
+behaviour was observed; FL was quit without saving and its installation was not modified.

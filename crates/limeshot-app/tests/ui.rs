@@ -196,7 +196,34 @@ fn clicking_a_step_button_writes_a_note() {
     assert!(has_step(&h), "left-click turned the step on");
     click(&mut h, p, PointerButton::Secondary);
     assert!(!has_step(&h), "right-click turned it off");
+    // As in FL Studio 2026, both buttons toggle: a right-click on an unlit step lights it.
+    click(&mut h, p, PointerButton::Secondary);
+    assert!(has_step(&h), "right-click turned it back on");
+    click(&mut h, p, PointerButton::Primary);
+    assert!(!has_step(&h), "left-click on a lit step turns it off");
     assert!(h.state().doc.is_modified());
+}
+
+#[test]
+fn a_drag_starting_on_a_lit_step_erases() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let lead = h.state().project().channels[3].id;
+    let steps = |h: &Harness<'static, LimeShotApp>| -> Vec<Tick> {
+        h.state()
+            .project()
+            .pattern(pat)
+            .map(|p| p.notes_for(lead).map(|n| n.start).collect())
+            .unwrap_or_default()
+    };
+    let at = |h: &Harness<'static, LimeShotApp>, s| h.state().ui.rack.step_pos(lead, s).expect("strip");
+    let (s0, s3) = (at(&h, 0), at(&h, 3));
+    drag(&mut h, s0, s3);
+    assert_eq!(steps(&h), vec![0, 240, 480, 720]);
+    // Starting on lit step 2 and dragging to step 3 paints "off" (FL: the first step decides).
+    let (s1, s2) = (at(&h, 1), at(&h, 2));
+    drag(&mut h, s1, s2);
+    assert_eq!(steps(&h), vec![0, 720]);
 }
 
 #[test]
@@ -286,8 +313,8 @@ fn piano_roll_click_adds_drag_moves_delete_removes() {
     assert_eq!(n.len(), 1, "click adds a note");
     assert_eq!(
         (n[0].start, n[0].length, n[0].key),
-        (STEP_TICKS, STEP_TICKS, 72),
-        "snapped to the step grid"
+        (STEP_TICKS, 2 * STEP_TICKS, 72),
+        "snapped to the step grid; FL's first note is two steps long"
     );
     // Drag it two beats to the right.
     let from = g.pos(STEP_TICKS + 40, 72);
@@ -428,4 +455,25 @@ fn mixer_route_buttons_route_the_selected_track() {
     let p = button(&h, 1);
     click(&mut h, p, PointerButton::Primary);
     assert!(h.state().project().mixer.tracks[6].routes.iter().all(|r| r.to != 1));
+}
+
+/// Found in a live session: the Mixer laid its body out in child UIs that did not advance the
+/// cursor, so its frame covered only the title bar and the windows behind showed through.
+#[test]
+fn floating_window_frames_cover_their_body() {
+    let mut h = harness(true);
+    for w in Win::ALL {
+        h.state_mut().show_window(w);
+        h.state_mut().ui.workspace.state_mut(w).maximized = false;
+    }
+    h.step();
+    h.step();
+    for w in Win::ALL {
+        let r = h.ctx.memory(|m| m.area_rect(w.id())).expect("window drawn");
+        assert!(
+            r.height() >= w.min_size().y,
+            "{w:?} frame is only {} px high",
+            r.height()
+        );
+    }
 }

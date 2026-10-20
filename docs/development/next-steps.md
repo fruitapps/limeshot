@@ -2,10 +2,10 @@
 
 1. **Run CI on all platforms.** Needs a GitHub repository (`.github/workflows/ci.yml` is ready). Push and fix what
    Windows and Linux report, then update PF-002…PF-005 in `features.json`.
-2. **Grant Accessibility** to the Claude app (System Settings › Privacy & Security › Accessibility) so REA can read
-   FL Studio's UI and drive it. Then resolve the INFERRED/UNKNOWN items in `fl-studio-analysis.md` (clip looping D14,
-   default note length, step drag-paint), and run a real-input pass over the live LimeShot window with the checklist
-   in `progress.md`.
+2. **More live FL observation** (Accessibility is granted; session 4 settled clip looping, note length and step
+   painting). Next: Playlist clip resize from the left edge and slip editing, Piano Roll right-click default length,
+   Mixer send/route gestures, and Channel Settings layout. Repeat the real-input pass after UI changes (notes in the
+   session 4 entry of `progress.md`).
 3. **Mixer:** sidechain inputs for the compressor (MIX-009), pre-fader sends, a gain-reduction meter, and remembering
    window layout per project/settings.
 4. **Effects polish:** delay tempo sync, EQ curve display, presets for effects and instruments (FX-014, INS-010).

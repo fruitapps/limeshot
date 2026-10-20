@@ -2,7 +2,8 @@
 //!
 //! Row layout follows the FL Studio convention: mute · pan · volume · mixer track · name ·
 //! steps. Steps are notes of the current pattern on the 16th-note grid (see `limeshot_core`).
-//! Left-click/drag paints steps on, right-click/drag paints them off. A channel whose notes are not
+//! A click (either button) toggles a step; a drag paints the state the first step was switched to,
+//! as in FL Studio. A channel whose notes are not
 //! plain steps shows a preview of its notes instead; clicking it opens the Piano Roll. Clicking a
 //! channel name shows its instrument in the Inspector.
 
@@ -11,10 +12,7 @@ use crate::browser::{self, DraggedSample};
 use crate::theme::{Theme, mix, rgb, semibold};
 use crate::widgets::{knob, toggle_label};
 use crate::workspace::Win;
-use egui::{
-    Align2, Context, CornerRadius, DragValue, Key, Modifiers, PointerButton, Rect, RichText, Sense, Stroke, Ui, pos2,
-    vec2,
-};
+use egui::{Align2, Context, CornerRadius, DragValue, Key, Modifiers, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::*;
 
 const ROW_H: f32 = 30.0;
@@ -434,10 +432,10 @@ fn step_strip(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, 
     let started = app.ui.rack.paint.is_none() && (resp.drag_started() || resp.is_pointer_button_down_on());
     if started && let Some(pos) = pointer {
         let s = step_at(pos.x);
-        let right = ui.input(|i| i.pointer.button_down(PointerButton::Secondary));
         let currently_on = pattern.and_then(|p| p.step_note(ch.id, ch.root_key, s)).is_some();
-        // Left toggles (and paints that state); right always erases.
-        let on = !right && !currently_on;
+        // Either button toggles the first step and paints that state (observed in FL Studio 2026:
+        // a right-click on an unlit step lights it; see fl-studio-analysis.md §2).
+        let on = !currently_on;
         app.ui.rack.paint = Some((ch.id, on));
         app.ui.rack.painted.clear();
         app.select_channel(ch.id);
@@ -466,7 +464,7 @@ fn step_strip(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, 
         app.preview_off(ch.id, ch.root_key);
     }
     if resp.hovered() {
-        app.hint("Steps: left-click/drag to paint on, right-click/drag to erase");
+        app.hint("Steps: click to toggle; drag paints the state of the first step");
     }
 }
 

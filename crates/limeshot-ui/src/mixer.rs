@@ -37,6 +37,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     }
     // FL Studio layout: strips on the left, the selected track's FX slots on the right.
     let full = ui.available_rect_before_wrap();
+    // The children below don't advance this cursor; without claiming the space the window frame
+    // shrinks to the title bar and the windows behind show through the Mixer's body.
+    ui.advance_cursor_after_rect(full);
     let side_w = 300.0f32.min(full.width() * 0.45);
     let strips_rect = Rect::from_min_max(full.min, pos2(full.right() - side_w, full.bottom()));
     let side_rect = Rect::from_min_max(pos2(full.right() - side_w + 1.0, full.top()), full.max);

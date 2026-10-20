@@ -1,7 +1,7 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-20 (session 3).
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-20 (session 4).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
@@ -62,7 +62,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| SEQ-001 | Step sequencing | P0 | ✓ | VERIFIED | Step buttons per channel; left-click/drag paints on, right-click/drag paints off; steps are notes at 240-tick steps with the channel's root key. | `limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid`<br>`limeshot-engine tests/audio.rs::tempo_change_moves_onsets`<br>`limeshot-app tests/ui.rs::clicking_a_step_button_writes_a_note`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end`<br>`limeshot-app tests/ui.rs::dragging_across_steps_paints_them_in_one_undo_step` |
+| SEQ-001 | Step sequencing | P0 | ✓ | VERIFIED | Step buttons per channel; either mouse button toggles a step and a drag paints the state of the first step (FL Studio); steps are notes at 240-tick steps with the channel's root key.<br>*Toggle/paint semantics observed live in FL Studio (docs/research/evidence/screenshots/fl-steps-toggle.png) and checked with real input in the live LimeShot window (2026-10-20, session 4).* | `limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid`<br>`limeshot-engine tests/audio.rs::tempo_change_moves_onsets`<br>`limeshot-app tests/ui.rs::clicking_a_step_button_writes_a_note`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end`<br>`limeshot-app tests/ui.rs::dragging_across_steps_paints_them_in_one_undo_step`<br>`limeshot-app tests/ui.rs::a_drag_starting_on_a_lit_step_erases` |
 | SEQ-002 | Add sampler / synth channels | P0 | ✓ | VERIFIED | Add menu, Channel Rack + Add, or drop a WAV from the Browser. | `limeshot-core document::tests::new_channels_take_free_inserts`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | SEQ-003 | Channel mute and solo | P0 | ✓ | VERIFIED | LED: left-click mutes, right-click or Cmd+click solos. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves`<br>`limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master` |
 | SEQ-004 | Channel volume and pan | P0 | ✓ | VERIFIED | Knobs (drag, Shift fine, wheel, double-click reset); default 78% volume. | `limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
@@ -85,7 +85,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| PR-001 | Add, move, resize, delete notes | P0 | ✓ | VERIFIED | Same mouse conventions; Alt bypasses snap; Delete removes the selection. | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes`<br>`limeshot-core document::tests::notes_move_resize_and_duplicate` |
+| PR-001 | Add, move, resize, delete notes | P0 | ✓ | VERIFIED | Same mouse conventions; Alt bypasses snap; Delete removes the selection. New notes are two steps long until a note is drawn or resized; after that they take its length (as observed in FL Studio).<br>*Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png).* | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes`<br>`limeshot-core document::tests::notes_move_resize_and_duplicate` |
 | PR-002 | Note selection (click, rectangle, select all) | P0 | ✓ | IMPLEMENTED | Cmd+click toggles, Cmd+drag rectangle, Cmd+A all, Cmd+D none, double-click a note selects its pitch row.<br>*Invert selection not implemented.* | — |
 | PR-003 | Snap to grid | P0 | ✓ | VERIFIED | Global snap (bar, beat, ½ beat, step, ½, ¼ step, none); Alt bypasses. | `limeshot-core time::tests::snapping`<br>`limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes` |
 | PR-004 | Velocity editing | P0 | ✓ | IMPLEMENTED | Velocity lane: click/drag a stem; applies to the selection when the note is selected.<br>*SetNoteVelocity is unit-tested through the engine; the lane drag is manual-tested only.* | `limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release` |
@@ -117,7 +117,7 @@ automated tests or recorded manual verification. Everything else is not done.
 |---|---|---|---|---|---|---|
 | PL-001 | Pattern clips (linked instances) | P0 | ✓ | VERIFIED | Left-click empty space places the current pattern; every clip of a pattern plays the same data. | `limeshot-core document::tests::clips_are_linked_until_made_unique`<br>`limeshot-sequencer tests::playlist_flattens_linked_clips`<br>`limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern`<br>`limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-002 | Move clips (time and track) | P0 | ✓ | VERIFIED | Drag moves the selection with snap; arrows nudge. | `limeshot-core document::tests::clip_duplicate_and_move` |
-| PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge; content is truncated (pattern plays once).<br>*Deviation/INFERRED: LimeShot does not loop a pattern inside a longer clip.* | `limeshot-sequencer tests::clip_truncates_notes` |
+| PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge; content is truncated (pattern plays once).<br>*Matches FL Studio: observed live in FL Studio 2026.1.1 that a pattern clip lengthened past its pattern is silent after the pattern ends (no looping; evidence/screenshots/fl-clip-no-loop.png). Decision D14.* | `limeshot-sequencer tests::clip_truncates_notes` |
 | PL-004 | Delete clips | P0 | ✓ | VERIFIED | Right-click or right-drag deletes; Delete key removes the selection. | `limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
 | PL-005 | Duplicate clips (Ctrl+B) | P0 | ✓ | VERIFIED | Cmd+B or clip menu › Duplicate. | `limeshot-core document::tests::clip_duplicate_and_move` |
 | PL-006 | Select clips | P0 | ✓ | IMPLEMENTED | Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D. | — |

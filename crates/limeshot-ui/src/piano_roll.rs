@@ -71,7 +71,9 @@ impl Default for State {
             scroll: Vec2::ZERO,
             selection: Vec::new(),
             drag: None,
-            last_len: STEP_TICKS,
+            // FL Studio's first drawn note is two steps long; after that new notes take the
+            // length of the last note drawn or resized (observed, fl-studio-analysis.md §3).
+            last_len: 2 * STEP_TICKS,
             last_vel: 0.78,
             audition: None,
             scrolled_once: false,

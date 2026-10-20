@@ -55,7 +55,7 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 
 | Where | Action |
 |---|---|
-| Step buttons | left-click/drag paints on, right-click/drag paints off; turning a step on auditions it |
+| Step buttons | left- or right-click toggles; a drag paints the state of the first step (FL Studio 2026); turning a step on auditions it |
 | Piano Roll | left on empty adds a note (snapped) and keeps dragging it; drag a note moves; drag right edge resizes; right-click/drag deletes; Cmd+click toggles selection; Cmd+drag rectangle; double-click a note selects its pitch row; Alt bypasses snap |
 | Piano keys | click/drag auditions |
 | Velocity lane | click/drag sets the nearest stem (and the whole selection if that note is selected) |

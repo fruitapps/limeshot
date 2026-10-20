@@ -86,3 +86,31 @@ Verification: 95 tests pass; Clippy and fmt clean. Offscreen renders reviewed. T
 Then: **mixer routing** (MIX-008/013) — `Route`s on mixer tracks (inserts → master by default), `SetRoute` with feedback
 refusal, topological mixing order in the snapshot, FL-style route buttons and send knobs on strips, an Output section
 in the track panel. 99 tests pass.
+
+## 2026-10-20 — Session 4: live FL Studio observation and a real-input pass
+
+Permissions: Screen Recording and Accessibility granted. Synthetic mouse and keyboard input (CoreGraphics events from a
+small throwaway helper outside the repository) reaches both FL Studio and LimeShot. REA's MCP tools are loaded; FL
+Studio's UI is custom-drawn, so input was driven by coordinates read from screenshots rather than the accessibility tree.
+
+FL Studio 2026.1.1, observed live (`fl-studio-analysis.md` §2–§4, screenshots in `docs/research/evidence/screenshots/`):
+1. **Steps:** both mouse buttons toggle; a drag paints the state of the first step. LimeShot now does the same (D26).
+2. **Clip looping:** a lengthened pattern clip is silent after its pattern ends — confirms D14.
+3. **Default note length:** the first drawn note is two steps; later notes take the last drawn/resized length.
+   LimeShot's initial length changed from one step to two.
+
+Real-input pass over the live LimeShot window (`limeshot --demo`): moving a workspace window, painting steps,
+right-click toggles, drag-erase, Cmd+Z (one undo step for a drag), Space in Pattern and Song mode (playhead, meters,
+voices), F6/F7/F9, drawing, resizing and remembered note length in the Piano Roll, placing and right-click deleting a
+Playlist clip, dragging a Mixer fader. All behaved as expected except:
+* **Bug found and fixed:** the Mixer's body (and a floating Playlist's) was transparent — the windows behind showed
+  through. The bodies are laid out in child UIs that did not advance the parent cursor, so the window frame only
+  covered the title bar. Regression test `floating_window_frames_cover_their_body` (fails without the fix).
+
+Notes for the next real-input pass: this Mac uses a German (QWERTZ) layout, so the Z key is virtual keycode 16; and
+driving apps through AppleScript "System Events" triggers a macOS Automation prompt — use CoreGraphics events instead.
+
+Verification: `cargo test --workspace` (101 tests) passes; Clippy (`-D warnings`) and `cargo fmt --check` are clean.
+
+Not verified: Windows/Linux (CI results not readable from this machine: `gh` is not installed and the repository is
+private).

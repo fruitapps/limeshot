@@ -155,6 +155,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         ui.label(RichText::new(format!("{bars} bars")).font(mono(10.5)).color(t.text_dim));
     });
     let area = ui.available_rect_before_wrap();
+    // Claim the space the child UIs below fill, so a floating Playlist's frame covers it.
+    ui.advance_cursor_after_rect(area);
     if ui.rect_contains_pointer(area) && ui.input(|i| i.pointer.any_pressed()) {
         app.ui.focus = Focus::Playlist;
     }
