@@ -64,7 +64,7 @@ applies a JSON list of the same typed commands the UI uses:
 cargo test --workspace
 ```
 
-The suite (92 tests) covers musical timing, scheduling across buffer sizes and sample rates,
+The suite (95 tests) covers musical timing, scheduling across buffer sizes and sample rates,
 synth/sampler behaviour, effects, mixing, project round trips, undo/redo, and the UI driven with synthetic input.
 
 ## Layout

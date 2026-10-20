@@ -28,6 +28,7 @@ pub mod shortcuts;
 pub mod theme;
 pub mod toolbar;
 pub mod widgets;
+pub mod workspace;
 
 pub use app::LimeShotApp;
 pub use settings::Settings;

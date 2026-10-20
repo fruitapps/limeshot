@@ -434,3 +434,9 @@ pub fn vrule(ui: &mut Ui, height: f32) {
         Stroke::new(1.0, t.border),
     );
 }
+
+/// Whether a standard egui widget's `changed()` came from the user. egui sliders can report a
+/// change on their own (rounding to the displayed decimals), which must not edit the project.
+pub fn user_changed(r: &Response) -> bool {
+    r.changed() && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
+}

@@ -132,15 +132,13 @@ impl Geometry {
 
 const PICKER_W: f32 = 150.0;
 
-/// The Playlist fills the central area (FL Studio opens it maximised): a header strip, the
-/// pattern picker on the left, and the arrangement.
+/// Body of the Playlist window (FL Studio opens it maximised): a tool strip, the pattern picker
+/// on the left, and the arrangement.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    let cur = app.current_pattern();
-    let cur_name = app.project().pattern(cur).map(|p| p.name.clone()).unwrap_or_default();
     let sig = app.project().time_signature;
     let bars = app.project().playlist.song_length(sig) / sig.ticks_per_bar();
-    panel_header(ui, &format!("Playlist  ·  Arrangement  ›  {cur_name}"), |ui| {
+    panel_header(ui, "", |ui| {
         if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
             app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x * 1.25).min(400.0);
         }
@@ -164,9 +162,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let body_rect = Rect::from_min_max(pos2(picker.right() + 1.0, area.top()), area.max);
     ui.painter()
         .line_segment([picker.right_top(), picker.right_bottom()], Stroke::new(1.0, t.border));
-    let mut pick_ui = ui.new_child(egui::UiBuilder::new().max_rect(picker));
+    let mut pick_ui = ui.new_child(egui::UiBuilder::new().id_salt("playlist-picker").max_rect(picker));
     picker_ui(app, &mut pick_ui);
-    let mut body_ui = ui.new_child(egui::UiBuilder::new().max_rect(body_rect));
+    let mut body_ui = ui.new_child(egui::UiBuilder::new().id_salt("playlist-body").max_rect(body_rect));
     body(app, &mut body_ui);
     let ctx = ui.ctx().clone();
     clip_menu(app, &ctx);
@@ -244,7 +242,7 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                     app.set_current_pattern(id);
                 }
                 if resp.double_clicked() {
-                    app.show_tab(crate::app::DockTab::PianoRoll);
+                    app.show_window(crate::workspace::Win::PianoRoll);
                 }
                 resp.on_hover_text("Click: place this pattern · double-click: edit in the Piano Roll")
                     .context_menu(|ui| {
@@ -693,7 +691,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && let Some((c, _, false)) = hit(view, clips, p)
     {
         app.set_current_pattern(c.pattern());
-        app.show_tab(crate::app::DockTab::PianoRoll);
+        app.show_window(crate::workspace::Win::PianoRoll);
     }
 }
 
@@ -741,7 +739,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                 }
                 if ui.button("Edit pattern").clicked() {
                     app.set_current_pattern(clip.pattern());
-                    app.show_tab(crate::app::DockTab::PianoRoll);
+                    app.show_window(crate::workspace::Win::PianoRoll);
                     close = true;
                 }
                 if ui.button("Rename pattern…").clicked() {

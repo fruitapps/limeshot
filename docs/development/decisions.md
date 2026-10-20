@@ -84,7 +84,7 @@ scripts), `render` and `play`, plus the offscreen `ui_shot` renderer, cover head
 **Why:** START.md treats all three platforms as first class. Platform status is recorded only after a job has actually
 passed.
 
-### D19. Docked layout instead of floating editor windows (session 2)
+### D19. Docked layout instead of floating editor windows (session 2) — superseded by D24
 The editors moved from floating egui windows into an ArtCraft-style docked layout: the Playlist as the central
 workspace (FL Studio opens it maximised, observed), a bottom dock with Channel Rack / Piano Roll / Mixer tabs, and an
 Inspector on the right replacing FL's floating Channel Settings. **Why:** the user asked for a sleeker, more modern UI
@@ -107,3 +107,15 @@ Observed in FL Studio 2026's toolbar on a new project. `Tempo::default()` stays 
 ### D23. UI tests locate controls through recorded geometry
 Editors record their layout (step strip rectangles, Piano Roll and Playlist grid mappings) each frame. Tests compute
 pointer positions from it, so restyling does not break the interaction tests.
+
+### D24. FL Studio's window model with ArtCraft-like styling (supersedes D19)
+The user clarified that FL Studio is the source for UI/UX and ArtCraft only for the broad style. Editors are windows in a
+workspace again: movable, resizable, maximisable, detachable into OS windows (egui viewports), toggled by FL's F-keys;
+the Playlist starts maximised with the Channel Rack on top; Channel Settings is a window opened from the channel
+button; the Mixer carries the selected track's FX slots on its right. Styling (tokens, fonts, flat title bars and
+controls) stays ArtCraft-like. Implementation: `crates/limeshot-ui/src/workspace.rs`.
+
+### D25. Only user interaction may turn widget changes into commands
+egui sliders can report `changed()` on their own when they round a value to the displayed decimals; viewing the Mixer
+once silently edited the project. Standard egui widgets that issue commands go through `widgets::user_changed`
+(changed and hovered/focused/dragged). A UI test asserts that opening every window leaves the project unmodified.

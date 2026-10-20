@@ -1,9 +1,10 @@
-//! The Mixer (bottom dock): master plus insert tracks. Channels route to inserts (Channel Rack's
+//! The Mixer window: master plus insert tracks. Channels route to inserts (Channel Rack's
 //! mixer field); inserts sum into the master. Each strip has a meter, fader, pan, mute and solo.
 //! Mute: left-click · Solo: right-click or Cmd+click (FL Studio convention). Clicking a strip's
-//! name shows it in the Inspector.
+//! name or FX area selects it; the panel on the right shows its level, routing and FX slots (as FL Studio's
+//! Mixer does).
 
-use crate::app::{InspectTarget, LimeShotApp};
+use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, mono, rgb, semibold};
 use crate::widgets::{fader, knob, meter, panel_header, section, toggle_label};
 use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
@@ -31,6 +32,20 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             h.1 = r.max(h.1 * fall);
         }
     }
+    // FL Studio layout: strips on the left, the selected track's FX slots on the right.
+    let full = ui.available_rect_before_wrap();
+    let side_w = 300.0f32.min(full.width() * 0.45);
+    let strips_rect = Rect::from_min_max(full.min, pos2(full.right() - side_w, full.bottom()));
+    let side_rect = Rect::from_min_max(pos2(full.right() - side_w + 1.0, full.top()), full.max);
+    let t = Theme::current();
+    ui.painter().line_segment(
+        [side_rect.left_top(), side_rect.left_bottom()],
+        Stroke::new(1.0, t.border),
+    );
+    let mut side_ui = ui.new_child(egui::UiBuilder::new().id_salt("mixer-track-panel").max_rect(side_rect));
+    track_panel(app, &mut side_ui);
+    let mut strips_ui = ui.new_child(egui::UiBuilder::new().id_salt("mixer-strips").max_rect(strips_rect));
+    let ui = &mut strips_ui;
     egui::ScrollArea::horizontal()
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -73,7 +88,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     };
     let any_solo = app.project().mixer.tracks.iter().skip(1).any(|t| t.solo);
     let audible = !track.muted && (i == 0 || !any_solo || track.solo);
-    let selected = app.ui.mixer.selected == i && app.ui.inspect == InspectTarget::MixerTrack;
+    let selected = app.ui.mixer.selected == i;
     let routed = routed(app, i);
     let color = routed
         .first()
@@ -129,10 +144,10 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
             .sense(Sense::click()),
         )
         .on_hover_text(if routed.is_empty() {
-            format!("{} — click: Inspector · double-click: rename", track.name)
+            format!("{} — click: select · double-click: rename", track.name)
         } else {
             format!(
-                "{} — channels: {} — click: Inspector · double-click: rename",
+                "{} — channels: {} — click: select · double-click: rename",
                 track.name,
                 routed.iter().map(|r| r.0.as_str()).collect::<Vec<_>>().join(", ")
             )
@@ -143,7 +158,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     if name.double_clicked() {
         app.dialog = Some(crate::dialogs::Dialog::rename_mixer(app, i));
     }
-    // Insert slots (names only; edit them in the Inspector).
+    // Insert slots (names only; edit them in the track panel on the right).
     let labels = crate::effects_ui::strip_labels(&track.effects);
     let (fx_rect, fx_resp) = ui.allocate_exact_size(vec2(STRIP_W - 12.0, 44.0), Sense::click());
     ui.painter()
@@ -182,7 +197,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         );
     }
     if fx_resp
-        .on_hover_text("Insert effects — click to edit in the Inspector")
+        .on_hover_text("Insert effects — click to edit them in the panel on the right")
         .clicked()
     {
         select(app, i);
@@ -263,19 +278,17 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
 
 fn select(app: &mut LimeShotApp, i: u16) {
     app.ui.mixer.selected = i;
-    app.ui.inspect = InspectTarget::MixerTrack;
-    app.ui.show_inspector = true;
 }
 
-/// The Inspector view of the selected mixer track.
-pub fn inspector(app: &mut LimeShotApp, ui: &mut Ui) {
+/// The selected track's panel on the right of the Mixer: level, routing and insert slots.
+fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let i = app.ui.mixer.selected;
     let Some(track) = app.project().mixer.tracks.get(usize::from(i)).cloned() else {
-        app.ui.inspect = InspectTarget::Channel;
+        app.ui.mixer.selected = 0;
         return;
     };
-    panel_header(ui, "Mixer track", |ui| {
+    panel_header(ui, "Track", |ui| {
         ui.label(
             RichText::new(if i == 0 { "Master".into() } else { format!("Insert {i}") })
                 .font(mono(10.5))
@@ -299,14 +312,14 @@ pub fn inspector(app: &mut LimeShotApp, ui: &mut Ui) {
                     .fixed_decimals(1)
                     .text("Volume"),
             );
-            let cmd = r.changed().then(|| Command::SetMixerVolume {
+            let cmd = crate::widgets::user_changed(&r).then(|| Command::SetMixerVolume {
                 track: i,
                 volume: if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) },
             });
             app.exec_gesture(&r, cmd);
             let mut pan = track.pan;
             let r = ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan"));
-            let cmd = r.changed().then_some(Command::SetMixerPan { track: i, pan });
+            let cmd = crate::widgets::user_changed(&r).then_some(Command::SetMixerPan { track: i, pan });
             app.exec_gesture(&r, cmd);
             ui.add_space(8.0);
             section(ui, "Input");

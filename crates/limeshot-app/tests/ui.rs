@@ -6,7 +6,7 @@
 use egui::{Event, Key, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use limeshot_core::*;
-use limeshot_ui::app::DockTab;
+use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 
 fn harness(demo: bool) -> Harness<'static, LimeShotApp> {
@@ -61,41 +61,78 @@ fn drag(h: &mut Harness<'static, LimeShotApp>, from: Pos2, to: Pos2) {
 #[test]
 fn renders_every_panel_without_panicking() {
     let mut h = harness(true);
-    for tab in DockTab::ALL {
-        h.state_mut().show_tab(tab);
+    for w in Win::ALL {
+        h.state_mut().show_window(w);
         h.step();
         h.step();
     }
     let c = h.state().project().channels[3].id;
     h.state_mut().select_channel(c);
+    h.state_mut().ui.mixer.selected = 4;
     h.step();
-    h.state_mut().ui.inspect = limeshot_ui::app::InspectTarget::MixerTrack;
-    h.step();
+    // Maximise, detach (embedded in tests: no multi-viewport backend) and close every window.
+    for w in Win::ALL {
+        h.state_mut().ui.workspace.state_mut(w).maximized = true;
+        h.step();
+        h.state_mut().ui.workspace.state_mut(w).detached = true;
+        h.step();
+        h.state_mut().ui.workspace.close(w);
+        h.step();
+    }
     let mut h = harness(false);
     h.step();
 }
 
 #[test]
-fn window_shortcuts_switch_dock_tabs() {
+fn new_project_opens_fl_studios_window_layout() {
+    let h = harness(false);
+    let ws = &h.state().ui.workspace;
+    assert!(
+        ws.is_open(Win::Playlist) && ws.state(Win::Playlist).maximized,
+        "Playlist maximised"
+    );
+    assert!(
+        ws.is_open(Win::ChannelRack) && !ws.state(Win::ChannelRack).maximized,
+        "Channel Rack floating"
+    );
+    assert!(!ws.is_open(Win::PianoRoll) && !ws.is_open(Win::Mixer));
+}
+
+#[test]
+fn f_keys_toggle_windows() {
     let mut h = harness(false);
-    assert!(h.state().is_tab_visible(DockTab::ChannelRack));
     h.key_press(Key::F7);
     h.step();
-    assert!(h.state().is_tab_visible(DockTab::PianoRoll));
+    assert!(h.state().is_window_open(Win::PianoRoll));
     h.key_press(Key::F9);
     h.step();
-    assert!(h.state().is_tab_visible(DockTab::Mixer));
+    assert!(h.state().is_window_open(Win::Mixer));
     h.key_press(Key::F9);
     h.step();
-    assert!(
-        !h.state().ui.dock_open,
-        "pressing the visible tab's key again hides the dock"
-    );
-    h.key_press(Key::F5);
+    assert!(!h.state().is_window_open(Win::Mixer), "pressing again closes it");
+    h.key_press(Key::F6);
     h.step();
+    assert!(!h.state().is_window_open(Win::ChannelRack));
+}
+
+#[test]
+fn clicking_a_channel_button_toggles_its_settings_window() {
+    let mut h = harness(true);
+    let kick = h.state().project().channels[0].id;
+    let step = h.state().ui.rack.step_pos(kick, 0).expect("strip");
+    // The channel button sits left of the step strip (its right edge is ~6 px before the strip).
+    let button = step - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Primary);
+    assert!(h.state().is_window_open(Win::ChannelSettings));
+    assert_eq!(h.state().selected_channel(), Some(kick));
+    for _ in 0..3 {
+        h.step();
+    }
+    let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Primary);
     assert!(
-        h.state().ui.dock_open,
-        "F5 toggles the Playlist between maximised and docked"
+        !h.state().is_window_open(Win::ChannelSettings),
+        "a second click closes it"
     );
 }
 
@@ -184,6 +221,9 @@ fn dragging_across_steps_paints_them_in_one_undo_step() {
 #[test]
 fn clicking_the_playlist_places_the_current_pattern() {
     let mut h = harness(true);
+    // The floating Channel Rack covers part of the maximised Playlist (as in FL Studio).
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
     let before = h.state().project().playlist.clips.len();
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     // Track 5, bar 3 — empty in the demo.
@@ -210,6 +250,8 @@ fn clicking_the_playlist_places_the_current_pattern() {
 #[test]
 fn picker_selects_the_pattern_to_place() {
     let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
     let melody = h.state().project().patterns[1].id;
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     // The picker column sits left of the track headers; the second row is the Melody pattern.
@@ -223,7 +265,8 @@ fn piano_roll_click_adds_drag_moves_delete_removes() {
     let mut h = harness(true);
     let lead = h.state().project().channels[3].id;
     h.state_mut().select_channel(lead);
-    h.state_mut().show_tab(DockTab::PianoRoll);
+    h.state_mut().show_window(Win::PianoRoll);
+    h.state_mut().ui.workspace.state_mut(Win::PianoRoll).maximized = true;
     for _ in 0..3 {
         h.step();
     }
@@ -274,7 +317,7 @@ fn copy_paste_and_quantize_in_the_piano_roll() {
     let bass = h.state().project().channels[4].id;
     h.state_mut().set_current_pattern(melody);
     h.state_mut().select_channel(lead);
-    h.state_mut().show_tab(DockTab::PianoRoll);
+    h.state_mut().show_window(Win::PianoRoll);
     h.step();
     // Focus follows the last clicked editor; set it as a click would.
     h.state_mut().ui.focus = limeshot_ui::app::Focus::PianoRoll;
@@ -335,4 +378,21 @@ fn channel_rack_copies_steps_between_channels() {
         "pasted steps stay steps on the target channel"
     );
     assert_eq!(p.notes_for(lead).count(), 4);
+}
+
+#[test]
+fn opening_windows_does_not_modify_the_project() {
+    let mut h = harness(true);
+    h.state_mut().ui.mixer.selected = 4;
+    for w in Win::ALL {
+        h.state_mut().show_window(w);
+        for _ in 0..3 {
+            h.step();
+        }
+    }
+    assert!(
+        !h.state().doc.is_modified(),
+        "viewing changed the project: {:?}",
+        h.state().doc.history()
+    );
 }

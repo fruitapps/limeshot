@@ -1,7 +1,11 @@
 //! The LimeShot desktop application.
 //!
-//! `limeshot [project.lime] [--demo]`
+//! `limeshot [project.lime] [--demo] [--show=WINDOW]… [--detach=WINDOW]…`
+//!
+//! WINDOW is `playlist`, `rack`, `piano`, `mixer` or `settings` (window layout at start-up;
+//! useful for demos and for checking detached windows).
 
+use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 
 struct App(LimeShotApp);
@@ -35,6 +39,25 @@ fn main() -> eframe::Result {
             }
             Some(Err(e)) => log::error!("demo: {e}"),
             None => log::error!("demo: bundled samples not found"),
+        }
+    }
+    for a in &args {
+        let (flag, name) = a.split_once('=').unwrap_or((a.as_str(), ""));
+        let w = match name {
+            "playlist" => Win::Playlist,
+            "rack" => Win::ChannelRack,
+            "piano" => Win::PianoRoll,
+            "mixer" => Win::Mixer,
+            "settings" => Win::ChannelSettings,
+            _ => continue,
+        };
+        match flag {
+            "--show" => app.show_window(w),
+            "--detach" => {
+                app.show_window(w);
+                app.ui.workspace.state_mut(w).detached = true;
+            }
+            _ => {}
         }
     }
     if let Some(path) = args.iter().find(|a| !a.starts_with("--")) {

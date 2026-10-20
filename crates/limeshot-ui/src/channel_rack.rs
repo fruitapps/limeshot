@@ -6,10 +6,11 @@
 //! plain steps shows a preview of its notes instead; clicking it opens the Piano Roll. Clicking a
 //! channel name shows its instrument in the Inspector.
 
-use crate::app::{DockTab, LimeShotApp};
+use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
 use crate::theme::{Theme, mix, rgb, semibold};
 use crate::widgets::{knob, toggle_label};
+use crate::workspace::Win;
 use egui::{
     Align2, Context, CornerRadius, DragValue, Key, Modifiers, PointerButton, Rect, RichText, Sense, Stroke, Ui, pos2,
     vec2,
@@ -75,7 +76,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
                 let mut n = steps;
                 let r = ui.add_enabled(!auto, DragValue::new(&mut n).range(1..=512).suffix(" steps"));
-                if r.changed() {
+                if crate::widgets::user_changed(&r) {
                     app.exec(Command::SetPatternLength {
                         pattern: pid,
                         steps: Some(n),
@@ -181,7 +182,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                             .custom_formatter(|v, _| if v == 0.0 { "M".into() } else { format!("{v:.0}") }),
                     )
                     .on_hover_text("Mixer track (M = Master). Drag or type.");
-                let cmd = r.changed().then_some(Command::SetChannelMixerTrack {
+                let cmd = crate::widgets::user_changed(&r).then_some(Command::SetChannelMixerTrack {
                     channel: ch.id,
                     track: mt,
                 });
@@ -261,14 +262,20 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         if missing { t.danger } else { t.text },
     );
     if resp.clicked() {
+        // FL Studio: clicking a channel button toggles its Channel Settings window.
+        let same = app.selected_channel() == Some(ch.id);
         app.select_channel(ch.id);
-        app.ui.show_inspector = true;
+        if same && app.is_window_open(Win::ChannelSettings) {
+            app.ui.workspace.close(Win::ChannelSettings);
+        } else {
+            app.show_window(Win::ChannelSettings);
+        }
     }
     if let Some(p) = resp.dnd_release_payload::<DraggedSample>() {
         browser::assign_sample(app, ch.id, &p.0);
     }
     let hover = format!(
-        "{} ({}) — click: show in Inspector · right-click: menu{}",
+        "{} ({}) — click: Channel Settings · right-click: menu{}",
         ch.name,
         ch.instrument.kind_label(),
         if missing {
@@ -285,12 +292,12 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let pid = app.current_pattern();
     if ui.button("Piano Roll").clicked() {
         app.select_channel(ch.id);
-        app.show_tab(DockTab::PianoRoll);
+        app.show_window(Win::PianoRoll);
         ui.close();
     }
-    if ui.button("Show in Inspector").clicked() {
+    if ui.button("Channel Settings").clicked() {
         app.select_channel(ch.id);
-        app.ui.show_inspector = true;
+        app.show_window(Win::ChannelSettings);
         ui.close();
     }
     if ui.button("Rename…").clicked() {
@@ -486,7 +493,7 @@ fn note_preview(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId
     }
     if resp.clicked() {
         app.select_channel(ch.id);
-        app.show_tab(DockTab::PianoRoll);
+        app.show_window(Win::PianoRoll);
     }
     resp.on_hover_text("Piano Roll notes — click to edit");
 }

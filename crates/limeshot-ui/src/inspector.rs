@@ -1,33 +1,21 @@
-//! The Inspector (right panel): parameters of the selected channel's instrument, or of the
-//! selected mixer track. It replaces FL Studio's floating Channel Settings window with a docked
-//! panel, as the ArtCraft apps do for their property panels.
+//! The Channel Settings window: the selected channel's instrument parameters (FL Studio opens
+//! this window when you click a channel button in the Channel Rack).
 
-use crate::app::{InspectTarget, LimeShotApp};
+use crate::app::LimeShotApp;
 use crate::browser;
 use crate::theme::{Theme, mono, rgb, semibold};
-use crate::widgets::{panel_header, section, segmented};
+use crate::widgets::{section, segmented};
 use egui::{Align2, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::*;
 
+/// Body of the Channel Settings window for the selected channel.
 pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    if app.ui.inspect == InspectTarget::MixerTrack {
-        crate::mixer::inspector(app, ui);
-        return;
-    }
     let Some(ch) = app.selected_channel().and_then(|c| app.project().channel(c).cloned()) else {
-        panel_header(ui, "Inspector", |_| {});
         ui.add_space(16.0);
         ui.vertical_centered(|ui| ui.label(RichText::new("Add a channel to edit its sound.").color(t.text_dim)));
         return;
     };
-    panel_header(ui, "Channel", |ui| {
-        ui.label(
-            RichText::new(ch.instrument.kind_label())
-                .font(mono(10.5))
-                .color(t.text_dim),
-        );
-    });
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::new().inner_margin(egui::Margin::same(12)).show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -39,6 +27,20 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
                 if name.clicked() {
                     app.dialog = Some(crate::dialogs::Dialog::rename_channel(app, ch.id));
                 }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        RichText::new(format!(
+                            "→ Mixer {}",
+                            if ch.mixer_track == 0 {
+                                "M".to_string()
+                            } else {
+                                ch.mixer_track.to_string()
+                            }
+                        ))
+                        .font(mono(10.5))
+                        .color(t.text_dim),
+                    );
+                });
             });
             ui.add_space(8.0);
             channel_body(app, ui, &ch);
@@ -83,7 +85,7 @@ fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
                     .range(0..=127)
                     .custom_formatter(|v, _| crate::piano_roll::key_name(v as u8)),
             );
-            if r.changed() {
+            if crate::widgets::user_changed(&r) {
                 app.exec(Command::SetChannelRootKey { channel: ch.id, key });
             }
             ui.label(RichText::new("Root").color(t.text_dim));
@@ -188,7 +190,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
     section(ui, "Playback");
     row(ui, "Gain", |ui| {
         let r = ui.add(egui::Slider::new(&mut q.gain_db, -24.0..=12.0).suffix(" dB"));
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Pitch", |ui| {
@@ -197,18 +199,18 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
                 .suffix(" st")
                 .step_by(0.01),
         );
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Start", |ui| {
         let r =
             ui.add(egui::Slider::new(&mut q.start, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "End", |ui| {
         let r = ui.add(egui::Slider::new(&mut q.end, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Release", |ui| {
@@ -217,17 +219,17 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
                 .logarithmic(true)
                 .suffix(" ms"),
         );
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Playback", |ui| {
         let r = ui.checkbox(&mut q.reverse, "Reverse");
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
         let r = ui
             .checkbox(&mut q.one_shot, "One-shot")
             .on_hover_text("Play the whole sample, ignoring note length");
-        let c = r.changed();
+        let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     if q.end < q.start {
@@ -244,7 +246,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     let mut waveform_changed = false;
     let mut changed: Option<egui::Response> = None;
     let mut track = |r: egui::Response| {
-        if r.changed() || r.drag_started() || r.drag_stopped() {
+        if crate::widgets::user_changed(&r) || r.drag_started() || r.drag_stopped() {
             changed = Some(r);
         }
     };

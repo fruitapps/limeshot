@@ -13,12 +13,12 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Cmd+M", "Metronome on/off"),
     ("Cmd+H", "Stop all sound (panic)"),
     ("F4", "New pattern"),
-    ("F5", "Maximise the Playlist (hide the dock)"),
-    ("F6", "Channel Rack tab"),
-    ("F7", "Piano Roll tab"),
-    ("F9", "Mixer tab"),
+    ("F5", "Playlist"),
+    ("F6", "Channel Rack"),
+    ("F7", "Piano Roll"),
+    ("F9", "Mixer"),
     ("Alt+F8", "Browser"),
-    ("Cmd+I", "Inspector"),
+    ("Cmd+Shift+H", "Arrange windows"),
     ("F1", "This list"),
     ("Cmd+Z / Cmd+Shift+Z", "Undo / redo"),
     ("Cmd+N / Cmd+O", "New / open project"),
@@ -99,8 +99,8 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         let m = !app.ui.metronome;
         app.set_metronome(m);
     }
-    if pressed(ctx, cmd, Key::I) {
-        app.ui.show_inspector ^= true;
+    if pressed(ctx, cmd_shift, Key::H) {
+        app.ui.workspace.reset_layout = true;
     }
     if pressed(ctx, cmd, Key::H) {
         app.send(limeshot_audio::Msg::Panic);
@@ -120,18 +120,16 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     if pressed(ctx, Modifiers::NONE, Key::F4) {
         crate::menus::add_pattern(app);
     }
-    if pressed(ctx, Modifiers::NONE, Key::F5) {
-        app.ui.dock_open ^= true;
-        app.ui.focus = crate::app::Focus::Playlist;
-    }
-    if pressed(ctx, Modifiers::NONE, Key::F6) {
-        app.toggle_tab(crate::app::DockTab::ChannelRack);
-    }
-    if pressed(ctx, Modifiers::NONE, Key::F7) {
-        app.toggle_tab(crate::app::DockTab::PianoRoll);
-    }
-    if pressed(ctx, Modifiers::NONE, Key::F9) {
-        app.toggle_tab(crate::app::DockTab::Mixer);
+    use crate::workspace::Win;
+    for (k, w) in [
+        (Key::F5, Win::Playlist),
+        (Key::F6, Win::ChannelRack),
+        (Key::F7, Win::PianoRoll),
+        (Key::F9, Win::Mixer),
+    ] {
+        if pressed(ctx, Modifiers::NONE, k) {
+            app.toggle_window(w);
+        }
     }
     if pressed(ctx, Modifiers::ALT, Key::F8) {
         app.ui.show_browser ^= true;

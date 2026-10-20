@@ -1,11 +1,12 @@
 //! Header (logo, menus, project name), the global toolbar (transport, tempo, time, pattern, snap,
 //! panel toggles) and the status bar.
 
-use crate::app::{DockTab, LimeShotApp};
+use crate::app::LimeShotApp;
 use crate::dialogs::Dialog;
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, mono, prop, semibold};
 use crate::widgets::{icon_button, meter, readout, segmented, transport_button, unavailable_button, vrule};
+use crate::workspace::Win;
 use egui::{Align2, ComboBox, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, vec2};
 use limeshot_core::{BarBeatTick, Command, Snap, Tempo, TimeSignature, Timeline};
 use limeshot_engine::PlayMode;
@@ -111,7 +112,7 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
                 .fixed_decimals(3),
         )
         .on_hover_text("Tempo in BPM: drag or type (10–522)");
-    let cmd = r.changed().then(|| Command::SetTempo(Tempo::from_bpm(bpm)));
+    let cmd = crate::widgets::user_changed(&r).then(|| Command::SetTempo(Tempo::from_bpm(bpm)));
     app.exec_gesture(&r, cmd);
     ui.label(RichText::new("BPM").font(semibold(9.5)).color(t.text_dim));
     ui.add_space(4.0);
@@ -124,7 +125,7 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let b = ui
         .add_sized(vec2(26.0, B), DragValue::new(&mut d).range(1..=32))
         .on_hover_text("Beat unit (power of two)");
-    if a.changed() || b.changed() {
+    if crate::widgets::user_changed(&a) || crate::widgets::user_changed(&b) {
         sig = TimeSignature::new(n, d);
         app.exec(Command::SetTimeSignature(sig));
     }
@@ -223,18 +224,17 @@ fn panels(app: &mut LimeShotApp, ui: &mut Ui) {
     if icon_button(ui, Icon::Browser, app.ui.show_browser, B, "Browser (Alt+F8)").clicked() {
         app.ui.show_browser ^= true;
     }
-    for (tab, icon) in [
-        (DockTab::ChannelRack, Icon::ChannelRack),
-        (DockTab::PianoRoll, Icon::PianoRoll),
-        (DockTab::Mixer, Icon::Mixer),
+    // FL Studio's window shortcut buttons.
+    for (w, icon) in [
+        (Win::Playlist, Icon::Playlist),
+        (Win::ChannelRack, Icon::ChannelRack),
+        (Win::PianoRoll, Icon::PianoRoll),
+        (Win::Mixer, Icon::Mixer),
     ] {
-        let tip = format!("{} ({})", tab.label(), tab.shortcut());
-        if icon_button(ui, icon, app.is_tab_visible(tab), B, &tip).clicked() {
-            app.toggle_tab(tab);
+        let tip = format!("{} ({})", w.label(), w.shortcut());
+        if icon_button(ui, icon, app.is_window_open(w), B, &tip).clicked() {
+            app.toggle_window(w);
         }
-    }
-    if icon_button(ui, Icon::Inspector, app.ui.show_inspector, B, "Inspector (Cmd+I)").clicked() {
-        app.ui.show_inspector ^= true;
     }
 }
 

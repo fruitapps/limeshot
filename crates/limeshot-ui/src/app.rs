@@ -7,9 +7,9 @@
 //! * runtime resources: `samples` (decoded audio),
 //! * ephemeral UI state: `ui` (visible panels, selections, zoom, the current pattern).
 //!
-//! Layout (ArtCraft-style docking, FL Studio workflow): header + toolbar on top, Browser on the
-//! left, Inspector on the right, the Playlist in the centre (FL opens it maximised), and a bottom
-//! dock with tabs for the Channel Rack, Piano Roll and Mixer.
+//! Layout (FL Studio's window model, ArtCraft-like styling): header + toolbar on top, the Browser
+//! docked left, and the workspace with the editor windows (Playlist maximised by default, Channel
+//! Rack on top), which can be moved, maximised and detached (see `workspace.rs`).
 
 use crate::settings::Settings;
 use crate::{browser, channel_rack, dialogs, mixer, piano_roll, playlist, shortcuts, toolbar};
@@ -34,51 +34,10 @@ pub enum Focus {
     Mixer,
 }
 
-/// The tabs of the bottom dock.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum DockTab {
-    #[default]
-    ChannelRack,
-    PianoRoll,
-    Mixer,
-}
-
-impl DockTab {
-    pub const ALL: [DockTab; 3] = [DockTab::ChannelRack, DockTab::PianoRoll, DockTab::Mixer];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            DockTab::ChannelRack => "Channel Rack",
-            DockTab::PianoRoll => "Piano Roll",
-            DockTab::Mixer => "Mixer",
-        }
-    }
-
-    pub fn shortcut(self) -> &'static str {
-        match self {
-            DockTab::ChannelRack => "F6",
-            DockTab::PianoRoll => "F7",
-            DockTab::Mixer => "F9",
-        }
-    }
-}
-
-/// What the Inspector panel shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum InspectTarget {
-    /// The selected channel's instrument.
-    #[default]
-    Channel,
-    /// The selected mixer track.
-    MixerTrack,
-}
-
 pub struct UiState {
     pub show_browser: bool,
-    pub show_inspector: bool,
-    pub dock_open: bool,
-    pub dock_tab: DockTab,
-    pub inspect: InspectTarget,
+    /// The editor windows (FL Studio's window model).
+    pub workspace: crate::workspace::Workspace,
     pub current_pattern: PatternId,
     pub selected_channel: Option<ChannelId>,
     pub snap: Snap,
@@ -98,10 +57,7 @@ impl UiState {
     fn new(project: &Project) -> Self {
         Self {
             show_browser: true,
-            show_inspector: true,
-            dock_open: true,
-            dock_tab: DockTab::ChannelRack,
-            inspect: InspectTarget::Channel,
+            workspace: Default::default(),
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
             selected_channel: project.channels.first().map(|c| c.id),
             snap: Snap::Step,
@@ -225,47 +181,36 @@ impl LimeShotApp {
         self.doc.project()
     }
 
-    /// UI state for a newly opened project, keeping the panel layout.
+    /// UI state for a newly opened project, keeping the browser setting (windows reset to
+    /// FL Studio's new-project layout).
     fn fresh_ui_state(&self) -> UiState {
-        let u = &self.ui;
         UiState {
-            show_browser: u.show_browser,
-            show_inspector: u.show_inspector,
-            dock_open: u.dock_open,
-            dock_tab: u.dock_tab,
+            show_browser: self.ui.show_browser,
             ..UiState::new(self.doc.project())
         }
     }
 
-    /// Show a dock tab (opening the dock).
-    pub fn show_tab(&mut self, tab: DockTab) {
-        self.ui.dock_open = true;
-        self.ui.dock_tab = tab;
-        self.ui.focus = match tab {
-            DockTab::ChannelRack => Focus::ChannelRack,
-            DockTab::PianoRoll => Focus::PianoRoll,
-            DockTab::Mixer => Focus::Mixer,
-        };
+    /// Open a workspace window and bring it to the front.
+    pub fn show_window(&mut self, w: crate::workspace::Win) {
+        self.ui.workspace.show(w);
+        self.ui.focus = w.focus();
     }
 
-    /// F6/F7/F9 behaviour: show the tab, or collapse the dock if it is already showing.
-    pub fn toggle_tab(&mut self, tab: DockTab) {
-        if self.is_tab_visible(tab) {
-            self.ui.dock_open = false;
-            self.ui.focus = Focus::Playlist;
-        } else {
-            self.show_tab(tab);
+    /// F5/F6/F7/F9 behaviour: open a closed window, close an open one.
+    pub fn toggle_window(&mut self, w: crate::workspace::Win) {
+        self.ui.workspace.toggle(w);
+        if self.ui.workspace.is_open(w) {
+            self.ui.focus = w.focus();
         }
     }
 
-    pub fn is_tab_visible(&self, tab: DockTab) -> bool {
-        self.ui.dock_open && self.ui.dock_tab == tab
+    pub fn is_window_open(&self, w: crate::workspace::Win) -> bool {
+        self.ui.workspace.is_open(w)
     }
 
-    /// Select a channel and show it in the Inspector.
+    /// Select a channel (the Piano Roll and Channel Settings follow the selection).
     pub fn select_channel(&mut self, id: ChannelId) {
         self.ui.selected_channel = Some(id);
-        self.ui.inspect = InspectTarget::Channel;
     }
 
     pub fn send(&mut self, msg: Msg) {
@@ -657,65 +602,36 @@ impl LimeShotApp {
                 .frame(flat(t.surface))
                 .show(ui, |ui| browser::show(self, ui));
         }
-        if self.ui.show_inspector {
-            egui::Panel::right("inspector")
-                .resizable(true)
-                .default_size(300.0)
-                .size_range(240.0..=480.0)
-                .frame(flat(t.surface))
-                .show(ui, |ui| crate::inspector::show(self, ui));
-        }
-        if self.ui.dock_open {
-            egui::Panel::bottom("dock")
-                .resizable(true)
-                .default_size(330.0)
-                .size_range(160.0..=900.0)
-                .frame(flat(t.surface))
-                .show(ui, |ui| dock(self, ui));
-        }
-        egui::CentralPanel::default()
-            .frame(flat(t.surface))
-            .show(ui, |ui| playlist::panel(self, ui));
+        let area = egui::CentralPanel::default()
+            .frame(flat(t.bg))
+            .show(ui, |ui| {
+                let r = ui.max_rect();
+                crate::icons::logo(ui.painter(), r.center(), 56.0);
+                ui.painter().text(
+                    r.center() + egui::vec2(0.0, 80.0),
+                    egui::Align2::CENTER_CENTER,
+                    "LimeShot",
+                    crate::theme::semibold(15.0),
+                    t.text_faint,
+                );
+                r
+            })
+            .inner;
+        crate::workspace::show(self, &ctx, area, window_body);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
     }
 }
 
-/// The bottom dock: tab strip plus the active editor.
-fn dock(app: &mut LimeShotApp, ui: &mut egui::Ui) {
-    let tabs: Vec<(&str, String)> = DockTab::ALL
-        .iter()
-        .map(|d| (d.label(), format!("{} ({})", d.label(), d.shortcut())))
-        .collect();
-    let tab_refs: Vec<(&str, &str)> = tabs.iter().map(|(a, b)| (*a, b.as_str())).collect();
-    let active = DockTab::ALL.iter().position(|d| *d == app.ui.dock_tab).unwrap_or(0);
-    let mut collapse = false;
-    let clicked = crate::widgets::tab_strip(ui, &tab_refs, active, |ui| {
-        if crate::widgets::icon_button(ui, crate::icons::Icon::Close, false, 22.0, "Hide the dock").clicked() {
-            collapse = true;
-        }
-    });
-    if let Some(i) = clicked
-        && let Some(tab) = DockTab::ALL.get(i)
-    {
-        app.show_tab(*tab);
-    }
-    if collapse {
-        app.ui.dock_open = false;
-        return;
-    }
-    let rect = ui.available_rect_before_wrap();
-    if ui.rect_contains_pointer(rect) && ui.input(|i| i.pointer.any_pressed()) {
-        app.ui.focus = match app.ui.dock_tab {
-            DockTab::ChannelRack => Focus::ChannelRack,
-            DockTab::PianoRoll => Focus::PianoRoll,
-            DockTab::Mixer => Focus::Mixer,
-        };
-    }
-    match app.ui.dock_tab {
-        DockTab::ChannelRack => channel_rack::panel(app, ui),
-        DockTab::PianoRoll => piano_roll::panel(app, ui),
-        DockTab::Mixer => mixer::panel(app, ui),
+/// The content of each workspace window.
+fn window_body(app: &mut LimeShotApp, ui: &mut egui::Ui, w: crate::workspace::Win) {
+    use crate::workspace::Win;
+    match w {
+        Win::Playlist => playlist::panel(app, ui),
+        Win::ChannelRack => channel_rack::panel(app, ui),
+        Win::PianoRoll => piano_roll::panel(app, ui),
+        Win::Mixer => mixer::panel(app, ui),
+        Win::ChannelSettings => crate::inspector::show(app, ui),
     }
 }
 

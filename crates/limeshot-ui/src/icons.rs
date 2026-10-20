@@ -28,6 +28,10 @@ pub enum Icon {
     Save,
     Export,
     Inspector,
+    Maximize,
+    Restore,
+    Detach,
+    Attach,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -209,6 +213,64 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
                 0.5,
                 c.gamma_multiply(0.6),
             );
+        }
+        Icon::Maximize => {
+            p.rect_stroke(
+                Rect::from_min_max(at(-5.5, -5.0), at(5.5, 5.0)),
+                1.0,
+                line,
+                egui::StrokeKind::Inside,
+            );
+            p.line_segment([at(-5.5, -3.0), at(5.5, -3.0)], line);
+        }
+        Icon::Restore => {
+            p.rect_stroke(
+                Rect::from_min_max(at(-6.0, -2.5), at(3.0, 6.0)),
+                1.0,
+                line,
+                egui::StrokeKind::Inside,
+            );
+            p.add(Shape::line(
+                vec![
+                    at(-3.0, -2.5),
+                    at(-3.0, -6.0),
+                    at(6.0, -6.0),
+                    at(6.0, 3.0),
+                    at(3.0, 3.0),
+                ],
+                line,
+            ));
+        }
+        Icon::Detach | Icon::Attach => {
+            p.add(Shape::line(
+                vec![
+                    at(1.0, -6.0),
+                    at(-6.0, -6.0),
+                    at(-6.0, 6.0),
+                    at(6.0, 6.0),
+                    at(6.0, -1.0),
+                ],
+                line,
+            ));
+            let (from, to) = if icon == Icon::Detach {
+                (at(-1.5, 1.5), at(6.0, -6.0))
+            } else {
+                (at(6.0, -6.0), at(-1.5, 1.5))
+            };
+            p.line_segment([from, to], line);
+            let tip = to;
+            let back = if icon == Icon::Detach {
+                vec2(-3.5 * u, 0.0)
+            } else {
+                vec2(3.5 * u, 0.0)
+            };
+            let down = if icon == Icon::Detach {
+                vec2(0.0, 3.5 * u)
+            } else {
+                vec2(0.0, -3.5 * u)
+            };
+            p.line_segment([tip, tip + back], line);
+            p.line_segment([tip, tip + down], line);
         }
         Icon::Inspector => {
             p.rect_stroke(

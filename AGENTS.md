@@ -12,7 +12,7 @@ code copied from ArtCraft/SoundCraft. The full brief is `START.md`.
 ## Build, run, test
 ```
 cargo build --workspace
-cargo run --release -p limeshot-app [-- --demo | path/to/song.lime]
+cargo run --release -p limeshot-app [-- --demo | path/to/song.lime] [--show=piano --detach=mixer]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
 cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty]
@@ -35,7 +35,7 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
 | `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
 | `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread |
-| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `inspector`, `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
+| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
 | `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot` example, MVP and UI tests |
 
 ## Coding conventions
@@ -63,7 +63,8 @@ features as records.
 ## Current state (2026-10-20, session 2)
 * Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
   yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done.
-* UI: ArtCraft-style docked layout (`docs/architecture/ui.md`); editors are panels, not windows.
+* UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
+  decision D24). **FL Studio is the source for UI/UX; ArtCraft only for the broad visual style.**
 * 220 features tracked: 70 verified, 34 implemented, 7 in progress, 106 not started, 1 researched, 2 deferred.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 

@@ -35,8 +35,7 @@ Current as of 2026-10-20 (session 2). Everything here is either not implemented 
 * No templates, autosave or crash recovery. Recent files have no Alt+number shortcuts.
 * `.flp` files cannot be imported.
 * No plugin hosting.
-* Panels are docked (Browser, Inspector, bottom dock); they cannot be torn off into OS windows or rearranged, and
-  the Channel Rack and Piano Roll share the dock, so they are not visible at the same time.
+* Window positions, sizes and detached/maximised states are not remembered between sessions.
 * Accessibility: custom-painted editors expose no accessibility labels.
 
 ## Research

@@ -176,20 +176,24 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             }
         });
         ui.menu_button("View", |ui| {
-            for tab in crate::app::DockTab::ALL {
-                if toggle(ui, app.is_tab_visible(tab), tab.label(), &key(tab.shortcut())) {
-                    app.toggle_tab(tab);
+            use crate::workspace::Win;
+            for w in [
+                Win::Playlist,
+                Win::ChannelRack,
+                Win::PianoRoll,
+                Win::Mixer,
+                Win::ChannelSettings,
+            ] {
+                if toggle(ui, app.is_window_open(w), w.label(), &key(w.shortcut())) {
+                    app.toggle_window(w);
                 }
             }
-            if toggle(ui, !app.ui.dock_open, "Maximise Playlist", &key("F5")) {
-                app.ui.dock_open ^= true;
-            }
-            ui.separator();
             if toggle(ui, app.ui.show_browser, "Browser", &key("Alt+F8")) {
                 app.ui.show_browser ^= true;
             }
-            if toggle(ui, app.ui.show_inspector, "Inspector", &key("Cmd+I")) {
-                app.ui.show_inspector ^= true;
+            ui.separator();
+            if item(ui, "Arrange windows", &key("Cmd+Shift+H")) {
+                app.ui.workspace.reset_layout = true;
             }
             ui.separator();
             if item(ui, "Zoom in", &key("Cmd+=")) {

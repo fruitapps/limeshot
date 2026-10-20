@@ -127,7 +127,7 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             });
                             return;
                         }
-                        let cmd = r.changed().then_some(Command::SetEffectParam {
+                        let cmd = crate::widgets::user_changed(&r).then_some(Command::SetEffectParam {
                             track,
                             effect: e.id,
                             index: i,

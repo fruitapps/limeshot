@@ -69,3 +69,16 @@ Verification on this machine:
 
 Not verified: Windows/Linux (no CI run; no remote), operating the live GUI with real input, FL Studio interaction
 details.
+
+## 2026-10-20 — Session 3: back to FL Studio's window model
+
+The user clarified that FL Studio is the UI/UX source and ArtCraft only the broad style. The docked layout from session 2
+was replaced by FL's model (`workspace.rs`, decision D24): editor windows in a workspace, maximise, detach into OS
+windows, FL's default layout, Channel Settings as a window, FX slots in the Mixer's right panel.
+
+Found and fixed: viewing the Mixer committed a "Mixer volume" edit (egui slider rounding) — guarded by
+`widgets::user_changed`, with a regression test (D25).
+
+Verification: 95 tests pass; Clippy and fmt clean. Offscreen renders reviewed. The live app was started with
+`--demo --detach=mixer --show=piano`: a second OS window "Mixer — LimeShot" appeared, and both windows were captured
+(`docs/screenshots/live-macos.png`, `live-mixer-detached.png`).

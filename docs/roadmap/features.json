@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-20 (session 2)",
+  "updated": "2026-10-20 (session 3)",
   "features": [
     {
       "id": "APP-001",
@@ -939,7 +939,7 @@
       "name": "Channel settings window",
       "description": "Edit instrument parameters.",
       "fl_reference": "Click channel button opens Channel Settings.",
-      "limeshot_behavior": "Instrument parameters live in the docked Inspector (right panel): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. Clicking a channel name shows it there.",
+      "limeshot_behavior": "Channel Settings window (opened by clicking the channel button): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -961,7 +961,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "Replaces FL Studio's floating Channel Settings window with a docked panel (ArtCraft style)."
+      "notes": ""
     },
     {
       "id": "SEQ-010",
@@ -2814,7 +2814,7 @@
       "name": "Insert effect slots",
       "description": "Per-track effect chains.",
       "fl_reference": "10 FX slots per track.",
-      "limeshot_behavior": "Up to 10 insert effects per mixer track (master included), processed in order before the fader; add, bypass, reorder and remove in the Inspector; names show on the strip.",
+      "limeshot_behavior": "Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -5969,7 +5969,7 @@
       "name": "Main window layout (toolbar, browser, workspace)",
       "description": "FL-style workspace.",
       "fl_reference": "Toolbar, docked browser, child windows.",
-      "limeshot_behavior": "ArtCraft-style docked layout: header with menus, flat toolbar, Browser (left), Playlist as the central workspace with FL's pattern picker, Inspector (right), and a bottom dock with Channel Rack / Piano Roll / Mixer tabs; status bar with hints.",
+      "limeshot_behavior": "FL Studio's window model with a modern, ArtCraft-like finish: header with menus, flat toolbar with window buttons, Browser docked left, and a workspace where the Playlist (maximised by default), Channel Rack, Piano Roll, Mixer and Channel Settings are windows with flat custom title bars; status bar with hints.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -5982,6 +5982,40 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking",
+        "limeshot-app tests/ui.rs::new_project_opens_fl_studios_window_layout",
+        "limeshot-app tests/ui.rs::opening_windows_does_not_modify_the_project"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
+          "docs/research/fl-studio-analysis.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-002",
+      "category": "UI",
+      "name": "Workspace windows: toggle, maximise, arrange",
+      "description": "Window management.",
+      "fl_reference": "F5 Playlist, F6 rack, F7 piano roll, F9 mixer.",
+      "limeshot_behavior": "F5/F6/F7/F9 and the toolbar buttons toggle the Playlist, Channel Rack, Piano Roll and Mixer windows (FL); each window can be moved, resized, maximised to the workspace and closed; Cmd+Shift+H arranges windows to the defaults.",
+      "priority": "P0",
+      "status": "VERIFIED",
+      "mvp": true,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::f_keys_toggle_windows",
         "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
       ],
       "reference": {
@@ -5992,38 +6026,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": "Panels can be hidden and resized; they cannot yet be torn off or rearranged."
-    },
-    {
-      "id": "UI-002",
-      "category": "UI",
-      "name": "Child windows with toggles (F5–F9) and arrange",
-      "description": "Window management.",
-      "fl_reference": "F5 Playlist, F6 rack, F7 piano roll, F9 mixer.",
-      "limeshot_behavior": "F6/F7/F9 show the dock tab (press again to hide the dock), F5 maximises the Playlist, Alt+F8 Browser, Cmd+I Inspector; the toolbar buttons do the same.",
-      "priority": "P0",
-      "status": "VERIFIED",
-      "mvp": true,
-      "dependencies": [],
-      "modules": [
-        "limeshot-ui"
-      ],
-      "acceptance_criteria": [
-        "Behaves as described under 'LimeShot intended behaviour'.",
-        "Has an automated test or a documented manual test procedure."
-      ],
-      "tests": [
-        "limeshot-app tests/ui.rs::window_shortcuts_switch_dock_tabs"
-      ],
-      "reference": {
-        "application": "FL Studio",
-        "version": "FL Studio 2026 (26.1.1.5313)",
-        "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
-          "docs/research/fl-studio-analysis.md"
-        ]
-      },
-      "notes": "Replaces floating editor windows."
+      "notes": ""
     },
     {
       "id": "UI-003",
@@ -6148,17 +6151,23 @@
       "name": "Detachable windows (multi-monitor)",
       "description": "Windows outside the main window.",
       "fl_reference": "Detached windows.",
-      "limeshot_behavior": "egui multi-viewport.",
+      "limeshot_behavior": "Any editor window can be detached into its own OS window (egui viewport) from its title bar and re-attached; shortcuts work inside detached windows. `limeshot --detach=mixer` opens one detached at start.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking (embedded fallback)",
+        "manual: limeshot --demo --detach=mixer --show=piano on macOS 26 — a second OS window 'Mixer — LimeShot' appeared and was captured (docs/screenshots/live-mixer-detached.png)"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6167,7 +6176,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": ""
+      "notes": "Detached state and positions are not persisted."
     },
     {
       "id": "UI-008",
@@ -6366,7 +6375,7 @@
       "name": "Pattern picker",
       "description": "List of patterns beside the Playlist.",
       "fl_reference": "Clip picker panel on the left of the Playlist (observed in fl-main.png).",
-      "limeshot_behavior": "Patterns column left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit, right-click to rename/clone/delete, + for a new pattern.",
+      "limeshot_behavior": "Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -6424,10 +6433,10 @@
     {
       "id": "UI-009",
       "category": "UI",
-      "name": "Inspector panel",
+      "name": "Channel Settings window",
       "description": "Docked property panel.",
-      "fl_reference": "Channel Settings and Mixer track properties windows.",
-      "limeshot_behavior": "Right panel showing the selected channel's instrument or the selected mixer track (level, routing, insert chain).",
+      "fl_reference": "Clicking a channel button opens its Channel Settings window.",
+      "limeshot_behavior": "Clicking a channel button in the Channel Rack toggles the Channel Settings window for that channel (sampler or LimeSynth parameters, root key, routing).",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -6442,16 +6451,17 @@
         "Edits are commands with undo."
       ],
       "tests": [
+        "limeshot-app tests/ui.rs::clicking_a_channel_button_toggles_its_settings_window",
         "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
       ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "docs/research/artcraft-architecture.md"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "ArtCraft-style docked property panel."
+      "notes": "Was a docked Inspector in session 2 (D19, superseded by D24)."
     }
   ]
 }

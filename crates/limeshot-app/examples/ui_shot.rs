@@ -1,8 +1,9 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--settings] [--melody]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach]`
 
 use egui_kittest::Harness;
+use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 
 fn main() {
@@ -22,24 +23,29 @@ fn main() {
         app.ui.selected_channel = app.project().channels.get(3).map(|c| c.id);
     }
     if args.iter().any(|a| a == "--piano") {
-        app.show_tab(limeshot_ui::app::DockTab::PianoRoll);
+        app.show_window(Win::PianoRoll);
     }
     if args.iter().any(|a| a == "--mixer") {
-        app.show_tab(limeshot_ui::app::DockTab::Mixer);
+        app.show_window(Win::Mixer);
     }
     if args.iter().any(|a| a == "--fx") {
         app.ui.mixer.selected = 4;
-        app.ui.inspect = limeshot_ui::app::InspectTarget::MixerTrack;
+        app.show_window(Win::Mixer);
     }
     if args.iter().any(|a| a == "--settings")
         && let Some(c) = app.project().channels.first().map(|c| c.id)
     {
         app.select_channel(c);
+        app.show_window(Win::ChannelSettings);
     }
     if args.iter().any(|a| a == "--melody")
         && let Some(p) = app.project().patterns.get(1).map(|p| p.id)
     {
         app.set_current_pattern(p);
+    }
+    if args.iter().any(|a| a == "--detach") {
+        // Without multi-viewport support the detached window renders embedded; this checks it draws.
+        app.ui.workspace.state_mut(Win::ChannelRack).detached = true;
     }
     let mut harness = Harness::builder()
         .with_size(egui::vec2(1440.0, 900.0))
