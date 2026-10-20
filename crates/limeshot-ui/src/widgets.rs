@@ -32,7 +32,12 @@ pub fn unavailable_button(ui: &mut Ui, icon: Icon, size: f32, tip: &str) -> Resp
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
     ui.painter().rect_filled(r, CornerRadius::same(4), t.sunken);
-    icons::paint(ui.painter(), r.shrink(size * 0.18), icon, t.text_dim.gamma_multiply(0.5));
+    icons::paint(
+        ui.painter(),
+        r.shrink(size * 0.18),
+        icon,
+        t.text_dim.gamma_multiply(0.5),
+    );
     resp.on_hover_text(format!("{tip} (not implemented yet)"))
 }
 
@@ -49,7 +54,8 @@ pub fn toggle_label(ui: &mut Ui, on: bool, text: &str, on_color: Color32, size: 
     };
     ui.painter().rect_filled(r, CornerRadius::same(3), fill);
     let fg = if on { t.text_on_accent } else { t.text_dim };
-    ui.painter().text(r.center(), Align2::CENTER_CENTER, text, mono(10.5), fg);
+    ui.painter()
+        .text(r.center(), Align2::CENTER_CENTER, text, mono(10.5), fg);
     resp.on_hover_text(tip)
 }
 
@@ -74,7 +80,16 @@ fn drag_value(ui: &Ui, resp: &Response, v: &mut f32, min: f32, max: f32, default
 }
 
 /// A rotary knob. `bipolar` draws the arc from the centre (pan).
-pub fn knob(ui: &mut Ui, v: &mut f32, min: f32, max: f32, default: f32, size: f32, bipolar: bool, tip: impl Fn(f32) -> String) -> Response {
+pub fn knob(
+    ui: &mut Ui,
+    v: &mut f32,
+    min: f32,
+    max: f32,
+    default: f32,
+    size: f32,
+    bipolar: bool,
+    tip: impl Fn(f32) -> String,
+) -> Response {
     let t = Theme::current();
     let (r, mut resp) = ui.allocate_exact_size(vec2(size, size), Sense::click_and_drag());
     if drag_value(ui, &resp, v, min, max, default, 120.0) {
@@ -83,7 +98,15 @@ pub fn knob(ui: &mut Ui, v: &mut f32, min: f32, max: f32, default: f32, size: f3
     let p = ui.painter();
     let c = r.center();
     let rad = size * 0.42;
-    p.circle_filled(c, rad, if resp.hovered() || resp.dragged() { t.raised_hover } else { t.raised });
+    p.circle_filled(
+        c,
+        rad,
+        if resp.hovered() || resp.dragged() {
+            t.raised_hover
+        } else {
+            t.raised
+        },
+    );
     let frac = if max > min { (*v - min) / (max - min) } else { 0.0 };
     let a0 = PI * 0.75;
     let sweep = PI * 1.5;
@@ -98,10 +121,20 @@ pub fn knob(ui: &mut Ui, v: &mut f32, min: f32, max: f32, default: f32, size: f3
         p.add(egui::Shape::line(pts, Stroke::new(w, color)));
     };
     arc(a0, a0 + sweep, t.sunken, 2.0);
-    let (from, to) = if bipolar { (a0 + sweep * 0.5, a0 + sweep * frac) } else { (a0, a0 + sweep * frac) };
+    let (from, to) = if bipolar {
+        (a0 + sweep * 0.5, a0 + sweep * frac)
+    } else {
+        (a0, a0 + sweep * frac)
+    };
     arc(from.min(to), from.max(to), t.accent, 2.0);
     let a = a0 + sweep * frac;
-    p.line_segment([c + vec2(a.cos(), a.sin()) * rad * 0.25, c + vec2(a.cos(), a.sin()) * rad * 0.9], Stroke::new(1.6, t.text));
+    p.line_segment(
+        [
+            c + vec2(a.cos(), a.sin()) * rad * 0.25,
+            c + vec2(a.cos(), a.sin()) * rad * 0.9,
+        ],
+        Stroke::new(1.6, t.text),
+    );
     let text = tip(*v);
     if resp.dragged() {
         resp = resp.on_hover_text_at_pointer(text);
@@ -129,15 +162,35 @@ pub fn fader(ui: &mut Ui, v: &mut f32, max: f32, default: f32, size: egui::Vec2,
     p.rect_filled(track, 2.0, t.sunken);
     // 0 dB tick.
     let unity_y = track.bottom() - to_pos(1.0) * track.height();
-    p.line_segment([pos2(r.left() + 2.0, unity_y), pos2(r.right() - 2.0, unity_y)], Stroke::new(1.0, t.grid_bar));
+    p.line_segment(
+        [pos2(r.left() + 2.0, unity_y), pos2(r.right() - 2.0, unity_y)],
+        Stroke::new(1.0, t.grid_bar),
+    );
     let y = track.bottom() - pos * track.height();
     let handle = Rect::from_center_size(pos2(r.center().x, y), vec2(r.width() - 4.0, 10.0));
-    let fill = if resp.dragged() { t.accent } else if resp.hovered() { t.key_white } else { mix(t.key_white, t.raised, 0.25) };
+    let fill = if resp.dragged() {
+        t.accent
+    } else if resp.hovered() {
+        t.key_white
+    } else {
+        mix(t.key_white, t.raised, 0.25)
+    };
     p.rect_filled(handle, 2.0, fill);
-    p.line_segment([pos2(handle.left() + 2.0, y), pos2(handle.right() - 2.0, y)], Stroke::new(1.0, t.raised));
+    p.line_segment(
+        [pos2(handle.left() + 2.0, y), pos2(handle.right() - 2.0, y)],
+        Stroke::new(1.0, t.raised),
+    );
     let db = limeshot_dsp::gain_to_db(*v);
-    let label = if db.is_finite() { format!("{tip}: {db:+.1} dB") } else { format!("{tip}: −∞ dB") };
-    resp = if resp.dragged() { resp.on_hover_text_at_pointer(label) } else { resp.on_hover_text(label) };
+    let label = if db.is_finite() {
+        format!("{tip}: {db:+.1} dB")
+    } else {
+        format!("{tip}: −∞ dB")
+    };
+    resp = if resp.dragged() {
+        resp.on_hover_text_at_pointer(label)
+    } else {
+        resp.on_hover_text(label)
+    };
     resp
 }
 
@@ -158,7 +211,10 @@ pub fn meter(ui: &mut Ui, size: egui::Vec2, left: f32, right: f32, clipped: bool
     p.rect_filled(r, 2.0, t.sunken);
     let w = (r.width() - 3.0) / 2.0;
     for (i, level) in [left, right].into_iter().enumerate() {
-        let bar = Rect::from_min_size(pos2(r.left() + 1.0 + i as f32 * (w + 1.0), r.top() + 1.0), vec2(w, r.height() - 2.0));
+        let bar = Rect::from_min_size(
+            pos2(r.left() + 1.0 + i as f32 * (w + 1.0), r.top() + 1.0),
+            vec2(w, r.height() - 2.0),
+        );
         let f = meter_fraction(level);
         let top = bar.bottom() - f * bar.height();
         // Green to −12 dB, yellow to 0 dB, red above.

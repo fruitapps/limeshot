@@ -5,6 +5,7 @@
 //! limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate 48000] [--bits 16|24|32f]
 //! limeshot-cli run    <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]
 //! limeshot-cli demo   <out.lime> [--render out.wav]
+//! limeshot-cli play   <project.lime> [--pattern] [--seconds 5]   (realtime, through the audio device)
 //! ```
 //!
 //! `run` applies a JSON array of `limeshot_core::Command` values (the same typed commands the UI
@@ -19,7 +20,7 @@ use std::sync::Arc;
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]"
+        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]"
     );
     ExitCode::from(2)
 }
@@ -32,10 +33,20 @@ struct Opts {
     project: Option<PathBuf>,
     save: Option<PathBuf>,
     render: Option<PathBuf>,
+    seconds: f32,
 }
 
 fn parse(args: &[String]) -> Result<Opts, String> {
-    let mut o = Opts { positional: Vec::new(), pattern: false, rate: 44_100, depth: BitDepth::Int24, project: None, save: None, render: None };
+    let mut o = Opts {
+        positional: Vec::new(),
+        pattern: false,
+        rate: 44_100,
+        depth: BitDepth::Int24,
+        project: None,
+        save: None,
+        render: None,
+        seconds: 5.0,
+    };
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut val = || it.next().cloned().ok_or_else(|| format!("{a} needs a value"));
@@ -53,6 +64,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
             "--project" => o.project = Some(val()?.into()),
             "--save" => o.save = Some(val()?.into()),
             "--render" => o.render = Some(val()?.into()),
+            "--seconds" => o.seconds = val()?.parse().map_err(|_| "bad --seconds".to_string())?,
             s if s.starts_with("--") => return Err(format!("unknown option {s}")),
             s => o.positional.push(s.to_string()),
         }
@@ -68,7 +80,9 @@ fn load(path: &Path) -> Result<Project, String> {
         if let limeshot_core::Instrument::Sampler(s) = &mut c.instrument
             && let Some(r) = &mut s.sample
         {
-            r.path = limeshot_project::resolve_sample_path(&r.path, dir).to_string_lossy().into_owned();
+            r.path = limeshot_project::resolve_sample_path(&r.path, dir)
+                .to_string_lossy()
+                .into_owned();
         }
     }
     Ok(p)
@@ -83,8 +97,16 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     }
     let pattern = project.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
     let snap = Arc::new(limeshot_sequencer::compile(project, pattern, &cache));
-    let range = if o.pattern { ExportRange::Pattern } else { ExportRange::Song };
-    let settings = RenderSettings { sample_rate: o.rate, range, ..RenderSettings::default() };
+    let range = if o.pattern {
+        ExportRange::Pattern
+    } else {
+        ExportRange::Song
+    };
+    let settings = RenderSettings {
+        sample_rate: o.rate,
+        range,
+        ..RenderSettings::default()
+    };
     let rep = limeshot_engine::export_wav(snap, &settings, o.depth, out).map_err(|e| e.to_string())?;
     println!(
         "rendered {} — {:.2} s ({} frames at {} Hz), peak {:.1} dBFS",
@@ -97,24 +119,93 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     Ok(())
 }
 
+/// Play through the system audio device and report what the realtime callback produced.
+fn play(project: &Project, o: &Opts) -> Result<(), String> {
+    use limeshot_audio::{AudioConfig, Msg, Player};
+    let mut cache = SampleCache::new();
+    for r in project.sample_refs() {
+        if let Err(e) = cache.load_blocking(&r.path) {
+            eprintln!("warning: {e}");
+        }
+    }
+    let pattern = project.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
+    let snap = Arc::new(limeshot_sequencer::compile(project, pattern, &cache));
+    let mut player = Player::start(&AudioConfig::default(), snap);
+    match player.output_description() {
+        Ok(name) => println!("output: {name} at {} Hz", player.sample_rate()),
+        Err(e) => println!("no output device ({e}); running the silent clock"),
+    }
+    let mode = if o.pattern {
+        limeshot_engine::PlayMode::Pattern
+    } else {
+        limeshot_engine::PlayMode::Song
+    };
+    player.send(Msg::Mode(mode));
+    player.send(Msg::Play);
+    let start = std::time::Instant::now();
+    let (mut peak, mut max_load, mut max_voices, mut max_pos) = (0.0f32, 0.0f32, 0, 0);
+    while start.elapsed().as_secs_f32() < o.seconds {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        let s = player.status();
+        let (l, r) = s.peak(0);
+        peak = peak.max(l).max(r);
+        max_load = max_load.max(s.load());
+        max_voices = max_voices.max(s.voices());
+        max_pos = max_pos.max(s.position());
+        player.collect_garbage();
+    }
+    let callbacks = player.status().callbacks();
+    println!(
+        "played {:.1} s: {} callbacks, master peak {:.1} dBFS, max {} voices, max load {:.1}%, furthest position {}",
+        o.seconds,
+        callbacks,
+        limeshot_dsp::gain_to_db(peak),
+        max_voices,
+        max_load * 100.0,
+        limeshot_core::BarBeatTick::from_ticks(max_pos, project.time_signature)
+    );
+    player.send(Msg::Stop);
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    if callbacks == 0 || peak <= 0.0 {
+        return Err("no audio was produced".into());
+    }
+    Ok(())
+}
+
 fn info(p: &Project) {
     let sig = p.time_signature;
     println!("title:      {}", p.title);
     println!("tempo:      {} BPM, {}", p.tempo, sig);
     println!("channels:   {}", p.channels.len());
     for c in &p.channels {
-        println!("  - {} ({}) → mixer {}", c.name, c.instrument.kind_label(), c.mixer_track);
+        println!(
+            "  - {} ({}) → mixer {}",
+            c.name,
+            c.instrument.kind_label(),
+            c.mixer_track
+        );
     }
     println!("patterns:   {}", p.patterns.len());
     for pat in &p.patterns {
-        println!("  - {}: {} notes, {} bars", pat.name, pat.notes.len(), pat.length(sig) / sig.ticks_per_bar());
+        println!(
+            "  - {}: {} notes, {} bars",
+            pat.name,
+            pat.notes.len(),
+            pat.length(sig) / sig.ticks_per_bar()
+        );
     }
-    println!("clips:      {} (song {} bars)", p.playlist.clips.len(), p.playlist.song_length(sig) / sig.ticks_per_bar());
+    println!(
+        "clips:      {} (song {} bars)",
+        p.playlist.clips.len(),
+        p.playlist.song_length(sig) / sig.ticks_per_bar()
+    );
 }
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let Some((cmd, rest)) = args.split_first() else { return usage() };
+    let Some((cmd, rest)) = args.split_first() else {
+        return usage();
+    };
     let o = match parse(rest) {
         Ok(o) => o,
         Err(e) => {
@@ -131,8 +222,14 @@ fn main() -> ExitCode {
             (Some(p), Some(out)) => load(Path::new(p)).and_then(|proj| render(&proj, Path::new(out), &o)),
             _ => return usage(),
         },
+        "play" => match o.positional.first() {
+            Some(p) => load(Path::new(p)).and_then(|proj| play(&proj, &o)),
+            None => return usage(),
+        },
         "run" => {
-            let Some(script) = o.positional.first() else { return usage() };
+            let Some(script) = o.positional.first() else {
+                return usage();
+            };
             (|| {
                 let text = std::fs::read_to_string(script).map_err(|e| format!("{script}: {e}"))?;
                 let cmds: Vec<Command> = serde_json::from_str(&text).map_err(|e| format!("{script}: {e}"))?;
@@ -142,7 +239,9 @@ fn main() -> ExitCode {
                 });
                 for (i, c) in cmds.into_iter().enumerate() {
                     let label = c.label();
-                    let out = doc.execute(c).map_err(|e| format!("command {} ({label}): {e}", i + 1))?;
+                    let out = doc
+                        .execute(c)
+                        .map_err(|e| format!("command {} ({label}): {e}", i + 1))?;
                     if let Some(id) = out.0 {
                         println!("{}: {label} → id {id}", i + 1);
                     }
@@ -158,7 +257,9 @@ fn main() -> ExitCode {
             })()
         }
         "demo" => {
-            let Some(out) = o.positional.first() else { return usage() };
+            let Some(out) = o.positional.first() else {
+                return usage();
+            };
             (|| {
                 let samples = limeshot_app::bundled_samples_dir().ok_or("bundled samples not found")?;
                 let doc = limeshot_app::demo::build(&samples)?;

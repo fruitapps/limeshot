@@ -38,14 +38,16 @@ impl SampleCache {
     pub fn new() -> Self {
         let (job_tx, job_rx) = channel::<PathBuf>();
         let (res_tx, res_rx) = channel::<LoadResult>();
-        let spawned = std::thread::Builder::new().name("limeshot-sample-loader".into()).spawn(move || {
-            while let Ok(path) = job_rx.recv() {
-                let r = load_wav(&path).map(Arc::new).map_err(|e| e.to_string());
-                if res_tx.send((path, r)).is_err() {
-                    break;
+        let spawned = std::thread::Builder::new()
+            .name("limeshot-sample-loader".into())
+            .spawn(move || {
+                while let Ok(path) = job_rx.recv() {
+                    let r = load_wav(&path).map(Arc::new).map_err(|e| e.to_string());
+                    if res_tx.send((path, r)).is_err() {
+                        break;
+                    }
                 }
-            }
-        });
+            });
         let jobs = match spawned {
             Ok(_) => Some(job_tx),
             Err(e) => {
@@ -53,7 +55,12 @@ impl SampleCache {
                 None
             }
         };
-        Self { project_dir: None, entries: HashMap::new(), jobs, results: res_rx }
+        Self {
+            project_dir: None,
+            entries: HashMap::new(),
+            jobs,
+            results: res_rx,
+        }
     }
 
     /// Relative sample paths resolve against this folder (the open project's).

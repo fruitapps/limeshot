@@ -36,7 +36,12 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
 
 impl Oscillator {
     pub fn new(shape: Shape, freq: f32, sample_rate: f32, phase: f32) -> Self {
-        let mut o = Self { shape, phase: phase.rem_euclid(1.0), inc: 0.0, tri: 0.0 };
+        let mut o = Self {
+            shape,
+            phase: phase.rem_euclid(1.0),
+            inc: 0.0,
+            tri: 0.0,
+        };
         o.set_frequency(freq, sample_rate);
         o
     }

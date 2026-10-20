@@ -39,8 +39,15 @@ pub struct Peak {
 
 #[derive(Debug, Clone, Copy)]
 enum Action {
-    Note { channel: u16, key: u8, velocity: f32, end_tick: Tick },
-    Click { downbeat: bool },
+    Note {
+        channel: u16,
+        key: u8,
+        velocity: f32,
+        end_tick: Tick,
+    },
+    Click {
+        downbeat: bool,
+    },
 }
 
 pub struct Renderer {
@@ -77,7 +84,9 @@ impl Renderer {
             snapshot,
             voices: vec![Voice::default(); MAX_VOICES],
             serial: 0,
-            buses: (0..limeshot_core::Mixer::MAX_TRACKS).map(|_| vec![0.0; 2 * MAX_BLOCK]).collect(),
+            buses: (0..limeshot_core::Mixer::MAX_TRACKS)
+                .map(|_| vec![0.0; 2 * MAX_BLOCK])
+                .collect(),
             actions: Vec::with_capacity(MAX_EVENTS_PER_BLOCK),
             peaks: vec![Peak::default(); limeshot_core::Mixer::MAX_TRACKS],
             master_clipped: false,
@@ -108,8 +117,17 @@ impl Renderer {
         if tempo_changed {
             // Keep the musical position; continue at the new tempo from here.
             let tick = self.timeline.tick_at_sample(self.now);
-            self.timeline = Timeline { origin_tick: tick, origin_sample: self.now, tempo: self.snapshot.tempo, sample_rate: self.sample_rate };
-            for v in self.voices.iter_mut().filter(|v| v.sequenced && v.release_at != u64::MAX) {
+            self.timeline = Timeline {
+                origin_tick: tick,
+                origin_sample: self.now,
+                tempo: self.snapshot.tempo,
+                sample_rate: self.sample_rate,
+            };
+            for v in self
+                .voices
+                .iter_mut()
+                .filter(|v| v.sequenced && v.release_at != u64::MAX)
+            {
                 v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
             }
         }
@@ -161,7 +179,11 @@ impl Renderer {
     /// The loop/end point of the current program; an empty song still runs one bar.
     fn program_length(&self) -> Tick {
         let len = self.program().length;
-        if len == 0 { self.snapshot.time_signature.ticks_per_bar() } else { len }
+        if len == 0 {
+            self.snapshot.time_signature.ticks_per_bar()
+        } else {
+            len
+        }
     }
 
     /// The transport position in ticks within the current program.
@@ -193,7 +215,12 @@ impl Renderer {
 
     pub fn locate(&mut self, tick: Tick) {
         let tick = if tick >= self.program_length() { 0 } else { tick };
-        self.timeline = Timeline { origin_tick: tick, origin_sample: self.now, tempo: self.snapshot.tempo, sample_rate: self.sample_rate };
+        self.timeline = Timeline {
+            origin_tick: tick,
+            origin_sample: self.now,
+            tempo: self.snapshot.tempo,
+            sample_rate: self.sample_rate,
+        };
         if !self.playing {
             self.start_tick = tick;
         }
@@ -234,15 +261,22 @@ impl Renderer {
 
     /// Audition a channel's instrument (piano keys, step clicks).
     pub fn preview_note_on(&mut self, channel: u16, key: u8, velocity: f32) {
-        let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else { return };
-        if let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, self.sample_rate as f32) {
+        let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
+            return;
+        };
+        if let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, self.sample_rate as f32)
+        {
             v.channel = channel;
             self.alloc_voice(v);
         }
     }
 
     pub fn preview_note_off(&mut self, channel: u16, key: u8) {
-        for v in self.voices.iter_mut().filter(|v| !v.sequenced && v.channel == channel && v.key == key) {
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| !v.sequenced && v.channel == channel && v.key == key)
+        {
             v.release();
         }
     }
@@ -256,7 +290,11 @@ impl Renderer {
     }
 
     pub fn stop_sample_preview(&mut self) {
-        for v in self.voices.iter_mut().filter(|v| !v.sequenced && v.channel == NO_CHANNEL) {
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| !v.sequenced && v.channel == NO_CHANNEL)
+        {
             v.release();
         }
     }
@@ -285,7 +323,11 @@ impl Renderer {
 
         let mut done = 0;
         while done < frames {
-            let chunk = if self.playing { self.schedule(frames - done) } else { frames - done };
+            let chunk = if self.playing {
+                self.schedule(frames - done)
+            } else {
+                frames - done
+            };
             let chunk = chunk.max(1).min(frames - done);
             // Render voices between actions; `actions` holds offsets relative to `done`.
             let mut cursor = 0;
@@ -331,7 +373,15 @@ impl Renderer {
                 break;
             }
             let offset = tl.sample_of_tick(e.tick).saturating_sub(s0) as usize;
-            actions.push((offset, Action::Note { channel: e.channel, key: e.key, velocity: e.velocity, end_tick: e.tick + e.length }));
+            actions.push((
+                offset,
+                Action::Note {
+                    channel: e.channel,
+                    key: e.key,
+                    velocity: e.velocity,
+                    end_tick: e.tick + e.length,
+                },
+            ));
         }
         if self.metronome {
             let sig = self.snapshot.time_signature;
@@ -340,7 +390,12 @@ impl Renderer {
             let mut t = t_lo.div_ceil(beat) * beat;
             while t < t_hi && actions.len() < MAX_EVENTS_PER_BLOCK {
                 let offset = tl.sample_of_tick(t).saturating_sub(s0) as usize;
-                actions.push((offset, Action::Click { downbeat: t % bar == 0 }));
+                actions.push((
+                    offset,
+                    Action::Click {
+                        downbeat: t.is_multiple_of(bar),
+                    },
+                ));
                 t += beat;
             }
         }
@@ -359,28 +414,58 @@ impl Renderer {
             self.playing = false;
             self.finished = true;
             self.release_sequenced();
-            self.timeline = Timeline { origin_tick: 0, origin_sample: self.now, tempo: self.snapshot.tempo, sample_rate: self.sample_rate };
+            self.timeline = Timeline {
+                origin_tick: 0,
+                origin_sample: self.now,
+                tempo: self.snapshot.tempo,
+                sample_rate: self.sample_rate,
+            };
             self.start_tick = 0;
             return;
         }
         // Notes do not ring across the loop point, except one-shot samples.
-        for v in self.voices.iter_mut().filter(|v| v.sequenced && v.release_at != u64::MAX) {
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| v.sequenced && v.release_at != u64::MAX)
+        {
             v.release();
         }
-        self.timeline = Timeline { origin_tick: 0, origin_sample: pass_end, tempo: self.snapshot.tempo, sample_rate: self.sample_rate };
+        self.timeline = Timeline {
+            origin_tick: 0,
+            origin_sample: pass_end,
+            tempo: self.snapshot.tempo,
+            sample_rate: self.sample_rate,
+        };
     }
 
     fn start(&mut self, action: Action) {
         let sr = self.sample_rate as f32;
         match action {
-            Action::Note { channel, key, velocity, end_tick } => {
-                let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else { return };
-                let one_shot = matches!(ch.instrument, limeshot_sequencer::InstrumentState::Sampler { one_shot: true, .. });
-                let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, sr) else { return };
+            Action::Note {
+                channel,
+                key,
+                velocity,
+                end_tick,
+            } => {
+                let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
+                    return;
+                };
+                let one_shot = matches!(
+                    ch.instrument,
+                    limeshot_sequencer::InstrumentState::Sampler { one_shot: true, .. }
+                );
+                let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, sr) else {
+                    return;
+                };
                 v.channel = channel;
                 v.sequenced = true;
                 v.end_tick = end_tick;
-                v.release_at = if one_shot { u64::MAX } else { self.timeline.sample_of_tick(end_tick) };
+                v.release_at = if one_shot {
+                    u64::MAX
+                } else {
+                    self.timeline.sample_of_tick(end_tick)
+                };
                 self.alloc_voice(v);
             }
             Action::Click { downbeat } => self.alloc_voice(Voice::click(downbeat, sr)),
@@ -399,7 +484,12 @@ impl Renderer {
             let (track, gl, gr, audible) = match snapshot.channels.get(usize::from(v.channel)) {
                 Some(ch) => {
                     let (pl, pr) = pan_gains(ch.pan);
-                    (ch.mixer_track.min(tracks - 1), ch.volume * pl, ch.volume * pr, ch.audible || !v.sequenced)
+                    (
+                        ch.mixer_track.min(tracks - 1),
+                        ch.volume * pl,
+                        ch.volume * pr,
+                        ch.audible || !v.sequenced,
+                    )
                 }
                 None => (0, 1.0, 1.0, true),
             };
@@ -428,7 +518,11 @@ impl Renderer {
         for (i, bus) in inserts.iter_mut().take(tracks - 1).enumerate() {
             let t = self.snapshot.mixer[i + 1];
             let (pl, pr) = pan_gains(t.pan);
-            let (gl, gr) = if t.audible { (t.gain * pl, t.gain * pr) } else { (0.0, 0.0) };
+            let (gl, gr) = if t.audible {
+                (t.gain * pl, t.gain * pr)
+            } else {
+                (0.0, 0.0)
+            };
             let mut peak = Peak::default();
             for f in 0..frames {
                 let l = bus[2 * f] * gl;
@@ -442,7 +536,11 @@ impl Renderer {
         }
         let t = self.snapshot.mixer[0];
         let (pl, pr) = pan_gains(t.pan);
-        let (gl, gr) = if t.audible { (t.gain * pl, t.gain * pr) } else { (0.0, 0.0) };
+        let (gl, gr) = if t.audible {
+            (t.gain * pl, t.gain * pr)
+        } else {
+            (0.0, 0.0)
+        };
         let mut peak = Peak::default();
         for f in 0..frames {
             let l = master[2 * f] * gl;

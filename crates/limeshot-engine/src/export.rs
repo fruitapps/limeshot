@@ -28,7 +28,12 @@ pub struct RenderSettings {
 
 impl Default for RenderSettings {
     fn default() -> Self {
-        Self { sample_rate: 44_100, range: ExportRange::Song, max_tail_secs: 4.0, block: 512 }
+        Self {
+            sample_rate: 44_100,
+            range: ExportRange::Song,
+            max_tail_secs: 4.0,
+            block: 512,
+        }
     }
 }
 
@@ -57,7 +62,10 @@ impl RenderReport {
 }
 
 /// Render to interleaved stereo f32.
-pub fn render_offline(snapshot: Arc<Snapshot>, settings: &RenderSettings) -> Result<(Vec<f32>, RenderReport), ExportError> {
+pub fn render_offline(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+) -> Result<(Vec<f32>, RenderReport), ExportError> {
     let length = match settings.range {
         ExportRange::Song => snapshot.song.length,
         ExportRange::Pattern => snapshot.pattern.length,
@@ -96,12 +104,22 @@ pub fn render_offline(snapshot: Arc<Snapshot>, settings: &RenderSettings) -> Res
         tail += n;
     }
     let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
-    let report = RenderReport { frames: out.len() / 2, sample_rate, music_frames: music, peak };
+    let report = RenderReport {
+        frames: out.len() / 2,
+        sample_rate,
+        music_frames: music,
+        peak,
+    };
     Ok((out, report))
 }
 
 /// Render and write a stereo WAV file.
-pub fn export_wav(snapshot: Arc<Snapshot>, settings: &RenderSettings, depth: BitDepth, path: &Path) -> Result<RenderReport, ExportError> {
+pub fn export_wav(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    depth: BitDepth,
+    path: &Path,
+) -> Result<RenderReport, ExportError> {
     let (audio, report) = render_offline(snapshot, settings)?;
     write_wav(path, report.sample_rate, &audio, depth)?;
     Ok(report)

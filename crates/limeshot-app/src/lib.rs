@@ -1,6 +1,12 @@
 //! Shared code for the LimeShot binaries: locating bundled assets and building the demo song.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod demo;
 
@@ -9,14 +15,19 @@ use std::path::PathBuf;
 /// The folder of bundled samples: next to the executable (`samples/`, or `../Resources/samples`
 /// inside a macOS app bundle), falling back to the source tree in development builds.
 pub fn bundled_samples_dir() -> Option<PathBuf> {
-    let exe_dir = std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.to_path_buf()));
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(|p| p.to_path_buf()));
     let mut candidates = Vec::new();
     if let Some(d) = &exe_dir {
         candidates.push(d.join("samples"));
         candidates.push(d.join("../Resources/samples"));
     }
     candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/samples"));
-    candidates.into_iter().find(|p| p.is_dir()).and_then(|p| p.canonicalize().ok())
+    candidates
+        .into_iter()
+        .find(|p| p.is_dir())
+        .and_then(|p| p.canonicalize().ok())
 }
 
 /// The LimeShot icon as RGBA pixels, rasterised in code (no image file).

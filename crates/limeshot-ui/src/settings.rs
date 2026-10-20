@@ -20,7 +20,12 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { audio: AudioConfig::default(), recent: Vec::new(), browser_folders: Vec::new(), ui_scale: 1.0 }
+        Self {
+            audio: AudioConfig::default(),
+            recent: Vec::new(),
+            browser_folders: Vec::new(),
+            ui_scale: 1.0,
+        }
     }
 }
 
@@ -43,7 +48,11 @@ impl Settings {
             .ok()
             .and_then(|t| serde_json::from_str::<Settings>(&t).ok())
             .map(|mut s| {
-                s.ui_scale = if s.ui_scale.is_finite() { s.ui_scale.clamp(0.5, 3.0) } else { 1.0 };
+                s.ui_scale = if s.ui_scale.is_finite() {
+                    s.ui_scale.clamp(0.5, 3.0)
+                } else {
+                    1.0
+                };
                 s.recent.truncate(MAX_RECENT);
                 s
             })

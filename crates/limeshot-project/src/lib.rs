@@ -13,8 +13,14 @@
 //!   folder, absolute otherwise; [`resolve_sample_path`] turns them back into paths.
 //! * Saving writes a temporary file next to the target, syncs it and renames it over the target,
 //!   so a crash mid-save never leaves a truncated project.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 use limeshot_core::{Instrument, Project};
 use serde_json::{Value, json};
@@ -34,7 +40,9 @@ pub enum ProjectError {
     Io { path: PathBuf, source: std::io::Error },
     #[error("{0} is not a LimeShot project")]
     NotAProject(PathBuf),
-    #[error("{path} was saved by a newer LimeShot (format version {version}); this version reads up to {CURRENT_VERSION}")]
+    #[error(
+        "{path} was saved by a newer LimeShot (format version {version}); this version reads up to {CURRENT_VERSION}"
+    )]
     TooNew { path: PathBuf, version: u64 },
     #[error("{path} is damaged: {message}")]
     Corrupt { path: PathBuf, message: String },
@@ -43,7 +51,10 @@ pub enum ProjectError {
 }
 
 fn io(path: &Path) -> impl FnOnce(std::io::Error) -> ProjectError + '_ {
-    move |source| ProjectError::Io { path: path.to_path_buf(), source }
+    move |source| ProjectError::Io {
+        path: path.to_path_buf(),
+        source,
+    }
 }
 
 /// Serialise `project` to the envelope JSON. Sample paths are made relative to `project_dir`.
@@ -70,16 +81,28 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
 /// Parse envelope JSON (migrating old versions) into a sanitized project. Sample paths stay as
 /// stored; use [`resolve_sample_path`] to locate them.
 pub fn from_json(text: &str, path_for_errors: &Path) -> Result<Project, ProjectError> {
-    let corrupt = |message: String| ProjectError::Corrupt { path: path_for_errors.to_path_buf(), message };
+    let corrupt = |message: String| ProjectError::Corrupt {
+        path: path_for_errors.to_path_buf(),
+        message,
+    };
     let env: Value = serde_json::from_str(text).map_err(|e| corrupt(e.to_string()))?;
     if env.get("format").and_then(Value::as_str) != Some(FORMAT) {
         return Err(ProjectError::NotAProject(path_for_errors.to_path_buf()));
     }
-    let version = env.get("version").and_then(Value::as_u64).ok_or_else(|| corrupt("missing format version".into()))?;
+    let version = env
+        .get("version")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| corrupt("missing format version".into()))?;
     if version > CURRENT_VERSION {
-        return Err(ProjectError::TooNew { path: path_for_errors.to_path_buf(), version });
+        return Err(ProjectError::TooNew {
+            path: path_for_errors.to_path_buf(),
+            version,
+        });
     }
-    let raw = env.get("project").cloned().ok_or_else(|| corrupt("missing project data".into()))?;
+    let raw = env
+        .get("project")
+        .cloned()
+        .ok_or_else(|| corrupt("missing project data".into()))?;
     let raw = migrate(version, raw).map_err(corrupt)?;
     let mut project: Project = serde_json::from_value(raw).map_err(|e| corrupt(e.to_string()))?;
     project.sanitize();
@@ -107,9 +130,18 @@ pub fn load(path: &Path) -> Result<Project, ProjectError> {
 
 /// Save atomically: write `name.lime.tmp-<pid>`, flush to disk, rename over `path`.
 pub fn save(project: &Project, path: &Path) -> Result<(), ProjectError> {
-    let dir = path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
-    let text = to_json(project, Some(dir)).map_err(|e| ProjectError::Corrupt { path: path.to_path_buf(), message: e.to_string() })?;
-    let file_name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "project.lime".into());
+    let dir = path
+        .parent()
+        .filter(|d| !d.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let text = to_json(project, Some(dir)).map_err(|e| ProjectError::Corrupt {
+        path: path.to_path_buf(),
+        message: e.to_string(),
+    })?;
+    let file_name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "project.lime".into());
     let tmp = dir.join(format!(".{file_name}.tmp-{}", std::process::id()));
     let result = (|| {
         let mut f = fs::File::create(&tmp).map_err(io(&tmp))?;
@@ -137,7 +169,11 @@ pub fn relative_path(target: &Path, dir: &Path) -> String {
         return target.to_string_lossy().replace('\\', "/");
     }
     match target.strip_prefix(dir) {
-        Ok(rel) => rel.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect::<Vec<_>>().join("/"),
+        Ok(rel) => rel
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/"),
         Err(_) => target.to_string_lossy().into_owned(),
     }
 }
@@ -177,20 +213,48 @@ mod tests {
             .unwrap(),
         );
         let lead = ChannelId(
-            d.execute(Command::AddChannel { name: "Lead".into(), instrument: Instrument::Synth(SynthParams::default()) })
-                .unwrap()
-                .0
-                .unwrap(),
+            d.execute(Command::AddChannel {
+                name: "Lead".into(),
+                instrument: Instrument::Synth(SynthParams::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
         );
         for s in [0, 4, 8, 12] {
-            d.execute(Command::SetStep { pattern: pat, channel: kick, step: s, on: true }).unwrap();
-        }
-        d.execute(Command::AddNote { pattern: pat, note: NewNote { channel: lead, key: 67, start: 480, length: 720, velocity: 0.6 } })
+            d.execute(Command::SetStep {
+                pattern: pat,
+                channel: kick,
+                step: s,
+                on: true,
+            })
             .unwrap();
-        d.execute(Command::AddClip { pattern: pat, track: 0, start: 0, length: None }).unwrap();
+        }
+        d.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel: lead,
+                key: 67,
+                start: 480,
+                length: 720,
+                velocity: 0.6,
+            },
+        })
+        .unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 0,
+            length: None,
+        })
+        .unwrap();
         d.execute(Command::SetTempo(Tempo::from_bpm(97.25))).unwrap();
         d.execute(Command::SetMixerVolume { track: 1, volume: 0.5 }).unwrap();
-        d.execute(Command::SetChannelPan { channel: lead, pan: -0.25 }).unwrap();
+        d.execute(Command::SetChannelPan {
+            channel: lead,
+            pan: -0.25,
+        })
+        .unwrap();
         d.project().clone()
     }
 
@@ -202,16 +266,24 @@ mod tests {
         let path = dir.path().join("song.lime");
         save(&project, &path).unwrap();
         let text = fs::read_to_string(&path).unwrap();
-        assert!(text.contains("\"path\": \"samples/kick.wav\""), "sample stored relative: {text}");
+        assert!(
+            text.contains("\"path\": \"samples/kick.wav\""),
+            "sample stored relative: {text}"
+        );
         let loaded = load(&path).unwrap();
         let mut expected = project.clone();
         if let Instrument::Sampler(s) = &mut expected.channels[0].instrument {
-            s.sample = Some(SampleRef { path: "samples/kick.wav".into() });
+            s.sample = Some(SampleRef {
+                path: "samples/kick.wav".into(),
+            });
         }
         assert_eq!(loaded, expected);
         assert_eq!(resolve_sample_path("samples/kick.wav", Some(dir.path())), sample);
         // No temporary files left behind.
-        let names: Vec<_> = fs::read_dir(dir.path()).unwrap().map(|e| e.unwrap().file_name()).collect();
+        let names: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
         assert_eq!(names.len(), 1, "{names:?}");
     }
 
@@ -225,12 +297,18 @@ mod tests {
         let again: Value = serde_json::from_str(&to_json(&p, None).unwrap()).unwrap();
         assert_eq!(again["project"]["future_feature"], json!({"a": 1}));
         assert_eq!(again["project"]["channels"][0]["sidechain"], json!(true));
-        assert_eq!(again["project"]["channels"][0]["instrument"]["sample"]["path"], json!("/abs/kick.wav"));
+        assert_eq!(
+            again["project"]["channels"][0]["instrument"]["sample"]["path"],
+            json!("/abs/kick.wav")
+        );
     }
 
     #[test]
     fn refuses_newer_and_foreign_files() {
-        let e = from_json(r#"{"format":"limeshot-project","version":99,"project":{}}"#, Path::new("a.lime"));
+        let e = from_json(
+            r#"{"format":"limeshot-project","version":99,"project":{}}"#,
+            Path::new("a.lime"),
+        );
         assert!(matches!(e, Err(ProjectError::TooNew { version: 99, .. })));
         let e = from_json(r#"{"hello":1}"#, Path::new("a.lime"));
         assert!(matches!(e, Err(ProjectError::NotAProject(_))));

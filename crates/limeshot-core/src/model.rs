@@ -97,7 +97,16 @@ pub struct SamplerParams {
 
 impl Default for SamplerParams {
     fn default() -> Self {
-        Self { sample: None, gain_db: 0.0, pitch: 0.0, start: 0.0, end: 1.0, reverse: false, release_ms: 10.0, one_shot: true }
+        Self {
+            sample: None,
+            gain_db: 0.0,
+            pitch: 0.0,
+            start: 0.0,
+            end: 1.0,
+            reverse: false,
+            release_ms: 10.0,
+            one_shot: true,
+        }
     }
 }
 
@@ -340,7 +349,14 @@ pub struct MixerTrack {
 
 impl MixerTrack {
     pub fn new(name: impl Into<String>) -> Self {
-        Self { name: name.into(), volume: 0.8, pan: 0.0, muted: false, solo: false, extra: Extra::new() }
+        Self {
+            name: name.into(),
+            volume: 0.8,
+            pan: 0.0,
+            muted: false,
+            solo: false,
+            extra: Extra::new(),
+        }
     }
 }
 
@@ -356,7 +372,10 @@ impl Mixer {
 
 impl Default for Mixer {
     fn default() -> Self {
-        let mut tracks = vec![MixerTrack { volume: 1.0, ..MixerTrack::new("Master") }];
+        let mut tracks = vec![MixerTrack {
+            volume: 1.0,
+            ..MixerTrack::new("Master")
+        }];
         tracks.extend((1..=Self::DEFAULT_INSERTS).map(|i| MixerTrack::new(format!("Insert {i}"))));
         Self { tracks }
     }
@@ -394,7 +413,12 @@ impl Project {
             channels: Vec::new(),
             patterns: Vec::new(),
             playlist: Playlist {
-                tracks: (1..=16).map(|i| PlaylistTrack { name: format!("Track {i}"), muted: false }).collect(),
+                tracks: (1..=16)
+                    .map(|i| PlaylistTrack {
+                        name: format!("Track {i}"),
+                        muted: false,
+                    })
+                    .collect(),
                 clips: Vec::new(),
             },
             mixer: Mixer::default(),
@@ -532,9 +556,14 @@ impl Project {
         let max_track = self.playlist.clips.iter().map(|c| c.track).max().unwrap_or(0);
         while self.playlist.tracks.len() <= max_track as usize && self.playlist.tracks.len() < 500 {
             let n = self.playlist.tracks.len() + 1;
-            self.playlist.tracks.push(PlaylistTrack { name: format!("Track {n}"), muted: false });
+            self.playlist.tracks.push(PlaylistTrack {
+                name: format!("Track {n}"),
+                muted: false,
+            });
         }
-        self.playlist.clips.retain(|c| (c.track as usize) < self.playlist.tracks.len());
+        self.playlist
+            .clips
+            .retain(|c| (c.track as usize) < self.playlist.tracks.len());
         for c in &mut self.playlist.clips {
             c.length = c.length.max(1);
             max_id = max_id.max(c.id.0);
@@ -569,7 +598,14 @@ mod tests {
         let mut p = Project::new();
         let sig = p.time_signature;
         assert_eq!(p.patterns[0].length(sig), 3840);
-        p.patterns[0].notes.push(Note { id: NoteId(9), channel: ChannelId(1), key: 60, start: 3840, length: 10, velocity: 1.0 });
+        p.patterns[0].notes.push(Note {
+            id: NoteId(9),
+            channel: ChannelId(1),
+            key: 60,
+            start: 3840,
+            length: 10,
+            velocity: 1.0,
+        });
         assert_eq!(p.patterns[0].length(sig), 7680);
         p.patterns[0].length_steps = Some(8);
         assert_eq!(p.patterns[0].length(sig), 1920);
@@ -590,7 +626,10 @@ mod tests {
             id: ChannelId(50),
             name: "x".into(),
             color: PALETTE[0],
-            instrument: Instrument::Synth(SynthParams { sustain: f32::NAN, ..SynthParams::default() }),
+            instrument: Instrument::Synth(SynthParams {
+                sustain: f32::NAN,
+                ..SynthParams::default()
+            }),
             volume: 99.0,
             pan: f32::INFINITY,
             muted: false,
@@ -599,7 +638,14 @@ mod tests {
             root_key: 200,
             extra: Extra::new(),
         });
-        p.patterns[0].notes.push(Note { id: NoteId(70), channel: ChannelId(404), key: 60, start: 0, length: 0, velocity: 1.0 });
+        p.patterns[0].notes.push(Note {
+            id: NoteId(70),
+            channel: ChannelId(404),
+            key: 60,
+            start: 0,
+            length: 0,
+            velocity: 1.0,
+        });
         p.sanitize();
         let c = &p.channels[0];
         assert_eq!(c.volume, 1.25);

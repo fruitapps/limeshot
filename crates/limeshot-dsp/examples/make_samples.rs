@@ -49,7 +49,8 @@ fn snare() -> Vec<f32> {
     (0..n)
         .map(|i| {
             let t = secs(i);
-            let tone = (t * TAU * 185.0).sin() * (-t * 22.0).exp() * 0.6 + (t * TAU * 330.0).sin() * (-t * 30.0).exp() * 0.3;
+            let tone =
+                (t * TAU * 185.0).sin() * (-t * 22.0).exp() * 0.6 + (t * TAU * 330.0).sin() * (-t * 30.0).exp() * 0.3;
             let w = noise.next();
             lp += 0.55 * (w - lp);
             let hiss = (w - lp) * (-t * 13.0).exp() * 0.8;
@@ -91,7 +92,11 @@ fn hat(open: bool) -> Vec<f32> {
     (0..n)
         .map(|i| {
             let t = secs(i);
-            let metal: f32 = ratios.iter().map(|r| if ((t * 4300.0 * r) % 1.0) < 0.5 { 1.0 } else { -1.0 }).sum::<f32>() / 6.0;
+            let metal: f32 = ratios
+                .iter()
+                .map(|r| if ((t * 4300.0 * r) % 1.0) < 0.5 { 1.0 } else { -1.0 })
+                .sum::<f32>()
+                / 6.0;
             let w = 0.6 * noise.next() + 0.4 * metal;
             let hp = w - prev; // first-order high-pass
             prev = w;
@@ -112,7 +117,10 @@ fn perc() -> Vec<f32> {
 }
 
 fn main() {
-    let dir: PathBuf = std::env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("assets/samples"));
+    let dir: PathBuf = std::env::args()
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("assets/samples"));
     if let Err(e) = std::fs::create_dir_all(&dir) {
         eprintln!("cannot create {}: {e}", dir.display());
         std::process::exit(1);

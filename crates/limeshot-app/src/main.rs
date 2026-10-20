@@ -40,7 +40,11 @@ fn main() -> eframe::Result {
     if let Some(path) = args.iter().find(|a| !a.starts_with("--")) {
         app.open_path(std::path::Path::new(path));
     }
-    let icon = egui::IconData { rgba: limeshot_app::icon_rgba(256), width: 256, height: 256 };
+    let icon = egui::IconData {
+        rgba: limeshot_app::icon_rgba(256),
+        width: 256,
+        height: 256,
+    };
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("LimeShot")

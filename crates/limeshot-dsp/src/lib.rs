@@ -1,6 +1,12 @@
 //! LimeShot DSP building blocks. Everything here is original and allocation-free per sample.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod envelope;
 pub mod osc;
@@ -12,12 +18,20 @@ pub use sample::{BitDepth, SampleData, SampleError, load_wav, write_wav};
 
 /// Decibels to linear gain. −120 dB and below is silence.
 pub fn db_to_gain(db: f32) -> f32 {
-    if !db.is_finite() || db <= -120.0 { 0.0 } else { 10f32.powf(db / 20.0) }
+    if !db.is_finite() || db <= -120.0 {
+        0.0
+    } else {
+        10f32.powf(db / 20.0)
+    }
 }
 
 /// Linear gain to decibels (−∞ for silence).
 pub fn gain_to_db(gain: f32) -> f32 {
-    if gain <= 0.0 { f32::NEG_INFINITY } else { 20.0 * gain.log10() }
+    if gain <= 0.0 {
+        f32::NEG_INFINITY
+    } else {
+        20.0 * gain.log10()
+    }
 }
 
 /// Balance pan law: centre is unity on both sides, the opposite side fades linearly, so panning

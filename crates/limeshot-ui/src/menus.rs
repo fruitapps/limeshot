@@ -25,7 +25,10 @@ fn toggle(ui: &mut Ui, on: bool, text: &str, shortcut: &str) -> bool {
 
 pub fn add_sampler(app: &mut LimeShotApp) {
     let n = app.project().channels.len() + 1;
-    if let Some(id) = app.exec(Command::AddChannel { name: format!("Sampler {n}"), instrument: Instrument::Sampler(SamplerParams::default()) }) {
+    if let Some(id) = app.exec(Command::AddChannel {
+        name: format!("Sampler {n}"),
+        instrument: Instrument::Sampler(SamplerParams::default()),
+    }) {
         app.ui.selected_channel = Some(limeshot_core::ChannelId(id));
     }
 }
@@ -42,7 +45,9 @@ pub fn add_synth(app: &mut LimeShotApp) {
 
 pub fn add_pattern(app: &mut LimeShotApp) {
     let n = app.project().patterns.len() + 1;
-    if let Some(id) = app.exec(Command::AddPattern { name: format!("Pattern {n}") }) {
+    if let Some(id) = app.exec(Command::AddPattern {
+        name: format!("Pattern {n}"),
+    }) {
         app.set_current_pattern(PatternId(id));
     }
 }
@@ -84,13 +89,33 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             }
         });
         ui.menu_button("Edit", |ui| {
-            let undo = app.doc.undo_label().map(|l| format!("Undo {l}")).unwrap_or_else(|| "Undo".into());
-            if ui.add_enabled(app.doc.undo_label().is_some(), Button::new(undo).shortcut_text(key("Cmd+Z"))).clicked() {
+            let undo = app
+                .doc
+                .undo_label()
+                .map(|l| format!("Undo {l}"))
+                .unwrap_or_else(|| "Undo".into());
+            if ui
+                .add_enabled(
+                    app.doc.undo_label().is_some(),
+                    Button::new(undo).shortcut_text(key("Cmd+Z")),
+                )
+                .clicked()
+            {
                 app.doc.undo();
                 ui.close();
             }
-            let redo = app.doc.redo_label().map(|l| format!("Redo {l}")).unwrap_or_else(|| "Redo".into());
-            if ui.add_enabled(app.doc.redo_label().is_some(), Button::new(redo).shortcut_text(key("Cmd+Shift+Z"))).clicked() {
+            let redo = app
+                .doc
+                .redo_label()
+                .map(|l| format!("Redo {l}"))
+                .unwrap_or_else(|| "Redo".into());
+            if ui
+                .add_enabled(
+                    app.doc.redo_label().is_some(),
+                    Button::new(redo).shortcut_text(key("Cmd+Shift+Z")),
+                )
+                .clicked()
+            {
                 app.doc.redo();
                 ui.close();
             }
@@ -128,10 +153,10 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             if item(ui, "New pattern", &key("F4")) {
                 add_pattern(app);
             }
-            if item(ui, "Clone pattern", "") {
-                if let Some(id) = app.exec(Command::ClonePattern(cur)) {
-                    app.set_current_pattern(PatternId(id));
-                }
+            if item(ui, "Clone pattern", "")
+                && let Some(id) = app.exec(Command::ClonePattern(cur))
+            {
+                app.set_current_pattern(PatternId(id));
             }
             if item(ui, "Rename pattern…", "") {
                 app.dialog = Some(Dialog::rename_pattern(app, cur));
@@ -142,7 +167,8 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.close();
             }
             ui.separator();
-            let pats: Vec<(PatternId, String)> = app.project().patterns.iter().map(|p| (p.id, p.name.clone())).collect();
+            let pats: Vec<(PatternId, String)> =
+                app.project().patterns.iter().map(|p| (p.id, p.name.clone())).collect();
             for (id, name) in pats {
                 if toggle(ui, id == cur, &name, "") {
                     app.set_current_pattern(id);

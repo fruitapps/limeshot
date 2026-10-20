@@ -34,7 +34,10 @@ pub const EDITING: &[(&str, &str)] = &[
     ("Cmd+A", "Select all"),
     ("Cmd+D", "Deselect"),
     ("Cmd+B", "Duplicate selection to the right"),
-    ("↑ / ↓", "Piano Roll: transpose a semitone · Channel Rack: select channel"),
+    (
+        "↑ / ↓",
+        "Piano Roll: transpose a semitone · Channel Rack: select channel",
+    ),
     ("Cmd+↑ / Cmd+↓", "Piano Roll: transpose an octave"),
     ("← / →", "Piano Roll / Playlist: nudge by the snap"),
     ("Cmd+L", "Channel Rack: route channel to a free mixer track"),

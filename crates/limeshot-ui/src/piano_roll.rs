@@ -11,7 +11,10 @@
 
 use crate::app::{Focus, LimeShotApp};
 use crate::theme::{Theme, mix, mono, rgb};
-use egui::{Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui, Vec2, pos2, vec2};
+use egui::{
+    Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
+    Vec2, pos2, vec2,
+};
 use limeshot_core::*;
 
 const KEYS_W: f32 = 52.0;
@@ -21,9 +24,24 @@ const EDGE: f32 = 6.0;
 
 #[derive(Debug, Clone)]
 enum Drag {
-    Move { ids: Vec<NoteId>, anchor_start: Tick, anchor_key: u8, grab_tick: i64, grab_key: i32, applied_dt: i64, applied_dk: i32 },
-    Resize { ids: Vec<NoteId>, anchor_end: Tick, grab_tick: i64, applied: i64 },
-    Select { from: Pos2 },
+    Move {
+        ids: Vec<NoteId>,
+        anchor_start: Tick,
+        anchor_key: u8,
+        grab_tick: i64,
+        grab_key: i32,
+        applied_dt: i64,
+        applied_dk: i32,
+    },
+    Resize {
+        ids: Vec<NoteId>,
+        anchor_end: Tick,
+        grab_tick: i64,
+        applied: i64,
+    },
+    Select {
+        from: Pos2,
+    },
     Erase,
     Velocity,
 }
@@ -89,7 +107,10 @@ impl View {
         127 - ((y - self.grid.top() + self.scroll.y) / self.key_h).floor() as i32
     }
     fn note_rect(&self, n: &Note) -> Rect {
-        Rect::from_min_max(pos2(self.x(n.start), self.y(n.key)), pos2(self.x(n.end()).max(self.x(n.start) + 3.0), self.y(n.key) + self.key_h))
+        Rect::from_min_max(
+            pos2(self.x(n.start), self.y(n.key)),
+            pos2(self.x(n.end()).max(self.x(n.start) + 3.0), self.y(n.key) + self.key_h),
+        )
     }
 }
 
@@ -122,21 +143,38 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let pid = app.current_pattern();
     let Some(cid) = app.selected_channel() else {
         ui.add_space(20.0);
-        ui.vertical_centered(|ui| ui.label(RichText::new("Add a channel in the Channel Rack to write notes.").color(t.text_dim)));
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new("Add a channel in the Channel Rack to write notes.").color(t.text_dim))
+        });
         return;
     };
     // Header: channel selector and zoom.
     ui.horizontal(|ui| {
-        let chans: Vec<(ChannelId, String, Rgb)> = app.project().channels.iter().map(|c| (c.id, c.name.clone(), c.color)).collect();
-        let cur_name = chans.iter().find(|c| c.0 == cid).map(|c| c.1.clone()).unwrap_or_default();
-        egui::ComboBox::from_id_salt("pr_channel").selected_text(cur_name).width(140.0).show_ui(ui, |ui| {
-            for (id, name, color) in &chans {
-                if ui.selectable_label(*id == cid, RichText::new(format!("■ {name}")).color(rgb(*color))).clicked() {
-                    app.ui.selected_channel = Some(*id);
-                    app.ui.piano.selection.clear();
+        let chans: Vec<(ChannelId, String, Rgb)> = app
+            .project()
+            .channels
+            .iter()
+            .map(|c| (c.id, c.name.clone(), c.color))
+            .collect();
+        let cur_name = chans
+            .iter()
+            .find(|c| c.0 == cid)
+            .map(|c| c.1.clone())
+            .unwrap_or_default();
+        egui::ComboBox::from_id_salt("pr_channel")
+            .selected_text(cur_name)
+            .width(140.0)
+            .show_ui(ui, |ui| {
+                for (id, name, color) in &chans {
+                    if ui
+                        .selectable_label(*id == cid, RichText::new(format!("■ {name}")).color(rgb(*color)))
+                        .clicked()
+                    {
+                        app.ui.selected_channel = Some(*id);
+                        app.ui.piano.selection.clear();
+                    }
                 }
-            }
-        });
+            });
         let pat_name = app.project().pattern(pid).map(|p| p.name.clone()).unwrap_or_default();
         ui.label(RichText::new(format!("in {pat_name}")).color(t.text_dim));
         ui.separator();
@@ -149,17 +187,37 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(12.0);
             }
             if ui.small_button("↕").on_hover_text("Taller keys").clicked() {
-                app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 { 9.0 } else { app.ui.piano.key_h + 3.0 };
+                app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 {
+                    9.0
+                } else {
+                    app.ui.piano.key_h + 3.0
+                };
             }
-            ui.label(RichText::new(format!("{} selected", app.ui.piano.selection.len())).small().color(t.text_dim));
+            ui.label(
+                RichText::new(format!("{} selected", app.ui.piano.selection.len()))
+                    .small()
+                    .color(t.text_dim),
+            );
         });
     });
     let full = ui.available_rect_before_wrap();
     let (full, _) = ui.allocate_exact_size(full.size(), Sense::hover());
-    let ruler = Rect::from_min_max(pos2(full.left() + KEYS_W, full.top()), pos2(full.right(), full.top() + RULER_H));
-    let keys = Rect::from_min_max(pos2(full.left(), full.top() + RULER_H), pos2(full.left() + KEYS_W, full.bottom() - VEL_H));
-    let grid = Rect::from_min_max(pos2(full.left() + KEYS_W, full.top() + RULER_H), pos2(full.right(), full.bottom() - VEL_H));
-    let vel = Rect::from_min_max(pos2(full.left() + KEYS_W, full.bottom() - VEL_H + 4.0), full.right_bottom());
+    let ruler = Rect::from_min_max(
+        pos2(full.left() + KEYS_W, full.top()),
+        pos2(full.right(), full.top() + RULER_H),
+    );
+    let keys = Rect::from_min_max(
+        pos2(full.left(), full.top() + RULER_H),
+        pos2(full.left() + KEYS_W, full.bottom() - VEL_H),
+    );
+    let grid = Rect::from_min_max(
+        pos2(full.left() + KEYS_W, full.top() + RULER_H),
+        pos2(full.right(), full.bottom() - VEL_H),
+    );
+    let vel = Rect::from_min_max(
+        pos2(full.left() + KEYS_W, full.bottom() - VEL_H + 4.0),
+        full.right_bottom(),
+    );
 
     let st = &mut app.ui.piano;
     if !st.scrolled_once {
@@ -169,10 +227,19 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let max_y = (128.0 * st.key_h - grid.height()).max(0.0);
     st.scroll.y = st.scroll.y.clamp(0.0, max_y);
     st.scroll.x = st.scroll.x.max(0.0);
-    let view = View { grid, ppt: st.zoom_x / PPQ as f32, key_h: st.key_h, scroll: st.scroll };
+    let view = View {
+        grid,
+        ppt: st.zoom_x / PPQ as f32,
+        key_h: st.key_h,
+        scroll: st.scroll,
+    };
 
     let sig = app.project().time_signature;
-    let pat_len = app.project().pattern(pid).map(|p| p.length(sig)).unwrap_or(sig.ticks_per_bar());
+    let pat_len = app
+        .project()
+        .pattern(pid)
+        .map(|p| p.length(sig))
+        .unwrap_or(sig.ticks_per_bar());
     let painter = ui.painter_at(full);
 
     // Rows.
@@ -187,7 +254,10 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             painter.rect_filled(row.intersect(grid), 0.0, t.row_black_key);
         }
         if k % 12 == 0 {
-            painter.line_segment([pos2(grid.left(), y + view.key_h), pos2(grid.right(), y + view.key_h)], Stroke::new(1.0, t.grid_beat));
+            painter.line_segment(
+                [pos2(grid.left(), y + view.key_h), pos2(grid.right(), y + view.key_h)],
+                Stroke::new(1.0, t.grid_beat),
+            );
         }
     }
     // Columns.
@@ -195,7 +265,11 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     // Pattern end.
     let xe = view.x(pat_len);
     if xe < grid.right() {
-        painter.rect_filled(Rect::from_min_max(pos2(xe.max(grid.left()), grid.top()), grid.right_bottom()), 0.0, Color32::from_black_alpha(70));
+        painter.rect_filled(
+            Rect::from_min_max(pos2(xe.max(grid.left()), grid.top()), grid.right_bottom()),
+            0.0,
+            Color32::from_black_alpha(70),
+        );
     }
 
     // Notes: other channels as ghosts, then this channel.
@@ -205,7 +279,11 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         for n in p.notes.iter().filter(|n| n.channel != cid) {
             let r = view.note_rect(n);
             if r.intersects(grid) {
-                painter.rect_filled(r.intersect(grid), CornerRadius::same(2), t.text_dim.gamma_multiply(0.18));
+                painter.rect_filled(
+                    r.intersect(grid),
+                    CornerRadius::same(2),
+                    t.text_dim.gamma_multiply(0.18),
+                );
             }
         }
         for n in p.notes_for(cid) {
@@ -217,21 +295,41 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             let base = mix(t.raised, ch_color, 0.45 + 0.55 * n.velocity);
             let fill = if sel { mix(base, Color32::WHITE, 0.35) } else { base };
             painter.rect_filled(r.intersect(grid), CornerRadius::same(2), fill);
-            painter.rect_stroke(r, 2.0, Stroke::new(1.0, if sel { t.accent } else { mix(fill, Color32::BLACK, 0.4) }), egui::StrokeKind::Inside);
+            painter.rect_stroke(
+                r,
+                2.0,
+                Stroke::new(1.0, if sel { t.accent } else { mix(fill, Color32::BLACK, 0.4) }),
+                egui::StrokeKind::Inside,
+            );
             if r.width() > 26.0 && view.key_h >= 11.0 {
-                painter.text(r.left_center() + vec2(3.0, 0.0), Align2::LEFT_CENTER, key_name(n.key), mono(9.0), Color32::from_black_alpha(200));
+                painter.text(
+                    r.left_center() + vec2(3.0, 0.0),
+                    Align2::LEFT_CENTER,
+                    key_name(n.key),
+                    mono(9.0),
+                    Color32::from_black_alpha(200),
+                );
             }
         }
     }
     // Selection rectangle.
     if let (Some(Drag::Select { from }), Some(p)) = (&app.ui.piano.drag, ui.input(|i| i.pointer.hover_pos())) {
-        painter.rect(Rect::from_two_pos(*from, p), 0.0, t.selection, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
+        painter.rect(
+            Rect::from_two_pos(*from, p),
+            0.0,
+            t.selection,
+            Stroke::new(1.0, t.accent),
+            egui::StrokeKind::Inside,
+        );
     }
     // Playhead.
     if app.ui.mode == limeshot_engine::PlayMode::Pattern && app.is_playing() {
         let x = view.x(app.player.status().position());
         if x >= grid.left() && x <= grid.right() {
-            painter.line_segment([pos2(x, ruler.top()), pos2(x, grid.bottom())], Stroke::new(1.5, t.playhead));
+            painter.line_segment(
+                [pos2(x, ruler.top()), pos2(x, grid.bottom())],
+                Stroke::new(1.5, t.playhead),
+            );
         }
     }
 
@@ -247,7 +345,13 @@ pub fn draw_time_grid(painter: &egui::Painter, view: &impl TimeAxis, area: Rect,
     let beat = sig.ticks_per_beat();
     let bar = sig.ticks_per_bar();
     let px_per_beat = view.ppt() * beat as f32;
-    let step = if px_per_beat > 48.0 { STEP_TICKS } else if px_per_beat > 12.0 { beat } else { bar };
+    let step = if px_per_beat > 48.0 {
+        STEP_TICKS
+    } else if px_per_beat > 12.0 {
+        beat
+    } else {
+        bar
+    };
     let step = match snap.ticks(sig) {
         Some(s) if s < step && s as f32 * view.ppt() > 6.0 => s,
         _ => step,
@@ -256,9 +360,9 @@ pub fn draw_time_grid(painter: &egui::Painter, view: &impl TimeAxis, area: Rect,
     let mut tk = first;
     while view.x_of(tk) <= area.right() {
         let x = view.x_of(tk);
-        let c = if tk % bar == 0 {
+        let c = if tk.is_multiple_of(bar) {
             t.grid_bar
-        } else if tk % beat == 0 {
+        } else if tk.is_multiple_of(beat) {
             t.grid_beat
         } else {
             t.grid_step
@@ -294,14 +398,29 @@ pub fn draw_ruler(painter: &egui::Painter, view: &impl TimeAxis, ruler: Rect, si
     painter.rect_filled(ruler, 0.0, t.surface);
     let bar = sig.ticks_per_bar();
     let px_bar = view.ppt() * bar as f32;
-    let every = if px_bar > 40.0 { 1 } else if px_bar > 16.0 { 4 } else { 16 };
+    let every = if px_bar > 40.0 {
+        1
+    } else if px_bar > 16.0 {
+        4
+    } else {
+        16
+    };
     let first_bar = (view.tick_at_x(ruler.left()).max(0) as u64) / bar;
     let mut b = first_bar;
     while view.x_of(b * bar) <= ruler.right() {
         let x = view.x_of(b * bar);
-        if b % every == 0 && x >= ruler.left() - 1.0 {
-            painter.line_segment([pos2(x, ruler.center().y), pos2(x, ruler.bottom())], Stroke::new(1.0, t.grid_bar));
-            painter.text(pos2(x + 3.0, ruler.top() + 1.0), Align2::LEFT_TOP, (b + 1).to_string(), mono(10.0), t.text_dim);
+        if b.is_multiple_of(every) && x >= ruler.left() - 1.0 {
+            painter.line_segment(
+                [pos2(x, ruler.center().y), pos2(x, ruler.bottom())],
+                Stroke::new(1.0, t.grid_bar),
+            );
+            painter.text(
+                pos2(x + 3.0, ruler.top() + 1.0),
+                Align2::LEFT_TOP,
+                (b + 1).to_string(),
+                mono(10.0),
+                t.text_dim,
+            );
         }
         b += 1;
     }
@@ -313,7 +432,10 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
     let t = Theme::current();
     let xe = view.x(pat_len);
     if xe >= ruler.left() && xe <= ruler.right() {
-        painter.line_segment([pos2(xe, ruler.top()), pos2(xe, ruler.bottom())], Stroke::new(2.0, t.accent_dim));
+        painter.line_segment(
+            [pos2(xe, ruler.top()), pos2(xe, ruler.bottom())],
+            Stroke::new(2.0, t.accent_dim),
+        );
     }
     let resp = ui.interact(ruler, ui.id().with("pr_ruler"), Sense::click());
     if resp.clicked()
@@ -329,29 +451,56 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
 fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid: ChannelId) {
     let t = Theme::current();
     let painter = ui.painter_at(keys);
-    for k in 0..=127u8 {
-        let y = view.y(k);
-        if y > keys.bottom() || y + view.key_h < keys.top() {
-            continue;
-        }
-        let r = Rect::from_min_max(pos2(keys.left(), y), pos2(keys.right(), y + view.key_h - 1.0));
-        let pressed = app.ui.piano.audition == Some((cid, k));
-        let fill = if pressed {
-            t.accent
-        } else if is_black(k) {
-            t.key_black
-        } else {
-            t.key_white
-        };
-        let r = if is_black(k) { Rect::from_min_max(r.min, pos2(keys.left() + KEYS_W * 0.68, r.max.y)) } else { r };
-        painter.rect_filled(r, CornerRadius::same(2), fill);
-        if k % 12 == 0 {
-            painter.text(pos2(keys.right() - 3.0, y + view.key_h / 2.0), Align2::RIGHT_CENTER, key_name(k), mono(9.0), t.key_black);
+    painter.rect_filled(keys, 0.0, t.key_white);
+    // White keys first (with separators), then the shorter black keys on top.
+    for pass in [false, true] {
+        for k in 0..=127u8 {
+            let y = view.y(k);
+            if y > keys.bottom() || y + view.key_h < keys.top() || is_black(k) != pass {
+                continue;
+            }
+            let pressed = app.ui.piano.audition == Some((cid, k));
+            let r = Rect::from_min_max(pos2(keys.left(), y), pos2(keys.right(), y + view.key_h));
+            if pass {
+                let r = Rect::from_min_max(r.min, pos2(keys.left() + KEYS_W * 0.62, r.max.y));
+                painter.rect_filled(
+                    r,
+                    CornerRadius {
+                        nw: 0,
+                        ne: 2,
+                        sw: 0,
+                        se: 2,
+                    },
+                    if pressed { t.accent } else { t.key_black },
+                );
+            } else {
+                if pressed {
+                    painter.rect_filled(r, 0.0, t.accent);
+                }
+                if matches!(k % 12, 0 | 5) {
+                    painter.line_segment(
+                        [pos2(keys.left(), r.bottom()), pos2(keys.right(), r.bottom())],
+                        Stroke::new(1.0, mix(t.key_white, t.key_black, 0.35)),
+                    );
+                }
+                if k % 12 == 0 {
+                    painter.text(
+                        pos2(keys.right() - 3.0, y + view.key_h / 2.0),
+                        Align2::RIGHT_CENTER,
+                        key_name(k),
+                        mono(9.0),
+                        t.key_black,
+                    );
+                }
+            }
         }
     }
+    painter.line_segment([keys.right_top(), keys.right_bottom()], Stroke::new(1.0, t.border));
     let resp = ui.interact(keys, ui.id().with("pr_keys"), Sense::click_and_drag());
     let down = resp.is_pointer_button_down_on();
-    let key = resp.interact_pointer_pos().map(|p| view.key_at(p.y).clamp(0, 127) as u8);
+    let key = resp
+        .interact_pointer_pos()
+        .map(|p| view.key_at(p.y).clamp(0, 127) as u8);
     match (down, key, app.ui.piano.audition) {
         (true, Some(k), prev) if prev != Some((cid, k)) => {
             if let Some((c, pk)) = prev {
@@ -374,11 +523,20 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
 fn hit(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, bool)> {
     notes.iter().rev().filter(|n| n.channel == cid).find_map(|n| {
         let r = view.note_rect(n);
-        r.contains(p).then(|| (*n, p.x >= r.right() - EDGE.min(r.width() * 0.4)))
+        r.contains(p)
+            .then(|| (*n, p.x >= r.right() - EDGE.min(r.width() * 0.4)))
     })
 }
 
-fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: PatternId, cid: ChannelId, pattern: Option<&Pattern>) {
+fn grid_input(
+    app: &mut LimeShotApp,
+    ui: &mut Ui,
+    view: &View,
+    grid: Rect,
+    pid: PatternId,
+    cid: ChannelId,
+    pattern: Option<&Pattern>,
+) {
     let resp = ui.interact(grid, ui.id().with("pr_grid"), Sense::click_and_drag());
     let notes: &[Note] = pattern.map(|p| p.notes.as_slice()).unwrap_or(&[]);
     let sig = app.project().time_signature;
@@ -402,8 +560,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
         ));
     }
 
-    let primary_pressed = resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Primary));
-    let secondary_pressed = resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary));
+    let primary_pressed =
+        resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Primary));
+    let secondary_pressed =
+        resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary));
 
     if primary_pressed && let Some(p) = pointer {
         let st = &mut app.ui.piano;
@@ -434,7 +594,12 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
                     st.last_vel = n.velocity;
                     app.doc.begin_gesture();
                     if edge {
-                        app.ui.piano.drag = Some(Drag::Resize { ids, anchor_end: n.end(), grab_tick: view.tick_at(p.x), applied: 0 });
+                        app.ui.piano.drag = Some(Drag::Resize {
+                            ids,
+                            anchor_end: n.end(),
+                            grab_tick: view.tick_at(p.x),
+                            applied: 0,
+                        });
                     } else {
                         app.ui.piano.drag = Some(Drag::Move {
                             ids,
@@ -452,7 +617,13 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
                 None => {
                     let key = view.key_at(p.y).clamp(0, 127) as u8;
                     let start = snap.floor(view.tick_at(p.x).max(0) as u64, sig);
-                    let note = NewNote { channel: cid, key, start, length: st.last_len.max(1), velocity: st.last_vel };
+                    let note = NewNote {
+                        channel: cid,
+                        key,
+                        start,
+                        length: st.last_len.max(1),
+                        velocity: st.last_vel,
+                    };
                     app.doc.begin_gesture();
                     if let Some(id) = app.exec(Command::AddNote { pattern: pid, note }) {
                         let id = NoteId(id);
@@ -482,13 +653,26 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
     if let Some(p) = pointer {
         let mut drag = app.ui.piano.drag.take();
         match &mut drag {
-            Some(Drag::Move { ids, anchor_start, anchor_key, grab_tick, grab_key, applied_dt, applied_dk }) => {
+            Some(Drag::Move {
+                ids,
+                anchor_start,
+                anchor_key,
+                grab_tick,
+                grab_key,
+                applied_dt,
+                applied_dk,
+            }) => {
                 let raw = view.tick_at(p.x) - *grab_tick;
                 let target = (*anchor_start as i64 + raw).max(0) as u64;
                 let dt = snap.round(target, sig) as i64 - *anchor_start as i64;
                 let dk = (view.key_at(p.y) - *grab_key).clamp(-i32::from(*anchor_key), 127 - i32::from(*anchor_key));
                 if dt != *applied_dt || dk != *applied_dk {
-                    app.exec(Command::MoveNotes { pattern: pid, notes: ids.clone(), dt: dt - *applied_dt, dkey: dk - *applied_dk });
+                    app.exec(Command::MoveNotes {
+                        pattern: pid,
+                        notes: ids.clone(),
+                        dt: dt - *applied_dt,
+                        dkey: dk - *applied_dk,
+                    });
                     if dk != *applied_dk {
                         let k = (i32::from(*anchor_key) + dk) as u8;
                         if let Some((c, old)) = app.ui.piano.audition {
@@ -501,23 +685,43 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
                     *applied_dk = dk;
                 }
             }
-            Some(Drag::Resize { ids, anchor_end, grab_tick, applied }) => {
+            Some(Drag::Resize {
+                ids,
+                anchor_end,
+                grab_tick,
+                applied,
+            }) => {
                 let raw = view.tick_at(p.x) - *grab_tick;
                 let target = (*anchor_end as i64 + raw).max(1) as u64;
                 let snapped = snap.round(target, sig).max(1);
                 let d = snapped as i64 - *anchor_end as i64;
                 if d != *applied {
-                    app.exec(Command::ResizeNotes { pattern: pid, notes: ids.clone(), dlen: d - *applied });
+                    app.exec(Command::ResizeNotes {
+                        pattern: pid,
+                        notes: ids.clone(),
+                        dlen: d - *applied,
+                    });
                     *applied = d;
-                    if let Some(n) = app.project().pattern(pid).and_then(|pp| pp.notes.iter().find(|n| ids.first() == Some(&n.id))) {
+                    if let Some(n) = app
+                        .project()
+                        .pattern(pid)
+                        .and_then(|pp| pp.notes.iter().find(|n| ids.first() == Some(&n.id)))
+                    {
                         app.ui.piano.last_len = n.length;
                     }
                 }
             }
             Some(Drag::Erase) => {
-                let current = app.project().pattern(pid).map(|pp| pp.notes.clone()).unwrap_or_default();
+                let current = app
+                    .project()
+                    .pattern(pid)
+                    .map(|pp| pp.notes.clone())
+                    .unwrap_or_default();
                 if let Some((n, _)) = hit(view, &current, cid, p) {
-                    app.exec(Command::RemoveNotes { pattern: pid, notes: vec![n.id] });
+                    app.exec(Command::RemoveNotes {
+                        pattern: pid,
+                        notes: vec![n.id],
+                    });
                     app.ui.piano.selection.retain(|x| *x != n.id);
                 }
             }
@@ -550,16 +754,35 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, pid: 
         && let Some((n, _)) = hit(view, notes, cid, p)
     {
         // Double-click: select every note with the same pitch (quick way to edit a drum lane).
-        app.ui.piano.selection = notes.iter().filter(|m| m.channel == cid && m.key == n.key).map(|m| m.id).collect();
+        app.ui.piano.selection = notes
+            .iter()
+            .filter(|m| m.channel == cid && m.key == n.key)
+            .map(|m| m.id)
+            .collect();
     }
     let _ = root;
 }
 
-fn velocity_lane(app: &mut LimeShotApp, ui: &mut Ui, view: &View, lane: Rect, pid: PatternId, cid: ChannelId, pattern: Option<&Pattern>, color: Color32) {
+fn velocity_lane(
+    app: &mut LimeShotApp,
+    ui: &mut Ui,
+    view: &View,
+    lane: Rect,
+    pid: PatternId,
+    cid: ChannelId,
+    pattern: Option<&Pattern>,
+    color: Color32,
+) {
     let t = Theme::current();
     let painter = ui.painter_at(lane);
     painter.rect_filled(lane, 0.0, t.sunken);
-    painter.text(pos2(lane.left() - KEYS_W + 4.0, lane.top() + 2.0), Align2::LEFT_TOP, "Velocity", mono(9.5), t.text_dim);
+    painter.text(
+        pos2(lane.left() - KEYS_W + 4.0, lane.top() + 2.0),
+        Align2::LEFT_TOP,
+        "Velocity",
+        mono(9.5),
+        t.text_dim,
+    );
     let Some(p) = pattern else { return };
     let h = lane.height() - 8.0;
     for n in p.notes_for(cid) {
@@ -590,8 +813,16 @@ fn velocity_lane(app: &mut LimeShotApp, ui: &mut Ui, view: &View, lane: Rect, pi
             .min_by(|a, b| a.1.total_cmp(&b.1))
             .map(|x| x.0);
         if let Some(id) = near {
-            let ids = if app.ui.piano.selection.contains(&id) { app.ui.piano.selection.clone() } else { vec![id] };
-            app.exec(Command::SetNoteVelocity { pattern: pid, notes: ids, velocity: v });
+            let ids = if app.ui.piano.selection.contains(&id) {
+                app.ui.piano.selection.clone()
+            } else {
+                vec![id]
+            };
+            app.exec(Command::SetNoteVelocity {
+                pattern: pid,
+                notes: ids,
+                velocity: v,
+            });
             app.ui.piano.last_vel = v;
         }
     }
@@ -612,7 +843,10 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     let st = &mut app.ui.piano;
     if mods.command {
         let factor = (1.0 + delta.y * 0.004).clamp(0.5, 2.0);
-        let anchor = ui.input(|i| i.pointer.hover_pos()).map(|p| p.x - grid.left()).unwrap_or(0.0);
+        let anchor = ui
+            .input(|i| i.pointer.hover_pos())
+            .map(|p| p.x - grid.left())
+            .unwrap_or(0.0);
         let old = st.zoom_x;
         st.zoom_x = (st.zoom_x * factor).clamp(12.0, 800.0);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
@@ -629,23 +863,39 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     let pid = app.current_pattern();
     let Some(cid) = app.selected_channel() else { return };
     let sel = app.ui.piano.selection.clone();
-    if key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace) {
-        if !sel.is_empty() {
-            app.exec(Command::RemoveNotes { pattern: pid, notes: sel.clone() });
-            app.ui.piano.selection.clear();
-        }
+    if (key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace)) && !sel.is_empty() {
+        app.exec(Command::RemoveNotes {
+            pattern: pid,
+            notes: sel.clone(),
+        });
+        app.ui.piano.selection.clear();
     }
     if key(ctx, Modifiers::COMMAND, Key::A) {
-        app.ui.piano.selection = app.project().pattern(pid).map(|p| p.notes_for(cid).map(|n| n.id).collect()).unwrap_or_default();
+        app.ui.piano.selection = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes_for(cid).map(|n| n.id).collect())
+            .unwrap_or_default();
     }
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.piano.selection.clear();
     }
     if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
-        let before: Vec<NoteId> = app.project().pattern(pid).map(|p| p.notes.iter().map(|n| n.id).collect()).unwrap_or_default();
-        app.exec(Command::DuplicateNotes { pattern: pid, notes: sel.clone() });
+        let before: Vec<NoteId> = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes.iter().map(|n| n.id).collect())
+            .unwrap_or_default();
+        app.exec(Command::DuplicateNotes {
+            pattern: pid,
+            notes: sel.clone(),
+        });
         // Select the copies.
-        app.ui.piano.selection = app.project().pattern(pid).map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect()).unwrap_or_default();
+        app.ui.piano.selection = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect())
+            .unwrap_or_default();
     }
     if sel.is_empty() {
         return;
@@ -661,7 +911,12 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         (Modifiers::NONE, Key::ArrowRight, grid, 0),
     ] {
         if key(ctx, mods, k) {
-            app.exec(Command::MoveNotes { pattern: pid, notes: sel.clone(), dt, dkey: dk });
+            app.exec(Command::MoveNotes {
+                pattern: pid,
+                notes: sel.clone(),
+                dt,
+                dkey: dk,
+            });
         }
     }
 }

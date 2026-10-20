@@ -11,8 +11,14 @@
 //!
 //! When no output device can be opened, a timer thread renders into the void at the device's
 //! pace, so the transport, playhead and meters still behave (the UI says audio is unavailable).
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod assets;
 pub mod devices;
@@ -101,7 +107,11 @@ impl Status {
 
     /// The (left, right) peak of mixer track `i` in the last callback.
     pub fn peak(&self, i: usize) -> (f32, f32) {
-        let g = |j: usize| self.peaks.get(j).map_or(0.0, |a| f32::from_bits(a.load(Ordering::Relaxed)));
+        let g = |j: usize| {
+            self.peaks
+                .get(j)
+                .map_or(0.0, |a| f32::from_bits(a.load(Ordering::Relaxed)))
+        };
         (g(2 * i), g(2 * i + 1))
     }
 
@@ -182,16 +192,19 @@ impl AudioState {
         }
         s.position.store(self.renderer.position(), Ordering::Relaxed);
         s.playing.store(self.renderer.is_playing(), Ordering::Relaxed);
-        s.song_mode.store(self.renderer.mode() == PlayMode::Song, Ordering::Relaxed);
+        s.song_mode
+            .store(self.renderer.mode() == PlayMode::Song, Ordering::Relaxed);
         s.voices.store(self.renderer.active_voices() as u32, Ordering::Relaxed);
         s.callbacks.fetch_add(1, Ordering::Relaxed);
     }
 }
 
 fn write_device<T: SizedSample + FromSample<f32>>(data: &mut [T], channels: usize, offset: usize, chunk: &[f32]) {
-    for (f, lr) in chunk.chunks_exact(2).enumerate() {
+    for (f, lr) in chunk.as_chunks::<2>().0.iter().enumerate() {
         let base = (offset + f) * channels;
-        let Some(frame) = data.get_mut(base..base + channels) else { return };
+        let Some(frame) = data.get_mut(base..base + channels) else {
+            return;
+        };
         if channels == 1 {
             frame[0] = T::from_sample((0.5 * (lr[0] + lr[1])).clamp(-1.0, 1.0));
             continue;
@@ -209,9 +222,15 @@ fn write_device<T: SizedSample + FromSample<f32>>(data: &mut [T], channels: usiz
 
 /// Where the audio is going.
 pub enum Output {
-    Device { _stream: cpal::Stream, name: String },
+    Device {
+        _stream: cpal::Stream,
+        name: String,
+    },
     /// No device: a timer thread keeps the transport running silently.
-    Silent { reason: String, stop: Arc<AtomicBool> },
+    Silent {
+        reason: String,
+        stop: Arc<AtomicBool>,
+    },
 }
 
 /// The control-thread handle to playback.
@@ -249,15 +268,18 @@ impl Player {
                 match build_stream(&device, &stream_config, format, state) {
                     Ok(stream) => match stream.play() {
                         Ok(()) => {
-                            log::info!("audio: {name} at {sample_rate} Hz, {format:?}, {} ch", stream_config.channels);
-                            return Self {
+                            log::info!(
+                                "audio: {name} at {sample_rate} Hz, {format:?}, {} ch",
+                                stream_config.channels
+                            );
+                            Self {
                                 tx,
                                 garbage: grx,
                                 status,
                                 output: Output::Device { _stream: stream, name },
                                 sample_rate,
                                 buffer_frames,
-                            };
+                            }
                         }
                         Err(e) => Self::silent(format!("could not start {name}: {e}"), snapshot),
                     },
@@ -284,25 +306,34 @@ impl Player {
         };
         let stop = Arc::new(AtomicBool::new(false));
         let stop2 = stop.clone();
-        let spawned = std::thread::Builder::new().name("limeshot-silent-clock".into()).spawn(move || {
-            let block = 480usize; // 10 ms
-            let period = Duration::from_secs_f64(block as f64 / f64::from(sample_rate));
-            let mut next = Instant::now();
-            while !stop2.load(Ordering::Relaxed) {
-                state.process(block, |_, _| {});
-                next += period;
-                let now = Instant::now();
-                if next > now {
-                    std::thread::sleep(next - now);
-                } else {
-                    next = now;
+        let spawned = std::thread::Builder::new()
+            .name("limeshot-silent-clock".into())
+            .spawn(move || {
+                let block = 480usize; // 10 ms
+                let period = Duration::from_secs_f64(block as f64 / f64::from(sample_rate));
+                let mut next = Instant::now();
+                while !stop2.load(Ordering::Relaxed) {
+                    state.process(block, |_, _| {});
+                    next += period;
+                    let now = Instant::now();
+                    if next > now {
+                        std::thread::sleep(next - now);
+                    } else {
+                        next = now;
+                    }
                 }
-            }
-        });
+            });
         if let Err(e) = spawned {
             log::error!("could not start the silent clock: {e}");
         }
-        Self { tx, garbage: grx, status, output: Output::Silent { reason, stop }, sample_rate, buffer_frames: None }
+        Self {
+            tx,
+            garbage: grx,
+            status,
+            output: Output::Silent { reason, stop },
+            sample_rate,
+            buffer_frames: None,
+        }
     }
 
     /// Queue a message. Returns false when the queue is full (the message is dropped).
@@ -350,17 +381,20 @@ fn open_device(config: &AudioConfig) -> Result<(cpal::Device, cpal::StreamConfig
     let default = device.default_output_config().map_err(|e| e.to_string())?;
     let mut format = default.sample_format();
     let mut sample_rate = default.sample_rate();
-    let mut buffer = default.buffer_size().clone();
+    let mut buffer = *default.buffer_size();
     let mut channels = default.channels();
     if let Some(want) = config.sample_rate
         && let Ok(ranges) = device.supported_output_configs()
     {
         for r in ranges {
-            if r.min_sample_rate().0 <= want && want <= r.max_sample_rate().0 && devices::supported_format(r.sample_format()) {
+            if r.min_sample_rate().0 <= want
+                && want <= r.max_sample_rate().0
+                && devices::supported_format(r.sample_format())
+            {
                 let c = r.with_sample_rate(cpal::SampleRate(want));
                 format = c.sample_format();
                 sample_rate = c.sample_rate();
-                buffer = c.buffer_size().clone();
+                buffer = *c.buffer_size();
                 channels = c.channels();
                 break;
             }
@@ -369,7 +403,11 @@ fn open_device(config: &AudioConfig) -> Result<(cpal::Device, cpal::StreamConfig
     if !devices::supported_format(format) {
         format = cpal::SampleFormat::F32;
     }
-    let stream_config = cpal::StreamConfig { channels, sample_rate, buffer_size: devices::buffer_size(config.buffer_size, &buffer) };
+    let stream_config = cpal::StreamConfig {
+        channels,
+        sample_rate,
+        buffer_size: devices::buffer_size(config.buffer_size, &buffer),
+    };
     Ok((device, stream_config, format))
 }
 
@@ -442,6 +480,12 @@ mod tests {
         assert_eq!(quad, [0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0]);
         let mut short = [0i16; 2];
         write_device(&mut short, 2, 0, &chunk); // second frame does not fit: ignored
-        assert_eq!(short, [<i16 as FromSample<f32>>::from_sample_(0.5), <i16 as FromSample<f32>>::from_sample_(-0.5)]);
+        assert_eq!(
+            short,
+            [
+                <i16 as FromSample<f32>>::from_sample_(0.5),
+                <i16 as FromSample<f32>>::from_sample_(-0.5)
+            ]
+        );
     }
 }

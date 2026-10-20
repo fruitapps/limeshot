@@ -36,7 +36,16 @@ impl Default for Document {
 
 impl Document {
     pub fn new(project: Project) -> Self {
-        Self { project, undo: Vec::new(), redo: Vec::new(), revision: 0, state: 0, next_state: 1, saved_state: 0, gesture_open: false }
+        Self {
+            project,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            revision: 0,
+            state: 0,
+            next_state: 1,
+            saved_state: 0,
+            gesture_open: false,
+        }
     }
 
     pub fn project(&self) -> &Project {
@@ -96,12 +105,20 @@ impl Document {
         }
         let merges = self.gesture_open
             && merge.is_some()
-            && self.undo.last().is_some_and(|s| s.merge == merge && self.redo.is_empty());
+            && self
+                .undo
+                .last()
+                .is_some_and(|s| s.merge == merge && self.redo.is_empty());
         let before = std::mem::replace(&mut self.project, next);
         let before_state = std::mem::replace(&mut self.state, 0);
         self.state = self.new_state();
         if !merges {
-            self.undo.push(Step { label, before, before_state, merge: if self.gesture_open { merge } else { None } });
+            self.undo.push(Step {
+                label,
+                before,
+                before_state,
+                merge: if self.gesture_open { merge } else { None },
+            });
             if self.undo.len() > UNDO_LIMIT {
                 self.undo.remove(0);
             }
@@ -130,10 +147,17 @@ impl Document {
     }
 
     pub fn redo(&mut self) -> bool {
-        let Some((label, after, after_state)) = self.redo.pop() else { return false };
+        let Some((label, after, after_state)) = self.redo.pop() else {
+            return false;
+        };
         let before = std::mem::replace(&mut self.project, after);
         let before_state = std::mem::replace(&mut self.state, after_state);
-        self.undo.push(Step { label, before, before_state, merge: None });
+        self.undo.push(Step {
+            label,
+            before,
+            before_state,
+            merge: None,
+        });
         self.revision += 1;
         true
     }
@@ -154,7 +178,10 @@ mod tests {
     fn doc_with_channel() -> (Document, ChannelId, PatternId) {
         let mut d = Document::default();
         let id = d
-            .execute(Command::AddChannel { name: "Kick".into(), instrument: Instrument::Sampler(SamplerParams::default()) })
+            .execute(Command::AddChannel {
+                name: "Kick".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
             .unwrap()
             .0
             .unwrap();
@@ -166,7 +193,13 @@ mod tests {
     fn undo_and_redo_restore_state() {
         let (mut d, ch, pat) = doc_with_channel();
         let before = d.project().clone();
-        d.execute(Command::SetStep { pattern: pat, channel: ch, step: 4, on: true }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: ch,
+            step: 4,
+            on: true,
+        })
+        .unwrap();
         assert_eq!(d.project().patterns[0].notes.len(), 1);
         assert_eq!(d.project().patterns[0].notes[0].start, 4 * STEP_TICKS);
         assert!(d.undo());
@@ -181,7 +214,13 @@ mod tests {
         let rev = d.revision();
         let err = d.execute(Command::AddNote {
             pattern: pat,
-            note: NewNote { channel: ChannelId(999), key: 60, start: 0, length: 10, velocity: 1.0 },
+            note: NewNote {
+                channel: ChannelId(999),
+                key: 60,
+                start: 0,
+                length: 10,
+                velocity: 1.0,
+            },
         });
         assert!(err.is_err());
         assert_eq!(d.revision(), rev);
@@ -216,8 +255,20 @@ mod tests {
     #[test]
     fn step_toggle_off_removes_note() {
         let (mut d, ch, pat) = doc_with_channel();
-        d.execute(Command::SetStep { pattern: pat, channel: ch, step: 0, on: true }).unwrap();
-        d.execute(Command::SetStep { pattern: pat, channel: ch, step: 0, on: false }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: ch,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: ch,
+            step: 0,
+            on: false,
+        })
+        .unwrap();
         assert!(d.project().patterns[0].notes.is_empty());
     }
 
@@ -225,15 +276,35 @@ mod tests {
     fn notes_move_resize_and_duplicate() {
         let (mut d, ch, pat) = doc_with_channel();
         let id = d
-            .execute(Command::AddNote { pattern: pat, note: NewNote { channel: ch, key: 64, start: 960, length: 480, velocity: 0.5 } })
+            .execute(Command::AddNote {
+                pattern: pat,
+                note: NewNote {
+                    channel: ch,
+                    key: 64,
+                    start: 960,
+                    length: 480,
+                    velocity: 0.5,
+                },
+            })
             .unwrap()
             .0
             .unwrap();
         let n = vec![NoteId(id)];
-        d.execute(Command::MoveNotes { pattern: pat, notes: n.clone(), dt: -2000, dkey: 100 }).unwrap();
+        d.execute(Command::MoveNotes {
+            pattern: pat,
+            notes: n.clone(),
+            dt: -2000,
+            dkey: 100,
+        })
+        .unwrap();
         let note = d.project().patterns[0].notes[0];
         assert_eq!((note.start, note.key), (0, 127));
-        d.execute(Command::ResizeNotes { pattern: pat, notes: n.clone(), dlen: -1000 }).unwrap();
+        d.execute(Command::ResizeNotes {
+            pattern: pat,
+            notes: n.clone(),
+            dlen: -1000,
+        })
+        .unwrap();
         assert_eq!(d.project().patterns[0].notes[0].length, 1);
         d.execute(Command::DuplicateNotes { pattern: pat, notes: n }).unwrap();
         let notes = &d.project().patterns[0].notes;
@@ -244,11 +315,40 @@ mod tests {
     #[test]
     fn clips_are_linked_until_made_unique() {
         let (mut d, ch, pat) = doc_with_channel();
-        let a = ClipId(d.execute(Command::AddClip { pattern: pat, track: 0, start: 0, length: None }).unwrap().0.unwrap());
-        let b = ClipId(d.execute(Command::AddClip { pattern: pat, track: 1, start: 3840, length: None }).unwrap().0.unwrap());
-        assert_eq!(d.project().clip(a).unwrap().pattern(), d.project().clip(b).unwrap().pattern());
+        let a = ClipId(
+            d.execute(Command::AddClip {
+                pattern: pat,
+                track: 0,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let b = ClipId(
+            d.execute(Command::AddClip {
+                pattern: pat,
+                track: 1,
+                start: 3840,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        assert_eq!(
+            d.project().clip(a).unwrap().pattern(),
+            d.project().clip(b).unwrap().pattern()
+        );
         let new_pat = PatternId(d.execute(Command::MakeClipUnique(b)).unwrap().0.unwrap());
-        d.execute(Command::SetStep { pattern: new_pat, channel: ch, step: 3, on: true }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: new_pat,
+            channel: ch,
+            step: 3,
+            on: true,
+        })
+        .unwrap();
         assert!(d.project().pattern(pat).unwrap().notes.is_empty());
         assert_eq!(d.project().pattern(new_pat).unwrap().notes.len(), 1);
         assert_eq!(d.project().clip(b).unwrap().pattern(), new_pat);
@@ -257,12 +357,27 @@ mod tests {
     #[test]
     fn clip_duplicate_and_move() {
         let (mut d, _, pat) = doc_with_channel();
-        let a = ClipId(d.execute(Command::AddClip { pattern: pat, track: 0, start: 0, length: None }).unwrap().0.unwrap());
+        let a = ClipId(
+            d.execute(Command::AddClip {
+                pattern: pat,
+                track: 0,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
         d.execute(Command::DuplicateClips(vec![a])).unwrap();
         let clips = &d.project().playlist.clips;
         assert_eq!(clips.len(), 2);
         assert_eq!(clips[1].start, 3840);
-        d.execute(Command::MoveClips { clips: vec![a], dt: 960, dtrack: 99 }).unwrap();
+        d.execute(Command::MoveClips {
+            clips: vec![a],
+            dt: 960,
+            dtrack: 99,
+        })
+        .unwrap();
         let c = d.project().clip(a).unwrap();
         assert_eq!((c.start, c.track), (960, 15));
     }
@@ -270,7 +385,13 @@ mod tests {
     #[test]
     fn removing_channel_removes_its_notes() {
         let (mut d, ch, pat) = doc_with_channel();
-        d.execute(Command::SetStep { pattern: pat, channel: ch, step: 1, on: true }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: ch,
+            step: 1,
+            on: true,
+        })
+        .unwrap();
         d.execute(Command::RemoveChannel(ch)).unwrap();
         assert!(d.project().patterns[0].notes.is_empty());
     }
@@ -279,7 +400,11 @@ mod tests {
     fn new_channels_take_free_inserts() {
         let (mut d, _, _) = doc_with_channel();
         assert_eq!(d.project().channels[0].mixer_track, 1);
-        d.execute(Command::AddChannel { name: "Lead".into(), instrument: Instrument::Synth(SynthParams::default()) }).unwrap();
+        d.execute(Command::AddChannel {
+            name: "Lead".into(),
+            instrument: Instrument::Synth(SynthParams::default()),
+        })
+        .unwrap();
         assert_eq!(d.project().channels[1].mixer_track, 2);
     }
 }

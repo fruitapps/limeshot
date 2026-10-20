@@ -24,22 +24,35 @@ pub struct DeviceInfo {
 const STANDARD_RATES: [u32; 6] = [22_050, 44_100, 48_000, 88_200, 96_000, 192_000];
 
 pub(crate) fn supported_format(f: cpal::SampleFormat) -> bool {
-    matches!(f, cpal::SampleFormat::F32 | cpal::SampleFormat::I16 | cpal::SampleFormat::I32 | cpal::SampleFormat::U16)
+    matches!(
+        f,
+        cpal::SampleFormat::F32 | cpal::SampleFormat::I16 | cpal::SampleFormat::I32 | cpal::SampleFormat::U16
+    )
 }
 
 /// Every output device of the default host.
 pub fn list_output_devices() -> Vec<DeviceInfo> {
     let host = cpal::default_host();
     let default = host.default_output_device().and_then(|d| d.name().ok());
-    let Ok(devices) = host.output_devices() else { return Vec::new() };
+    let Ok(devices) = host.output_devices() else {
+        return Vec::new();
+    };
     devices
         .filter_map(|d| {
             let name = d.name().ok()?;
-            let ranges: Vec<_> = d.supported_output_configs().ok()?.filter(|c| supported_format(c.sample_format())).collect();
+            let ranges: Vec<_> = d
+                .supported_output_configs()
+                .ok()?
+                .filter(|c| supported_format(c.sample_format()))
+                .collect();
             let sample_rates = STANDARD_RATES
                 .iter()
                 .copied()
-                .filter(|r| ranges.iter().any(|c| c.min_sample_rate().0 <= *r && *r <= c.max_sample_rate().0))
+                .filter(|r| {
+                    ranges
+                        .iter()
+                        .any(|c| c.min_sample_rate().0 <= *r && *r <= c.max_sample_rate().0)
+                })
                 .collect();
             let (mut lo, mut hi) = (None::<u32>, None::<u32>);
             for c in &ranges {
@@ -48,7 +61,13 @@ pub fn list_output_devices() -> Vec<DeviceInfo> {
                     hi = Some(hi.map_or(*max, |v| v.max(*max)));
                 }
             }
-            Some(DeviceInfo { is_default: default.as_deref() == Some(name.as_str()), name, sample_rates, buffer_min: lo, buffer_max: hi })
+            Some(DeviceInfo {
+                is_default: default.as_deref() == Some(name.as_str()),
+                name,
+                sample_rates,
+                buffer_min: lo,
+                buffer_max: hi,
+            })
         })
         .collect()
 }
@@ -67,7 +86,9 @@ pub(crate) fn find_output(host: &cpal::Host, name: Option<&str>) -> Option<cpal:
 /// A fixed buffer size when the request is within what the device supports.
 pub(crate) fn buffer_size(want: Option<u32>, supported: &cpal::SupportedBufferSize) -> cpal::BufferSize {
     match (want, supported) {
-        (Some(n), cpal::SupportedBufferSize::Range { min, max }) if (*min..=*max).contains(&n) => cpal::BufferSize::Fixed(n),
+        (Some(n), cpal::SupportedBufferSize::Range { min, max }) if (*min..=*max).contains(&n) => {
+            cpal::BufferSize::Fixed(n)
+        }
         (Some(n), cpal::SupportedBufferSize::Unknown) if (32..=8192).contains(&n) => cpal::BufferSize::Fixed(n),
         _ => cpal::BufferSize::Default,
     }
@@ -83,6 +104,9 @@ mod tests {
         assert_eq!(buffer_size(Some(256), &r), cpal::BufferSize::Fixed(256));
         assert_eq!(buffer_size(Some(16), &r), cpal::BufferSize::Default);
         assert_eq!(buffer_size(None, &r), cpal::BufferSize::Default);
-        assert_eq!(buffer_size(Some(1 << 20), &cpal::SupportedBufferSize::Unknown), cpal::BufferSize::Default);
+        assert_eq!(
+            buffer_size(Some(1 << 20), &cpal::SupportedBufferSize::Unknown),
+            cpal::BufferSize::Default
+        );
     }
 }

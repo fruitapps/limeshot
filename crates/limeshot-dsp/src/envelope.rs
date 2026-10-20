@@ -12,7 +12,12 @@ pub struct Adsr {
 impl Adsr {
     /// A gate: instant attack, full sustain, `release` seconds of fade-out.
     pub fn gate(release: f32) -> Self {
-        Self { attack: 0.0, decay: 0.0, sustain: 1.0, release }
+        Self {
+            attack: 0.0,
+            decay: 0.0,
+            sustain: 1.0,
+            release,
+        }
     }
 }
 
@@ -141,7 +146,15 @@ mod tests {
     #[test]
     fn stages_follow_the_settings() {
         let sr = 1000.0;
-        let mut e = Envelope::start(Adsr { attack: 0.01, decay: 0.01, sustain: 0.5, release: 0.02 }, sr);
+        let mut e = Envelope::start(
+            Adsr {
+                attack: 0.01,
+                decay: 0.01,
+                sustain: 0.5,
+                release: 0.02,
+            },
+            sr,
+        );
         let attack: Vec<f32> = (0..10).map(|_| e.next()).collect();
         assert_eq!(attack[0], 0.0);
         assert!((e.level() - 1.0).abs() < 1e-5, "peak after 10 ms");
@@ -174,7 +187,15 @@ mod tests {
 
     #[test]
     fn release_during_attack_starts_from_current_level() {
-        let mut e = Envelope::start(Adsr { attack: 1.0, decay: 0.0, sustain: 1.0, release: 0.1 }, 100.0);
+        let mut e = Envelope::start(
+            Adsr {
+                attack: 1.0,
+                decay: 0.0,
+                sustain: 1.0,
+                release: 0.1,
+            },
+            100.0,
+        );
         for _ in 0..50 {
             e.next();
         }
@@ -193,7 +214,15 @@ mod tests {
 
     #[test]
     fn zero_sustain_ends_the_voice() {
-        let mut e = Envelope::start(Adsr { attack: 0.0, decay: 0.01, sustain: 0.0, release: 0.1 }, 1000.0);
+        let mut e = Envelope::start(
+            Adsr {
+                attack: 0.0,
+                decay: 0.01,
+                sustain: 0.0,
+                release: 0.1,
+            },
+            1000.0,
+        );
         for _ in 0..20 {
             e.next();
         }

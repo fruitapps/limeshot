@@ -8,8 +8,14 @@
 //!
 //! The Piano Roll, Channel Rack and Playlist all edit the same `Project`; this module is the only
 //! translation from that model to sound, so there is no second note representation to drift.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 use limeshot_core::{Instrument, PatternId, Project, Tempo, Tick, TimeSignature, Waveform};
 use limeshot_dsp::osc::Shape;
@@ -104,7 +110,11 @@ impl Default for Snapshot {
             tempo: Tempo::default(),
             time_signature: TimeSignature::default(),
             channels: Vec::new(),
-            mixer: vec![MixerTrackState { gain: 1.0, pan: 0.0, audible: true }],
+            mixer: vec![MixerTrackState {
+                gain: 1.0,
+                pan: 0.0,
+                audible: true,
+            }],
             pattern: Program::default(),
             song: Program::default(),
         }
@@ -229,13 +239,17 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         if clip.muted || track_muted {
             continue;
         }
-        let Some(p) = project.pattern(clip.pattern()) else { continue };
+        let Some(p) = project.pattern(clip.pattern()) else {
+            continue;
+        };
         let window_end = clip.offset.saturating_add(clip.length);
         for n in &p.notes {
             if n.start < clip.offset || n.start >= window_end {
                 continue;
             }
-            let Some(channel) = channel_index(n.channel) else { continue };
+            let Some(channel) = channel_index(n.channel) else {
+                continue;
+            };
             let tick = clip.start + (n.start - clip.offset);
             song_events.push(NoteEvent {
                 tick,
@@ -247,13 +261,20 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         }
     }
     song_events.sort_by_key(|e| (e.tick, e.channel, e.key));
-    let song = Program { events: song_events, length: project.playlist.song_length(sig) };
+    let song = Program {
+        events: song_events,
+        length: project.playlist.song_length(sig),
+    };
 
     Snapshot {
         tempo: project.tempo,
         time_signature: sig,
         channels,
-        mixer: if mixer.is_empty() { Snapshot::default().mixer } else { mixer },
+        mixer: if mixer.is_empty() {
+            Snapshot::default().mixer
+        } else {
+            mixer
+        },
         pattern: pattern_program,
         song,
     }
@@ -268,16 +289,22 @@ mod tests {
         let mut d = Document::default();
         let pat = d.project().patterns[0].id;
         let a = ChannelId(
-            d.execute(Command::AddChannel { name: "A".into(), instrument: Instrument::Sampler(SamplerParams::default()) })
-                .unwrap()
-                .0
-                .unwrap(),
+            d.execute(Command::AddChannel {
+                name: "A".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
         );
         let b = ChannelId(
-            d.execute(Command::AddChannel { name: "B".into(), instrument: Instrument::Synth(SynthParams::default()) })
-                .unwrap()
-                .0
-                .unwrap(),
+            d.execute(Command::AddChannel {
+                name: "B".into(),
+                instrument: Instrument::Synth(SynthParams::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
         );
         (d, a, b, pat)
     }
@@ -286,7 +313,13 @@ mod tests {
     fn steps_become_events_on_the_grid() {
         let (mut d, a, _, pat) = setup();
         for s in [0, 4, 8, 12] {
-            d.execute(Command::SetStep { pattern: pat, channel: a, step: s, on: true }).unwrap();
+            d.execute(Command::SetStep {
+                pattern: pat,
+                channel: a,
+                step: s,
+                on: true,
+            })
+            .unwrap();
         }
         let snap = compile(d.project(), pat, &NoSamples);
         let ticks: Vec<Tick> = snap.pattern.events.iter().map(|e| e.tick).collect();
@@ -298,9 +331,27 @@ mod tests {
     #[test]
     fn playlist_flattens_linked_clips() {
         let (mut d, a, _, pat) = setup();
-        d.execute(Command::SetStep { pattern: pat, channel: a, step: 0, on: true }).unwrap();
-        d.execute(Command::AddClip { pattern: pat, track: 0, start: 0, length: None }).unwrap();
-        d.execute(Command::AddClip { pattern: pat, track: 1, start: 7680, length: None }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: a,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 0,
+            length: None,
+        })
+        .unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 1,
+            start: 7680,
+            length: None,
+        })
+        .unwrap();
         let snap = compile(d.project(), pat, &NoSamples);
         let ticks: Vec<Tick> = snap.song.events.iter().map(|e| e.tick).collect();
         assert_eq!(ticks, vec![0, 7680]);
@@ -310,11 +361,35 @@ mod tests {
     #[test]
     fn clip_truncates_notes() {
         let (mut d, _, b, pat) = setup();
-        d.execute(Command::AddNote { pattern: pat, note: NewNote { channel: b, key: 60, start: 0, length: 3000, velocity: 1.0 } })
-            .unwrap();
-        d.execute(Command::AddNote { pattern: pat, note: NewNote { channel: b, key: 62, start: 2000, length: 100, velocity: 1.0 } })
-            .unwrap();
-        d.execute(Command::AddClip { pattern: pat, track: 0, start: 100, length: Some(1000) }).unwrap();
+        d.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel: b,
+                key: 60,
+                start: 0,
+                length: 3000,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+        d.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel: b,
+                key: 62,
+                start: 2000,
+                length: 100,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 100,
+            length: Some(1000),
+        })
+        .unwrap();
         let snap = compile(d.project(), pat, &NoSamples);
         assert_eq!(snap.song.events.len(), 1);
         assert_eq!((snap.song.events[0].tick, snap.song.events[0].length), (100, 1000));
@@ -323,11 +398,29 @@ mod tests {
     #[test]
     fn muted_tracks_and_clips_are_skipped_and_solo_resolves() {
         let (mut d, a, b, pat) = setup();
-        d.execute(Command::SetStep { pattern: pat, channel: a, step: 0, on: true }).unwrap();
-        let c = ClipId(d.execute(Command::AddClip { pattern: pat, track: 2, start: 0, length: None }).unwrap().0.unwrap());
-        d.execute(Command::SetPlaylistTrackMute { track: 2, muted: true }).unwrap();
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: a,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+        let c = ClipId(
+            d.execute(Command::AddClip {
+                pattern: pat,
+                track: 2,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        d.execute(Command::SetPlaylistTrackMute { track: 2, muted: true })
+            .unwrap();
         assert!(compile(d.project(), pat, &NoSamples).song.events.is_empty());
-        d.execute(Command::SetPlaylistTrackMute { track: 2, muted: false }).unwrap();
+        d.execute(Command::SetPlaylistTrackMute { track: 2, muted: false })
+            .unwrap();
         d.execute(Command::SetClipMuted { clip: c, muted: true }).unwrap();
         assert!(compile(d.project(), pat, &NoSamples).song.events.is_empty());
 
@@ -347,7 +440,12 @@ mod tests {
         let pat = d.project().patterns[0].id;
         d.execute(Command::AddChannel {
             name: "Kick".into(),
-            instrument: Instrument::Sampler(SamplerParams { sample: Some(SampleRef { path: "kick.wav".into() }), ..Default::default() }),
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef {
+                    path: "kick.wav".into(),
+                }),
+                ..Default::default()
+            }),
         })
         .unwrap();
         let data = Arc::new(SampleData::from_stereo(48_000, vec![0.5; 20]));

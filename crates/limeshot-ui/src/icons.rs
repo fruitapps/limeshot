@@ -54,7 +54,10 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
         }
         Icon::Metronome => {
             tri(p, [at(-4.5, 6.0), at(4.5, 6.0), at(0.0, -6.5)], c);
-            p.line_segment([at(0.0, 3.0), at(4.5, -5.0)], Stroke::new(1.6 * u, Color32::BLACK.gamma_multiply(0.6)));
+            p.line_segment(
+                [at(0.0, 3.0), at(4.5, -5.0)],
+                Stroke::new(1.6 * u, Color32::BLACK.gamma_multiply(0.6)),
+            );
             p.line_segment([at(0.0, 3.0), at(4.5, -5.0)], Stroke::new(0.9 * u, c));
         }
         Icon::Loop => {
@@ -90,7 +93,12 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             }
         }
         Icon::PianoRoll => {
-            p.rect_stroke(Rect::from_min_max(at(-6.5, -6.0), at(-2.5, 6.0)), 0.8, line, egui::StrokeKind::Inside);
+            p.rect_stroke(
+                Rect::from_min_max(at(-6.5, -6.0), at(-2.5, 6.0)),
+                0.8,
+                line,
+                egui::StrokeKind::Inside,
+            );
             for y in [-3.0f32, 1.0] {
                 p.rect_filled(Rect::from_min_max(at(-6.5, y - 0.9), at(-4.2, y + 0.9)), 0.3, c);
             }
@@ -123,14 +131,27 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
         }
         Icon::Folder => {
             p.add(Shape::convex_polygon(
-                vec![at(-6.5, -4.5), at(-2.0, -4.5), at(-0.5, -3.0), at(6.5, -3.0), at(6.5, 5.0), at(-6.5, 5.0)],
+                vec![
+                    at(-6.5, -4.5),
+                    at(-2.0, -4.5),
+                    at(-0.5, -3.0),
+                    at(6.5, -3.0),
+                    at(6.5, 5.0),
+                    at(-6.5, 5.0),
+                ],
                 c.gamma_multiply(0.85),
                 Stroke::NONE,
             ));
         }
         Icon::File => {
             p.add(Shape::convex_polygon(
-                vec![at(-4.5, -6.0), at(2.0, -6.0), at(4.5, -3.5), at(4.5, 6.0), at(-4.5, 6.0)],
+                vec![
+                    at(-4.5, -6.0),
+                    at(2.0, -6.0),
+                    at(4.5, -3.5),
+                    at(4.5, 6.0),
+                    at(-4.5, 6.0),
+                ],
                 Color32::TRANSPARENT,
                 line,
             ));
@@ -146,7 +167,16 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             p.add(Shape::line(pts, line));
         }
         Icon::Synth => {
-            let pts = vec![at(-6.5, 3.0), at(-3.0, -4.5), at(-3.0, 4.5), at(0.5, -4.5), at(0.5, 4.5), at(4.0, -4.5), at(4.0, 3.0), at(6.5, 3.0)];
+            let pts = vec![
+                at(-6.5, 3.0),
+                at(-3.0, -4.5),
+                at(-3.0, 4.5),
+                at(0.5, -4.5),
+                at(0.5, 4.5),
+                at(4.0, -4.5),
+                at(4.0, 3.0),
+                at(6.5, 3.0),
+            ];
             p.add(Shape::line(pts, line));
         }
         Icon::Undo | Icon::Redo => {
@@ -159,17 +189,33 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
                 .collect();
             p.add(Shape::line(pts, line));
             p.line_segment([at(flip * 1.0, -3.5), at(flip * -5.0, -3.5)], line);
-            tri(p, [at(flip * -6.5, -3.5), at(flip * -3.5, -6.5), at(flip * -3.5, -0.5)], c);
+            tri(
+                p,
+                [at(flip * -6.5, -3.5), at(flip * -3.5, -6.5), at(flip * -3.5, -0.5)],
+                c,
+            );
         }
         Icon::Save => {
-            p.rect_stroke(Rect::from_min_max(at(-5.5, -5.5), at(5.5, 5.5)), 1.0, line, egui::StrokeKind::Inside);
+            p.rect_stroke(
+                Rect::from_min_max(at(-5.5, -5.5), at(5.5, 5.5)),
+                1.0,
+                line,
+                egui::StrokeKind::Inside,
+            );
             p.rect_filled(Rect::from_min_max(at(-3.0, -5.5), at(3.0, -1.5)), 0.5, c);
-            p.rect_filled(Rect::from_min_max(at(-3.5, 1.5), at(3.5, 5.5)), 0.5, c.gamma_multiply(0.6));
+            p.rect_filled(
+                Rect::from_min_max(at(-3.5, 1.5), at(3.5, 5.5)),
+                0.5,
+                c.gamma_multiply(0.6),
+            );
         }
         Icon::Export => {
             p.line_segment([at(0.0, 2.0), at(0.0, -6.0)], line);
             tri(p, [at(-3.5, -3.0), at(3.5, -3.0), at(0.0, -7.0)], c);
-            p.add(Shape::line(vec![at(-6.0, 0.0), at(-6.0, 6.0), at(6.0, 6.0), at(6.0, 0.0)], line));
+            p.add(Shape::line(
+                vec![at(-6.0, 0.0), at(-6.0, 6.0), at(6.0, 6.0), at(6.0, 0.0)],
+                line,
+            ));
         }
     }
 }
@@ -187,7 +233,10 @@ pub fn logo(p: &Painter, center: Pos2, radius: f32) {
     for i in 0..n {
         let a = i as f32 / n as f32 * TAU + 0.2;
         let d = vec2(a.cos(), a.sin());
-        p.line_segment([center + d * radius * 0.12, center + d * radius * 0.8], Stroke::new(radius * 0.07, pith));
+        p.line_segment(
+            [center + d * radius * 0.12, center + d * radius * 0.8],
+            Stroke::new(radius * 0.07, pith),
+        );
     }
     p.circle_filled(center, radius * 0.14, pith);
 }

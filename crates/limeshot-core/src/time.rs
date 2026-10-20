@@ -35,7 +35,9 @@ impl Tempo {
         if !bpm.is_finite() {
             return Self::default();
         }
-        let milli = (bpm * 1000.0).round().clamp(Self::MIN_MILLI_BPM as f64, Self::MAX_MILLI_BPM as f64);
+        let milli = (bpm * 1000.0)
+            .round()
+            .clamp(Self::MIN_MILLI_BPM as f64, Self::MAX_MILLI_BPM as f64);
         Self(milli as u32)
     }
 
@@ -79,7 +81,10 @@ impl TimeSignature {
             12..=23 => 16,
             _ => 32,
         };
-        Self { numerator: numerator.clamp(1, 32), denominator }
+        Self {
+            numerator: numerator.clamp(1, 32),
+            denominator,
+        }
     }
 
     pub fn ticks_per_beat(self) -> Tick {
@@ -93,7 +98,10 @@ impl TimeSignature {
 
 impl Default for TimeSignature {
     fn default() -> Self {
-        Self { numerator: 4, denominator: 4 }
+        Self {
+            numerator: 4,
+            denominator: 4,
+        }
     }
 }
 
@@ -116,7 +124,11 @@ impl BarBeatTick {
         let bar_len = sig.ticks_per_bar();
         let beat_len = sig.ticks_per_beat();
         let in_bar = ticks % bar_len;
-        Self { bar: ticks / bar_len + 1, beat: in_bar / beat_len + 1, tick: in_bar % beat_len }
+        Self {
+            bar: ticks / bar_len + 1,
+            beat: in_bar / beat_len + 1,
+            tick: in_bar % beat_len,
+        }
     }
 }
 
@@ -140,8 +152,15 @@ pub enum Snap {
 }
 
 impl Snap {
-    pub const ALL: [Snap; 7] =
-        [Snap::Bar, Snap::Beat, Snap::HalfBeat, Snap::Step, Snap::HalfStep, Snap::QuarterStep, Snap::None];
+    pub const ALL: [Snap; 7] = [
+        Snap::Bar,
+        Snap::Beat,
+        Snap::HalfBeat,
+        Snap::Step,
+        Snap::HalfStep,
+        Snap::QuarterStep,
+        Snap::None,
+    ];
 
     /// Grid size in ticks, or `None` for no snapping.
     pub fn ticks(self, sig: TimeSignature) -> Option<Tick> {
@@ -201,7 +220,12 @@ pub struct Timeline {
 
 impl Timeline {
     pub fn new(tempo: Tempo, sample_rate: u32) -> Self {
-        Self { origin_tick: 0, origin_sample: 0, tempo, sample_rate: sample_rate.max(1) }
+        Self {
+            origin_tick: 0,
+            origin_sample: 0,
+            tempo,
+            sample_rate: sample_rate.max(1),
+        }
     }
 
     fn num(&self) -> u128 {
@@ -303,8 +327,18 @@ mod tests {
 
     #[test]
     fn first_tick_inverts_sample_of_tick() {
-        for &(bpm, sr) in &[(120_000, 48_000), (133_333, 44_100), (87_500, 96_000), (522_000, 22_050)] {
-            let tl = Timeline { origin_tick: 1000, origin_sample: 777, tempo: Tempo::from_milli_bpm(bpm), sample_rate: sr };
+        for &(bpm, sr) in &[
+            (120_000, 48_000),
+            (133_333, 44_100),
+            (87_500, 96_000),
+            (522_000, 22_050),
+        ] {
+            let tl = Timeline {
+                origin_tick: 1000,
+                origin_sample: 777,
+                tempo: Tempo::from_milli_bpm(bpm),
+                sample_rate: sr,
+            };
             for s in (777..60_000).step_by(997) {
                 let t = tl.first_tick_at_or_after(s);
                 assert!(tl.sample_of_tick(t) >= s);

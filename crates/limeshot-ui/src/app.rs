@@ -129,9 +129,17 @@ impl LimeShotApp {
         app
     }
 
-    fn new_with_player(settings: Settings, bundled_samples: Option<PathBuf>, player: impl FnOnce(Arc<Snapshot>) -> Player) -> Self {
+    fn new_with_player(
+        settings: Settings,
+        bundled_samples: Option<PathBuf>,
+        player: impl FnOnce(Arc<Snapshot>) -> Player,
+    ) -> Self {
         let doc = Document::default();
-        let snapshot = Arc::new(compile(doc.project(), doc.project().patterns[0].id, &limeshot_sequencer::NoSamples));
+        let snapshot = Arc::new(compile(
+            doc.project(),
+            doc.project().patterns[0].id,
+            &limeshot_sequencer::NoSamples,
+        ));
         let ui = UiState::new(doc.project());
         Self {
             player: player(snapshot.clone()),
@@ -188,13 +196,21 @@ impl LimeShotApp {
     }
 
     pub fn toast(&mut self, text: impl Into<String>) {
-        self.toasts.push(Toast { text: text.into(), error: false, until: Instant::now() + Duration::from_secs(3) });
+        self.toasts.push(Toast {
+            text: text.into(),
+            error: false,
+            until: Instant::now() + Duration::from_secs(3),
+        });
     }
 
     pub fn toast_error(&mut self, text: impl Into<String>) {
         let text = text.into();
         log::warn!("{text}");
-        self.toasts.push(Toast { text, error: true, until: Instant::now() + Duration::from_secs(6) });
+        self.toasts.push(Toast {
+            text,
+            error: true,
+            until: Instant::now() + Duration::from_secs(6),
+        });
     }
 
     pub fn hint(&mut self, text: impl Into<String>) {
@@ -251,7 +267,11 @@ impl LimeShotApp {
     }
 
     pub fn toggle_mode(&mut self) {
-        let m = if self.ui.mode == PlayMode::Pattern { PlayMode::Song } else { PlayMode::Pattern };
+        let m = if self.ui.mode == PlayMode::Pattern {
+            PlayMode::Song
+        } else {
+            PlayMode::Pattern
+        };
         self.set_mode(m);
     }
 
@@ -271,14 +291,26 @@ impl LimeShotApp {
 
     /// Audition a note on a channel (piano keys, step clicks).
     pub fn preview_on(&mut self, channel: ChannelId, key: u8, velocity: f32) {
-        if let Some(i) = self.project().channel_index(channel).and_then(|i| u16::try_from(i).ok()) {
+        if let Some(i) = self
+            .project()
+            .channel_index(channel)
+            .and_then(|i| u16::try_from(i).ok())
+        {
             self.sync_engine();
-            self.send(Msg::NoteOn { channel: i, key, velocity });
+            self.send(Msg::NoteOn {
+                channel: i,
+                key,
+                velocity,
+            });
         }
     }
 
     pub fn preview_off(&mut self, channel: ChannelId, key: u8) {
-        if let Some(i) = self.project().channel_index(channel).and_then(|i| u16::try_from(i).ok()) {
+        if let Some(i) = self
+            .project()
+            .channel_index(channel)
+            .and_then(|i| u16::try_from(i).ok())
+        {
             self.send(Msg::NoteOff { channel: i, key });
         }
     }
@@ -310,7 +342,12 @@ impl LimeShotApp {
     // ----- files -----
 
     pub fn window_title(&self) -> String {
-        let name = self.path.as_ref().and_then(|p| p.file_stem()).map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "Untitled".into());
+        let name = self
+            .path
+            .as_ref()
+            .and_then(|p| p.file_stem())
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Untitled".into());
         format!("{}{name} — LimeShot", if self.doc.is_modified() { "• " } else { "" })
     }
 
@@ -342,7 +379,11 @@ impl LimeShotApp {
         self.doc.replace(Project::new());
         self.path = None;
         self.samples.set_project_dir(None);
-        self.ui = UiState { arrange_windows: false, workspace: self.ui.workspace, ..UiState::new(self.doc.project()) };
+        self.ui = UiState {
+            arrange_windows: false,
+            workspace: self.ui.workspace,
+            ..UiState::new(self.doc.project())
+        };
         self.set_mode(PlayMode::Pattern);
         self.ui.mode = PlayMode::Pattern;
         self.send(Msg::Mode(PlayMode::Pattern));
@@ -358,7 +399,11 @@ impl LimeShotApp {
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
-                self.ui = UiState { arrange_windows: false, workspace: self.ui.workspace, ..UiState::new(self.doc.project()) };
+                self.ui = UiState {
+                    arrange_windows: false,
+                    workspace: self.ui.workspace,
+                    ..UiState::new(self.doc.project())
+                };
                 self.ui.mode = PlayMode::Pattern;
                 self.send(Msg::Mode(PlayMode::Pattern));
                 self.compiled = None;
@@ -379,8 +424,14 @@ impl LimeShotApp {
     }
 
     pub fn save_as(&mut self) -> bool {
-        let name = format!("{}.{}", sanitize_file_name(&self.project().title), limeshot_project::EXTENSION);
-        let dialog = rfd::FileDialog::new().add_filter("LimeShot project", &[limeshot_project::EXTENSION]).set_file_name(name);
+        let name = format!(
+            "{}.{}",
+            sanitize_file_name(&self.project().title),
+            limeshot_project::EXTENSION
+        );
+        let dialog = rfd::FileDialog::new()
+            .add_filter("LimeShot project", &[limeshot_project::EXTENSION])
+            .set_file_name(name);
         match dialog.save_file() {
             Some(mut p) => {
                 if p.extension().is_none() {
@@ -454,10 +505,18 @@ impl LimeShotApp {
         self.ui.hint.clear();
         shortcuts::handle(self, &ctx);
         egui::Panel::top("menu").show(ui, |ui| crate::menus::menu_bar(self, ui));
-        egui::Panel::top("toolbar").exact_size(toolbar::HEIGHT).show(ui, |ui| toolbar::show(self, ui));
-        egui::Panel::bottom("status").exact_size(22.0).show(ui, |ui| toolbar::status_bar(self, ui));
+        egui::Panel::top("toolbar")
+            .exact_size(toolbar::HEIGHT)
+            .show(ui, |ui| toolbar::show(self, ui));
+        egui::Panel::bottom("status")
+            .exact_size(22.0)
+            .show(ui, |ui| toolbar::status_bar(self, ui));
         if self.ui.show_browser {
-            egui::Panel::left("browser").resizable(true).default_size(220.0).min_size(150.0).show(ui, |ui| browser::show(self, ui));
+            egui::Panel::left("browser")
+                .resizable(true)
+                .default_size(220.0)
+                .min_size(150.0)
+                .show(ui, |ui| browser::show(self, ui));
         }
         let central = egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(crate::theme::Theme::current().bg))
@@ -485,9 +544,22 @@ impl LimeShotApp {
 }
 
 fn sanitize_file_name(s: &str) -> String {
-    let clean: String = s.chars().map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' }).collect();
+    let clean: String = s
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
     let clean = clean.trim();
-    if clean.is_empty() { "Untitled".into() } else { clean.into() }
+    if clean.is_empty() {
+        "Untitled".into()
+    } else {
+        clean.into()
+    }
 }
 
 /// A copy of `project` whose relative sample paths are resolved against `dir`.
@@ -497,7 +569,9 @@ fn absolutize_samples(project: &Project, dir: Option<&Path>) -> Project {
         if let limeshot_core::Instrument::Sampler(s) = &mut c.instrument
             && let Some(r) = &mut s.sample
         {
-            r.path = limeshot_project::resolve_sample_path(&r.path, dir).to_string_lossy().into_owned();
+            r.path = limeshot_project::resolve_sample_path(&r.path, dir)
+                .to_string_lossy()
+                .into_owned();
         }
     }
     p

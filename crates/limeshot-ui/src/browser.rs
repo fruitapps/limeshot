@@ -59,29 +59,49 @@ pub fn is_wav(p: &Path) -> bool {
 }
 
 pub fn file_label(p: &Path) -> String {
-    p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| p.display().to_string())
+    p.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| p.display().to_string())
 }
 
 /// Load `path` into `channel` (making it a sampler) and name the channel after the file.
 pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
-    let Some(ch) = app.project().channel(channel) else { return };
+    let Some(ch) = app.project().channel(channel) else {
+        return;
+    };
     let mut params = match &ch.instrument {
         Instrument::Sampler(p) => p.clone(),
         _ => SamplerParams::default(),
     };
-    params.sample = Some(SampleRef { path: path.to_string_lossy().into_owned() });
+    params.sample = Some(SampleRef {
+        path: path.to_string_lossy().into_owned(),
+    });
     app.samples.request_path(path.to_path_buf());
     app.exec(Command::Batch(vec![
-        Command::SetInstrument { channel, instrument: Instrument::Sampler(params) },
-        Command::RenameChannel { channel, name: file_label(path) },
+        Command::SetInstrument {
+            channel,
+            instrument: Instrument::Sampler(params),
+        },
+        Command::RenameChannel {
+            channel,
+            name: file_label(path),
+        },
     ]));
 }
 
 /// A new sampler channel playing `path`.
 pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<ChannelId> {
     app.samples.request_path(path.to_path_buf());
-    let params = SamplerParams { sample: Some(SampleRef { path: path.to_string_lossy().into_owned() }), ..SamplerParams::default() };
-    let id = app.exec(Command::AddChannel { name: file_label(path), instrument: Instrument::Sampler(params) })?;
+    let params = SamplerParams {
+        sample: Some(SampleRef {
+            path: path.to_string_lossy().into_owned(),
+        }),
+        ..SamplerParams::default()
+    };
+    let id = app.exec(Command::AddChannel {
+        name: file_label(path),
+        instrument: Instrument::Sampler(params),
+    })?;
     app.ui.selected_channel = Some(ChannelId(id));
     Some(ChannelId(id))
 }
@@ -117,26 +137,40 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
             if ui.small_button("⟳").on_hover_text("Re-read folders").clicked() {
                 app.ui.browser.refresh();
             }
-            if ui.small_button("+").on_hover_text("Add a folder to the Browser").clicked()
+            if ui
+                .small_button("+")
+                .on_hover_text("Add a folder to the Browser")
+                .clicked()
                 && let Some(dir) = rfd::FileDialog::new().pick_folder()
+                && !app.settings.browser_folders.contains(&dir)
             {
-                if !app.settings.browser_folders.contains(&dir) {
-                    app.settings.browser_folders.push(dir);
-                    app.settings.save();
-                }
+                app.settings.browser_folders.push(dir);
+                app.settings.save();
             }
         });
     });
-    ui.add(TextEdit::singleline(&mut app.ui.browser.filter).hint_text("Filter samples…").desired_width(f32::INFINITY));
+    ui.add(
+        TextEdit::singleline(&mut app.ui.browser.filter)
+            .hint_text("Filter samples…")
+            .desired_width(f32::INFINITY),
+    );
     ui.separator();
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-        CollapsingHeader::new(RichText::new("Current project").color(t.text_dim)).default_open(true).show(ui, |ui| project_tree(app, ui));
+        CollapsingHeader::new(RichText::new("Current project").color(t.text_dim))
+            .default_open(true)
+            .show(ui, |ui| project_tree(app, ui));
         let mut roots: Vec<(String, PathBuf, bool)> = Vec::new();
         if let Some(b) = &app.bundled_samples {
             roots.push(("LimeShot samples".into(), b.clone(), false));
         }
         for f in &app.settings.browser_folders {
-            roots.push((f.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| f.display().to_string()), f.clone(), true));
+            roots.push((
+                f.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| f.display().to_string()),
+                f.clone(),
+                true,
+            ));
         }
         let mut remove = None;
         for (name, dir, user) in roots {
@@ -164,7 +198,12 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     ui.label(RichText::new("Patterns").small().color(t.text_dim));
     let cur = app.current_pattern();
-    let pats: Vec<_> = app.project().patterns.iter().map(|p| (p.id, p.name.clone(), p.color)).collect();
+    let pats: Vec<_> = app
+        .project()
+        .patterns
+        .iter()
+        .map(|p| (p.id, p.name.clone(), p.color))
+        .collect();
     for (id, name, color) in pats {
         let text = RichText::new(format!("■ {name}")).color(if id == cur { crate::theme::rgb(color) } else { t.text });
         if ui.selectable_label(id == cur, text).clicked() {
@@ -173,9 +212,17 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     }
     ui.label(RichText::new("Channels").small().color(t.text_dim));
     let sel = app.selected_channel();
-    let chans: Vec<_> = app.project().channels.iter().map(|c| (c.id, c.name.clone(), c.instrument.kind_label())).collect();
+    let chans: Vec<_> = app
+        .project()
+        .channels
+        .iter()
+        .map(|c| (c.id, c.name.clone(), c.instrument.kind_label()))
+        .collect();
     for (id, name, kind) in chans {
-        if ui.selectable_label(Some(id) == sel, format!("{name}  ·  {kind}")).clicked() {
+        if ui
+            .selectable_label(Some(id) == sel, format!("{name}  ·  {kind}"))
+            .clicked()
+        {
             app.ui.selected_channel = Some(id);
         }
     }
@@ -193,7 +240,9 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
     }
     for (path, is_dir) in entries {
         if is_dir {
-            CollapsingHeader::new(file_label(&path)).id_salt(&path).show(ui, |ui| folder(app, ui, &path, depth + 1));
+            CollapsingHeader::new(file_label(&path))
+                .id_salt(&path)
+                .show(ui, |ui| folder(app, ui, &path, depth + 1));
             continue;
         }
         let name = file_label(&path);
@@ -206,8 +255,16 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
             .dnd_drag_source(id, DraggedSample(path.clone()), |ui| {
                 ui.horizontal(|ui| {
                     let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-                    icons::paint(ui.painter(), r, Icon::Wave, if selected { t.accent } else { t.text_dim });
-                    ui.add(egui::Label::new(RichText::new(&name).color(if selected { t.accent } else { t.text })).selectable(false));
+                    icons::paint(
+                        ui.painter(),
+                        r,
+                        Icon::Wave,
+                        if selected { t.accent } else { t.text_dim },
+                    );
+                    ui.add(
+                        egui::Label::new(RichText::new(&name).color(if selected { t.accent } else { t.text }))
+                            .selectable(false),
+                    );
                 });
             })
             .response;
@@ -220,7 +277,10 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
             load_into_selected(app, &path);
         }
         if resp.hovered() {
-            app.hint(format!("{} — click to preview, double-click to load into the selected channel, drag to the Channel Rack", path.display()));
+            app.hint(format!(
+                "{} — click to preview, double-click to load into the selected channel, drag to the Channel Rack",
+                path.display()
+            ));
         }
         resp.context_menu(|ui| {
             if ui.button("Preview").clicked() {
@@ -241,7 +301,14 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
 
 fn load_into_selected(app: &mut LimeShotApp, path: &Path) {
     match app.selected_channel() {
-        Some(c) if matches!(app.project().channel(c).map(|c| &c.instrument), Some(Instrument::Sampler(_))) => assign_sample(app, c, path),
+        Some(c)
+            if matches!(
+                app.project().channel(c).map(|c| &c.instrument),
+                Some(Instrument::Sampler(_))
+            ) =>
+        {
+            assign_sample(app, c, path)
+        }
         _ => {
             new_sampler_channel(app, path);
         }

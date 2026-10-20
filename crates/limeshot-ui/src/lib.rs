@@ -3,8 +3,14 @@
 //! The UI is thin: panels read the [`limeshot_core::Project`] and change it only through
 //! [`limeshot_core::Command`]s, and drive the engine through [`limeshot_audio::Player`] messages.
 //! See `docs/architecture/ui.md`.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo
+)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod app;
 pub mod browser;

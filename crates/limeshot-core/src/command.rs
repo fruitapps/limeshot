@@ -43,57 +43,167 @@ pub enum Command {
     SetTempo(Tempo),
     SetTimeSignature(TimeSignature),
 
-    AddChannel { name: String, instrument: Instrument },
+    AddChannel {
+        name: String,
+        instrument: Instrument,
+    },
     RemoveChannel(ChannelId),
     CloneChannel(ChannelId),
-    RenameChannel { channel: ChannelId, name: String },
-    SetChannelColor { channel: ChannelId, color: Rgb },
-    MoveChannel { channel: ChannelId, delta: i32 },
-    SetChannelVolume { channel: ChannelId, volume: f32 },
-    SetChannelPan { channel: ChannelId, pan: f32 },
-    SetChannelMute { channel: ChannelId, muted: bool },
-    SetChannelSolo { channel: ChannelId, solo: bool },
-    SetChannelMixerTrack { channel: ChannelId, track: u16 },
-    SetChannelRootKey { channel: ChannelId, key: u8 },
-    SetInstrument { channel: ChannelId, instrument: Instrument },
+    RenameChannel {
+        channel: ChannelId,
+        name: String,
+    },
+    SetChannelColor {
+        channel: ChannelId,
+        color: Rgb,
+    },
+    MoveChannel {
+        channel: ChannelId,
+        delta: i32,
+    },
+    SetChannelVolume {
+        channel: ChannelId,
+        volume: f32,
+    },
+    SetChannelPan {
+        channel: ChannelId,
+        pan: f32,
+    },
+    SetChannelMute {
+        channel: ChannelId,
+        muted: bool,
+    },
+    SetChannelSolo {
+        channel: ChannelId,
+        solo: bool,
+    },
+    SetChannelMixerTrack {
+        channel: ChannelId,
+        track: u16,
+    },
+    SetChannelRootKey {
+        channel: ChannelId,
+        key: u8,
+    },
+    SetInstrument {
+        channel: ChannelId,
+        instrument: Instrument,
+    },
 
-    SetStep { pattern: PatternId, channel: ChannelId, step: u32, on: bool },
-    AddNote { pattern: PatternId, note: NewNote },
-    AddNotes { pattern: PatternId, notes: Vec<NewNote> },
-    RemoveNotes { pattern: PatternId, notes: Vec<NoteId> },
+    SetStep {
+        pattern: PatternId,
+        channel: ChannelId,
+        step: u32,
+        on: bool,
+    },
+    AddNote {
+        pattern: PatternId,
+        note: NewNote,
+    },
+    AddNotes {
+        pattern: PatternId,
+        notes: Vec<NewNote>,
+    },
+    RemoveNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+    },
     /// Move notes by a time and pitch offset (clamped at 0 and to the MIDI range).
-    MoveNotes { pattern: PatternId, notes: Vec<NoteId>, dt: i64, dkey: i32 },
+    MoveNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        dt: i64,
+        dkey: i32,
+    },
     /// Change note lengths by `dlen` ticks (minimum one tick).
-    ResizeNotes { pattern: PatternId, notes: Vec<NoteId>, dlen: i64 },
-    SetNoteVelocity { pattern: PatternId, notes: Vec<NoteId>, velocity: f32 },
+    ResizeNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        dlen: i64,
+    },
+    SetNoteVelocity {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        velocity: f32,
+    },
     /// Copy the notes right after the selection's span.
-    DuplicateNotes { pattern: PatternId, notes: Vec<NoteId> },
-    ClearChannelNotes { pattern: PatternId, channel: ChannelId },
+    DuplicateNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+    },
+    ClearChannelNotes {
+        pattern: PatternId,
+        channel: ChannelId,
+    },
 
-    AddPattern { name: String },
+    AddPattern {
+        name: String,
+    },
     ClonePattern(PatternId),
     RemovePattern(PatternId),
-    RenamePattern { pattern: PatternId, name: String },
-    SetPatternLength { pattern: PatternId, steps: Option<u32> },
+    RenamePattern {
+        pattern: PatternId,
+        name: String,
+    },
+    SetPatternLength {
+        pattern: PatternId,
+        steps: Option<u32>,
+    },
 
-    AddClip { pattern: PatternId, track: u32, start: Tick, length: Option<Tick> },
+    AddClip {
+        pattern: PatternId,
+        track: u32,
+        start: Tick,
+        length: Option<Tick>,
+    },
     RemoveClips(Vec<ClipId>),
-    MoveClips { clips: Vec<ClipId>, dt: i64, dtrack: i32 },
-    ResizeClip { clip: ClipId, length: Tick },
+    MoveClips {
+        clips: Vec<ClipId>,
+        dt: i64,
+        dtrack: i32,
+    },
+    ResizeClip {
+        clip: ClipId,
+        length: Tick,
+    },
     DuplicateClips(Vec<ClipId>),
     /// Give the clip its own copy of its pattern.
     MakeClipUnique(ClipId),
-    SetClipMuted { clip: ClipId, muted: bool },
+    SetClipMuted {
+        clip: ClipId,
+        muted: bool,
+    },
     AddPlaylistTrack,
-    RenamePlaylistTrack { track: u32, name: String },
-    SetPlaylistTrackMute { track: u32, muted: bool },
+    RenamePlaylistTrack {
+        track: u32,
+        name: String,
+    },
+    SetPlaylistTrackMute {
+        track: u32,
+        muted: bool,
+    },
 
     AddMixerTrack,
-    RenameMixerTrack { track: u16, name: String },
-    SetMixerVolume { track: u16, volume: f32 },
-    SetMixerPan { track: u16, pan: f32 },
-    SetMixerMute { track: u16, muted: bool },
-    SetMixerSolo { track: u16, solo: bool },
+    RenameMixerTrack {
+        track: u16,
+        name: String,
+    },
+    SetMixerVolume {
+        track: u16,
+        volume: f32,
+    },
+    SetMixerPan {
+        track: u16,
+        pan: f32,
+    },
+    SetMixerMute {
+        track: u16,
+        muted: bool,
+    },
+    SetMixerSolo {
+        track: u16,
+        solo: bool,
+    },
 
     /// Several commands applied as one undo step. Stops at the first error.
     Batch(Vec<Command>),
@@ -106,7 +216,11 @@ fn ok() -> R {
 }
 
 fn finite(v: f32) -> Result<f32, CommandError> {
-    if v.is_finite() { Ok(v) } else { Err(CommandError::Invalid("value is not a number".into())) }
+    if v.is_finite() {
+        Ok(v)
+    } else {
+        Err(CommandError::Invalid("value is not a number".into()))
+    }
 }
 
 fn channel(p: &mut Project, id: ChannelId) -> Result<&mut Channel, CommandError> {
@@ -118,11 +232,18 @@ fn pattern(p: &mut Project, id: PatternId) -> Result<&mut Pattern, CommandError>
 }
 
 fn mixer_track(p: &mut Project, i: u16) -> Result<&mut MixerTrack, CommandError> {
-    p.mixer.tracks.get_mut(usize::from(i)).ok_or(CommandError::NoMixerTrack(i))
+    p.mixer
+        .tracks
+        .get_mut(usize::from(i))
+        .ok_or(CommandError::NoMixerTrack(i))
 }
 
 fn offset(t: Tick, d: i64) -> Tick {
-    if d >= 0 { t.saturating_add(d as u64) } else { t.saturating_sub(d.unsigned_abs()) }
+    if d >= 0 {
+        t.saturating_add(d as u64)
+    } else {
+        t.saturating_sub(d.unsigned_abs())
+    }
 }
 
 fn sort_notes(p: &mut Pattern) {
@@ -200,7 +321,9 @@ impl Command {
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
-            SetStep { pattern, channel, on, .. } => format!("step{}:{}:{on}", pattern.0, channel.0),
+            SetStep {
+                pattern, channel, on, ..
+            } => format!("step{}:{}:{on}", pattern.0, channel.0),
             _ => return None,
         })
     }
@@ -247,7 +370,12 @@ impl Command {
                 c.name = format!("{} #2", c.name);
                 p.channels.insert(i + 1, c);
                 for pi in 0..p.patterns.len() {
-                    let copies: Vec<Note> = p.patterns[pi].notes.iter().filter(|n| n.channel == id).copied().collect();
+                    let copies: Vec<Note> = p.patterns[pi]
+                        .notes
+                        .iter()
+                        .filter(|n| n.channel == id)
+                        .copied()
+                        .collect();
                     for mut n in copies {
                         n.id = NoteId(p.alloc_id());
                         n.channel = new_id;
@@ -276,9 +404,17 @@ impl Command {
                 channel(p, id)?.mixer_track = track;
             }
             SetChannelRootKey { channel: id, key } => channel(p, id)?.root_key = key.min(127),
-            SetInstrument { channel: id, instrument } => channel(p, id)?.instrument = instrument,
+            SetInstrument {
+                channel: id,
+                instrument,
+            } => channel(p, id)?.instrument = instrument,
 
-            SetStep { pattern: pid, channel: cid, step, on } => {
+            SetStep {
+                pattern: pid,
+                channel: cid,
+                step,
+                on,
+            } => {
                 if step >= 512 {
                     return Err(CommandError::Invalid(format!("step {step} is past the 512-step limit")));
                 }
@@ -286,7 +422,10 @@ impl Command {
                 let note_id = p.alloc_id();
                 let pat = pattern(p, pid)?;
                 let t = Tick::from(step) * STEP_TICKS;
-                let existing = pat.notes.iter().position(|n| n.channel == cid && n.start == t && n.key == root);
+                let existing = pat
+                    .notes
+                    .iter()
+                    .position(|n| n.channel == cid && n.start == t && n.key == root);
                 match (existing, on) {
                     (None, true) => {
                         pat.notes.push(Note {
@@ -308,7 +447,12 @@ impl Command {
             AddNote { pattern: pid, note } => return add_notes(p, pid, vec![note]),
             AddNotes { pattern: pid, notes } => return add_notes(p, pid, notes),
             RemoveNotes { pattern: pid, notes } => pattern(p, pid)?.notes.retain(|n| !notes.contains(&n.id)),
-            MoveNotes { pattern: pid, notes, dt, dkey } => {
+            MoveNotes {
+                pattern: pid,
+                notes,
+                dt,
+                dkey,
+            } => {
                 let pat = pattern(p, pid)?;
                 for n in pat.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
                     n.start = offset(n.start, dt);
@@ -316,12 +460,20 @@ impl Command {
                 }
                 sort_notes(pat);
             }
-            ResizeNotes { pattern: pid, notes, dlen } => {
+            ResizeNotes {
+                pattern: pid,
+                notes,
+                dlen,
+            } => {
                 for n in pattern(p, pid)?.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
                     n.length = offset(n.length, dlen).max(1);
                 }
             }
-            SetNoteVelocity { pattern: pid, notes, velocity } => {
+            SetNoteVelocity {
+                pattern: pid,
+                notes,
+                velocity,
+            } => {
                 let v = finite(velocity)?.clamp(0.0, 1.0);
                 for n in pattern(p, pid)?.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
                     n.velocity = v;
@@ -339,20 +491,40 @@ impl Command {
                 let span = (hi - lo).div_ceil(beat).max(1) * beat;
                 let new: Vec<NewNote> = sel
                     .iter()
-                    .map(|n| NewNote { channel: n.channel, key: n.key, start: n.start + span, length: n.length, velocity: n.velocity })
+                    .map(|n| NewNote {
+                        channel: n.channel,
+                        key: n.key,
+                        start: n.start + span,
+                        length: n.length,
+                        velocity: n.velocity,
+                    })
                     .collect();
                 return add_notes(p, pid, new);
             }
-            ClearChannelNotes { pattern: pid, channel: cid } => pattern(p, pid)?.notes.retain(|n| n.channel != cid),
+            ClearChannelNotes {
+                pattern: pid,
+                channel: cid,
+            } => pattern(p, pid)?.notes.retain(|n| n.channel != cid),
 
             AddPattern { name } => {
                 let id = p.alloc_id();
                 let color = PALETTE[p.patterns.len() % PALETTE.len()];
-                p.patterns.push(Pattern { id: PatternId(id), name, color, length_steps: None, notes: Vec::new(), extra: Extra::new() });
+                p.patterns.push(Pattern {
+                    id: PatternId(id),
+                    name,
+                    color,
+                    length_steps: None,
+                    notes: Vec::new(),
+                    extra: Extra::new(),
+                });
                 return Ok(Created(Some(id)));
             }
             ClonePattern(id) => {
-                let i = p.patterns.iter().position(|x| x.id == id).ok_or(CommandError::NoPattern(id))?;
+                let i = p
+                    .patterns
+                    .iter()
+                    .position(|x| x.id == id)
+                    .ok_or(CommandError::NoPattern(id))?;
                 let new = clone_pattern(p, i);
                 return Ok(Created(Some(new.0)));
             }
@@ -360,16 +532,27 @@ impl Command {
                 if p.patterns.len() <= 1 {
                     return Err(CommandError::Invalid("a project keeps at least one pattern".into()));
                 }
-                let i = p.patterns.iter().position(|x| x.id == id).ok_or(CommandError::NoPattern(id))?;
+                let i = p
+                    .patterns
+                    .iter()
+                    .position(|x| x.id == id)
+                    .ok_or(CommandError::NoPattern(id))?;
                 p.patterns.remove(i);
                 p.playlist.clips.retain(|c| c.pattern() != id);
             }
             RenamePattern { pattern: id, name } => pattern(p, id)?.name = name,
             SetPatternLength { pattern: id, steps } => pattern(p, id)?.length_steps = steps.map(|s| s.clamp(1, 512)),
 
-            AddClip { pattern: pid, track, start, length } => {
+            AddClip {
+                pattern: pid,
+                track,
+                start,
+                length,
+            } => {
                 let sig = p.time_signature;
-                let len = length.unwrap_or_else(|| p.pattern(pid).map(|x| x.length(sig)).unwrap_or(0)).max(1);
+                let len = length
+                    .unwrap_or_else(|| p.pattern(pid).map(|x| x.length(sig)).unwrap_or(0))
+                    .max(1);
                 if p.pattern(pid).is_none() {
                     return Err(CommandError::NoPattern(pid));
                 }
@@ -399,7 +582,13 @@ impl Command {
             }
             ResizeClip { clip, length } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.length = length.max(1),
             DuplicateClips(ids) => {
-                let sel: Vec<Clip> = p.playlist.clips.iter().filter(|c| ids.contains(&c.id)).cloned().collect();
+                let sel: Vec<Clip> = p
+                    .playlist
+                    .clips
+                    .iter()
+                    .filter(|c| ids.contains(&c.id))
+                    .cloned()
+                    .collect();
                 let (Some(lo), Some(hi)) = (sel.iter().map(|c| c.start).min(), sel.iter().map(Clip::end).max()) else {
                     return ok();
                 };
@@ -412,7 +601,11 @@ impl Command {
             }
             MakeClipUnique(id) => {
                 let pid = p.clip(id).ok_or(CommandError::NoClip(id))?.pattern();
-                let i = p.patterns.iter().position(|x| x.id == pid).ok_or(CommandError::NoPattern(pid))?;
+                let i = p
+                    .patterns
+                    .iter()
+                    .position(|x| x.id == pid)
+                    .ok_or(CommandError::NoPattern(pid))?;
                 let new = clone_pattern(p, i);
                 if let Some(c) = p.clip_mut(id) {
                     c.source = ClipSource::Pattern(new);
@@ -425,18 +618,32 @@ impl Command {
                     return Err(CommandError::Invalid("the playlist holds at most 500 tracks".into()));
                 }
                 let n = p.playlist.tracks.len() + 1;
-                p.playlist.tracks.push(PlaylistTrack { name: format!("Track {n}"), muted: false });
+                p.playlist.tracks.push(PlaylistTrack {
+                    name: format!("Track {n}"),
+                    muted: false,
+                });
             }
             RenamePlaylistTrack { track, name } => {
-                p.playlist.tracks.get_mut(track as usize).ok_or(CommandError::NoPlaylistTrack(track))?.name = name
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .name = name
             }
             SetPlaylistTrackMute { track, muted } => {
-                p.playlist.tracks.get_mut(track as usize).ok_or(CommandError::NoPlaylistTrack(track))?.muted = muted
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .muted = muted
             }
 
             AddMixerTrack => {
                 if p.mixer.tracks.len() >= Mixer::MAX_TRACKS {
-                    return Err(CommandError::Invalid(format!("the mixer holds at most {} tracks", Mixer::MAX_TRACKS)));
+                    return Err(CommandError::Invalid(format!(
+                        "the mixer holds at most {} tracks",
+                        Mixer::MAX_TRACKS
+                    )));
                 }
                 let n = p.mixer.tracks.len();
                 p.mixer.tracks.push(MixerTrack::new(format!("Insert {n}")));

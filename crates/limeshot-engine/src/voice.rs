@@ -71,10 +71,25 @@ impl Voice {
 
     /// Set up a voice for `instrument`. Returns `None` when the instrument makes no sound (no
     /// sample loaded, unsupported instrument).
-    pub fn for_instrument(instrument: &InstrumentState, root_key: u8, key: u8, velocity: f32, sample_rate: f32) -> Option<Self> {
+    pub fn for_instrument(
+        instrument: &InstrumentState,
+        root_key: u8,
+        key: u8,
+        velocity: f32,
+        sample_rate: f32,
+    ) -> Option<Self> {
         let velocity = velocity.clamp(0.0, 1.0);
         match instrument {
-            InstrumentState::Sampler { sample, gain, pitch, start, end, reverse, release, one_shot: _ } => {
+            InstrumentState::Sampler {
+                sample,
+                gain,
+                pitch,
+                start,
+                end,
+                reverse,
+                release,
+                one_shot: _,
+            } => {
                 let sample = sample.as_ref()?;
                 let frames = sample.frames() as f64;
                 if frames < 2.0 {
@@ -89,16 +104,37 @@ impl Voice {
                 }
                 let pos = if *reverse { hi - 1.0 } else { lo };
                 Some(Self {
-                    source: Source::Sampler { sample: sample.clone(), pos, step, lo, hi, reverse: *reverse },
+                    source: Source::Sampler {
+                        sample: sample.clone(),
+                        pos,
+                        step,
+                        lo,
+                        hi,
+                        reverse: *reverse,
+                    },
                     // Declick on the way out only (samples are expected to start cleanly), so the
                     // first sample frame lands exactly on the note's onset.
-                    env: Envelope::start(Adsr { attack: 0.0, decay: 0.0, sustain: 1.0, release: *release }, sample_rate),
+                    env: Envelope::start(
+                        Adsr {
+                            attack: 0.0,
+                            decay: 0.0,
+                            sustain: 1.0,
+                            release: *release,
+                        },
+                        sample_rate,
+                    ),
                     key,
                     gain: velocity * gain,
                     ..Self::default()
                 })
             }
-            InstrumentState::Synth { shape, adsr, gain, octave, detune_cents } => {
+            InstrumentState::Synth {
+                shape,
+                adsr,
+                gain,
+                octave,
+                detune_cents,
+            } => {
                 let k = f32::from(key) + 12.0 * f32::from(*octave);
                 let f = key_to_hz(k);
                 let a = Oscillator::new(*shape, f, sample_rate, 0.0);
@@ -127,8 +163,18 @@ impl Voice {
     pub fn click(downbeat: bool, sample_rate: f32) -> Self {
         let f = if downbeat { 1760.0 } else { 1320.0 };
         Self {
-            source: Source::Click { osc: Oscillator::new(Shape::Sine, f, sample_rate, 0.0) },
-            env: Envelope::start(Adsr { attack: 0.0005, decay: 0.03, sustain: 0.0, release: 0.005 }, sample_rate),
+            source: Source::Click {
+                osc: Oscillator::new(Shape::Sine, f, sample_rate, 0.0),
+            },
+            env: Envelope::start(
+                Adsr {
+                    attack: 0.0005,
+                    decay: 0.03,
+                    sustain: 0.0,
+                    release: 0.005,
+                },
+                sample_rate,
+            ),
             gain: if downbeat { 0.5 } else { 0.35 },
             ..Self::default()
         }
@@ -142,8 +188,23 @@ impl Voice {
         }
         let step = f64::from(sample.sample_rate) / f64::from(sample_rate);
         Some(Self {
-            source: Source::Sampler { sample, pos: 0.0, step, lo: 0.0, hi: frames, reverse: false },
-            env: Envelope::start(Adsr { attack: 0.001, decay: 0.0, sustain: 1.0, release: 0.01 }, sample_rate),
+            source: Source::Sampler {
+                sample,
+                pos: 0.0,
+                step,
+                lo: 0.0,
+                hi: frames,
+                reverse: false,
+            },
+            env: Envelope::start(
+                Adsr {
+                    attack: 0.001,
+                    decay: 0.0,
+                    sustain: 1.0,
+                    release: 0.01,
+                },
+                sample_rate,
+            ),
             gain: 0.8,
             ..Self::default()
         })
@@ -158,7 +219,14 @@ impl Voice {
     pub fn next_frame(&mut self) -> (f32, f32) {
         let (l, r) = match &mut self.source {
             Source::Off => return (0.0, 0.0),
-            Source::Sampler { sample, pos, step, lo, hi, reverse } => {
+            Source::Sampler {
+                sample,
+                pos,
+                step,
+                lo,
+                hi,
+                reverse,
+            } => {
                 if *pos < *lo || *pos >= *hi {
                     self.source = Source::Off;
                     return (0.0, 0.0);

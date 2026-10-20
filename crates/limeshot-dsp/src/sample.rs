@@ -17,7 +17,11 @@ pub struct SampleData {
 
 impl SampleData {
     pub fn from_stereo(sample_rate: u32, data: Vec<f32>) -> Self {
-        Self { sample_rate: sample_rate.max(1), data, source: None }
+        Self {
+            sample_rate: sample_rate.max(1),
+            data,
+            source: None,
+        }
     }
 
     pub fn frames(&self) -> usize {
@@ -68,31 +72,48 @@ pub enum SampleError {
 
 /// Read a WAV file (8/16/24/32-bit integer or 32-bit float PCM).
 pub fn load_wav(path: &Path) -> Result<SampleData, SampleError> {
-    let err = |e: hound::Error| SampleError::Decode { path: path.to_path_buf(), message: e.to_string() };
+    let err = |e: hound::Error| SampleError::Decode {
+        path: path.to_path_buf(),
+        message: e.to_string(),
+    };
     let mut reader = hound::WavReader::open(path).map_err(err)?;
     let spec = reader.spec();
     let channels = usize::from(spec.channels.max(1));
     let frames = reader.duration() as usize;
     if frames > MAX_FRAMES {
-        return Err(SampleError::TooLong { path: path.to_path_buf() });
+        return Err(SampleError::TooLong {
+            path: path.to_path_buf(),
+        });
     }
     let raw: Vec<f32> = match spec.sample_format {
         hound::SampleFormat::Float => reader.samples::<f32>().collect::<Result<_, _>>().map_err(err)?,
         hound::SampleFormat::Int => {
             let bits = u32::from(spec.bits_per_sample.clamp(1, 32));
             let scale = 1.0 / (1u64 << (bits - 1)) as f32;
-            reader.samples::<i32>().map(|s| s.map(|v| v as f32 * scale)).collect::<Result<_, _>>().map_err(err)?
+            reader
+                .samples::<i32>()
+                .map(|s| s.map(|v| v as f32 * scale))
+                .collect::<Result<_, _>>()
+                .map_err(err)?
         }
     };
     let mut data = Vec::with_capacity(raw.len() / channels * 2);
     for frame in raw.chunks_exact(channels) {
         let l = frame.first().copied().unwrap_or(0.0);
-        let r = if channels > 1 { frame.get(1).copied().unwrap_or(l) } else { l };
+        let r = if channels > 1 {
+            frame.get(1).copied().unwrap_or(l)
+        } else {
+            l
+        };
         let clean = |v: f32| if v.is_finite() { v } else { 0.0 };
         data.push(clean(l));
         data.push(clean(r));
     }
-    Ok(SampleData { sample_rate: spec.sample_rate.max(1), data, source: Some(path.to_path_buf()) })
+    Ok(SampleData {
+        sample_rate: spec.sample_rate.max(1),
+        data,
+        source: Some(path.to_path_buf()),
+    })
 }
 
 /// Output sample format for [`write_wav`].
@@ -119,13 +140,21 @@ impl BitDepth {
 /// Write interleaved stereo f32 as a WAV file. Integer formats are clipped to full scale
 /// (no dithering yet).
 pub fn write_wav(path: &Path, sample_rate: u32, interleaved: &[f32], depth: BitDepth) -> Result<(), SampleError> {
-    let err = |source| SampleError::Write { path: path.to_path_buf(), source };
+    let err = |source| SampleError::Write {
+        path: path.to_path_buf(),
+        source,
+    };
     let (bits, format) = match depth {
         BitDepth::Int16 => (16, hound::SampleFormat::Int),
         BitDepth::Int24 => (24, hound::SampleFormat::Int),
         BitDepth::Float32 => (32, hound::SampleFormat::Float),
     };
-    let spec = hound::WavSpec { channels: 2, sample_rate, bits_per_sample: bits, sample_format: format };
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample: bits,
+        sample_format: format,
+    };
     let mut w = hound::WavWriter::create(path, spec).map_err(err)?;
     match depth {
         BitDepth::Float32 => {
@@ -135,12 +164,14 @@ pub fn write_wav(path: &Path, sample_rate: u32, interleaved: &[f32], depth: BitD
         }
         BitDepth::Int16 => {
             for &s in interleaved {
-                w.write_sample((s.clamp(-1.0, 1.0) * 32767.0).round() as i16).map_err(err)?;
+                w.write_sample((s.clamp(-1.0, 1.0) * 32767.0).round() as i16)
+                    .map_err(err)?;
             }
         }
         BitDepth::Int24 => {
             for &s in interleaved {
-                w.write_sample((s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32).map_err(err)?;
+                w.write_sample((s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32)
+                    .map_err(err)?;
             }
         }
     }
@@ -172,7 +203,12 @@ mod tests {
     fn mono_is_duplicated() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().join("m.wav");
-        let spec = hound::WavSpec { channels: 1, sample_rate: 8000, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 8000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
         let mut w = hound::WavWriter::create(&p, spec).unwrap();
         for v in [0i16, 16384, -16384] {
             w.write_sample(v).unwrap();
