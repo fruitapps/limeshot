@@ -1,0 +1,349 @@
+//! Modal-style dialogs, background export jobs and toast notifications.
+
+use crate::app::{LimeShotApp, Pending};
+use crate::theme::Theme;
+use egui::{Align2, ComboBox, Context, RichText, vec2};
+use limeshot_audio::DeviceInfo;
+use limeshot_core::{ChannelId, Command, PatternId};
+use limeshot_engine::{BitDepth, ExportRange, RenderReport, RenderSettings};
+use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, channel};
+use std::time::Instant;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RenameTarget {
+    Pattern(PatternId),
+    Channel(ChannelId),
+    PlaylistTrack(u32),
+    MixerTrack(u16),
+    Project,
+}
+
+pub struct ExportOptions {
+    pub range: ExportRange,
+    pub sample_rate: u32,
+    pub depth: BitDepth,
+}
+
+pub struct AudioOptions {
+    pub devices: Vec<DeviceInfo>,
+    pub config: limeshot_audio::AudioConfig,
+}
+
+pub enum Dialog {
+    ConfirmDiscard(Pending),
+    Export(ExportOptions),
+    Audio(AudioOptions),
+    Rename { target: RenameTarget, text: String },
+    About,
+    Shortcuts,
+}
+
+impl Dialog {
+    pub fn export(app: &LimeShotApp) -> Self {
+        let range = if app.project().playlist.clips.is_empty() { ExportRange::Pattern } else { ExportRange::Song };
+        Dialog::Export(ExportOptions { range, sample_rate: 44_100, depth: BitDepth::Int24 })
+    }
+
+    pub fn audio(app: &LimeShotApp) -> Self {
+        Dialog::Audio(AudioOptions { devices: limeshot_audio::list_output_devices(), config: app.settings.audio.clone() })
+    }
+
+    pub fn rename_pattern(app: &LimeShotApp, id: PatternId) -> Self {
+        let text = app.project().pattern(id).map(|p| p.name.clone()).unwrap_or_default();
+        Dialog::Rename { target: RenameTarget::Pattern(id), text }
+    }
+
+    pub fn rename_channel(app: &LimeShotApp, id: ChannelId) -> Self {
+        let text = app.project().channel(id).map(|c| c.name.clone()).unwrap_or_default();
+        Dialog::Rename { target: RenameTarget::Channel(id), text }
+    }
+
+    pub fn rename_track(app: &LimeShotApp, i: u32) -> Self {
+        let text = app.project().playlist.tracks.get(i as usize).map(|t| t.name.clone()).unwrap_or_default();
+        Dialog::Rename { target: RenameTarget::PlaylistTrack(i), text }
+    }
+
+    pub fn rename_mixer(app: &LimeShotApp, i: u16) -> Self {
+        let text = app.project().mixer.tracks.get(usize::from(i)).map(|t| t.name.clone()).unwrap_or_default();
+        Dialog::Rename { target: RenameTarget::MixerTrack(i), text }
+    }
+}
+
+pub struct ExportJob {
+    pub path: PathBuf,
+    pub started: Instant,
+    rx: Receiver<Result<RenderReport, String>>,
+}
+
+pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) {
+    app.sync_engine();
+    let snap = app.snapshot().clone();
+    let settings = RenderSettings { sample_rate: opts.sample_rate, range: opts.range, ..RenderSettings::default() };
+    let depth = opts.depth;
+    let (tx, rx) = channel();
+    let p = path.clone();
+    let spawned = std::thread::Builder::new().name("limeshot-export".into()).spawn(move || {
+        let r = limeshot_engine::export_wav(snap, &settings, depth, &p).map_err(|e| e.to_string());
+        let _ = tx.send(r);
+    });
+    match spawned {
+        Ok(_) => app.export_job = Some(ExportJob { path, started: Instant::now(), rx }),
+        Err(e) => app.toast_error(format!("could not start the export: {e}")),
+    }
+}
+
+pub fn poll_export(app: &mut LimeShotApp) {
+    let Some(job) = &app.export_job else { return };
+    match job.rx.try_recv() {
+        Ok(Ok(rep)) => {
+            let path = job.path.clone();
+            app.export_job = None;
+            let clip = if rep.peak > 1.0 { format!(" — peak {:+.1} dBFS: clipped, lower the master", limeshot_dsp::gain_to_db(rep.peak)) } else { String::new() };
+            app.toast(format!("Exported {} ({:.1} s){clip}", path.display(), rep.seconds()));
+        }
+        Ok(Err(e)) => {
+            app.export_job = None;
+            app.toast_error(format!("Export failed: {e}"));
+        }
+        Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+            app.export_job = None;
+            app.toast_error("Export failed unexpectedly");
+        }
+    }
+}
+
+fn modal(ctx: &Context, title: &str, add: impl FnOnce(&mut egui::Ui)) {
+    egui::Window::new(RichText::new(title).strong())
+        .id(egui::Id::new("dialog"))
+        .collapsible(false)
+        .resizable(false)
+        .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
+        .default_width(360.0)
+        .show(ctx, add);
+}
+
+pub fn show(app: &mut LimeShotApp, ctx: &Context) {
+    if let Some(job) = &app.export_job {
+        let secs = job.started.elapsed().as_secs_f32();
+        let path = job.path.display().to_string();
+        modal(ctx, "Exporting…", |ui| {
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(format!("Rendering to {path} ({secs:.0} s)"));
+            });
+        });
+        ctx.request_repaint();
+    }
+    let Some(mut dialog) = app.dialog.take() else { return };
+    let mut keep = true;
+    let esc = ctx.input(|i| i.key_pressed(egui::Key::Escape));
+    match &mut dialog {
+        Dialog::ConfirmDiscard(action) => {
+            let what = match action {
+                Pending::New => "starting a new project",
+                Pending::Open(_) => "opening another project",
+                Pending::Quit => "quitting",
+            };
+            let action = action.clone();
+            modal(ctx, "Save changes?", |ui| {
+                ui.label(format!("The project has unsaved changes. Save them before {what}?"));
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("Save").strong()).clicked() {
+                        keep = false;
+                        if app.save() {
+                            app.perform(action.clone());
+                        }
+                    }
+                    if ui.button("Don't save").clicked() {
+                        keep = false;
+                        app.perform(action.clone());
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::Export(opts) => {
+            modal(ctx, "Export WAV", |ui| {
+                egui::Grid::new("export_grid").num_columns(2).spacing(vec2(12.0, 6.0)).show(ui, |ui| {
+                    ui.label("Range");
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut opts.range, ExportRange::Song, "Song (Playlist)");
+                        ui.selectable_value(&mut opts.range, ExportRange::Pattern, "Current pattern");
+                    });
+                    ui.end_row();
+                    ui.label("Sample rate");
+                    ComboBox::from_id_salt("export_sr").selected_text(format!("{} Hz", opts.sample_rate)).show_ui(ui, |ui| {
+                        for sr in [44_100u32, 48_000, 88_200, 96_000] {
+                            ui.selectable_value(&mut opts.sample_rate, sr, format!("{sr} Hz"));
+                        }
+                    });
+                    ui.end_row();
+                    ui.label("Format");
+                    ComboBox::from_id_salt("export_depth").selected_text(opts.depth.label()).show_ui(ui, |ui| {
+                        for d in BitDepth::ALL {
+                            ui.selectable_value(&mut opts.depth, d, d.label());
+                        }
+                    });
+                    ui.end_row();
+                });
+                if opts.range == ExportRange::Song && app.project().playlist.clips.is_empty() {
+                    ui.colored_label(Theme::current().warning, "The Playlist is empty: place a pattern first, or export the pattern.");
+                }
+                ui.label(RichText::new("Stereo WAV. Notes ring out for up to 4 s after the end. No dithering.").small().color(Theme::current().text_dim));
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("Export…").strong()).clicked() {
+                        let name = format!("{}.wav", app.path.as_ref().and_then(|p| p.file_stem()).map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "LimeShot export".into()));
+                        if let Some(mut path) = rfd::FileDialog::new().add_filter("WAV audio", &["wav"]).set_file_name(name).save_file() {
+                            if path.extension().is_none() {
+                                path.set_extension("wav");
+                            }
+                            start_export(app, opts, path);
+                            keep = false;
+                        }
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::Audio(opts) => {
+            modal(ctx, "Audio settings", |ui| {
+                egui::Grid::new("audio_grid").num_columns(2).spacing(vec2(12.0, 6.0)).show(ui, |ui| {
+                    ui.label("Output device");
+                    let current = opts.config.device.clone().unwrap_or_else(|| "System default".into());
+                    ComboBox::from_id_salt("audio_dev").width(220.0).selected_text(current).show_ui(ui, |ui| {
+                        ui.selectable_value(&mut opts.config.device, None, "System default");
+                        for d in &opts.devices {
+                            let label = if d.is_default { format!("{} (default)", d.name) } else { d.name.clone() };
+                            ui.selectable_value(&mut opts.config.device, Some(d.name.clone()), label);
+                        }
+                    });
+                    ui.end_row();
+                    let dev = opts.devices.iter().find(|d| Some(&d.name) == opts.config.device.as_ref()).or_else(|| opts.devices.iter().find(|d| d.is_default));
+                    ui.label("Sample rate");
+                    let sr_text = opts.config.sample_rate.map(|s| format!("{s} Hz")).unwrap_or_else(|| "Device default".into());
+                    ComboBox::from_id_salt("audio_sr").selected_text(sr_text).show_ui(ui, |ui| {
+                        ui.selectable_value(&mut opts.config.sample_rate, None, "Device default");
+                        for sr in dev.map(|d| d.sample_rates.clone()).unwrap_or_default() {
+                            ui.selectable_value(&mut opts.config.sample_rate, Some(sr), format!("{sr} Hz"));
+                        }
+                    });
+                    ui.end_row();
+                    ui.label("Buffer size");
+                    let buf_text = opts.config.buffer_size.map(|b| format!("{b} frames")).unwrap_or_else(|| "Device default".into());
+                    ComboBox::from_id_salt("audio_buf").selected_text(buf_text).show_ui(ui, |ui| {
+                        ui.selectable_value(&mut opts.config.buffer_size, None, "Device default");
+                        for b in [64u32, 128, 256, 512, 1024, 2048] {
+                            let ok = dev.is_none_or(|d| d.buffer_min.is_none_or(|lo| b >= lo) && d.buffer_max.is_none_or(|hi| b <= hi));
+                            if ok {
+                                ui.selectable_value(&mut opts.config.buffer_size, Some(b), format!("{b} frames"));
+                            }
+                        }
+                    });
+                    ui.end_row();
+                });
+                let status = match app.player.output_description() {
+                    Ok(n) => format!("Now: {n}, {} Hz", app.player.sample_rate()),
+                    Err(e) => format!("Now: no output ({e})"),
+                };
+                ui.label(RichText::new(status).small().color(Theme::current().text_dim));
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("Apply").strong()).clicked() {
+                        app.settings.audio = opts.config.clone();
+                        app.restart_audio();
+                        keep = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::Rename { target, text } => {
+            let target = target.clone();
+            modal(ctx, "Rename", |ui| {
+                let r = ui.add(egui::TextEdit::singleline(text).desired_width(300.0));
+                r.request_focus();
+                let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
+                ui.horizontal(|ui| {
+                    if ui.button("OK").clicked() || enter {
+                        let name = text.trim().to_string();
+                        if !name.is_empty() {
+                            app.exec(match target {
+                                RenameTarget::Pattern(pattern) => Command::RenamePattern { pattern, name },
+                                RenameTarget::Channel(channel) => Command::RenameChannel { channel, name },
+                                RenameTarget::PlaylistTrack(track) => Command::RenamePlaylistTrack { track, name },
+                                RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },
+                                RenameTarget::Project => Command::SetTitle(name),
+                            });
+                        }
+                        keep = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::About => {
+            modal(ctx, "About LimeShot", |ui| {
+                ui.vertical_centered(|ui| {
+                    let (r, _) = ui.allocate_exact_size(vec2(80.0, 80.0), egui::Sense::hover());
+                    crate::icons::logo(ui.painter(), r.center(), 36.0);
+                    ui.heading(format!("LimeShot {}", env!("CARGO_PKG_VERSION")));
+                    ui.label("An open-source, offline-first music workstation written in Rust.");
+                    ui.label(RichText::new("Pattern workflow inspired by FL Studio; independently implemented. FL Studio is a trademark of Image-Line, which is not affiliated with LimeShot.").small().color(Theme::current().text_dim));
+                    ui.label(RichText::new("MIT OR Apache-2.0").small());
+                });
+                if ui.button("Close").clicked() {
+                    keep = false;
+                }
+            });
+        }
+        Dialog::Shortcuts => {
+            modal(ctx, "Keyboard shortcuts", |ui| {
+                egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
+                    egui::Grid::new("keys").striped(true).show(ui, |ui| {
+                        for (k, a) in crate::shortcuts::GLOBAL.iter().chain(crate::shortcuts::EDITING) {
+                            ui.label(RichText::new(crate::shortcuts::label(k)).monospace());
+                            ui.label(*a);
+                            ui.end_row();
+                        }
+                    });
+                });
+                if ui.button("Close").clicked() {
+                    keep = false;
+                }
+            });
+        }
+    }
+    if esc && !matches!(dialog, Dialog::ConfirmDiscard(_)) {
+        keep = false;
+    }
+    if keep && app.dialog.is_none() {
+        app.dialog = Some(dialog);
+    }
+}
+
+pub fn toasts(app: &mut LimeShotApp, ctx: &Context) {
+    if app.toasts.is_empty() {
+        return;
+    }
+    let t = Theme::current();
+    egui::Area::new(egui::Id::new("toasts")).anchor(Align2::RIGHT_BOTTOM, vec2(-16.0, -32.0)).order(egui::Order::Tooltip).show(ctx, |ui| {
+        for toast in &app.toasts {
+            egui::Frame::popup(ui.style()).fill(if toast.error { crate::theme::mix(t.surface, t.danger, 0.25) } else { t.surface }).show(ui, |ui| {
+                ui.set_max_width(420.0);
+                ui.label(&toast.text);
+            });
+        }
+    });
+}

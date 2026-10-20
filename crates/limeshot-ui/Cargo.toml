@@ -1,0 +1,27 @@
+[package]
+name = "limeshot-ui"
+description = "LimeShot user interface (egui): toolbar, browser, channel rack, piano roll, playlist, mixer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+limeshot-core.workspace = true
+limeshot-project.workspace = true
+limeshot-dsp.workspace = true
+limeshot-sequencer.workspace = true
+limeshot-engine.workspace = true
+limeshot-audio.workspace = true
+egui.workspace = true
+rfd.workspace = true
+directories.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

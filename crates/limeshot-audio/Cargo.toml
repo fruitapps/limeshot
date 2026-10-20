@@ -1,0 +1,24 @@
+[package]
+name = "limeshot-audio"
+description = "LimeShot realtime audio output (cpal) and background sample loading"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+limeshot-core.workspace = true
+limeshot-dsp.workspace = true
+limeshot-sequencer.workspace = true
+limeshot-engine.workspace = true
+limeshot-project.workspace = true
+cpal.workspace = true
+rtrb.workspace = true
+log.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

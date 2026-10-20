@@ -1,0 +1,36 @@
+[package]
+name = "limeshot-app"
+description = "LimeShot desktop application and headless command-line tool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+default-run = "limeshot"
+
+[[bin]]
+name = "limeshot"
+path = "src/main.rs"
+
+[[bin]]
+name = "limeshot-cli"
+path = "src/cli.rs"
+
+[dependencies]
+limeshot-core.workspace = true
+limeshot-project.workspace = true
+limeshot-dsp.workspace = true
+limeshot-sequencer.workspace = true
+limeshot-engine.workspace = true
+limeshot-audio.workspace = true
+limeshot-ui.workspace = true
+eframe.workspace = true
+egui.workspace = true
+serde_json.workspace = true
+log.workspace = true
+env_logger.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

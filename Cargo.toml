@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/limeshot-core", "crates/limeshot-project", "crates/limeshot-dsp", "crates/limeshot-sequencer", "crates/limeshot-engine"]
+members = ["crates/*"]
 
 [workspace.package]
 version = "0.1.0"
