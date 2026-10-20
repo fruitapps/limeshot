@@ -360,7 +360,7 @@ mod tests {
         .unwrap();
         assert!(d.project().pattern(pat).unwrap().notes.is_empty());
         assert_eq!(d.project().pattern(new_pat).unwrap().notes.len(), 1);
-        assert_eq!(d.project().clip(b).unwrap().pattern(), new_pat);
+        assert_eq!(d.project().clip(b).unwrap().pattern(), Some(new_pat));
     }
 
     #[test]
@@ -633,5 +633,114 @@ mod tests {
         })
         .unwrap();
         assert_eq!(d.project().channels[1].mixer_track, 2);
+    }
+
+    #[test]
+    fn audio_clips_reuse_their_channel_and_follow_it() {
+        let mut d = Document::default();
+        let wav = SampleRef {
+            path: "loop.wav".into(),
+        };
+        let add = |d: &mut Document, start| {
+            ClipId(
+                d.execute(Command::AddAudioClip {
+                    sample: wav.clone(),
+                    name: "loop".into(),
+                    track: 0,
+                    start,
+                    length: 1920,
+                })
+                .unwrap()
+                .0
+                .unwrap(),
+            )
+        };
+        let a = add(&mut d, 0);
+        let b = add(&mut d, 3840);
+        assert_eq!(
+            d.project().channels.len(),
+            1,
+            "the second drop reuses the audio clip channel"
+        );
+        let ch = d.project().clip(a).unwrap().audio_channel().unwrap();
+        assert_eq!(d.project().clip(b).unwrap().audio_channel(), Some(ch));
+        match &d.project().channel(ch).unwrap().instrument {
+            Instrument::Sampler(s) => assert!(!s.one_shot && s.sample.as_ref() == Some(&wav)),
+            other => panic!("{other:?}"),
+        }
+        assert!(d.execute(Command::MakeClipUnique(a)).is_err());
+        // Paste places a copy of any clip kind.
+        let c = d.project().clip(a).unwrap().clone();
+        d.execute(Command::PlaceClip {
+            source: c.source,
+            track: 1,
+            start: 7680,
+            length: c.length,
+            offset: 240,
+        })
+        .unwrap();
+        assert_eq!(d.project().playlist.clips.len(), 3);
+        assert!(
+            d.execute(Command::PlaceClip {
+                source: ClipSource::Audio(ChannelId(999)),
+                track: 0,
+                start: 0,
+                length: 1,
+                offset: 0,
+            })
+            .is_err()
+        );
+        // Deleting the channel deletes its clips; undo brings both back.
+        d.execute(Command::RemoveChannel(ch)).unwrap();
+        assert!(d.project().playlist.clips.is_empty());
+        d.undo();
+        assert_eq!(d.project().playlist.clips.len(), 3);
+    }
+
+    #[test]
+    fn trimming_a_clip_start_moves_its_offset() {
+        let (mut d, _, pat) = doc_with_channel();
+        let c = ClipId(
+            d.execute(Command::AddClip {
+                pattern: pat,
+                track: 0,
+                start: 3840,
+                length: Some(3840),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let get = |d: &Document| {
+            let c = d.project().clip(c).unwrap();
+            (c.start, c.offset, c.length)
+        };
+        d.execute(Command::ResizeClipStart { clip: c, start: 4800 }).unwrap();
+        assert_eq!(get(&d), (4800, 960, 2880));
+        // Revealing more than the source has stops at the source start.
+        d.execute(Command::ResizeClipStart { clip: c, start: 0 }).unwrap();
+        assert_eq!(get(&d), (3840, 0, 3840));
+        // The end stays put; at least one tick remains.
+        d.execute(Command::ResizeClipStart { clip: c, start: 99_999 }).unwrap();
+        assert_eq!(get(&d), (7679, 3839, 1));
+    }
+
+    #[test]
+    fn sanitize_drops_audio_clips_without_a_channel() {
+        let mut p = Project::new();
+        p.playlist.clips.push(Clip {
+            id: ClipId(5),
+            source: ClipSource::Audio(ChannelId(77)),
+            track: 0,
+            start: 0,
+            length: 10,
+            offset: 0,
+            muted: false,
+            extra: Extra::new(),
+        });
+        let json = serde_json::to_string(&p.playlist.clips[0]).unwrap();
+        assert!(json.contains("\"Audio\":77"), "{json}");
+        p.sanitize();
+        assert!(p.playlist.clips.is_empty());
     }
 }

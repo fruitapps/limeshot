@@ -17,7 +17,9 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
-use limeshot_core::{Instrument, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature, Waveform};
+use limeshot_core::{
+    ClipSource, Instrument, PPQ, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature, Waveform,
+};
 use limeshot_dsp::osc::Shape;
 use limeshot_dsp::{Adsr, SampleData, db_to_gain};
 use std::sync::Arc;
@@ -31,6 +33,30 @@ pub struct NoteEvent {
     pub channel: u16,
     pub key: u8,
     pub velocity: f32,
+    /// Seconds into the channel's sample at which playback starts (audio clips trimmed at the
+    /// start); 0 for notes.
+    pub offset_secs: f64,
+    /// An audio clip: plays for exactly `length` even on a one-shot sampler, and starts mid-way
+    /// when playback begins inside it.
+    pub clip: bool,
+}
+
+impl NoteEvent {
+    pub fn note(tick: Tick, length: Tick, channel: u16, key: u8, velocity: f32) -> Self {
+        Self {
+            tick,
+            length,
+            channel,
+            key,
+            velocity,
+            offset_secs: 0.0,
+            clip: false,
+        }
+    }
+
+    pub fn end(&self) -> Tick {
+        self.tick.saturating_add(self.length)
+    }
 }
 
 /// A loopable, tick-sorted list of note events.
@@ -262,13 +288,13 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                 .filter(|n| n.start < length)
                 .filter_map(|n| {
                     let tick = n.start + swing(n.start);
-                    Some(NoteEvent {
+                    Some(NoteEvent::note(
                         tick,
-                        length: n.length.min(length.saturating_sub(tick)).max(1),
-                        channel: channel_index(n.channel)?,
-                        key: n.key,
-                        velocity: n.velocity,
-                    })
+                        n.length.min(length.saturating_sub(tick)).max(1),
+                        channel_index(n.channel)?,
+                        n.key,
+                        n.velocity,
+                    ))
                 })
                 .collect();
             events.sort_by_key(|e| (e.tick, e.channel, e.key));
@@ -283,8 +309,23 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         if clip.muted || track_muted {
             continue;
         }
-        let Some(p) = project.pattern(clip.pattern()) else {
-            continue;
+        let p = match clip.source {
+            ClipSource::Pattern(id) => match project.pattern(id) {
+                Some(p) => p,
+                None => continue,
+            },
+            ClipSource::Audio(ch) => {
+                if let (Some(channel), Some(c)) = (channel_index(ch), project.channel(ch)) {
+                    // Tempo is constant within a project, so a tick offset is a fixed time.
+                    let secs = project.tempo.bpm().recip() * 60.0 * clip.offset as f64 / PPQ as f64;
+                    song_events.push(NoteEvent {
+                        offset_secs: secs,
+                        clip: true,
+                        ..NoteEvent::note(clip.start, clip.length, channel, c.root_key, 1.0)
+                    });
+                }
+                continue;
+            }
         };
         let window_end = clip.offset.saturating_add(clip.length);
         for n in &p.notes {
@@ -298,13 +339,13 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             if tick >= clip.end() {
                 continue;
             }
-            song_events.push(NoteEvent {
+            song_events.push(NoteEvent::note(
                 tick,
-                length: n.length.min(clip.end() - tick),
+                n.length.min(clip.end() - tick),
                 channel,
-                key: n.key,
-                velocity: n.velocity,
-            });
+                n.key,
+                n.velocity,
+            ));
         }
     }
     song_events.sort_by_key(|e| (e.tick, e.channel, e.key));

@@ -280,6 +280,10 @@ impl Pattern {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClipSource {
     Pattern(PatternId),
+    /// The sample of a sampler channel, played from the clip's `offset` for the clip's length.
+    /// As in FL Studio, a sample dropped on the Playlist becomes an audio-clip channel in the
+    /// Channel Rack; the channel's volume, pan, sampler settings and mixer track apply.
+    Audio(ChannelId),
 }
 
 /// A clip on the Playlist.
@@ -305,9 +309,19 @@ impl Clip {
         self.start.saturating_add(self.length)
     }
 
-    pub fn pattern(&self) -> PatternId {
+    /// The pattern a pattern clip plays.
+    pub fn pattern(&self) -> Option<PatternId> {
         match self.source {
-            ClipSource::Pattern(p) => p,
+            ClipSource::Pattern(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// The channel an audio clip plays.
+    pub fn audio_channel(&self) -> Option<ChannelId> {
+        match self.source {
+            ClipSource::Audio(c) => Some(c),
+            _ => None,
         }
     }
 }
@@ -658,7 +672,10 @@ impl Project {
             max_id = max_id.max(p.id.0);
         }
         let patterns: Vec<PatternId> = self.patterns.iter().map(|p| p.id).collect();
-        self.playlist.clips.retain(|c| patterns.contains(&c.pattern()));
+        self.playlist.clips.retain(|c| match c.source {
+            ClipSource::Pattern(p) => patterns.contains(&p),
+            ClipSource::Audio(ch) => channels.contains(&ch),
+        });
         let max_track = self.playlist.clips.iter().map(|c| c.track).max().unwrap_or(0);
         while self.playlist.tracks.len() <= max_track as usize && self.playlist.tracks.len() < 500 {
             let n = self.playlist.tracks.len() + 1;

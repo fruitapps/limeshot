@@ -800,3 +800,79 @@ fn mixer_routes_through_buses() {
         .unwrap();
     assert_eq!(peak(&f), 0.0);
 }
+
+/// A one-second ramp whose value encodes the frame index (value = i / 48000), placed as an audio
+/// clip at bar 1 beat 3 (tick 1920 = 48 000 frames at 120 BPM), trimmed by a quarter of a second
+/// at the start and half a second long.
+fn audio_clip_fixture() -> (Document, Arc<limeshot_sequencer::Snapshot>) {
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let clip = ClipId(
+        doc.execute(Command::AddAudioClip {
+            sample: SampleRef { path: "ramp".into() },
+            name: "Ramp".into(),
+            track: 0,
+            start: 1440,
+            length: 1440,
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    // Trim the first 480 ticks (0.25 s) by dragging the left edge.
+    doc.execute(Command::ResizeClipStart { clip, start: 1920 }).unwrap();
+    let c = doc.project().clip(clip).unwrap().clone();
+    assert_eq!((c.start, c.offset, c.length), (1920, 480, 960));
+    let ch = c.audio_channel().unwrap();
+    doc.execute(Command::SetChannelVolume {
+        channel: ch,
+        volume: 1.0,
+    })
+    .unwrap();
+    doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
+    let data: Vec<f32> = (0..48_000).flat_map(|i| [i as f32 / 48_000.0; 2]).collect();
+    let s = Arc::new(SampleData::from_stereo(SR, data));
+    let lookup = move |p: &str| (p == "ramp").then(|| s.clone());
+    let pat = doc.project().patterns[0].id;
+    let snap = Arc::new(compile(doc.project(), pat, &lookup));
+    (doc, snap)
+}
+
+#[test]
+fn audio_clips_play_their_sample_window_sample_accurately() {
+    let (_, snap) = audio_clip_fixture();
+    for block in [64, 333, 1024] {
+        let (audio, _) = render(snap.clone(), ExportRange::Song, block, SR);
+        let at = |i: usize| audio[2 * i];
+        assert_eq!(at(47_999), 0.0, "silent before the clip (block {block})");
+        // The clip starts 12 000 frames into the sample (the trimmed quarter second).
+        for k in [0usize, 1, 5_000, 23_999] {
+            let want = (12_000 + k) as f32 / 48_000.0;
+            assert!(
+                (at(48_000 + k) - want).abs() < 1e-5,
+                "frame {k}: {} vs {want}",
+                at(48_000 + k)
+            );
+        }
+        // It stops at the clip end (half a second, then the sampler's 10 ms declick release), not
+        // at the end of the sample.
+        assert!(at(72_000 + 10) < 0.75, "releasing (block {block})");
+        assert_eq!(at(72_000 + 480 + 10), 0.0, "block {block}");
+    }
+}
+
+#[test]
+fn playback_starting_inside_an_audio_clip_starts_the_audio_part_way() {
+    let (_, snap) = audio_clip_fixture();
+    for block in [64, 333, 1024] {
+        let mut r = Renderer::new(SR, snap.clone());
+        r.set_mode(PlayMode::Song);
+        // Tick 2400 is 480 ticks (12 000 frames) into the clip: sample frame 24 000.
+        r.locate(2400);
+        r.play();
+        let mut buf = vec![0.0; 2 * block];
+        r.render(&mut buf);
+        assert!((buf[0] - 0.5).abs() < 1e-5, "block {block}: {}", buf[0]);
+        assert!((buf[2 * (block - 1)] - (24_000 + block - 1) as f32 / 48_000.0).abs() < 1e-5);
+    }
+}

@@ -44,6 +44,8 @@ enum Action {
         key: u8,
         velocity: f32,
         end_tick: Tick,
+        offset_secs: f64,
+        clip: bool,
     },
     Click {
         downbeat: bool,
@@ -76,6 +78,9 @@ pub struct Renderer {
     fx: crate::fx::FxRack,
     /// Peak of the last block's output (for detecting when effect tails have died away).
     last_peak: f32,
+    /// Start the audio clips that span the position on the next schedule (after play, locate or
+    /// a mode change), part-way through.
+    chase: bool,
 }
 
 impl Renderer {
@@ -103,6 +108,7 @@ impl Renderer {
             finished: false,
             fx: crate::fx::FxRack::new(),
             last_peak: 0.0,
+            chase: true,
         }
     }
 
@@ -202,6 +208,7 @@ impl Renderer {
             self.start_tick = self.position();
             self.playing = true;
             self.finished = false;
+            self.chase = true;
         }
     }
 
@@ -231,6 +238,7 @@ impl Renderer {
             self.start_tick = tick;
         }
         self.release_sequenced();
+        self.chase = true;
     }
 
     fn release_sequenced(&mut self) {
@@ -374,6 +382,23 @@ impl Renderer {
         let t_hi = self.timeline.first_tick_at_or_after(chunk_end).min(len);
         let tl = self.timeline;
         let mut actions = std::mem::take(&mut self.actions);
+        if std::mem::take(&mut self.chase) {
+            for e in self.program().range(0, t_lo) {
+                if e.clip && e.end() > t_lo && actions.len() < MAX_EVENTS_PER_BLOCK {
+                    actions.push((
+                        0,
+                        Action::Note {
+                            channel: e.channel,
+                            key: e.key,
+                            velocity: e.velocity,
+                            end_tick: e.end(),
+                            offset_secs: e.offset_secs + tl.seconds(t_lo - e.tick),
+                            clip: true,
+                        },
+                    ));
+                }
+            }
+        }
         for e in self.program().range(t_lo, t_hi) {
             if actions.len() >= MAX_EVENTS_PER_BLOCK {
                 break;
@@ -386,6 +411,8 @@ impl Renderer {
                     key: e.key,
                     velocity: e.velocity,
                     end_tick: e.tick + e.length,
+                    offset_secs: e.offset_secs,
+                    clip: e.clip,
                 },
             ));
         }
@@ -453,17 +480,26 @@ impl Renderer {
                 key,
                 velocity,
                 end_tick,
+                offset_secs,
+                clip,
             } => {
                 let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
                     return;
                 };
-                let one_shot = matches!(
-                    ch.instrument,
-                    limeshot_sequencer::InstrumentState::Sampler { one_shot: true, .. }
-                );
+                let one_shot = !clip
+                    && matches!(
+                        ch.instrument,
+                        limeshot_sequencer::InstrumentState::Sampler { one_shot: true, .. }
+                    );
                 let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, sr) else {
                     return;
                 };
+                if offset_secs > 0.0 {
+                    v.skip(offset_secs, sr);
+                    if !v.is_active() {
+                        return;
+                    }
+                }
                 v.channel = channel;
                 v.sequenced = true;
                 v.end_tick = end_tick;

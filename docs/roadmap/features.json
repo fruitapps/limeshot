@@ -1995,7 +1995,7 @@
       "name": "Resize clips",
       "description": "Change clip length.",
       "fl_reference": "Shift+drag edge.",
-      "limeshot_behavior": "Drag the right edge; content is truncated (pattern plays once).",
+      "limeshot_behavior": "Drag the right edge to change the length; drag the left edge to trim or reveal the start (the clip offset moves, the end stays). A pattern clip plays its pattern once and is silent after it (FL Studio, D14).",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": true,
@@ -2009,7 +2009,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-sequencer tests::clip_truncates_notes"
+        "limeshot-sequencer tests::clip_truncates_notes",
+        "limeshot-core document::tests::trimming_a_clip_start_moves_its_offset"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2330,19 +2331,30 @@
       "name": "Audio clips",
       "description": "Place audio on the timeline.",
       "fl_reference": "Audio clips with fades, gain, stretch.",
-      "limeshot_behavior": "Audio clip source type rendered by the engine.",
+      "limeshot_behavior": "Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "INS-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::audio_clips_play_their_sample_window_sample_accurately",
+        "limeshot-engine tests/audio.rs::playback_starting_inside_an_audio_clip_starts_the_audio_part_way",
+        "limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it",
+        "limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel",
+        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2350,7 +2362,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008."
     },
     {
       "id": "PL-015",
@@ -4691,19 +4703,24 @@
       "name": "Drag samples to the Playlist (audio clips)",
       "description": "Place audio directly.",
       "fl_reference": "Drag samples to Playlist.",
-      "limeshot_behavior": "—",
+      "limeshot_behavior": "Drag a sample from the Browser onto the Playlist: it is decoded, placed at the snapped drop position as an audio clip as long as the sample, and its audio-clip channel is reused when the same sample is dropped again.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PL-014"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-ui",
+        "limeshot-audio"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6423,7 +6440,7 @@
       "name": "Copy / cut / paste clips",
       "description": "Clipboard for clips.",
       "fl_reference": "Ctrl+C / X / V in the Playlist.",
-      "limeshot_behavior": "Cmd+C/X/V; in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.",
+      "limeshot_behavior": "Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,

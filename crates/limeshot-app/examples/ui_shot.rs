@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -49,6 +49,17 @@ fn main() {
         && let Some(p) = app.project().patterns.get(1).map(|p| p.id)
     {
         app.set_current_pattern(p);
+    }
+    if args.iter().any(|a| a == "--audio")
+        && let Some(dir) = &samples
+    {
+        // Audio clips on tracks 5 and 6, zoomed in enough to show their waveforms.
+        let bar = app.project().time_signature.ticks_per_bar();
+        limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Snare.wav"), 4, 2 * bar);
+        limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Hat Open.wav"), 5, 2 * bar + bar / 2);
+        app.ui.workspace.close(Win::ChannelRack);
+        app.ui.playlist.zoom_x = 90.0;
+        app.doc.mark_saved();
     }
     if args.iter().any(|a| a == "--detach") {
         // Without multi-viewport support the detached window renders embedded; this checks it draws.

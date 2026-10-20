@@ -214,6 +214,30 @@ impl Voice {
         self.env.release();
     }
 
+    /// Start `secs` (of output time) into the source: audio clips trimmed at the start, or
+    /// playback starting inside a clip. Only samplers move; a voice skipped past its end stops.
+    pub fn skip(&mut self, secs: f64, sample_rate: f32) {
+        if let Source::Sampler {
+            pos,
+            step,
+            lo,
+            hi,
+            reverse,
+            ..
+        } = &mut self.source
+        {
+            let frames = secs.max(0.0) * f64::from(sample_rate) * *step;
+            if *reverse {
+                *pos -= frames;
+            } else {
+                *pos += frames;
+            }
+            if *pos < *lo || *pos >= *hi {
+                self.source = Source::Off;
+            }
+        }
+    }
+
     /// Render one stereo frame (before channel gain and pan). Turns itself off when finished.
     #[inline]
     pub fn next_frame(&mut self) -> (f32, f32) {

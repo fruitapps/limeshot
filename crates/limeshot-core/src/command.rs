@@ -169,6 +169,24 @@ pub enum Command {
         start: Tick,
         length: Option<Tick>,
     },
+    /// Place a sample on the Playlist as an audio clip. Reuses the channel of an audio clip that
+    /// already plays this sample, otherwise adds a sampler channel for it (FL Studio's audio clip
+    /// channel). Returns the clip id.
+    AddAudioClip {
+        sample: SampleRef,
+        name: String,
+        track: u32,
+        start: Tick,
+        length: Tick,
+    },
+    /// Place a clip of any kind (paste).
+    PlaceClip {
+        source: ClipSource,
+        track: u32,
+        start: Tick,
+        length: Tick,
+        offset: Tick,
+    },
     RemoveClips(Vec<ClipId>),
     MoveClips {
         clips: Vec<ClipId>,
@@ -178,6 +196,12 @@ pub enum Command {
     ResizeClip {
         clip: ClipId,
         length: Tick,
+    },
+    /// Move a clip's start while keeping its end, trimming or revealing the beginning of its
+    /// source (dragging the left edge).
+    ResizeClipStart {
+        clip: ClipId,
+        start: Tick,
     },
     DuplicateClips(Vec<ClipId>),
     /// Give the clip its own copy of its pattern.
@@ -331,10 +355,11 @@ impl Command {
             RemovePattern(_) => "Delete pattern",
             RenamePattern { .. } => "Rename pattern",
             SetPatternLength { .. } => "Pattern length",
-            AddClip { .. } => "Add clip",
+            AddClip { .. } | PlaceClip { .. } => "Add clip",
+            AddAudioClip { .. } => "Add audio clip",
             RemoveClips(_) => "Delete clips",
             MoveClips { .. } => "Move clips",
-            ResizeClip { .. } => "Resize clip",
+            ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
             DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
@@ -384,6 +409,7 @@ impl Command {
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
+            ResizeClipStart { clip, .. } => format!("rss{}", clip.0),
             SetStep {
                 pattern, channel, on, ..
             } => format!("step{}:{}:{on}", pattern.0, channel.0),
@@ -425,6 +451,7 @@ impl Command {
                 for pat in &mut p.patterns {
                     pat.notes.retain(|n| n.channel != id);
                 }
+                p.playlist.clips.retain(|c| c.audio_channel() != Some(id));
             }
             CloneChannel(id) => {
                 let i = p.channel_index(id).ok_or(CommandError::NoChannel(id))?;
@@ -624,7 +651,7 @@ impl Command {
                     .position(|x| x.id == id)
                     .ok_or(CommandError::NoPattern(id))?;
                 p.patterns.remove(i);
-                p.playlist.clips.retain(|c| c.pattern() != id);
+                p.playlist.clips.retain(|c| c.pattern() != Some(id));
             }
             RenamePattern { pattern: id, name } => pattern(p, id)?.name = name,
             SetPatternLength { pattern: id, steps } => pattern(p, id)?.length_steps = steps.map(|s| s.clamp(1, 512)),
@@ -658,6 +685,47 @@ impl Command {
                 });
                 return Ok(Created(Some(id)));
             }
+            AddAudioClip {
+                sample,
+                name,
+                track,
+                start,
+                length,
+            } => {
+                if track as usize >= p.playlist.tracks.len() {
+                    return Err(CommandError::NoPlaylistTrack(track));
+                }
+                let audio_channels: Vec<ChannelId> = p.playlist.clips.iter().filter_map(Clip::audio_channel).collect();
+                let reuse = p
+                    .channels
+                    .iter()
+                    .find(|c| {
+                        audio_channels.contains(&c.id)
+                            && matches!(&c.instrument, Instrument::Sampler(s) if s.sample.as_ref() == Some(&sample))
+                    })
+                    .map(|c| c.id);
+                let channel = match reuse {
+                    Some(c) => c,
+                    None => {
+                        let instrument = Instrument::Sampler(SamplerParams {
+                            sample: Some(sample),
+                            // An audio clip plays for the clip's length, not the whole sample.
+                            one_shot: false,
+                            ..SamplerParams::default()
+                        });
+                        let id = Command::AddChannel { name, instrument }.apply(p)?;
+                        ChannelId(id.0.unwrap_or_default())
+                    }
+                };
+                return place_clip(p, ClipSource::Audio(channel), track, start, length, 0);
+            }
+            PlaceClip {
+                source,
+                track,
+                start,
+                length,
+                offset,
+            } => return place_clip(p, source, track, start, length, offset),
             RemoveClips(ids) => p.playlist.clips.retain(|c| !ids.contains(&c.id)),
             MoveClips { clips, dt, dtrack } => {
                 let max_track = p.playlist.tracks.len().saturating_sub(1) as i64;
@@ -667,6 +735,14 @@ impl Command {
                 }
             }
             ResizeClip { clip, length } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.length = length.max(1),
+            ResizeClipStart { clip, start } => {
+                let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
+                let end = c.end();
+                let start = start.clamp(c.start.saturating_sub(c.offset), end.saturating_sub(1));
+                c.offset = (c.offset + start).saturating_sub(c.start);
+                c.length = end - start;
+                c.start = start;
+            }
             DuplicateClips(ids) => {
                 let sel: Vec<Clip> = p
                     .playlist
@@ -686,7 +762,11 @@ impl Command {
                 }
             }
             MakeClipUnique(id) => {
-                let pid = p.clip(id).ok_or(CommandError::NoClip(id))?.pattern();
+                let pid = p
+                    .clip(id)
+                    .ok_or(CommandError::NoClip(id))?
+                    .pattern()
+                    .ok_or_else(|| CommandError::Invalid("only pattern clips can be made unique".into()))?;
                 let i = p
                     .patterns
                     .iter()
@@ -840,6 +920,29 @@ impl Command {
         }
         ok()
     }
+}
+
+fn place_clip(p: &mut Project, source: ClipSource, track: u32, start: Tick, length: Tick, offset: Tick) -> R {
+    match source {
+        ClipSource::Pattern(id) if p.pattern(id).is_none() => return Err(CommandError::NoPattern(id)),
+        ClipSource::Audio(id) if p.channel(id).is_none() => return Err(CommandError::NoChannel(id)),
+        _ => {}
+    }
+    if track as usize >= p.playlist.tracks.len() {
+        return Err(CommandError::NoPlaylistTrack(track));
+    }
+    let id = p.alloc_id();
+    p.playlist.clips.push(Clip {
+        id: ClipId(id),
+        source,
+        track,
+        start,
+        length: length.max(1),
+        offset,
+        muted: false,
+        extra: Extra::new(),
+    });
+    Ok(Created(Some(id)))
 }
 
 fn add_notes(p: &mut Project, pid: PatternId, notes: Vec<NewNote>) -> R {

@@ -1,10 +1,11 @@
-//! The Playlist: arranges pattern clips on tracks; Song mode plays it.
+//! The Playlist: arranges pattern and audio clips on tracks; Song mode plays it.
 //!
 //! Mouse: left-click empty space places the current pattern (and keeps dragging to move it);
-//! drag a clip to move it (across tracks too), drag its right edge to resize; right-click/drag
-//! deletes; Cmd+drag selects; double-click a clip opens its pattern in the Piano Roll; the ▾
-//! marker on a clip opens its menu (Make unique …). Alt disables snapping. Click the ruler to move
-//! the song position.
+//! drag a clip to move it (across tracks too), drag its right edge to resize and its left edge to
+//! trim the start; right-click/drag deletes; Cmd+drag selects; double-click a pattern clip opens
+//! the Piano Roll, an audio clip its channel settings; the ▾ marker on a clip opens its menu.
+//! Alt disables snapping. Click the ruler to move the song position. Samples dragged in from the
+//! Browser become audio clips (FL Studio).
 
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
@@ -36,6 +37,9 @@ enum Drag {
         id: ClipId,
         start: Tick,
     },
+    ResizeStart {
+        id: ClipId,
+    },
     Select {
         from: Pos2,
     },
@@ -50,6 +54,8 @@ pub struct State {
     pub selection: Vec<ClipId>,
     drag: Option<Drag>,
     menu: Option<(ClipId, Pos2)>,
+    /// Waveform overviews of audio clip samples, by stored sample path.
+    peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
 }
@@ -63,6 +69,7 @@ impl Default for State {
             selection: Vec::new(),
             drag: None,
             menu: None,
+            peaks: Default::default(),
             geometry: None,
         }
     }
@@ -202,7 +209,7 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                     .playlist
                     .clips
                     .iter()
-                    .filter(|c| c.pattern() == p.id)
+                    .filter(|c| c.pattern() == Some(p.id))
                     .count(),
             )
         })
@@ -342,7 +349,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         if !r.intersects(grid) {
             continue;
         }
-        let Some(p) = app.project().pattern(c.pattern()) else {
+        let Some((name, color)) = clip_label(app.project(), c) else {
             continue;
         };
         let track_muted = app
@@ -352,7 +359,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             .get(c.track as usize)
             .is_some_and(|t| t.muted);
         let sel = app.ui.playlist.selection.contains(&c.id);
-        let base = rgb(p.color);
+        let base = rgb(color);
         let muted = c.muted || track_muted;
         // Saturated body with a solid title strip, as in the ArtCraft timelines.
         let fill = if muted {
@@ -378,16 +385,26 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         painter.with_clip_rect(rr).text(
             r.min + vec2(15.0, 1.0),
             Align2::LEFT_TOP,
-            &p.name,
+            &name,
             crate::theme::semibold(10.5),
             fg,
         );
         painter
             .with_clip_rect(rr)
             .text(r.min + vec2(4.0, 0.5), Align2::LEFT_TOP, "▾", mono(10.0), fg);
-        // Note preview.
         let body = Rect::from_min_max(pos2(r.left(), r.top() + 15.0), r.max);
-        if body.height() > 6.0 && !p.notes.is_empty() {
+        if let ClipSource::Audio(ch) = c.source {
+            draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55));
+        }
+        // Note preview.
+        let p = match c.source {
+            ClipSource::Pattern(id) => app.project().pattern(id),
+            _ => None,
+        };
+        if let Some(p) = p
+            && body.height() > 6.0
+            && !p.notes.is_empty()
+        {
             let (lo, hi) = p
                 .notes
                 .iter()
@@ -450,7 +467,171 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     ruler_ui(app, ui, &view, ruler, sig);
     headers_ui(app, ui, &view, headers, tracks);
     grid_input(app, ui, &view, grid, &clips, tracks);
+    sample_drop(app, ui, &view, grid, tracks);
     scroll_input(app, ui, full, grid);
+}
+
+/// Name and color shown on a clip: its pattern's, or for an audio clip its channel's.
+fn clip_label(p: &Project, c: &Clip) -> Option<(String, Rgb)> {
+    match c.source {
+        ClipSource::Pattern(id) => p.pattern(id).map(|x| (x.name.clone(), x.color)),
+        ClipSource::Audio(id) => p.channel(id).map(|x| (x.name.clone(), x.color)),
+    }
+}
+
+/// Min/max of the mono signal per block of `Peaks::BLOCK` frames.
+pub struct Peaks {
+    blocks: Vec<(f32, f32)>,
+}
+
+impl Peaks {
+    const BLOCK: usize = 256;
+
+    fn of(s: &limeshot_dsp::SampleData) -> Self {
+        let blocks = (0..s.frames().div_ceil(Self::BLOCK))
+            .map(|b| {
+                let (mut lo, mut hi) = (0.0f32, 0.0f32);
+                for i in b * Self::BLOCK..((b + 1) * Self::BLOCK).min(s.frames()) {
+                    let (l, r) = s.frame(i);
+                    let m = 0.5 * (l + r);
+                    lo = lo.min(m);
+                    hi = hi.max(m);
+                }
+                (lo, hi)
+            })
+            .collect();
+        Self { blocks }
+    }
+
+    /// Min/max over frames `a..b`.
+    fn range(&self, a: f64, b: f64) -> Option<(f32, f32)> {
+        let i = (a.max(0.0) as usize) / Self::BLOCK;
+        let j = ((b.max(0.0) as usize) / Self::BLOCK)
+            .max(i)
+            .min(self.blocks.len().checked_sub(1)?);
+        self.blocks
+            .get(i..=j)?
+            .iter()
+            .copied()
+            .reduce(|x, y| (x.0.min(y.0), x.1.max(y.1)))
+    }
+}
+
+/// The sample an audio clip plays, its first frame (sampler start trim) and the source frames per
+/// tick at the project tempo (including the sampler's pitch).
+fn clip_audio(
+    app: &LimeShotApp,
+    ch: ChannelId,
+) -> Option<(String, std::sync::Arc<limeshot_dsp::SampleData>, f64, f64)> {
+    let Instrument::Sampler(sp) = &app.project().channel(ch)?.instrument else {
+        return None;
+    };
+    let stored = sp.sample.as_ref()?.path.clone();
+    let s = limeshot_sequencer::SampleLookup::sample(&app.samples, &stored)?;
+    let secs_per_tick = 60.0 / (app.project().tempo.bpm() * PPQ as f64);
+    let rate = 2f64.powf(f64::from(sp.pitch) / 12.0);
+    let per_tick = secs_per_tick * f64::from(s.sample_rate) * rate;
+    let first = f64::from(sp.start.min(sp.end)) * s.frames() as f64;
+    Some((stored, s, first, per_tick))
+}
+
+fn draw_waveform(
+    app: &mut LimeShotApp,
+    painter: &egui::Painter,
+    view: &View,
+    grid: Rect,
+    c: &Clip,
+    ch: ChannelId,
+    body: Rect,
+    color: Color32,
+) {
+    if body.height() < 6.0 {
+        return;
+    }
+    let Some((stored, sample, first, per_tick)) = clip_audio(app, ch) else {
+        return;
+    };
+    let peaks = app
+        .ui
+        .playlist
+        .peaks
+        .entry(stored)
+        .or_insert_with(|| std::sync::Arc::new(Peaks::of(&sample)))
+        .clone();
+    let mid = body.center().y;
+    let half = body.height() * 0.5 - 2.0;
+    let x0 = body.left().max(grid.left()).floor();
+    let x1 = body.right().min(grid.right());
+    let mut x = x0;
+    while x < x1 {
+        let t0 = view.tick_at(x) - c.start as i64 + c.offset as i64;
+        let t1 = view.tick_at(x + 1.0) - c.start as i64 + c.offset as i64;
+        let (a, b) = (first + t0 as f64 * per_tick, first + t1 as f64 * per_tick);
+        if let Some((lo, hi)) = peaks.range(a, b) {
+            painter.line_segment(
+                [
+                    pos2(x + 0.5, mid - hi.clamp(-1.0, 1.0) * half),
+                    pos2(x + 0.5, mid - lo.clamp(-1.0, 1.0) * half + 0.5),
+                ],
+                Stroke::new(1.0, color),
+            );
+        }
+        x += 1.0;
+    }
+}
+
+/// The length in ticks of a whole sample at the project tempo (for new audio clips).
+fn sample_ticks(app: &LimeShotApp, s: &limeshot_dsp::SampleData) -> Tick {
+    let beats = s.duration_secs() * app.project().tempo.bpm() / 60.0;
+    ((beats * PPQ as f64).round() as Tick).max(1)
+}
+
+/// Samples dragged from the Browser become audio clips where they are dropped.
+fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, tracks: u32) {
+    let resp = ui.interact(grid, ui.id().with("pl_drop"), Sense::hover());
+    if resp.dnd_hover_payload::<crate::browser::DraggedSample>().is_some() {
+        app.hint("Drop to place the sample as an audio clip");
+    }
+    let Some(payload) = resp.dnd_release_payload::<crate::browser::DraggedSample>() else {
+        return;
+    };
+    let Some(pos) = ui.input(|i| i.pointer.interact_pos().or(i.pointer.hover_pos())) else {
+        return;
+    };
+    let track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
+    let sig = app.project().time_signature;
+    let start = app.ui.snap.floor(view.tick_at(pos.x).max(0) as u64, sig);
+    if let Some(id) = add_audio_clip(app, &payload.0, track, start) {
+        app.ui.playlist.selection = vec![id];
+    }
+}
+
+/// Place the sample file at `path` as an audio clip (decoding it now to know its length).
+pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32, start: Tick) -> Option<ClipId> {
+    let stored = path.to_string_lossy().into_owned();
+    let sample = match app.samples.load_blocking(&stored) {
+        Ok(s) => s,
+        Err(e) => {
+            app.toast_error(format!("Could not load {}: {e}", path.display()));
+            return None;
+        }
+    };
+    let length = sample_ticks(app, &sample);
+    let name = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Audio".into());
+    let id = app.exec(Command::AddAudioClip {
+        sample: SampleRef { path: stored },
+        name,
+        track,
+        start,
+        length,
+    })?;
+    if let Some(ch) = app.project().clip(ClipId(id)).and_then(Clip::audio_channel) {
+        app.select_channel(ch);
+    }
+    Some(ClipId(id))
 }
 
 fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: TimeSignature) {
@@ -521,15 +702,39 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
     }
 }
 
-fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, bool, bool)> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Part {
+    Body,
+    LeftEdge,
+    RightEdge,
+    Menu,
+}
+
+fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
     clips.iter().rev().find_map(|c| {
         let r = view.clip_rect(c);
         r.contains(p).then(|| {
-            let edge = p.x >= r.right() - EDGE.min(r.width() * 0.4);
-            let menu = p.x <= r.left() + 13.0 && p.y <= r.top() + 13.0;
-            (c.clone(), edge, menu)
+            let edge = EDGE.min(r.width() * 0.3);
+            let part = if p.x <= r.left() + 13.0 && p.y <= r.top() + 13.0 {
+                Part::Menu
+            } else if p.x >= r.right() - edge {
+                Part::RightEdge
+            } else if p.x <= r.left() + edge {
+                Part::LeftEdge
+            } else {
+                Part::Body
+            };
+            (c.clone(), part)
         })
     })
+}
+
+/// Make a clicked clip's source the thing being edited: its pattern, or its audio channel.
+fn focus_source(app: &mut LimeShotApp, c: &Clip) {
+    match c.source {
+        ClipSource::Pattern(p) => app.set_current_pattern(p),
+        ClipSource::Audio(ch) => app.select_channel(ch),
+    }
 }
 
 fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips: &[Clip], tracks: u32) {
@@ -538,15 +743,15 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
     let snap = if mods.alt { Snap::None } else { app.ui.snap };
     if let Some(p) = resp.hover_pos() {
-        match hit(view, clips, p) {
-            Some((_, true, _)) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal),
-            Some((_, _, true)) => ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand),
-            Some(_) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
+        match hit(view, clips, p).map(|h| h.1) {
+            Some(Part::LeftEdge | Part::RightEdge) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal),
+            Some(Part::Menu) => ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand),
+            Some(Part::Body) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
             None => {}
         }
         let tk = view.tick_at(p.x).max(0) as u64;
         app.hint(format!(
-            "{} — left: place/move/resize · right: delete · double-click: edit pattern · ▾: clip menu · Cmd+drag: select",
+            "{} — left: place/move/resize (either edge) · right: delete · double-click: edit · ▾: clip menu · Cmd+drag: select · drop samples here",
             BarBeatTick::from_ticks(tk, sig)
         ));
     }
@@ -557,7 +762,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         let st = &mut app.ui.playlist;
         if mods.command {
             match hit(view, clips, p) {
-                Some((c, _, _)) => {
+                Some((c, _)) => {
                     if let Some(i) = st.selection.iter().position(|x| *x == c.id) {
                         st.selection.remove(i);
                     } else {
@@ -573,30 +778,30 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
         } else {
             match hit(view, clips, p) {
-                Some((c, _, true)) => {
+                Some((c, Part::Menu)) => {
                     st.menu = Some((c.id, p));
                 }
-                Some((c, edge, _)) => {
+                Some((c, part)) => {
                     if !st.selection.contains(&c.id) {
                         st.selection = vec![c.id];
                     }
                     let ids = st.selection.clone();
-                    app.set_current_pattern(c.pattern());
+                    focus_source(app, &c);
                     app.doc.begin_gesture();
-                    app.ui.playlist.drag = Some(if edge {
-                        Drag::Resize {
+                    app.ui.playlist.drag = Some(match part {
+                        Part::RightEdge => Drag::Resize {
                             id: c.id,
                             start: c.start,
-                        }
-                    } else {
-                        Drag::Move {
+                        },
+                        Part::LeftEdge => Drag::ResizeStart { id: c.id },
+                        _ => Drag::Move {
                             ids,
                             anchor_start: c.start,
                             grab_tick: view.tick_at(p.x),
                             grab_track: view.track_at(p.y),
                             applied_dt: 0,
                             applied_dtrack: 0,
-                        }
+                        },
                     });
                 }
                 None => {
@@ -663,9 +868,15 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     app.exec(Command::ResizeClip { clip: *id, length: len });
                 }
             }
+            Some(Drag::ResizeStart { id }) => {
+                let start = snap.round(view.tick_at(p.x).max(0) as u64, sig);
+                if app.project().clip(*id).is_some_and(|c| c.start != start) {
+                    app.exec(Command::ResizeClipStart { clip: *id, start });
+                }
+            }
             Some(Drag::Erase) => {
                 let current = app.project().playlist.clips.clone();
-                if let Some((c, _, _)) = hit(view, &current, p) {
+                if let Some((c, _)) = hit(view, &current, p) {
                     app.exec(Command::RemoveClips(vec![c.id]));
                     app.ui.playlist.selection.retain(|x| *x != c.id);
                 }
@@ -690,10 +901,14 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     }
     if resp.double_clicked()
         && let Some(p) = pointer
-        && let Some((c, _, false)) = hit(view, clips, p)
+        && let Some((c, part)) = hit(view, clips, p)
+        && part != Part::Menu
     {
-        app.set_current_pattern(c.pattern());
-        app.show_window(crate::workspace::Win::PianoRoll);
+        focus_source(app, &c);
+        app.show_window(match c.source {
+            ClipSource::Pattern(_) => crate::workspace::Win::PianoRoll,
+            ClipSource::Audio(_) => crate::workspace::Win::ChannelSettings,
+        });
     }
 }
 
@@ -708,7 +923,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
         .playlist
         .clips
         .iter()
-        .filter(|c| c.pattern() == clip.pattern())
+        .filter(|c| c.source == clip.source)
         .count();
     let mut close = false;
     let area = egui::Area::new(egui::Id::new("clip_menu"))
@@ -717,11 +932,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
         .show(ctx, |ui| {
             egui::Frame::menu(ui.style()).show(ui, |ui| {
                 ui.set_min_width(170.0);
-                let name = app
-                    .project()
-                    .pattern(clip.pattern())
-                    .map(|p| p.name.clone())
-                    .unwrap_or_default();
+                let name = clip_label(app.project(), &clip).map(|l| l.0).unwrap_or_default();
                 ui.label(RichText::new(name).strong());
                 ui.label(
                     RichText::new(format!("Used by {users} clip(s)"))
@@ -729,24 +940,35 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                         .color(Theme::current().text_dim),
                 );
                 ui.separator();
-                if ui
-                    .add_enabled(users > 1, egui::Button::new("Make unique"))
-                    .on_hover_text("Give this clip its own copy of the pattern")
-                    .clicked()
-                {
-                    if let Some(p) = app.exec(Command::MakeClipUnique(id)) {
-                        app.set_current_pattern(PatternId(p));
+                match clip.source {
+                    ClipSource::Pattern(pid) => {
+                        if ui
+                            .add_enabled(users > 1, egui::Button::new("Make unique"))
+                            .on_hover_text("Give this clip its own copy of the pattern")
+                            .clicked()
+                        {
+                            if let Some(p) = app.exec(Command::MakeClipUnique(id)) {
+                                app.set_current_pattern(PatternId(p));
+                            }
+                            close = true;
+                        }
+                        if ui.button("Edit pattern").clicked() {
+                            app.set_current_pattern(pid);
+                            app.show_window(crate::workspace::Win::PianoRoll);
+                            close = true;
+                        }
+                        if ui.button("Rename pattern…").clicked() {
+                            app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, pid));
+                            close = true;
+                        }
                     }
-                    close = true;
-                }
-                if ui.button("Edit pattern").clicked() {
-                    app.set_current_pattern(clip.pattern());
-                    app.show_window(crate::workspace::Win::PianoRoll);
-                    close = true;
-                }
-                if ui.button("Rename pattern…").clicked() {
-                    app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, clip.pattern()));
-                    close = true;
+                    ClipSource::Audio(ch) => {
+                        if ui.button("Channel settings").clicked() {
+                            app.select_channel(ch);
+                            app.show_window(crate::workspace::Win::ChannelSettings);
+                            close = true;
+                        }
+                    }
                 }
                 if ui
                     .button(if clip.muted { "Unmute clip" } else { "Mute clip" })
@@ -758,10 +980,16 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                     });
                     close = true;
                 }
-                if ui.button("Fit to pattern length").clicked() {
-                    let sig = app.project().time_signature;
-                    if let Some(len) = app.project().pattern(clip.pattern()).map(|p| p.length(sig)) {
-                        app.exec(Command::ResizeClip { clip: id, length: len });
+                let fit = match clip.source {
+                    ClipSource::Pattern(_) => "Fit to pattern length",
+                    ClipSource::Audio(_) => "Fit to sample length",
+                };
+                if ui.button(fit).clicked() {
+                    if let Some(len) = source_length(app, &clip) {
+                        app.exec(Command::ResizeClip {
+                            clip: id,
+                            length: len.saturating_sub(clip.offset).max(1),
+                        });
                     }
                     close = true;
                 }
@@ -781,6 +1009,24 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
     let clicked_outside = ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer();
     if close || clicked_outside || ctx.input(|i| i.key_pressed(Key::Escape)) {
         app.ui.playlist.menu = None;
+    }
+}
+
+/// The full length of a clip's source in ticks: its pattern, or its whole sample.
+fn source_length(app: &LimeShotApp, c: &Clip) -> Option<Tick> {
+    match c.source {
+        ClipSource::Pattern(p) => {
+            let sig = app.project().time_signature;
+            app.project().pattern(p).map(|p| p.length(sig))
+        }
+        ClipSource::Audio(ch) => {
+            let (_, s, first, per_tick) = clip_audio(app, ch)?;
+            let Instrument::Sampler(sp) = &app.project().channel(ch)?.instrument else {
+                return None;
+            };
+            let last = f64::from(sp.start.max(sp.end)) * s.frames() as f64;
+            Some((((last - first) / per_tick).round() as Tick).max(1))
+        }
     }
 }
 
@@ -825,13 +1071,19 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     }
     let cut = key(ctx, Modifiers::COMMAND, Key::X);
     if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {
-        let clips: Vec<(PatternId, u32, Tick, Tick)> = app
+        let clips: Vec<crate::app::CopiedClip> = app
             .project()
             .playlist
             .clips
             .iter()
             .filter(|c| sel.contains(&c.id))
-            .map(|c| (c.pattern(), c.track, c.start, c.length))
+            .map(|c| crate::app::CopiedClip {
+                source: c.source,
+                track: c.track,
+                start: c.start,
+                length: c.length,
+                offset: c.offset,
+            })
             .collect();
         app.clipboard = Some(crate::app::Clipboard::Clips(clips));
         if cut {
@@ -843,7 +1095,7 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         && let Some(crate::app::Clipboard::Clips(clips)) = app.clipboard.clone()
     {
         let sig = app.project().time_signature;
-        let origin = clips.iter().map(|c| c.2).min().unwrap_or(0);
+        let origin = clips.iter().map(|c| c.start).min().unwrap_or(0);
         let target = if app.ui.mode == PlayMode::Song {
             Snap::Bar.floor(app.player.status().position(), sig)
         } else {
@@ -852,11 +1104,12 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
         let cmds = clips
             .iter()
-            .map(|&(pattern, track, start, length)| Command::AddClip {
-                pattern,
-                track,
-                start: start - origin + target,
-                length: Some(length),
+            .map(|c| Command::PlaceClip {
+                source: c.source,
+                track: c.track,
+                start: c.start - origin + target,
+                length: c.length,
+                offset: c.offset,
             })
             .collect();
         app.exec(Command::Batch(cmds));

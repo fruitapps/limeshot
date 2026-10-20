@@ -10,20 +10,20 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 103, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 73, DEFERRED 2
+- By status: NOT_STARTED 101, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 75, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 22 | 10 | 4 | 1 | 7 |
 | Channel Rack | 18 | 10 | 2 | 0 | 6 |
 | Piano Roll | 25 | 5 | 8 | 0 | 12 |
-| Playlist | 26 | 10 | 5 | 1 | 10 |
+| Playlist | 26 | 11 | 5 | 1 | 9 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
 | Instruments | 12 | 5 | 0 | 0 | 7 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 9 | 0 | 0 | 0 | 9 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
-| Browser | 10 | 0 | 5 | 0 | 5 |
+| Browser | 10 | 1 | 5 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
 | Export | 12 | 4 | 0 | 0 | 8 |
 | Transport & Time | 13 | 7 | 4 | 0 | 2 |
@@ -117,7 +117,7 @@ automated tests or recorded manual verification. Everything else is not done.
 |---|---|---|---|---|---|---|
 | PL-001 | Pattern clips (linked instances) | P0 | ✓ | VERIFIED | Left-click empty space places the current pattern; every clip of a pattern plays the same data. | `limeshot-core document::tests::clips_are_linked_until_made_unique`<br>`limeshot-sequencer tests::playlist_flattens_linked_clips`<br>`limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern`<br>`limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-002 | Move clips (time and track) | P0 | ✓ | VERIFIED | Drag moves the selection with snap; arrows nudge. | `limeshot-core document::tests::clip_duplicate_and_move` |
-| PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge; content is truncated (pattern plays once).<br>*Matches FL Studio: observed live in FL Studio 2026.1.1 that a pattern clip lengthened past its pattern is silent after the pattern ends (no looping; evidence/screenshots/fl-clip-no-loop.png). Decision D14.* | `limeshot-sequencer tests::clip_truncates_notes` |
+| PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge to change the length; drag the left edge to trim or reveal the start (the clip offset moves, the end stays). A pattern clip plays its pattern once and is silent after it (FL Studio, D14).<br>*Matches FL Studio: observed live in FL Studio 2026.1.1 that a pattern clip lengthened past its pattern is silent after the pattern ends (no looping; evidence/screenshots/fl-clip-no-loop.png). Decision D14.* | `limeshot-sequencer tests::clip_truncates_notes`<br>`limeshot-core document::tests::trimming_a_clip_start_moves_its_offset` |
 | PL-004 | Delete clips | P0 | ✓ | VERIFIED | Right-click or right-drag deletes; Delete key removes the selection. | `limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
 | PL-005 | Duplicate clips (Ctrl+B) | P0 | ✓ | VERIFIED | Cmd+B or clip menu › Duplicate. | `limeshot-core document::tests::clip_duplicate_and_move` |
 | PL-006 | Select clips | P0 | ✓ | IMPLEMENTED | Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D. | — |
@@ -128,7 +128,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-011 | Make unique | P0 | ✓ | VERIFIED | Clip ▾ menu › Make unique clones the pattern for that clip. | `limeshot-core document::tests::clips_are_linked_until_made_unique` |
 | PL-012 | Playlist tracks: add, rename, mute | P0 | ✓ | VERIFIED | + Track; double-click to rename; LED mutes the track. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves` |
 | PL-013 | Clip mute | P1 |  | VERIFIED | Clip menu › Mute clip. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves` |
-| PL-014 | Audio clips | P1 |  | NOT_STARTED | Audio clip source type rendered by the engine. | — |
+| PL-014 | Audio clips | P1 |  | VERIFIED | Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.<br>*No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008.* | `limeshot-engine tests/audio.rs::audio_clips_play_their_sample_window_sample_accurately`<br>`limeshot-engine tests/audio.rs::playback_starting_inside_an_audio_clip_starts_the_audio_part_way`<br>`limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it`<br>`limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel`<br>`limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge` |
 | PL-015 | Automation clips | P1 |  | NOT_STARTED | Third clip source type. | — |
 | PL-016 | Markers and loop region / time selection | P1 |  | NOT_STARTED | Markers and a loop range for playback/export. | — |
 | PL-017 | Slip, slice clips | P2 |  | NOT_STARTED | Slip content inside clip; slice clip at a time. | — |
@@ -140,7 +140,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-023 | Crossfades and time stretching | P2 |  | NOT_STARTED | Fades and stretch on audio clips. | — |
 | PL-024 | Clip offset (start inside pattern) | P2 |  | IN_PROGRESS | Model and sequencer support `offset`; no UI to set it yet. | — |
 | PL-025 | Pattern picker | P1 |  | VERIFIED | Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern. | `limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
-| PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V; in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |
+| PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |
 
 ## Mixer
 
@@ -241,7 +241,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | BR-007 | Tags | P3 |  | NOT_STARTED | — | — |
 | BR-008 | Plugin and preset browser | P2 |  | NOT_STARTED | — | — |
 | BR-009 | Online content | P3 |  | DEFERRED | Out of scope (offline-first). | — |
-| BR-010 | Drag samples to the Playlist (audio clips) | P1 |  | NOT_STARTED | — | — |
+| BR-010 | Drag samples to the Playlist (audio clips) | P1 |  | VERIFIED | Drag a sample from the Browser onto the Playlist: it is decoded, placed at the snapped drop position as an audio clip as long as the sample, and its audio-clip channel is reused when the same sample is dropped again. | `limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge` |
 
 ## Plugins
 

@@ -81,9 +81,18 @@ pub enum Clipboard {
     /// Notes without a channel: (key, start, length, velocity). Pasted at the same times into the
     /// channel being edited, as FL Studio does.
     Notes(Vec<(u8, Tick, Tick, f32)>),
-    /// Clips as (pattern, track, start, length). Pasted at the song position in Song mode (so
-    /// the earliest clip lands there), otherwise at their original times.
-    Clips(Vec<(PatternId, u32, Tick, Tick)>),
+    /// Clips, pasted at the song position in Song mode (so the earliest clip lands there),
+    /// otherwise at their original times.
+    Clips(Vec<CopiedClip>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CopiedClip {
+    pub source: limeshot_core::ClipSource,
+    pub track: u32,
+    pub start: Tick,
+    pub length: Tick,
+    pub offset: Tick,
 }
 
 /// A file action waiting for "save changes?" to be answered.

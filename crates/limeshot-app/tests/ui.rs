@@ -260,7 +260,7 @@ fn clicking_the_playlist_places_the_current_pattern() {
     assert_eq!(clips.len(), before + 1);
     let c = clips.last().expect("clip").clone();
     assert_eq!(c.track, 4);
-    assert_eq!(c.pattern(), h.state().current_pattern());
+    assert_eq!(c.pattern(), Some(h.state().current_pattern()));
     assert_eq!(c.start, 2 * bar, "snapped down to the grid");
     click(
         &mut h,
@@ -476,4 +476,41 @@ fn floating_window_frames_cover_their_body() {
             r.height()
         );
     }
+}
+
+#[test]
+fn samples_become_audio_clips_that_trim_from_the_left_edge() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.playlist.zoom_x = 200.0;
+    h.step();
+    let kick = limeshot_app::bundled_samples_dir()
+        .expect("samples")
+        .join("Lime Kick.wav");
+    let channels = h.state().project().channels.len();
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &kick, 4, bar).expect("placed");
+    let c = h.state().project().clip(id).expect("clip").clone();
+    assert_eq!(
+        h.state().project().channels.len(),
+        channels + 1,
+        "an audio clip channel"
+    );
+    assert!(c.audio_channel().is_some());
+    // The clip is as long as the sample at the project tempo.
+    let secs = limeshot_dsp::load_wav(&kick).expect("wav").duration_secs();
+    let want = secs * h.state().project().tempo.bpm() / 60.0 * PPQ as f64;
+    assert!((c.length as f64 - want).abs() <= 1.0, "{} vs {want}", c.length);
+    for _ in 0..3 {
+        h.step();
+    }
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let from = g.pos(c.start, 4) + vec2(2.0, 0.0);
+    drag(&mut h, from, from + vec2(STEP_TICKS as f32 * g.ppt, 0.0));
+    let c = h.state().project().clip(id).expect("clip").clone();
+    assert_eq!(
+        (c.start, c.offset),
+        (bar + STEP_TICKS, STEP_TICKS),
+        "left edge trimmed the start"
+    );
 }
