@@ -251,7 +251,7 @@ pub struct FlpFile {
 }
 
 fn utf16(d: &[u8]) -> String {
-    let units: Vec<u16> = d.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+    let units: Vec<u16> = d.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
     String::from_utf16_lossy(&units)
         .trim_end_matches('\0')
         .trim()
@@ -341,7 +341,7 @@ pub fn parse(data: &[u8]) -> Result<FlpFile, FlpError> {
             id::PATTERN_NOTES => {
                 if let (Some(p), Some(d)) = (pattern, v.data()) {
                     let pat = f.patterns.entry(p).or_default();
-                    for r in d.chunks_exact(24) {
+                    for r in d.as_chunks::<24>().0 {
                         if notes >= MAX_NOTES {
                             break;
                         }
