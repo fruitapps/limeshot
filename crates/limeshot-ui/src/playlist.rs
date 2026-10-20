@@ -7,8 +7,10 @@
 //! the song position.
 
 use crate::app::{Focus, LimeShotApp};
+use crate::icons::Icon;
 use crate::piano_roll::{TimeAxis, draw_ruler, draw_time_grid};
 use crate::theme::{Theme, mix, mono, rgb};
+use crate::widgets::{icon_button, panel_header, section};
 use egui::{
     Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
     Vec2, pos2, vec2,
@@ -48,17 +50,20 @@ pub struct State {
     pub selection: Vec<ClipId>,
     drag: Option<Drag>,
     menu: Option<(ClipId, Pos2)>,
+    /// Geometry of the last drawn frame.
+    pub geometry: Option<Geometry>,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
             zoom_x: 24.0,
-            track_h: 38.0,
+            track_h: 44.0,
             scroll: Vec2::ZERO,
             selection: Vec::new(),
             drag: None,
             menu: None,
+            geometry: None,
         }
     }
 }
@@ -106,58 +111,167 @@ impl TimeAxis for View {
     }
 }
 
-pub fn window(app: &mut LimeShotApp, ctx: &Context, arrange: bool) {
-    let mut open = app.ui.show_playlist;
-    let ws = app.ui.workspace;
-    let size = vec2((ws.width() - 40.0).max(400.0), (ws.height() * 0.62).max(260.0));
-    let pos = pos2(ws.left() + 20.0, ws.bottom() - size.y - 20.0);
-    let mut w = egui::Window::new(RichText::new("Playlist — Arrangement").strong())
-        .id(egui::Id::new("playlist"))
-        .open(&mut open)
-        .constrain_to(ws)
-        .default_pos(pos)
-        .default_size(size)
-        .min_size(vec2(360.0, 200.0))
-        .resizable(true);
-    if arrange {
-        w = w.current_pos(pos);
+/// Screen geometry of the last drawn Playlist (for tests and tools).
+#[derive(Debug, Clone, Copy)]
+pub struct Geometry {
+    pub grid: Rect,
+    pub ppt: f32,
+    pub track_h: f32,
+    pub scroll: Vec2,
+}
+
+impl Geometry {
+    /// Screen position of `tick` in the middle of `track`.
+    pub fn pos(&self, tick: Tick, track: u32) -> Pos2 {
+        pos2(
+            self.grid.left() + tick as f32 * self.ppt - self.scroll.x,
+            self.grid.top() + (track as f32 + 0.5) * self.track_h - self.scroll.y,
+        )
     }
-    let resp = w.show(ctx, |ui| body(app, ui));
-    if let Some(r) = resp
-        && r.response.contains_pointer()
-        && ctx.input(|i| i.pointer.any_pressed())
-    {
+}
+
+const PICKER_W: f32 = 150.0;
+
+/// The Playlist fills the central area (FL Studio opens it maximised): a header strip, the
+/// pattern picker on the left, and the arrangement.
+pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    let cur = app.current_pattern();
+    let cur_name = app.project().pattern(cur).map(|p| p.name.clone()).unwrap_or_default();
+    let sig = app.project().time_signature;
+    let bars = app.project().playlist.song_length(sig) / sig.ticks_per_bar();
+    panel_header(ui, &format!("Playlist  ·  Arrangement  ›  {cur_name}"), |ui| {
+        if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
+            app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x * 1.25).min(400.0);
+        }
+        if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
+            app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x / 1.25).max(3.0);
+        }
+        if ui
+            .small_button("+ Track")
+            .on_hover_text("Add a playlist track")
+            .clicked()
+        {
+            app.exec(Command::AddPlaylistTrack);
+        }
+        ui.label(RichText::new(format!("{bars} bars")).font(mono(10.5)).color(t.text_dim));
+    });
+    let area = ui.available_rect_before_wrap();
+    if ui.rect_contains_pointer(area) && ui.input(|i| i.pointer.any_pressed()) {
         app.ui.focus = Focus::Playlist;
     }
-    app.ui.show_playlist = open;
-    clip_menu(app, ctx);
+    let picker = Rect::from_min_size(area.min, vec2(PICKER_W, area.height()));
+    let body_rect = Rect::from_min_max(pos2(picker.right() + 1.0, area.top()), area.max);
+    ui.painter()
+        .line_segment([picker.right_top(), picker.right_bottom()], Stroke::new(1.0, t.border));
+    let mut pick_ui = ui.new_child(egui::UiBuilder::new().max_rect(picker));
+    picker_ui(app, &mut pick_ui);
+    let mut body_ui = ui.new_child(egui::UiBuilder::new().max_rect(body_rect));
+    body(app, &mut body_ui);
+    let ctx = ui.ctx().clone();
+    clip_menu(app, &ctx);
+}
+
+/// FL Studio's clip picker: the patterns of the project. Click to choose what the Playlist
+/// places; double-click to edit in the Piano Roll.
+fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        section(ui, "Patterns");
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.add_space(6.0);
+            if icon_button(ui, Icon::Plus, false, 20.0, "New pattern (F4)").clicked() {
+                crate::menus::add_pattern(app);
+            }
+        });
+    });
+    ui.add_space(2.0);
+    let cur = app.current_pattern();
+    let pats: Vec<(PatternId, String, Rgb, usize)> = app
+        .project()
+        .patterns
+        .iter()
+        .map(|p| {
+            (
+                p.id,
+                p.name.clone(),
+                p.color,
+                app.project()
+                    .playlist
+                    .clips
+                    .iter()
+                    .filter(|c| c.pattern() == p.id)
+                    .count(),
+            )
+        })
+        .collect();
+    egui::ScrollArea::vertical()
+        .id_salt("picker")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            for (id, name, color, uses) in pats {
+                let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+                let on = id == cur;
+                if on {
+                    ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
+                } else if resp.hovered() {
+                    ui.painter().rect_filled(r, 0.0, t.raised);
+                }
+                ui.painter().rect_filled(
+                    Rect::from_min_size(r.min + vec2(10.0, 8.0), vec2(10.0, 10.0)),
+                    CornerRadius::same(2),
+                    rgb(color),
+                );
+                ui.painter().text(
+                    r.left_center() + vec2(28.0, 0.0),
+                    Align2::LEFT_CENTER,
+                    &name,
+                    crate::theme::prop(12.0),
+                    if on { t.text } else { mix(t.text_dim, t.text, 0.5) },
+                );
+                if uses > 0 {
+                    ui.painter().text(
+                        r.right_center() - vec2(10.0, 0.0),
+                        Align2::RIGHT_CENTER,
+                        format!("×{uses}"),
+                        mono(10.0),
+                        t.text_faint,
+                    );
+                }
+                if resp.clicked() {
+                    app.set_current_pattern(id);
+                }
+                if resp.double_clicked() {
+                    app.show_tab(crate::app::DockTab::PianoRoll);
+                }
+                resp.on_hover_text("Click: place this pattern · double-click: edit in the Piano Roll")
+                    .context_menu(|ui| {
+                        if ui.button("Rename…").clicked() {
+                            app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, id));
+                            ui.close();
+                        }
+                        if ui.button("Clone").clicked() {
+                            if let Some(n) = app.exec(Command::ClonePattern(id)) {
+                                app.set_current_pattern(PatternId(n));
+                            }
+                            ui.close();
+                        }
+                        if ui
+                            .add_enabled(app.project().patterns.len() > 1, egui::Button::new("Delete"))
+                            .clicked()
+                        {
+                            app.exec(Command::RemovePattern(id));
+                            ui.close();
+                        }
+                    });
+            }
+        });
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    ui.horizontal(|ui| {
-        let cur = app.current_pattern();
-        let name = app.project().pattern(cur).map(|p| (p.name.clone(), p.color));
-        if let Some((n, c)) = name {
-            ui.label(RichText::new("Placing:").color(t.text_dim));
-            ui.label(RichText::new(format!("■ {n}")).color(rgb(c)).strong());
-        }
-        ui.separator();
-        let len = app.project().playlist.song_length(app.project().time_signature);
-        let bars = len / app.project().time_signature.ticks_per_bar();
-        ui.label(RichText::new(format!("Song: {bars} bars")).color(t.text_dim));
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text("Zoom in (Cmd+wheel)").clicked() {
-                app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x * 1.25).min(400.0);
-            }
-            if ui.small_button("−").on_hover_text("Zoom out").clicked() {
-                app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x / 1.25).max(3.0);
-            }
-            if ui.small_button("+ Track").clicked() {
-                app.exec(Command::AddPlaylistTrack);
-            }
-        });
-    });
     let full = ui.available_rect_before_wrap();
     let (full, _) = ui.allocate_exact_size(full.size(), Sense::hover());
     let ruler = Rect::from_min_max(
@@ -181,6 +295,12 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         track_h: st.track_h,
         scroll: st.scroll,
     };
+    st.geometry = Some(Geometry {
+        grid,
+        ppt: view.ppt,
+        track_h: view.track_h,
+        scroll: view.scroll,
+    });
     let sig = app.project().time_signature;
     let painter = ui.painter_at(full);
 
@@ -233,19 +353,40 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             .is_some_and(|t| t.muted);
         let sel = app.ui.playlist.selection.contains(&c.id);
         let base = rgb(p.color);
-        let fill = if c.muted || track_muted {
-            mix(t.raised, base, 0.2)
+        let muted = c.muted || track_muted;
+        // Saturated body with a solid title strip, as in the ArtCraft timelines.
+        let fill = if muted {
+            mix(t.raised, base, 0.18)
         } else {
-            mix(t.raised, base, 0.55)
+            mix(t.sunken, base, 0.42)
         };
+        let strip = if muted { mix(t.raised, base, 0.3) } else { base };
         let rr = r.intersect(grid);
-        painter.rect_filled(rr, CornerRadius::same(3), fill);
-        let title = Rect::from_min_size(r.min, vec2(r.width(), 13.0)).intersect(grid);
-        painter.rect_filled(title, CornerRadius::same(3), mix(fill, Color32::BLACK, 0.25));
-        painter.text(r.min + vec2(14.0, 0.5), Align2::LEFT_TOP, &p.name, mono(10.0), t.text);
-        painter.text(r.min + vec2(3.0, 0.0), Align2::LEFT_TOP, "▾", mono(10.0), t.text_dim);
+        painter.rect_filled(rr, CornerRadius::same(t.radius_sm), fill);
+        let title = Rect::from_min_size(r.min, vec2(r.width(), 14.0)).intersect(grid);
+        painter.rect_filled(
+            title,
+            CornerRadius {
+                nw: t.radius_sm,
+                ne: t.radius_sm,
+                sw: 0,
+                se: 0,
+            },
+            strip,
+        );
+        let fg = crate::theme::text_on(strip);
+        painter.with_clip_rect(rr).text(
+            r.min + vec2(15.0, 1.0),
+            Align2::LEFT_TOP,
+            &p.name,
+            crate::theme::semibold(10.5),
+            fg,
+        );
+        painter
+            .with_clip_rect(rr)
+            .text(r.min + vec2(4.0, 0.5), Align2::LEFT_TOP, "▾", mono(10.0), fg);
         // Note preview.
-        let body = Rect::from_min_max(pos2(r.left(), r.top() + 14.0), r.max);
+        let body = Rect::from_min_max(pos2(r.left(), r.top() + 15.0), r.max);
         if body.height() > 6.0 && !p.notes.is_empty() {
             let (lo, hi) = p
                 .notes
@@ -263,20 +404,19 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                             pos2(x0.max(grid.left()), y),
                             pos2(x1.max(x0 + 1.5).min(grid.right()), y),
                         ],
-                        Stroke::new(1.5, mix(base, Color32::WHITE, 0.5)),
+                        Stroke::new(2.0, mix(base, Color32::WHITE, 0.55)),
                     );
                 }
             }
         }
-        painter.rect_stroke(
-            r,
-            3.0,
-            Stroke::new(
-                if sel { 1.5 } else { 1.0 },
-                if sel { t.accent } else { mix(fill, Color32::BLACK, 0.4) },
-            ),
-            egui::StrokeKind::Inside,
-        );
+        if sel {
+            painter.rect_stroke(
+                r,
+                CornerRadius::same(t.radius_sm),
+                Stroke::new(1.5, t.text),
+                egui::StrokeKind::Inside,
+            );
+        }
     }
     if let (Some(Drag::Select { from }), Some(p)) = (&app.ui.playlist.drag, ui.input(|i| i.pointer.hover_pos())) {
         painter.rect(
@@ -553,7 +693,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && let Some((c, _, false)) = hit(view, clips, p)
     {
         app.set_current_pattern(c.pattern());
-        app.ui.show_piano = true;
+        app.show_tab(crate::app::DockTab::PianoRoll);
     }
 }
 
@@ -601,7 +741,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                 }
                 if ui.button("Edit pattern").clicked() {
                     app.set_current_pattern(clip.pattern());
-                    app.ui.show_piano = true;
+                    app.show_tab(crate::app::DockTab::PianoRoll);
                     close = true;
                 }
                 if ui.button("Rename pattern…").clicked() {

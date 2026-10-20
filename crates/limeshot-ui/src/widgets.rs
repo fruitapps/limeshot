@@ -1,43 +1,63 @@
-//! Custom controls: knobs, faders, meters, icon buttons.
+//! Custom controls: knobs, faders, meters, icon buttons, panel headers and tab strips.
 //!
 //! Value widgets edit a local copy and report `changed()`; callers turn changes into commands.
 //! Shared conventions (documented in `docs/architecture/ui.md`): drag vertically to change,
 //! Shift for fine control, mouse wheel steps, double-click resets to the default.
+//!
+//! Style: flat. Controls have no fill until hovered or active, active state uses the accent, and
+//! panels are separated by 1 px rules (see `theme.rs`).
 
 use crate::icons::{self, Icon};
-use crate::theme::{Theme, mix, mono};
+use crate::theme::{Theme, mix, mono, semibold};
 use egui::{Align2, Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use std::f32::consts::PI;
 
-/// An icon button. `active` draws it in the accent color (a toggled state).
+/// A flat icon button: transparent at rest, filled on hover; `active` shows the accent.
 pub fn icon_button(ui: &mut Ui, icon: Icon, active: bool, size: f32, tip: &str) -> Response {
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(size, size), Sense::click());
     let fill = if active {
-        t.accent_dim
+        mix(t.surface, t.accent, 0.16)
+    } else if resp.hovered() {
+        t.raised_hover
+    } else {
+        Color32::TRANSPARENT
+    };
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), fill);
+    let fg = if active {
+        t.accent
+    } else if resp.hovered() {
+        t.text
+    } else {
+        mix(t.text_dim, t.text, 0.4)
+    };
+    icons::paint(ui.painter(), r.shrink(size * 0.22), icon, fg);
+    resp.on_hover_text(tip)
+}
+
+/// A larger, filled transport button (play/stop): the primary actions of the app.
+pub fn transport_button(ui: &mut Ui, icon: Icon, active: bool, size: f32, tip: &str) -> Response {
+    let t = Theme::current();
+    let (r, resp) = ui.allocate_exact_size(vec2(size, size), Sense::click());
+    let fill = if active {
+        t.accent
     } else if resp.hovered() {
         t.raised_hover
     } else {
         t.raised
     };
-    ui.painter().rect_filled(r, CornerRadius::same(4), fill);
-    let fg = if active { t.accent } else { t.text };
-    icons::paint(ui.painter(), r.shrink(size * 0.18), icon, fg);
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), fill);
+    let fg = if active { t.text_on_accent } else { t.text };
+    icons::paint(ui.painter(), r.shrink(size * 0.26), icon, fg);
     resp.on_hover_text(tip)
 }
 
-/// A disabled-looking icon button for features that are not implemented yet; it explains why
-/// on hover and does nothing when clicked.
+/// A dimmed icon for features that are not implemented yet; it explains why on hover and does
+/// nothing when clicked.
 pub fn unavailable_button(ui: &mut Ui, icon: Icon, size: f32, tip: &str) -> Response {
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
-    ui.painter().rect_filled(r, CornerRadius::same(4), t.sunken);
-    icons::paint(
-        ui.painter(),
-        r.shrink(size * 0.18),
-        icon,
-        t.text_dim.gamma_multiply(0.5),
-    );
+    icons::paint(ui.painter(), r.shrink(size * 0.24), icon, t.text_faint);
     resp.on_hover_text(format!("{tip} (not implemented yet)"))
 }
 
@@ -52,11 +72,52 @@ pub fn toggle_label(ui: &mut Ui, on: bool, text: &str, on_color: Color32, size: 
     } else {
         t.raised
     };
-    ui.painter().rect_filled(r, CornerRadius::same(3), fill);
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius_sm), fill);
     let fg = if on { t.text_on_accent } else { t.text_dim };
     ui.painter()
-        .text(r.center(), Align2::CENTER_CENTER, text, mono(10.5), fg);
+        .text(r.center(), Align2::CENTER_CENTER, text, semibold(10.0), fg);
     resp.on_hover_text(tip)
+}
+
+/// A segmented control (pill group). Returns the newly chosen index when one is clicked.
+pub fn segmented(ui: &mut Ui, labels: &[&str], selected: usize, height: f32, tip: &str) -> Option<usize> {
+    let t = Theme::current();
+    let font = semibold(10.5);
+    let widths: Vec<f32> = labels
+        .iter()
+        .map(|l| {
+            ui.painter()
+                .layout_no_wrap(l.to_string(), font.clone(), t.text)
+                .size()
+                .x
+                + 14.0
+        })
+        .collect();
+    let total: f32 = widths.iter().sum::<f32>() + 4.0;
+    let (r, _) = ui.allocate_exact_size(vec2(total, height), Sense::hover());
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), t.sunken);
+    let mut x = r.left() + 2.0;
+    let mut chosen = None;
+    for (i, (l, w)) in labels.iter().zip(&widths).enumerate() {
+        let rr = Rect::from_min_size(pos2(x, r.top() + 2.0), vec2(*w, height - 4.0));
+        let resp = ui
+            .interact(rr, ui.id().with(("seg", tip, i)), Sense::click())
+            .on_hover_text(tip);
+        let on = i == selected;
+        if on {
+            ui.painter().rect_filled(rr, CornerRadius::same(t.radius_sm), t.accent);
+        } else if resp.hovered() {
+            ui.painter().rect_filled(rr, CornerRadius::same(t.radius_sm), t.raised);
+        }
+        let fg = if on { t.text_on_accent } else { t.text_dim };
+        ui.painter()
+            .text(rr.center(), Align2::CENTER_CENTER, *l, font.clone(), fg);
+        if resp.clicked() && !on {
+            chosen = Some(i);
+        }
+        x += w;
+    }
+    chosen
 }
 
 /// Handle drag/wheel/double-click for a value control. Returns true if `v` changed.
@@ -79,7 +140,7 @@ fn drag_value(ui: &Ui, resp: &Response, v: &mut f32, min: f32, max: f32, default
     *v != old
 }
 
-/// A rotary knob. `bipolar` draws the arc from the centre (pan).
+/// A rotary knob drawn as a thin arc. `bipolar` draws the value from the centre (pan).
 pub fn knob(
     ui: &mut Ui,
     v: &mut f32,
@@ -97,50 +158,48 @@ pub fn knob(
     }
     let p = ui.painter();
     let c = r.center();
-    let rad = size * 0.42;
-    p.circle_filled(
-        c,
-        rad,
-        if resp.hovered() || resp.dragged() {
-            t.raised_hover
-        } else {
-            t.raised
-        },
-    );
+    let rad = size * 0.40;
+    let hot = resp.hovered() || resp.dragged();
+    p.circle_filled(c, rad * 0.72, if hot { t.raised_hover } else { t.raised });
     let frac = if max > min { (*v - min) / (max - min) } else { 0.0 };
     let a0 = PI * 0.75;
     let sweep = PI * 1.5;
     let arc = |from: f32, to: f32, color: Color32, w: f32| {
-        let n = 20;
+        let n = 24;
         let pts: Vec<_> = (0..=n)
             .map(|i| {
                 let a = from + (to - from) * i as f32 / n as f32;
-                c + vec2(a.cos(), a.sin()) * (rad + 1.5)
+                c + vec2(a.cos(), a.sin()) * rad
             })
             .collect();
         p.add(egui::Shape::line(pts, Stroke::new(w, color)));
     };
-    arc(a0, a0 + sweep, t.sunken, 2.0);
+    arc(a0, a0 + sweep, t.sunken, 2.5);
     let (from, to) = if bipolar {
         (a0 + sweep * 0.5, a0 + sweep * frac)
     } else {
         (a0, a0 + sweep * frac)
     };
-    arc(from.min(to), from.max(to), t.accent, 2.0);
+    arc(
+        from.min(to),
+        from.max(to),
+        if hot { t.accent_hover } else { t.accent },
+        2.5,
+    );
     let a = a0 + sweep * frac;
     p.line_segment(
         [
-            c + vec2(a.cos(), a.sin()) * rad * 0.25,
-            c + vec2(a.cos(), a.sin()) * rad * 0.9,
+            c + vec2(a.cos(), a.sin()) * rad * 0.15,
+            c + vec2(a.cos(), a.sin()) * rad * 0.62,
         ],
-        Stroke::new(1.6, t.text),
+        Stroke::new(1.5, t.text),
     );
     let text = tip(*v);
-    if resp.dragged() {
-        resp = resp.on_hover_text_at_pointer(text);
+    resp = if resp.dragged() {
+        resp.on_hover_text_at_pointer(text)
     } else {
-        resp = resp.on_hover_text(text);
-    }
+        resp.on_hover_text(text)
+    };
     resp
 }
 
@@ -158,27 +217,37 @@ pub fn fader(ui: &mut Ui, v: &mut f32, max: f32, default: f32, size: egui::Vec2,
         resp.mark_changed();
     }
     let p = ui.painter();
-    let track = Rect::from_center_size(r.center(), vec2(4.0, r.height() - 10.0));
-    p.rect_filled(track, 2.0, t.sunken);
+    let track = Rect::from_center_size(r.center(), vec2(3.0, r.height() - 10.0));
+    p.rect_filled(track, 1.5, t.sunken);
+    let y = track.bottom() - pos * track.height();
+    // Filled part of the track below the handle.
+    p.rect_filled(
+        Rect::from_min_max(pos2(track.left(), y), track.right_bottom()),
+        1.5,
+        t.accent_dim,
+    );
     // 0 dB tick.
     let unity_y = track.bottom() - to_pos(1.0) * track.height();
     p.line_segment(
-        [pos2(r.left() + 2.0, unity_y), pos2(r.right() - 2.0, unity_y)],
-        Stroke::new(1.0, t.grid_bar),
+        [pos2(r.left() + 1.0, unity_y), pos2(r.left() + 5.0, unity_y)],
+        Stroke::new(1.0, t.text_faint),
     );
-    let y = track.bottom() - pos * track.height();
-    let handle = Rect::from_center_size(pos2(r.center().x, y), vec2(r.width() - 4.0, 10.0));
+    p.line_segment(
+        [pos2(r.right() - 5.0, unity_y), pos2(r.right() - 1.0, unity_y)],
+        Stroke::new(1.0, t.text_faint),
+    );
+    let handle = Rect::from_center_size(pos2(r.center().x, y), vec2(r.width() - 2.0, 14.0));
     let fill = if resp.dragged() {
         t.accent
     } else if resp.hovered() {
         t.key_white
     } else {
-        mix(t.key_white, t.raised, 0.25)
+        mix(t.key_white, t.raised, 0.3)
     };
-    p.rect_filled(handle, 2.0, fill);
+    p.rect_filled(handle, CornerRadius::same(t.radius_sm), fill);
     p.line_segment(
-        [pos2(handle.left() + 2.0, y), pos2(handle.right() - 2.0, y)],
-        Stroke::new(1.0, t.raised),
+        [pos2(handle.left() + 3.0, y), pos2(handle.right() - 3.0, y)],
+        Stroke::new(1.0, mix(fill, Color32::BLACK, 0.5)),
     );
     let db = limeshot_dsp::gain_to_db(*v);
     let label = if db.is_finite() {
@@ -203,17 +272,20 @@ pub fn meter_fraction(peak: f32) -> f32 {
     ((db + 60.0) / 66.0).clamp(0.0, 1.0)
 }
 
-/// A stereo peak meter.
+/// A stereo peak meter with segment colors and a clip LED on top.
 pub fn meter(ui: &mut Ui, size: egui::Vec2, left: f32, right: f32, clipped: bool) -> Response {
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(size, Sense::hover());
     let p = ui.painter();
     p.rect_filled(r, 2.0, t.sunken);
-    let w = (r.width() - 3.0) / 2.0;
+    let led = Rect::from_min_size(r.min, vec2(r.width(), 3.0));
+    p.rect_filled(led, 1.0, if clipped { t.danger } else { t.raised });
+    let body = Rect::from_min_max(pos2(r.left(), r.top() + 5.0), r.max);
+    let w = (body.width() - 1.0) / 2.0;
     for (i, level) in [left, right].into_iter().enumerate() {
         let bar = Rect::from_min_size(
-            pos2(r.left() + 1.0 + i as f32 * (w + 1.0), r.top() + 1.0),
-            vec2(w, r.height() - 2.0),
+            pos2(body.left() + i as f32 * (w + 1.0), body.top()),
+            vec2(w, body.height()),
         );
         let f = meter_fraction(level);
         let top = bar.bottom() - f * bar.height();
@@ -230,15 +302,135 @@ pub fn meter(ui: &mut Ui, size: egui::Vec2, left: f32, right: f32, clipped: bool
         seg(y_yellow, y_red, t.meter_mid);
         seg(y_red, bar.top(), t.meter_high);
     }
-    if clipped {
-        p.rect_filled(Rect::from_min_size(r.min, vec2(r.width(), 3.0)), 0.0, t.danger);
-    }
-    p.rect_stroke(r, 2.0, Stroke::new(1.0, t.border), StrokeKind::Inside);
     resp
 }
 
-/// A thin section heading line used inside panels.
+/// An upper-case section label ("TRACKS", "ENVELOPE"), as used across the ArtCraft apps.
 pub fn section(ui: &mut Ui, text: &str) {
     let t = Theme::current();
-    ui.label(egui::RichText::new(text).color(t.text_dim).small());
+    ui.label(
+        egui::RichText::new(text.to_uppercase())
+            .font(semibold(10.5))
+            .color(t.text_dim),
+    );
+}
+
+/// A panel header strip: an upper-case title on the left, optional controls on the right
+/// (`right` is laid out right-to-left). Draws the bottom rule.
+pub fn panel_header(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
+    let t = Theme::current();
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 28.0), Sense::hover());
+    ui.painter().rect_filled(r, 0.0, t.header);
+    ui.painter()
+        .line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.border));
+    ui.painter().text(
+        r.left_center() + vec2(10.0, 0.0),
+        Align2::LEFT_CENTER,
+        title.to_uppercase(),
+        semibold(10.5),
+        t.text_dim,
+    );
+    let mut child = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(r.shrink2(vec2(6.0, 3.0)))
+            .layout(egui::Layout::right_to_left(egui::Align::Center)),
+    );
+    right(&mut child);
+}
+
+/// A tab strip with an accent underline under the active tab (like ArtCraft panel tabs).
+/// Returns the clicked tab, if any. `extra` adds controls at the right edge.
+pub fn tab_strip(ui: &mut Ui, tabs: &[(&str, &str)], active: usize, extra: impl FnOnce(&mut Ui)) -> Option<usize> {
+    let t = Theme::current();
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::hover());
+    ui.painter().rect_filled(r, 0.0, t.header);
+    ui.painter()
+        .line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.border));
+    let mut x = r.left() + 6.0;
+    let mut clicked = None;
+    for (i, (label, tip)) in tabs.iter().enumerate() {
+        let font = semibold(11.0);
+        let w = ui
+            .painter()
+            .layout_no_wrap(label.to_uppercase(), font.clone(), t.text)
+            .size()
+            .x
+            + 24.0;
+        let tr = Rect::from_min_size(pos2(x, r.top()), vec2(w, r.height()));
+        let resp = ui
+            .interact(tr, ui.id().with(("tab", i, *label)), Sense::click())
+            .on_hover_text(*tip);
+        let on = i == active;
+        let fg = if on {
+            t.text
+        } else if resp.hovered() {
+            mix(t.text_dim, t.text, 0.6)
+        } else {
+            t.text_dim
+        };
+        ui.painter()
+            .text(tr.center(), Align2::CENTER_CENTER, label.to_uppercase(), font, fg);
+        if on {
+            ui.painter().rect_filled(
+                Rect::from_min_max(
+                    pos2(tr.left() + 8.0, tr.bottom() - 2.0),
+                    pos2(tr.right() - 8.0, tr.bottom()),
+                ),
+                1.0,
+                t.accent,
+            );
+        }
+        if resp.clicked() {
+            clicked = Some(i);
+        }
+        x += w;
+    }
+    let mut child = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(Rect::from_min_max(
+                pos2(x, r.top() + 3.0),
+                r.right_bottom() - vec2(6.0, 3.0),
+            ))
+            .layout(egui::Layout::right_to_left(egui::Align::Center)),
+    );
+    extra(&mut child);
+    clicked
+}
+
+/// A labelled readout box, e.g. for tempo or the position display.
+pub fn readout(ui: &mut Ui, size: egui::Vec2, main: &str, caption: &str, tip: &str) -> Response {
+    let t = Theme::current();
+    let (r, resp) = ui.allocate_exact_size(size, Sense::click());
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), t.sunken);
+    ui.painter().rect_stroke(
+        r,
+        CornerRadius::same(t.radius),
+        Stroke::new(1.0, t.border),
+        StrokeKind::Inside,
+    );
+    ui.painter().text(
+        r.center() - vec2(0.0, 5.0),
+        Align2::CENTER_CENTER,
+        main,
+        mono(15.0),
+        t.accent,
+    );
+    ui.painter().text(
+        r.center() + vec2(0.0, 10.0),
+        Align2::CENTER_CENTER,
+        caption,
+        mono(8.5),
+        t.text_dim,
+    );
+    resp.on_hover_text(tip)
+}
+
+/// A thin vertical rule between toolbar groups.
+pub fn vrule(ui: &mut Ui, height: f32) {
+    let t = Theme::current();
+    let (r, _) = ui.allocate_exact_size(vec2(9.0, height), Sense::hover());
+    ui.painter().line_segment(
+        [r.center_top() + vec2(0.0, 4.0), r.center_bottom() - vec2(0.0, 4.0)],
+        Stroke::new(1.0, t.border),
+    );
 }

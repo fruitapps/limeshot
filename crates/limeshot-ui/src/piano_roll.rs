@@ -9,8 +9,10 @@
 //! * wheel: scroll vertically, Shift+wheel: horizontally, Cmd+wheel: zoom time,
 //! * keyboard on the left: click to audition; the lower lane edits velocity.
 
-use crate::app::{Focus, LimeShotApp};
+use crate::app::LimeShotApp;
+use crate::icons::Icon;
 use crate::theme::{Theme, mix, mono, rgb};
+use crate::widgets::icon_button;
 use egui::{
     Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
     Vec2, pos2, vec2,
@@ -57,6 +59,8 @@ pub struct State {
     pub last_vel: f32,
     audition: Option<(ChannelId, u8)>,
     scrolled_once: bool,
+    /// Geometry of the last drawn frame.
+    pub geometry: Option<Geometry>,
 }
 
 impl Default for State {
@@ -71,6 +75,7 @@ impl Default for State {
             last_vel: 0.78,
             audition: None,
             scrolled_once: false,
+            geometry: None,
         }
     }
 }
@@ -114,28 +119,29 @@ impl View {
     }
 }
 
-pub fn window(app: &mut LimeShotApp, ctx: &Context, arrange: bool) {
-    let mut open = app.ui.show_piano;
-    let ws = app.ui.workspace;
-    let mut w = egui::Window::new(RichText::new("Piano Roll").strong())
-        .id(egui::Id::new("piano_roll"))
-        .open(&mut open)
-        .constrain_to(ws)
-        .default_pos(ws.min + vec2(120.0, 120.0))
-        .default_size(vec2(820.0, 480.0))
-        .min_size(vec2(360.0, 240.0))
-        .resizable(true);
-    if arrange {
-        w = w.current_pos(ws.min + vec2(120.0, 120.0));
+/// Where a tick/key is on screen in the last drawn Piano Roll (for tests and tools).
+#[derive(Debug, Clone, Copy)]
+pub struct Geometry {
+    pub grid: Rect,
+    pub ppt: f32,
+    pub key_h: f32,
+    pub scroll: Vec2,
+}
+
+impl Geometry {
+    pub fn pos(&self, tick: Tick, key: u8) -> Pos2 {
+        let v = View {
+            grid: self.grid,
+            ppt: self.ppt,
+            key_h: self.key_h,
+            scroll: self.scroll,
+        };
+        pos2(v.x(tick), v.y(key) + self.key_h / 2.0)
     }
-    let resp = w.show(ctx, |ui| body(app, ui));
-    if let Some(r) = resp
-        && r.response.contains_pointer()
-        && ctx.input(|i| i.pointer.any_pressed())
-    {
-        app.ui.focus = Focus::PianoRoll;
-    }
-    app.ui.show_piano = open;
+}
+
+pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    body(app, ui);
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -149,57 +155,61 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         return;
     };
     // Header: channel selector and zoom.
-    ui.horizontal(|ui| {
-        let chans: Vec<(ChannelId, String, Rgb)> = app
-            .project()
-            .channels
-            .iter()
-            .map(|c| (c.id, c.name.clone(), c.color))
-            .collect();
-        let cur_name = chans
-            .iter()
-            .find(|c| c.0 == cid)
-            .map(|c| c.1.clone())
-            .unwrap_or_default();
-        egui::ComboBox::from_id_salt("pr_channel")
-            .selected_text(cur_name)
-            .width(140.0)
-            .show_ui(ui, |ui| {
-                for (id, name, color) in &chans {
-                    if ui
-                        .selectable_label(*id == cid, RichText::new(format!("■ {name}")).color(rgb(*color)))
-                        .clicked()
-                    {
-                        app.ui.selected_channel = Some(*id);
-                        app.ui.piano.selection.clear();
+    egui::Frame::new()
+        .inner_margin(egui::Margin::symmetric(10, 5))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let chans: Vec<(ChannelId, String, Rgb)> = app
+                    .project()
+                    .channels
+                    .iter()
+                    .map(|c| (c.id, c.name.clone(), c.color))
+                    .collect();
+                let cur_name = chans
+                    .iter()
+                    .find(|c| c.0 == cid)
+                    .map(|c| c.1.clone())
+                    .unwrap_or_default();
+                egui::ComboBox::from_id_salt("pr_channel")
+                    .selected_text(cur_name)
+                    .width(140.0)
+                    .show_ui(ui, |ui| {
+                        for (id, name, color) in &chans {
+                            if ui
+                                .selectable_label(*id == cid, RichText::new(format!("■ {name}")).color(rgb(*color)))
+                                .clicked()
+                            {
+                                app.select_channel(*id);
+                                app.ui.piano.selection.clear();
+                            }
+                        }
+                    });
+                let pat_name = app.project().pattern(pid).map(|p| p.name.clone()).unwrap_or_default();
+                ui.label(RichText::new(format!("in {pat_name}")).color(t.text_dim));
+                ui.separator();
+                ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
+                        app.ui.piano.zoom_x = (app.ui.piano.zoom_x * 1.25).min(800.0);
                     }
-                }
-            });
-        let pat_name = app.project().pattern(pid).map(|p| p.name.clone()).unwrap_or_default();
-        ui.label(RichText::new(format!("in {pat_name}")).color(t.text_dim));
-        ui.separator();
-        ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text("Zoom in (Cmd+wheel)").clicked() {
-                app.ui.piano.zoom_x = (app.ui.piano.zoom_x * 1.25).min(800.0);
-            }
-            if ui.small_button("−").on_hover_text("Zoom out").clicked() {
-                app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(12.0);
-            }
-            if ui.small_button("↕").on_hover_text("Taller keys").clicked() {
-                app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 {
-                    9.0
-                } else {
-                    app.ui.piano.key_h + 3.0
-                };
-            }
-            ui.label(
-                RichText::new(format!("{} selected", app.ui.piano.selection.len()))
-                    .small()
-                    .color(t.text_dim),
-            );
+                    if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
+                        app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(12.0);
+                    }
+                    if ui.small_button("↕").on_hover_text("Taller keys").clicked() {
+                        app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 {
+                            9.0
+                        } else {
+                            app.ui.piano.key_h + 3.0
+                        };
+                    }
+                    ui.label(
+                        RichText::new(format!("{} selected", app.ui.piano.selection.len()))
+                            .small()
+                            .color(t.text_dim),
+                    );
+                });
+            })
         });
-    });
     let full = ui.available_rect_before_wrap();
     let (full, _) = ui.allocate_exact_size(full.size(), Sense::hover());
     let ruler = Rect::from_min_max(
@@ -221,7 +231,8 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
 
     let st = &mut app.ui.piano;
     if !st.scrolled_once {
-        st.scroll.y = (127.0 - 79.0) * st.key_h; // G6 at the top: C4–C6 visible
+        // Centre on C6 (key 72): the melody range of most patterns.
+        st.scroll.y = (127.0 - 72.0) * st.key_h - grid.height() / 2.0;
         st.scrolled_once = true;
     }
     let max_y = (128.0 * st.key_h - grid.height()).max(0.0);
@@ -233,6 +244,12 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         key_h: st.key_h,
         scroll: st.scroll,
     };
+    st.geometry = Some(Geometry {
+        grid,
+        ppt: view.ppt,
+        key_h: view.key_h,
+        scroll: view.scroll,
+    });
 
     let sig = app.project().time_signature;
     let pat_len = app

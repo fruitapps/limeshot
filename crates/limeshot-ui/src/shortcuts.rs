@@ -13,13 +13,13 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Cmd+M", "Metronome on/off"),
     ("Cmd+H", "Stop all sound (panic)"),
     ("F4", "New pattern"),
-    ("F5", "Playlist"),
-    ("F6", "Channel Rack"),
-    ("F7", "Piano Roll"),
-    ("F9", "Mixer"),
+    ("F5", "Maximise the Playlist (hide the dock)"),
+    ("F6", "Channel Rack tab"),
+    ("F7", "Piano Roll tab"),
+    ("F9", "Mixer tab"),
     ("Alt+F8", "Browser"),
+    ("Cmd+I", "Inspector"),
     ("F1", "This list"),
-    ("Cmd+Shift+H", "Arrange windows"),
     ("Cmd+Z / Cmd+Shift+Z", "Undo / redo"),
     ("Cmd+N / Cmd+O", "New / open project"),
     ("Cmd+S / Cmd+Shift+S", "Save / save as"),
@@ -91,8 +91,8 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         let m = !app.ui.metronome;
         app.set_metronome(m);
     }
-    if pressed(ctx, cmd_shift, Key::H) {
-        app.ui.arrange_windows = true;
+    if pressed(ctx, cmd, Key::I) {
+        app.ui.show_inspector ^= true;
     }
     if pressed(ctx, cmd, Key::H) {
         app.send(limeshot_audio::Msg::Panic);
@@ -113,16 +113,17 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         crate::menus::add_pattern(app);
     }
     if pressed(ctx, Modifiers::NONE, Key::F5) {
-        app.ui.show_playlist ^= true;
+        app.ui.dock_open ^= true;
+        app.ui.focus = crate::app::Focus::Playlist;
     }
     if pressed(ctx, Modifiers::NONE, Key::F6) {
-        app.ui.show_rack ^= true;
+        app.toggle_tab(crate::app::DockTab::ChannelRack);
     }
     if pressed(ctx, Modifiers::NONE, Key::F7) {
-        app.ui.show_piano ^= true;
+        app.toggle_tab(crate::app::DockTab::PianoRoll);
     }
     if pressed(ctx, Modifiers::NONE, Key::F9) {
-        app.ui.show_mixer ^= true;
+        app.toggle_tab(crate::app::DockTab::Mixer);
     }
     if pressed(ctx, Modifiers::ALT, Key::F8) {
         app.ui.show_browser ^= true;

@@ -1,10 +1,12 @@
 //! Headless UI tests: the real `LimeShotApp` UI driven with synthetic input (no window, no
-//! audio device). Pointer positions refer to the default 1440×900 layout with the demo project;
-//! `cargo run -p limeshot-app --example ui_shot -- out.png` renders that layout for reference.
+//! audio device). Pointer positions come from the geometry each editor records while drawing
+//! (`channel_rack::State::step_pos`, `piano_roll::Geometry`, `playlist::Geometry`), so the tests
+//! follow layout changes.
 
-use egui::{Event, Key, Modifiers, PointerButton, Pos2, pos2};
+use egui::{Event, Key, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use limeshot_core::*;
+use limeshot_ui::app::DockTab;
 use limeshot_ui::{LimeShotApp, Settings};
 
 fn harness(demo: bool) -> Harness<'static, LimeShotApp> {
@@ -27,52 +29,74 @@ fn harness(demo: bool) -> Harness<'static, LimeShotApp> {
     h
 }
 
+fn press(h: &mut Harness<'static, LimeShotApp>, p: Pos2, button: PointerButton, pressed: bool) {
+    h.event(Event::PointerButton {
+        pos: p,
+        button,
+        pressed,
+        modifiers: Modifiers::NONE,
+    });
+    h.step();
+}
+
 fn click(h: &mut Harness<'static, LimeShotApp>, p: Pos2, button: PointerButton) {
     h.event(Event::PointerMoved(p));
     h.step();
-    h.event(Event::PointerButton {
-        pos: p,
-        button,
-        pressed: true,
-        modifiers: Modifiers::NONE,
-    });
-    h.step();
-    h.event(Event::PointerButton {
-        pos: p,
-        button,
-        pressed: false,
-        modifiers: Modifiers::NONE,
-    });
-    h.step();
+    press(h, p, button, true);
+    press(h, p, button, false);
     h.step();
 }
 
-#[test]
-fn renders_frames_without_panicking() {
-    let mut h = harness(true);
-    h.state_mut().ui.show_piano = true;
-    h.state_mut().ui.show_mixer = true;
-    h.state_mut().ui.rack.settings = h.state().project().channels.first().map(|c| c.id);
-    for _ in 0..5 {
+fn drag(h: &mut Harness<'static, LimeShotApp>, from: Pos2, to: Pos2) {
+    h.event(Event::PointerMoved(from));
+    h.step();
+    press(h, from, PointerButton::Primary, true);
+    for i in 1..=8 {
+        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
         h.step();
     }
+    press(h, to, PointerButton::Primary, false);
+}
+
+#[test]
+fn renders_every_panel_without_panicking() {
+    let mut h = harness(true);
+    for tab in DockTab::ALL {
+        h.state_mut().show_tab(tab);
+        h.step();
+        h.step();
+    }
+    let c = h.state().project().channels[3].id;
+    h.state_mut().select_channel(c);
+    h.step();
+    h.state_mut().ui.inspect = limeshot_ui::app::InspectTarget::MixerTrack;
+    h.step();
     let mut h = harness(false);
     h.step();
 }
 
 #[test]
-fn window_shortcuts_toggle_editors() {
+fn window_shortcuts_switch_dock_tabs() {
     let mut h = harness(false);
-    assert!(!h.state().ui.show_piano);
+    assert!(h.state().is_tab_visible(DockTab::ChannelRack));
     h.key_press(Key::F7);
     h.step();
-    assert!(h.state().ui.show_piano);
+    assert!(h.state().is_tab_visible(DockTab::PianoRoll));
     h.key_press(Key::F9);
     h.step();
-    assert!(h.state().ui.show_mixer);
+    assert!(h.state().is_tab_visible(DockTab::Mixer));
+    h.key_press(Key::F9);
+    h.step();
+    assert!(
+        !h.state().ui.dock_open,
+        "pressing the visible tab's key again hides the dock"
+    );
     h.key_press(Key::F5);
     h.step();
-    assert!(!h.state().ui.show_playlist);
+    assert!(
+        h.state().ui.dock_open,
+        "F5 toggles the Playlist between maximised and docked"
+    );
 }
 
 #[test]
@@ -125,28 +149,57 @@ fn clicking_a_step_button_writes_a_note() {
             .is_some_and(|p| p.notes_for(lead).any(|n| n.start == 0))
     };
     assert!(!has_step(&h));
-    // Lead row, first step (see the module docs for the reference layout).
-    click(&mut h, pos2(518.0, 265.0), PointerButton::Primary);
+    let p = h
+        .state()
+        .ui
+        .rack
+        .step_pos(lead, 0)
+        .expect("Lead's step strip is visible");
+    click(&mut h, p, PointerButton::Primary);
     assert!(has_step(&h), "left-click turned the step on");
-    click(&mut h, pos2(518.0, 265.0), PointerButton::Secondary);
+    click(&mut h, p, PointerButton::Secondary);
     assert!(!has_step(&h), "right-click turned it off");
     assert!(h.state().doc.is_modified());
+}
+
+#[test]
+fn dragging_across_steps_paints_them_in_one_undo_step() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let lead = h.state().project().channels[3].id;
+    let from = h.state().ui.rack.step_pos(lead, 0).expect("strip");
+    let to = h.state().ui.rack.step_pos(lead, 3).expect("strip");
+    let undo_before = h.state().doc.history().len();
+    drag(&mut h, from, to);
+    let steps: Vec<Tick> = h
+        .state()
+        .project()
+        .pattern(pat)
+        .map(|p| p.notes_for(lead).map(|n| n.start).collect())
+        .unwrap_or_default();
+    assert_eq!(steps, vec![0, 240, 480, 720]);
+    assert_eq!(h.state().doc.history().len(), undo_before + 1);
 }
 
 #[test]
 fn clicking_the_playlist_places_the_current_pattern() {
     let mut h = harness(true);
     let before = h.state().project().playlist.clips.len();
-    // Track 5, around bar 3 — empty in the demo.
-    click(&mut h, pos2(600.0, 610.0), PointerButton::Primary);
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    // Track 5, bar 3 — empty in the demo.
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    click(&mut h, g.pos(2 * bar + 100, 4), PointerButton::Primary);
     let clips = &h.state().project().playlist.clips;
     assert_eq!(clips.len(), before + 1);
     let c = clips.last().expect("clip").clone();
     assert_eq!(c.track, 4);
     assert_eq!(c.pattern(), h.state().current_pattern());
-    assert_eq!(c.start % STEP_TICKS, 0, "snapped to the grid");
-    let x = c_x(c.start) + 4.0;
-    click(&mut h, pos2(x, 610.0), PointerButton::Secondary);
+    assert_eq!(c.start, 2 * bar, "snapped down to the grid");
+    click(
+        &mut h,
+        g.pos(c.start + 200, 4) + vec2(0.0, 6.0),
+        PointerButton::Secondary,
+    );
     assert_eq!(
         h.state().project().playlist.clips.len(),
         before,
@@ -154,20 +207,23 @@ fn clicking_the_playlist_places_the_current_pattern() {
     );
 }
 
-/// Screen x of a tick in the Playlist at its default zoom (24 px per beat, no scroll), using
-/// the grid's left edge from the reference layout.
-fn c_x(tick: Tick) -> f32 {
-    374.0 + tick as f32 * 24.0 / PPQ as f32
+#[test]
+fn picker_selects_the_pattern_to_place() {
+    let mut h = harness(true);
+    let melody = h.state().project().patterns[1].id;
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    // The picker column sits left of the track headers; the second row is the Melody pattern.
+    let p = egui::pos2(g.grid.left() - 118.0 - 150.0 + 40.0, g.grid.top() + 26.0 + 28.0 + 13.0);
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(h.state().current_pattern(), melody);
 }
 
 #[test]
 fn piano_roll_click_adds_drag_moves_delete_removes() {
     let mut h = harness(true);
     let lead = h.state().project().channels[3].id;
-    h.state_mut().ui.selected_channel = Some(lead);
-    h.state_mut().ui.show_piano = true;
-    h.state_mut().ui.show_playlist = false;
-    h.state_mut().ui.show_rack = false;
+    h.state_mut().select_channel(lead);
+    h.state_mut().show_tab(DockTab::PianoRoll);
     for _ in 0..3 {
         h.step();
     }
@@ -180,40 +236,23 @@ fn piano_roll_click_adds_drag_moves_delete_removes() {
             .unwrap_or_default()
     };
     assert!(notes(&h).is_empty());
-    // The Piano Roll grid starts at x≈408 at the default zoom of 96 px per beat (24 px per step).
-    click(&mut h, pos2(450.0, 330.0), PointerButton::Primary);
+    let g = h.state().ui.piano.geometry.expect("piano roll drawn");
+    // Click in the second step of C6 (slightly right of its start): snaps down to step 1.
+    click(&mut h, g.pos(STEP_TICKS + 60, 72), PointerButton::Primary);
     let n = notes(&h);
     assert_eq!(n.len(), 1, "click adds a note");
-    assert_eq!(n[0].start, STEP_TICKS, "snapped down to the step grid");
-    assert_eq!(n[0].length, STEP_TICKS);
-    let key = n[0].key;
+    assert_eq!(
+        (n[0].start, n[0].length, n[0].key),
+        (STEP_TICKS, STEP_TICKS, 72),
+        "snapped to the step grid"
+    );
     // Drag it two beats to the right.
-    let from = pos2(445.0, 330.0);
-    let to = pos2(445.0 + 192.0, 330.0);
-    h.event(Event::PointerMoved(from));
-    h.step();
-    h.event(Event::PointerButton {
-        pos: from,
-        button: PointerButton::Primary,
-        pressed: true,
-        modifiers: Modifiers::NONE,
-    });
-    h.step();
-    for i in 1..=8 {
-        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
-        h.step();
-    }
-    h.event(Event::PointerButton {
-        pos: to,
-        button: PointerButton::Primary,
-        pressed: false,
-        modifiers: Modifiers::NONE,
-    });
-    h.step();
+    let from = g.pos(STEP_TICKS + 40, 72);
+    drag(&mut h, from, from + vec2(2.0 * PPQ as f32 * g.ppt, 0.0));
     let n = notes(&h);
     assert_eq!(n.len(), 1);
     assert_eq!(n[0].start, STEP_TICKS + 2 * PPQ, "moved by two beats");
-    assert_eq!(n[0].key, key, "same pitch");
+    assert_eq!(n[0].key, 72, "same pitch");
     // The moved note is selected; Delete removes it.
     h.key_press(Key::Delete);
     h.step();

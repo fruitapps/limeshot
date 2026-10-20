@@ -404,11 +404,12 @@ impl Default for Project {
 }
 
 impl Project {
-    /// An empty project: one pattern, a playlist with 16 tracks, a mixer with 16 inserts.
+    /// An empty project at 140 BPM: one pattern, a playlist with 16 tracks, a mixer with 16 inserts.
     pub fn new() -> Self {
         let mut p = Self {
             title: "Untitled".into(),
-            tempo: Tempo::default(),
+            // FL Studio starts new projects at 140 BPM (observed, docs/research/fl-studio-analysis.md).
+            tempo: Tempo::from_milli_bpm(140_000),
             time_signature: TimeSignature::default(),
             channels: Vec::new(),
             patterns: Vec::new(),

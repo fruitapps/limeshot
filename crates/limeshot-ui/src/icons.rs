@@ -27,6 +27,7 @@ pub enum Icon {
     Redo,
     Save,
     Export,
+    Inspector,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -208,6 +209,18 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
                 0.5,
                 c.gamma_multiply(0.6),
             );
+        }
+        Icon::Inspector => {
+            p.rect_stroke(
+                Rect::from_min_max(at(-6.5, -5.5), at(6.5, 5.5)),
+                1.0,
+                line,
+                egui::StrokeKind::Inside,
+            );
+            p.line_segment([at(2.0, -5.5), at(2.0, 5.5)], line);
+            for y in [-2.5f32, 0.0, 2.5] {
+                p.line_segment([at(3.5, y), at(5.0, y)], Stroke::new(0.9 * u, c));
+            }
         }
         Icon::Export => {
             p.line_segment([at(0.0, 2.0), at(0.0, -6.0)], line);

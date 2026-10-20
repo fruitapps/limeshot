@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--settings]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--settings] [--melody]`
 
 use egui_kittest::Harness;
 use limeshot_ui::{LimeShotApp, Settings};
@@ -21,10 +21,16 @@ fn main() {
         app.doc.replace(doc.project().clone());
         app.ui.selected_channel = app.project().channels.get(3).map(|c| c.id);
     }
-    app.ui.show_piano = args.iter().any(|a| a == "--piano");
-    app.ui.show_mixer = args.iter().any(|a| a == "--mixer");
-    if args.iter().any(|a| a == "--settings") {
-        app.ui.rack.settings = app.project().channels.first().map(|c| c.id);
+    if args.iter().any(|a| a == "--piano") {
+        app.show_tab(limeshot_ui::app::DockTab::PianoRoll);
+    }
+    if args.iter().any(|a| a == "--mixer") {
+        app.show_tab(limeshot_ui::app::DockTab::Mixer);
+    }
+    if args.iter().any(|a| a == "--settings")
+        && let Some(c) = app.project().channels.first().map(|c| c.id)
+    {
+        app.select_channel(c);
     }
     if args.iter().any(|a| a == "--melody")
         && let Some(p) = app.project().patterns.get(1).map(|p| p.id)

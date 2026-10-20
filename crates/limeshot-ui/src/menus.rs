@@ -29,7 +29,7 @@ pub fn add_sampler(app: &mut LimeShotApp) {
         name: format!("Sampler {n}"),
         instrument: Instrument::Sampler(SamplerParams::default()),
     }) {
-        app.ui.selected_channel = Some(limeshot_core::ChannelId(id));
+        app.select_channel(limeshot_core::ChannelId(id));
     }
 }
 
@@ -39,7 +39,7 @@ pub fn add_synth(app: &mut LimeShotApp) {
         name: format!("LimeSynth {n}"),
         instrument: Instrument::Synth(SynthParams::default()),
     }) {
-        app.ui.selected_channel = Some(limeshot_core::ChannelId(id));
+        app.select_channel(limeshot_core::ChannelId(id));
     }
 }
 
@@ -176,24 +176,20 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             }
         });
         ui.menu_button("View", |ui| {
-            if toggle(ui, app.ui.show_playlist, "Playlist", &key("F5")) {
-                app.ui.show_playlist ^= true;
+            for tab in crate::app::DockTab::ALL {
+                if toggle(ui, app.is_tab_visible(tab), tab.label(), &key(tab.shortcut())) {
+                    app.toggle_tab(tab);
+                }
             }
-            if toggle(ui, app.ui.show_rack, "Channel Rack", &key("F6")) {
-                app.ui.show_rack ^= true;
+            if toggle(ui, !app.ui.dock_open, "Maximise Playlist", &key("F5")) {
+                app.ui.dock_open ^= true;
             }
-            if toggle(ui, app.ui.show_piano, "Piano Roll", &key("F7")) {
-                app.ui.show_piano ^= true;
-            }
-            if toggle(ui, app.ui.show_mixer, "Mixer", &key("F9")) {
-                app.ui.show_mixer ^= true;
-            }
+            ui.separator();
             if toggle(ui, app.ui.show_browser, "Browser", &key("Alt+F8")) {
                 app.ui.show_browser ^= true;
             }
-            ui.separator();
-            if item(ui, "Arrange windows", &key("Cmd+Shift+H")) {
-                app.ui.arrange_windows = true;
+            if toggle(ui, app.ui.show_inspector, "Inspector", &key("Cmd+I")) {
+                app.ui.show_inspector ^= true;
             }
             ui.separator();
             if item(ui, "Zoom in", &key("Cmd+=")) {

@@ -26,6 +26,8 @@ struct Fixture {
 
 fn fixture() -> Fixture {
     let mut doc = Document::default();
+    // The timings below are written for 120 BPM (new projects start at 140).
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
     let pat = doc.project().patterns[0].id;
     let drum = ChannelId(
         doc.execute(Command::AddChannel {
@@ -491,6 +493,7 @@ fn song_stops_at_the_end_without_loop() {
 /// A 1000-frame ramp sample at the engine rate, for sampler parameter tests.
 fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
     let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
     let pat = doc.project().patterns[0].id;
     let ch = ChannelId(
         doc.execute(Command::AddChannel {
@@ -525,7 +528,12 @@ fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
 }
 
 fn sounding_frames(audio: &[f32]) -> usize {
-    audio.as_chunks::<2>().0.iter().take_while(|f| f[0].abs() > 1e-6).count()
+    audio
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .take_while(|f| f[0].abs() > 1e-6)
+        .count()
 }
 
 #[test]

@@ -5,11 +5,15 @@
 //! * application configuration: `settings`,
 //! * engine/transport state: owned by the audio thread, mirrored through `player.status()`,
 //! * runtime resources: `samples` (decoded audio),
-//! * ephemeral UI state: `ui` (open windows, selections, zoom, the current pattern).
+//! * ephemeral UI state: `ui` (visible panels, selections, zoom, the current pattern).
+//!
+//! Layout (ArtCraft-style docking, FL Studio workflow): header + toolbar on top, Browser on the
+//! left, Inspector on the right, the Playlist in the centre (FL opens it maximised), and a bottom
+//! dock with tabs for the Channel Rack, Piano Roll and Mixer.
 
 use crate::settings::Settings;
 use crate::{browser, channel_rack, dialogs, mixer, piano_roll, playlist, shortcuts, toolbar};
-use egui::{Context, Rect, Response};
+use egui::{Context, Response};
 use limeshot_audio::assets::SampleCache;
 use limeshot_audio::{Msg, Player};
 use limeshot_core::{ChannelId, Command, Document, PatternId, Project, Snap, Tick};
@@ -30,12 +34,51 @@ pub enum Focus {
     Mixer,
 }
 
+/// The tabs of the bottom dock.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DockTab {
+    #[default]
+    ChannelRack,
+    PianoRoll,
+    Mixer,
+}
+
+impl DockTab {
+    pub const ALL: [DockTab; 3] = [DockTab::ChannelRack, DockTab::PianoRoll, DockTab::Mixer];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            DockTab::ChannelRack => "Channel Rack",
+            DockTab::PianoRoll => "Piano Roll",
+            DockTab::Mixer => "Mixer",
+        }
+    }
+
+    pub fn shortcut(self) -> &'static str {
+        match self {
+            DockTab::ChannelRack => "F6",
+            DockTab::PianoRoll => "F7",
+            DockTab::Mixer => "F9",
+        }
+    }
+}
+
+/// What the Inspector panel shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InspectTarget {
+    /// The selected channel's instrument.
+    #[default]
+    Channel,
+    /// The selected mixer track.
+    MixerTrack,
+}
+
 pub struct UiState {
     pub show_browser: bool,
-    pub show_rack: bool,
-    pub show_piano: bool,
-    pub show_playlist: bool,
-    pub show_mixer: bool,
+    pub show_inspector: bool,
+    pub dock_open: bool,
+    pub dock_tab: DockTab,
+    pub inspect: InspectTarget,
     pub current_pattern: PatternId,
     pub selected_channel: Option<ChannelId>,
     pub snap: Snap,
@@ -44,8 +87,6 @@ pub struct UiState {
     pub metronome: bool,
     pub focus: Focus,
     pub hint: String,
-    pub arrange_windows: bool,
-    pub workspace: Rect,
     pub rack: channel_rack::State,
     pub piano: piano_roll::State,
     pub playlist: playlist::State,
@@ -57,10 +98,10 @@ impl UiState {
     fn new(project: &Project) -> Self {
         Self {
             show_browser: true,
-            show_rack: true,
-            show_piano: false,
-            show_playlist: true,
-            show_mixer: false,
+            show_inspector: true,
+            dock_open: true,
+            dock_tab: DockTab::ChannelRack,
+            inspect: InspectTarget::Channel,
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
             selected_channel: project.channels.first().map(|c| c.id),
             snap: Snap::Step,
@@ -69,8 +110,6 @@ impl UiState {
             metronome: false,
             focus: Focus::None,
             hint: String::new(),
-            arrange_windows: true,
-            workspace: Rect::NOTHING,
             rack: Default::default(),
             piano: Default::default(),
             playlist: Default::default(),
@@ -110,6 +149,8 @@ pub struct LimeShotApp {
     snapshot: Arc<Snapshot>,
     pub allow_close: bool,
     themed: bool,
+    /// Frames drawn since the theme (and its fonts) was installed; fonts apply one frame later.
+    themed_frames: u32,
     pub meter_hold: Vec<(f32, f32)>,
     pub clip_until: Option<Instant>,
 }
@@ -156,6 +197,7 @@ impl LimeShotApp {
             snapshot,
             allow_close: false,
             themed: false,
+            themed_frames: 0,
             meter_hold: Vec::new(),
             clip_until: None,
         }
@@ -163,6 +205,49 @@ impl LimeShotApp {
 
     pub fn project(&self) -> &Project {
         self.doc.project()
+    }
+
+    /// UI state for a newly opened project, keeping the panel layout.
+    fn fresh_ui_state(&self) -> UiState {
+        let u = &self.ui;
+        UiState {
+            show_browser: u.show_browser,
+            show_inspector: u.show_inspector,
+            dock_open: u.dock_open,
+            dock_tab: u.dock_tab,
+            ..UiState::new(self.doc.project())
+        }
+    }
+
+    /// Show a dock tab (opening the dock).
+    pub fn show_tab(&mut self, tab: DockTab) {
+        self.ui.dock_open = true;
+        self.ui.dock_tab = tab;
+        self.ui.focus = match tab {
+            DockTab::ChannelRack => Focus::ChannelRack,
+            DockTab::PianoRoll => Focus::PianoRoll,
+            DockTab::Mixer => Focus::Mixer,
+        };
+    }
+
+    /// F6/F7/F9 behaviour: show the tab, or collapse the dock if it is already showing.
+    pub fn toggle_tab(&mut self, tab: DockTab) {
+        if self.is_tab_visible(tab) {
+            self.ui.dock_open = false;
+            self.ui.focus = Focus::Playlist;
+        } else {
+            self.show_tab(tab);
+        }
+    }
+
+    pub fn is_tab_visible(&self, tab: DockTab) -> bool {
+        self.ui.dock_open && self.ui.dock_tab == tab
+    }
+
+    /// Select a channel and show it in the Inspector.
+    pub fn select_channel(&mut self, id: ChannelId) {
+        self.ui.selected_channel = Some(id);
+        self.ui.inspect = InspectTarget::Channel;
     }
 
     pub fn send(&mut self, msg: Msg) {
@@ -347,7 +432,7 @@ impl LimeShotApp {
             .as_ref()
             .and_then(|p| p.file_stem())
             .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Untitled".into());
+            .unwrap_or_else(|| self.project().title.clone());
         format!("{}{name} — LimeShot", if self.doc.is_modified() { "• " } else { "" })
     }
 
@@ -379,11 +464,7 @@ impl LimeShotApp {
         self.doc.replace(Project::new());
         self.path = None;
         self.samples.set_project_dir(None);
-        self.ui = UiState {
-            arrange_windows: false,
-            workspace: self.ui.workspace,
-            ..UiState::new(self.doc.project())
-        };
+        self.ui = self.fresh_ui_state();
         self.set_mode(PlayMode::Pattern);
         self.ui.mode = PlayMode::Pattern;
         self.send(Msg::Mode(PlayMode::Pattern));
@@ -399,11 +480,7 @@ impl LimeShotApp {
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
-                self.ui = UiState {
-                    arrange_windows: false,
-                    workspace: self.ui.workspace,
-                    ..UiState::new(self.doc.project())
-                };
+                self.ui = self.fresh_ui_state();
                 self.ui.mode = PlayMode::Pattern;
                 self.send(Msg::Mode(PlayMode::Pattern));
                 self.compiled = None;
@@ -480,6 +557,7 @@ impl LimeShotApp {
         if !self.themed {
             crate::theme::Theme::current().apply(ctx);
             self.themed = true;
+            ctx.request_repaint();
         }
         ctx.set_zoom_factor(self.settings.ui_scale);
         self.player.collect_garbage();
@@ -502,44 +580,96 @@ impl LimeShotApp {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         ui.set_style(ctx.global_style());
+        let t = crate::theme::Theme::current();
+        // Custom fonts registered by `logic` become available on the following frame.
+        if self.themed_frames < 1 || !self.themed {
+            self.themed_frames += u32::from(self.themed);
+            ui.painter().rect_filled(ui.max_rect(), 0.0, t.bg);
+            ctx.request_repaint();
+            return;
+        }
         self.ui.hint.clear();
         shortcuts::handle(self, &ctx);
-        egui::Panel::top("menu").show(ui, |ui| crate::menus::menu_bar(self, ui));
+        let flat = |fill| egui::Frame::new().fill(fill);
+        egui::Panel::top("header")
+            .exact_size(30.0)
+            .frame(flat(t.header).inner_margin(egui::Margin::symmetric(8, 0)))
+            .show(ui, |ui| toolbar::header(self, ui));
         egui::Panel::top("toolbar")
             .exact_size(toolbar::HEIGHT)
+            .frame(flat(t.header).inner_margin(egui::Margin::symmetric(8, 0)))
             .show(ui, |ui| toolbar::show(self, ui));
         egui::Panel::bottom("status")
-            .exact_size(22.0)
+            .exact_size(24.0)
+            .frame(flat(t.header).inner_margin(egui::Margin::symmetric(10, 0)))
             .show(ui, |ui| toolbar::status_bar(self, ui));
         if self.ui.show_browser {
             egui::Panel::left("browser")
                 .resizable(true)
-                .default_size(220.0)
-                .min_size(150.0)
+                .default_size(230.0)
+                .size_range(160.0..=420.0)
+                .frame(flat(t.surface))
                 .show(ui, |ui| browser::show(self, ui));
         }
-        let central = egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(crate::theme::Theme::current().bg))
-            .show(ui, |ui| {
-                let r = ui.max_rect();
-                crate::icons::logo(ui.painter(), r.center(), 60.0);
-                ui.painter().text(
-                    r.center() + egui::vec2(0.0, 84.0),
-                    egui::Align2::CENTER_CENTER,
-                    "LimeShot",
-                    crate::theme::prop(16.0),
-                    crate::theme::Theme::current().text_dim,
-                );
-                r
-            });
-        self.ui.workspace = central.inner;
-        let arrange = std::mem::take(&mut self.ui.arrange_windows);
-        playlist::window(self, &ctx, arrange);
-        channel_rack::window(self, &ctx, arrange);
-        piano_roll::window(self, &ctx, arrange);
-        mixer::window(self, &ctx, arrange);
+        if self.ui.show_inspector {
+            egui::Panel::right("inspector")
+                .resizable(true)
+                .default_size(300.0)
+                .size_range(240.0..=480.0)
+                .frame(flat(t.surface))
+                .show(ui, |ui| crate::inspector::show(self, ui));
+        }
+        if self.ui.dock_open {
+            egui::Panel::bottom("dock")
+                .resizable(true)
+                .default_size(330.0)
+                .size_range(160.0..=900.0)
+                .frame(flat(t.surface))
+                .show(ui, |ui| dock(self, ui));
+        }
+        egui::CentralPanel::default()
+            .frame(flat(t.surface))
+            .show(ui, |ui| playlist::panel(self, ui));
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
+    }
+}
+
+/// The bottom dock: tab strip plus the active editor.
+fn dock(app: &mut LimeShotApp, ui: &mut egui::Ui) {
+    let tabs: Vec<(&str, String)> = DockTab::ALL
+        .iter()
+        .map(|d| (d.label(), format!("{} ({})", d.label(), d.shortcut())))
+        .collect();
+    let tab_refs: Vec<(&str, &str)> = tabs.iter().map(|(a, b)| (*a, b.as_str())).collect();
+    let active = DockTab::ALL.iter().position(|d| *d == app.ui.dock_tab).unwrap_or(0);
+    let mut collapse = false;
+    let clicked = crate::widgets::tab_strip(ui, &tab_refs, active, |ui| {
+        if crate::widgets::icon_button(ui, crate::icons::Icon::Close, false, 22.0, "Hide the dock").clicked() {
+            collapse = true;
+        }
+    });
+    if let Some(i) = clicked
+        && let Some(tab) = DockTab::ALL.get(i)
+    {
+        app.show_tab(*tab);
+    }
+    if collapse {
+        app.ui.dock_open = false;
+        return;
+    }
+    let rect = ui.available_rect_before_wrap();
+    if ui.rect_contains_pointer(rect) && ui.input(|i| i.pointer.any_pressed()) {
+        app.ui.focus = match app.ui.dock_tab {
+            DockTab::ChannelRack => Focus::ChannelRack,
+            DockTab::PianoRoll => Focus::PianoRoll,
+            DockTab::Mixer => Focus::Mixer,
+        };
+    }
+    match app.ui.dock_tab {
+        DockTab::ChannelRack => channel_rack::panel(app, ui),
+        DockTab::PianoRoll => piano_roll::panel(app, ui),
+        DockTab::Mixer => mixer::panel(app, ui),
     }
 }
 

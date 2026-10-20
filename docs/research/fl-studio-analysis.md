@@ -11,10 +11,12 @@
 > installed app ships only an offline stub plus `HelpAliases.scr`); (b) REA static evidence
 > (`rea-findings.md`); (c) bundle and settings listings on this machine.
 >
-> **Limitation:** live screenshots and accessibility trees could not be captured. macOS Screen
-> Recording permission is not granted to this session (REA `observe-native-ui` and `screencapture`
-> both refused). Anything marked OBSERVED comes from file and window-list observation. Interaction
-> details come from the official manual (VERIFIED against documentation, not against the running UI).
+> **Live observation (session 2, 2026-10-20):** Screen Recording was granted, so window screenshots
+> were taken with `screencapture -l` (`docs/research/evidence/screenshots/fl-main.png`,
+> `fl-dialog.png`). Accessibility is **not** granted: REA's `observe-native-ui` refuses without it
+> (`evidence/rea/observe-ui-965.json`), and synthetic clicks are impossible, so FL could not be
+> operated (its modal welcome dialog also blocks opening demo projects). Interaction details still
+> come from the official manual. Findings marked OBSERVED below were seen in these screenshots.
 >
 > Confidence labels: **VERIFIED** (installed artifact or official documentation), **OBSERVED**
 > (seen on this machine), **INFERRED** (reasoned from evidence), **UNKNOWN**.
@@ -26,6 +28,32 @@
 - **Interaction:** F5 Playlist, F6 Channel Rack, F7 Piano Roll, F8 Plugin Picker, F9 Mixer, Alt+F8 Browser, F12 close all, Esc close window, Enter maximize Playlist (VERIFIED, shortcuts page).
 - **Confidence:** VERIFIED (docs) / OBSERVED (window list).
 - **LimeShot equivalent:** `limeshot-ui` main layout: top toolbar panel, left Browser side panel, central workspace with toggleable child windows (egui `Window`, constrained to the workspace) bound to the same F-keys.
+
+### 1a. Observed main window (screenshot `fl-main.png`, 1680×1020 pt)
+OBSERVED:
+* Toolbar row 1: traffic lights, upper-case menu labels (FILE EDIT ADD PATTERNS VIEW OPTIONS TOOLS
+  HELP), a vertical **PAT/SONG** pill pair, play, stop, record, tempo field **140.000** (the default
+  tempo of a new project), a large time display **1:01:00** labelled **B:S:T** (bar:step:tick), then
+  recording/metronome toggles (orange when on), CPU/memory panel.
+* Toolbar row 2: user/login box, window buttons (Playlist, Channel Rack, Piano Roll, Mixer, Browser…),
+  snap selector showing **Line**, pattern selector **Pattern 1** with a **+** button, Shift/Cmd/Opt
+  touch-modifier buttons, hint/news panel.
+* Browser docked left: a row of tab icons (all / project / plugins / online / starred), then a
+  category tree with coloured icons; a TAGS field at the bottom.
+* Playlist fills the rest of the window and opens maximised by default. Its title bar has the tool
+  icons (draw, paint, delete, mute, slip, slice, select, zoom, play) and the breadcrumb
+  "Playlist – Arrangement › Pattern 1". On its left is the **clip picker** listing patterns
+  ("Pattern 1"). Tracks are tall rows ("Track 1…") with a green LED at the bottom right of each
+  header. The ruler numbers bars, with bigger labels every 4 bars.
+* Channel Rack, Piano Roll and Mixer are closed in a new project.
+* Palette: blue-grey surfaces (about #34404a / #2b353d), orange accents for active toggles, green
+  LEDs, light grey text.
+* On start, a modal **Welcome** window offers templates, Loop Starter, chord progression, a demo list
+  and news (`fl-dialog.png`).
+
+LimeShot changes taken from this: new projects default to **140 BPM**; the Playlist is the main,
+docked workspace with a pattern picker on its left; editors open docked rather than floating; track
+headers keep the LED at the right.
 
 ## 2. Channel Rack and step sequencer
 - **Expected behaviour (VERIFIED, `channelrack.htm`):** Channels are shared by all patterns; each pattern holds its own step and piano-roll data per channel. Row layout: Mute, Pan, Volume, mixer-track target, channel button (name), selector LED, then step buttons or a piano-roll preview. Each step is a 16th note; the default is 16 steps; the maximum is 512. Left-click a step turns it on; right-click turns it off. Steps have no note-off. Ctrl+click on a mute button solos. Ctrl+L assigns selected channels to free mixer tracks. Alt+Up/Down reorders. Pattern length is Auto (ends at the last bar with data) or Manual. Global swing delays every second 16th. A Graph editor edits per-step velocity, pan, pitch and more.

@@ -6,8 +6,9 @@
 
 use crate::app::LimeShotApp;
 use crate::icons::{self, Icon};
-use crate::theme::Theme;
-use egui::{CollapsingHeader, RichText, Sense, TextEdit, Ui, vec2};
+use crate::theme::{Theme, mix, semibold};
+use crate::widgets::{icon_button, panel_header};
+use egui::{CollapsingHeader, CornerRadius, Rect, RichText, Sense, TextEdit, Ui, vec2};
 use limeshot_audio::Msg;
 use limeshot_audio::assets::SampleStatus;
 use limeshot_core::{ChannelId, Command, Instrument, SampleRef, SamplerParams};
@@ -129,39 +130,35 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
             _ => ui.ctx().request_repaint(),
         }
     }
-    ui.horizontal(|ui| {
-        let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
-        icons::paint(ui.painter(), r, Icon::Browser, t.accent);
-        ui.label(RichText::new("Browser").strong());
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("⟳").on_hover_text("Re-read folders").clicked() {
-                app.ui.browser.refresh();
-            }
-            if ui
-                .small_button("+")
-                .on_hover_text("Add a folder to the Browser")
-                .clicked()
-                && let Some(dir) = rfd::FileDialog::new().pick_folder()
-                && !app.settings.browser_folders.contains(&dir)
-            {
-                app.settings.browser_folders.push(dir);
-                app.settings.save();
-            }
-        });
+    panel_header(ui, "Browser", |ui| {
+        if ui.small_button("⟳").on_hover_text("Re-read folders").clicked() {
+            app.ui.browser.refresh();
+        }
+        if icon_button(ui, Icon::Plus, false, 22.0, "Add a folder to the Browser").clicked()
+            && let Some(dir) = rfd::FileDialog::new().pick_folder()
+            && !app.settings.browser_folders.contains(&dir)
+        {
+            app.settings.browser_folders.push(dir);
+            app.settings.save();
+        }
     });
-    ui.add(
-        TextEdit::singleline(&mut app.ui.browser.filter)
-            .hint_text("Filter samples…")
-            .desired_width(f32::INFINITY),
-    );
-    ui.separator();
+    egui::Frame::new()
+        .inner_margin(egui::Margin::symmetric(8, 6))
+        .show(ui, |ui| {
+            ui.add(
+                TextEdit::singleline(&mut app.ui.browser.filter)
+                    .hint_text("Search samples")
+                    .desired_width(f32::INFINITY),
+            );
+        });
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-        CollapsingHeader::new(RichText::new("Current project").color(t.text_dim))
+        ui.spacing_mut().indent = 12.0;
+        CollapsingHeader::new(RichText::new("CHANNELS").font(semibold(10.5)).color(t.text_dim))
             .default_open(true)
             .show(ui, |ui| project_tree(app, ui));
         let mut roots: Vec<(String, PathBuf, bool)> = Vec::new();
         if let Some(b) = &app.bundled_samples {
-            roots.push(("LimeShot samples".into(), b.clone(), false));
+            roots.push(("LIMESHOT SAMPLES".into(), b.clone(), false));
         }
         for f in &app.settings.browser_folders {
             roots.push((
@@ -174,10 +171,14 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
         }
         let mut remove = None;
         for (name, dir, user) in roots {
-            let header = CollapsingHeader::new(RichText::new(name).color(if user { t.accent } else { t.text_dim }))
-                .id_salt(&dir)
-                .default_open(!user)
-                .show(ui, |ui| folder(app, ui, &dir, 0));
+            let header = CollapsingHeader::new(RichText::new(name).font(semibold(10.5)).color(if user {
+                t.accent
+            } else {
+                t.text_dim
+            }))
+            .id_salt(&dir)
+            .default_open(!user)
+            .show(ui, |ui| folder(app, ui, &dir, 0));
             if user {
                 header.header_response.context_menu(|ui| {
                     if ui.button("Remove from Browser").clicked() {
@@ -194,36 +195,49 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     });
 }
 
+/// The project's channels (patterns are listed in the Playlist's picker). Click to select and
+/// show in the Inspector.
 fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    ui.label(RichText::new("Patterns").small().color(t.text_dim));
-    let cur = app.current_pattern();
-    let pats: Vec<_> = app
-        .project()
-        .patterns
-        .iter()
-        .map(|p| (p.id, p.name.clone(), p.color))
-        .collect();
-    for (id, name, color) in pats {
-        let text = RichText::new(format!("■ {name}")).color(if id == cur { crate::theme::rgb(color) } else { t.text });
-        if ui.selectable_label(id == cur, text).clicked() {
-            app.set_current_pattern(id);
-        }
-    }
-    ui.label(RichText::new("Channels").small().color(t.text_dim));
     let sel = app.selected_channel();
     let chans: Vec<_> = app
         .project()
         .channels
         .iter()
-        .map(|c| (c.id, c.name.clone(), c.instrument.kind_label()))
+        .map(|c| (c.id, c.name.clone(), c.color, c.instrument.kind_label()))
         .collect();
-    for (id, name, kind) in chans {
-        if ui
-            .selectable_label(Some(id) == sel, format!("{name}  ·  {kind}"))
-            .clicked()
-        {
-            app.ui.selected_channel = Some(id);
+    if chans.is_empty() {
+        ui.label(RichText::new("No channels yet").color(t.text_faint));
+    }
+    for (id, name, color, kind) in chans {
+        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click());
+        if Some(id) == sel {
+            ui.painter()
+                .rect_filled(r, CornerRadius::same(t.radius_sm), mix(t.surface, t.accent, 0.12));
+        } else if resp.hovered() {
+            ui.painter().rect_filled(r, CornerRadius::same(t.radius_sm), t.raised);
+        }
+        ui.painter().rect_filled(
+            Rect::from_min_size(r.min + vec2(4.0, 6.0), vec2(10.0, 10.0)),
+            CornerRadius::same(2),
+            crate::theme::rgb(color),
+        );
+        ui.painter().text(
+            r.left_center() + vec2(22.0, 0.0),
+            egui::Align2::LEFT_CENTER,
+            &name,
+            crate::theme::prop(12.0),
+            t.text,
+        );
+        ui.painter().text(
+            r.right_center() - vec2(6.0, 0.0),
+            egui::Align2::RIGHT_CENTER,
+            kind,
+            crate::theme::prop(10.5),
+            t.text_faint,
+        );
+        if resp.clicked() {
+            app.select_channel(id);
         }
     }
 }

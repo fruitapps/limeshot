@@ -1,0 +1,336 @@
+//! The Inspector (right panel): parameters of the selected channel's instrument, or of the
+//! selected mixer track. It replaces FL Studio's floating Channel Settings window with a docked
+//! panel, as the ArtCraft apps do for their property panels.
+
+use crate::app::{InspectTarget, LimeShotApp};
+use crate::browser;
+use crate::theme::{Theme, mono, rgb, semibold};
+use crate::widgets::{panel_header, section, segmented};
+use egui::{Align2, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, pos2, vec2};
+use limeshot_core::*;
+
+pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    if app.ui.inspect == InspectTarget::MixerTrack {
+        crate::mixer::inspector(app, ui);
+        return;
+    }
+    let Some(ch) = app.selected_channel().and_then(|c| app.project().channel(c).cloned()) else {
+        panel_header(ui, "Inspector", |_| {});
+        ui.add_space(16.0);
+        ui.vertical_centered(|ui| ui.label(RichText::new("Add a channel to edit its sound.").color(t.text_dim)));
+        return;
+    };
+    panel_header(ui, "Channel", |ui| {
+        ui.label(
+            RichText::new(ch.instrument.kind_label())
+                .font(mono(10.5))
+                .color(t.text_dim),
+        );
+    });
+    egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+        egui::Frame::new().inner_margin(egui::Margin::same(12)).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(12.0, 12.0), Sense::hover());
+                ui.painter().rect_filled(r, CornerRadius::same(3), rgb(ch.color));
+                let name = ui
+                    .add(egui::Label::new(RichText::new(&ch.name).font(semibold(15.0))).sense(Sense::click()))
+                    .on_hover_text("Click to rename");
+                if name.clicked() {
+                    app.dialog = Some(crate::dialogs::Dialog::rename_channel(app, ch.id));
+                }
+            });
+            ui.add_space(8.0);
+            channel_body(app, ui, &ch);
+        });
+    });
+}
+
+fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
+    ui.horizontal(|ui| {
+        ui.add_sized(
+            vec2(64.0, 22.0),
+            egui::Label::new(RichText::new(label).color(Theme::current().text_dim)),
+        );
+        ui.spacing_mut().slider_width = (ui.available_width() - 70.0).max(60.0);
+        add(ui);
+    });
+}
+
+fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
+    let t = Theme::current();
+    ui.horizontal(|ui| {
+        let kind = match ch.instrument {
+            Instrument::Sampler(_) => 0,
+            Instrument::Synth(_) => 1,
+            Instrument::Unsupported(_) => 2,
+        };
+        if let Some(kind) = segmented(ui, &["Sampler", "LimeSynth"], kind, 24.0, "Instrument type") {
+            let inst = if kind == 0 {
+                Instrument::Sampler(SamplerParams::default())
+            } else {
+                Instrument::Synth(SynthParams::default())
+            };
+            app.exec(Command::SetInstrument {
+                channel: ch.id,
+                instrument: inst,
+            });
+        }
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let mut key = ch.root_key;
+            let r = ui.add(
+                DragValue::new(&mut key)
+                    .range(0..=127)
+                    .custom_formatter(|v, _| crate::piano_roll::key_name(v as u8)),
+            );
+            if r.changed() {
+                app.exec(Command::SetChannelRootKey { channel: ch.id, key });
+            }
+            ui.label(RichText::new("Root").color(t.text_dim));
+        });
+    });
+    ui.add_space(6.0);
+    match &ch.instrument {
+        Instrument::Sampler(p) => sampler_settings(app, ui, ch.id, p),
+        Instrument::Synth(p) => synth_settings(app, ui, ch.id, p),
+        Instrument::Unsupported(_) => {
+            ui.label(RichText::new("This channel uses an instrument this version of LimeShot does not support. It is kept in the project but stays silent.").color(t.warning));
+        }
+    }
+}
+
+fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SamplerParams) {
+    let t = Theme::current();
+    let set = |p: SamplerParams| Command::SetInstrument {
+        channel: cid,
+        instrument: Instrument::Sampler(p),
+    };
+    let status = p.sample.as_ref().and_then(|s| app.samples.status(&s.path).cloned());
+    section(ui, "Sample");
+    ui.horizontal(|ui| {
+        let label = match &p.sample {
+            Some(s) => browser::file_label(std::path::Path::new(&s.path)),
+            None => "No sample".into(),
+        };
+        ui.label(RichText::new(label).font(semibold(12.5)));
+        if ui.button("Load…").clicked()
+            && let Some(path) = rfd::FileDialog::new()
+                .add_filter("WAV audio", &["wav", "WAV"])
+                .pick_file()
+        {
+            browser::assign_sample(app, cid, &path);
+        }
+    });
+    // Waveform with start/end markers.
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::hover());
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), t.sunken);
+    match &status {
+        Some(limeshot_audio::assets::SampleStatus::Ready(s)) => {
+            let frames = s.frames().max(1);
+            let cols = r.width() as usize;
+            for x in 0..cols {
+                let a = x * frames / cols.max(1);
+                let b = ((x + 1) * frames / cols.max(1)).max(a + 1);
+                let peak = (a..b)
+                    .step_by(((b - a) / 32).max(1))
+                    .map(|i| s.frame(i).0.abs())
+                    .fold(0.0f32, f32::max);
+                let h = peak.min(1.0) * r.height() * 0.48;
+                let xx = r.left() + x as f32;
+                ui.painter().line_segment(
+                    [pos2(xx, r.center().y - h), pos2(xx, r.center().y + h)],
+                    Stroke::new(1.0, t.accent_dim),
+                );
+            }
+            for (f, c) in [(p.start, t.accent), (p.end, t.danger)] {
+                let x = r.left() + f * r.width();
+                ui.painter()
+                    .line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, c));
+            }
+            ui.label(
+                RichText::new(format!("{:.2} s · {} Hz", s.duration_secs(), s.sample_rate))
+                    .small()
+                    .color(t.text_dim),
+            );
+        }
+        Some(limeshot_audio::assets::SampleStatus::Failed(e)) => {
+            ui.painter().text(
+                r.center(),
+                Align2::CENTER_CENTER,
+                "Could not load sample",
+                mono(11.0),
+                t.danger,
+            );
+            ui.label(RichText::new(e).small().color(t.danger));
+        }
+        Some(limeshot_audio::assets::SampleStatus::Loading) => {
+            ui.painter()
+                .text(r.center(), Align2::CENTER_CENTER, "Loading…", mono(11.0), t.text_dim);
+        }
+        None => {
+            ui.painter().text(
+                r.center(),
+                Align2::CENTER_CENTER,
+                "Drop or load a WAV file",
+                mono(11.0),
+                t.text_dim,
+            );
+        }
+    }
+    let mut q = p.clone();
+    let mut changed: Option<egui::Response> = None;
+    let mut track = |r: egui::Response, c: bool| {
+        if c || r.drag_started() || r.drag_stopped() {
+            changed = Some(r);
+        }
+    };
+    ui.add_space(4.0);
+    section(ui, "Playback");
+    row(ui, "Gain", |ui| {
+        let r = ui.add(egui::Slider::new(&mut q.gain_db, -24.0..=12.0).suffix(" dB"));
+        let c = r.changed();
+        track(r, c);
+    });
+    row(ui, "Pitch", |ui| {
+        let r = ui.add(
+            egui::Slider::new(&mut q.pitch, -24.0..=24.0)
+                .suffix(" st")
+                .step_by(0.01),
+        );
+        let c = r.changed();
+        track(r, c);
+    });
+    row(ui, "Start", |ui| {
+        let r =
+            ui.add(egui::Slider::new(&mut q.start, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
+        let c = r.changed();
+        track(r, c);
+    });
+    row(ui, "End", |ui| {
+        let r = ui.add(egui::Slider::new(&mut q.end, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
+        let c = r.changed();
+        track(r, c);
+    });
+    row(ui, "Release", |ui| {
+        let r = ui.add(
+            egui::Slider::new(&mut q.release_ms, 0.0..=2000.0)
+                .logarithmic(true)
+                .suffix(" ms"),
+        );
+        let c = r.changed();
+        track(r, c);
+    });
+    row(ui, "Playback", |ui| {
+        let r = ui.checkbox(&mut q.reverse, "Reverse");
+        let c = r.changed();
+        track(r, c);
+        let r = ui
+            .checkbox(&mut q.one_shot, "One-shot")
+            .on_hover_text("Play the whole sample, ignoring note length");
+        let c = r.changed();
+        track(r, c);
+    });
+    if q.end < q.start {
+        q.end = q.start;
+    }
+    if let Some(r) = changed {
+        let cmd = (q != *p).then(|| set(q));
+        app.exec_gesture(&r, cmd);
+    }
+}
+
+fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthParams) {
+    let mut q = p.clone();
+    let mut waveform_changed = false;
+    let mut changed: Option<egui::Response> = None;
+    let mut track = |r: egui::Response| {
+        if r.changed() || r.drag_started() || r.drag_stopped() {
+            changed = Some(r);
+        }
+    };
+    section(ui, "Oscillator");
+    ui.horizontal(|ui| {
+        let labels: Vec<&str> = Waveform::ALL.iter().map(|w| w.label()).collect();
+        let cur = Waveform::ALL.iter().position(|w| *w == q.waveform).unwrap_or(0);
+        if let Some(i) = segmented(ui, &labels, cur, 24.0, "Waveform")
+            && let Some(w) = Waveform::ALL.get(i)
+        {
+            q.waveform = *w;
+            waveform_changed = true;
+        }
+    });
+    row(ui, "Octave", |ui| {
+        track(ui.add(egui::Slider::new(&mut q.octave, -3..=3)))
+    });
+    row(ui, "Detune", |ui| {
+        track(
+            ui.add(egui::Slider::new(&mut q.detune_cents, -50.0..=50.0).suffix(" ct"))
+                .on_hover_text("A second, detuned oscillator; 0 turns it off"),
+        )
+    });
+    row(ui, "Gain", |ui| {
+        track(ui.add(egui::Slider::new(&mut q.gain_db, -36.0..=12.0).suffix(" dB")))
+    });
+    ui.add_space(4.0);
+    section(ui, "Envelope");
+    row(ui, "Attack", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.attack_ms, 0.0..=2000.0)
+                    .logarithmic(true)
+                    .suffix(" ms"),
+            ),
+        )
+    });
+    row(ui, "Decay", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.decay_ms, 0.0..=4000.0)
+                    .logarithmic(true)
+                    .suffix(" ms"),
+            ),
+        )
+    });
+    row(ui, "Sustain", |ui| {
+        track(
+            ui.add(egui::Slider::new(&mut q.sustain, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0))),
+        )
+    });
+    row(ui, "Release", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.release_ms, 0.0..=4000.0)
+                    .logarithmic(true)
+                    .suffix(" ms"),
+            ),
+        )
+    });
+    // ADSR picture.
+    let t = Theme::current();
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 56.0), Sense::hover());
+    ui.painter().rect_filled(r, CornerRadius::same(t.radius), t.sunken);
+    let total = (q.attack_ms + q.decay_ms + q.release_ms).max(1.0) * 1.25;
+    let x = |ms: f32| r.left() + 4.0 + ms / total * (r.width() - 8.0);
+    let y = |lvl: f32| r.bottom() - 4.0 - lvl * (r.height() - 8.0);
+    let hold = total * 0.2;
+    let pts = vec![
+        pos2(x(0.0), y(0.0)),
+        pos2(x(q.attack_ms), y(1.0)),
+        pos2(x(q.attack_ms + q.decay_ms), y(q.sustain)),
+        pos2(x(q.attack_ms + q.decay_ms + hold), y(q.sustain)),
+        pos2(x(q.attack_ms + q.decay_ms + hold + q.release_ms), y(0.0)),
+    ];
+    ui.painter().add(egui::Shape::line(pts, Stroke::new(1.5, t.accent)));
+    if waveform_changed {
+        app.exec(Command::SetInstrument {
+            channel: cid,
+            instrument: Instrument::Synth(q),
+        });
+    } else if let Some(r) = changed {
+        let cmd = (q != *p).then_some(Command::SetInstrument {
+            channel: cid,
+            instrument: Instrument::Synth(q),
+        });
+        app.exec_gesture(&r, cmd);
+    }
+}
