@@ -487,3 +487,125 @@ fn song_stops_at_the_end_without_loop() {
     assert!(r.finished());
     assert_eq!(r.position(), 0);
 }
+
+/// A 1000-frame ramp sample at the engine rate, for sampler parameter tests.
+fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
+    let mut doc = Document::default();
+    let pat = doc.project().patterns[0].id;
+    let ch = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "R".into(),
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef { path: "ramp".into() }),
+                release_ms: 0.0,
+                ..params
+            }),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    doc.execute(Command::SetChannelVolume {
+        channel: ch,
+        volume: 1.0,
+    })
+    .unwrap();
+    doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
+    doc.execute(Command::SetStep {
+        pattern: pat,
+        channel: ch,
+        step: 0,
+        on: true,
+    })
+    .unwrap();
+    let data: Vec<f32> = (0..1000).flat_map(|i| [0.1 + i as f32 / 2000.0; 2]).collect();
+    let s = Arc::new(SampleData::from_stereo(SR, data));
+    let lookup = move |p: &str| (p == "ramp").then(|| s.clone());
+    Arc::new(compile(doc.project(), pat, &lookup))
+}
+
+fn sounding_frames(audio: &[f32]) -> usize {
+    audio.chunks_exact(2).take_while(|f| f[0].abs() > 1e-6).count()
+}
+
+#[test]
+fn sampler_pitch_start_end_and_reverse() {
+    let (a, _) = render(ramp_snapshot(SamplerParams::default()), ExportRange::Pattern, 512, SR);
+    assert_eq!(sounding_frames(&a), 1000, "plays the whole sample once");
+    // Steps play at velocity 0.78.
+    let v = 0.78;
+    assert!((a[0] - 0.1 * v).abs() < 1e-6 && a[2 * 999] > 0.59 * v);
+
+    let (a, _) = render(
+        ramp_snapshot(SamplerParams {
+            pitch: 12.0,
+            ..Default::default()
+        }),
+        ExportRange::Pattern,
+        512,
+        SR,
+    );
+    assert_eq!(sounding_frames(&a), 500, "an octave up plays twice as fast");
+
+    let (a, _) = render(
+        ramp_snapshot(SamplerParams {
+            start: 0.5,
+            end: 0.75,
+            ..Default::default()
+        }),
+        ExportRange::Pattern,
+        512,
+        SR,
+    );
+    assert_eq!(sounding_frames(&a), 250, "start/end trim the region");
+    assert!(
+        (a[0] - (0.1 + 500.0 / 2000.0) * v).abs() < 1e-6,
+        "starts at the start point"
+    );
+
+    let (a, _) = render(
+        ramp_snapshot(SamplerParams {
+            reverse: true,
+            ..Default::default()
+        }),
+        ExportRange::Pattern,
+        512,
+        SR,
+    );
+    assert_eq!(sounding_frames(&a), 1000);
+    assert!(a[0] > a[2 * 500], "reverse plays from the end");
+
+    let (a, _) = render(
+        ramp_snapshot(SamplerParams {
+            gain_db: -6.0206,
+            ..Default::default()
+        }),
+        ExportRange::Pattern,
+        512,
+        SR,
+    );
+    assert!((a[0] - 0.05 * v).abs() < 1e-4, "gain in dB");
+}
+
+#[test]
+fn metronome_clicks_on_every_beat() {
+    let f = fixture();
+    let mut r = Renderer::new(SR, snapshot(&f));
+    r.set_metronome(true);
+    r.play();
+    let mut audio = vec![0.0f32; 2 * 96_000];
+    for chunk in audio.chunks_mut(2 * 500) {
+        r.render(chunk);
+    }
+    // A click is a short tone: keep the first threshold crossing of each burst.
+    let mut on: Vec<usize> = Vec::new();
+    for o in onsets(&audio, 0.01) {
+        if on.last().is_none_or(|l| o - l > 4_000) {
+            on.push(o);
+        }
+    }
+    assert_eq!(on.len(), 4, "{on:?}");
+    for (i, o) in on.iter().enumerate() {
+        assert!(o.abs_diff(i * 24_000) < 30, "beat {i} at {o}");
+    }
+}
