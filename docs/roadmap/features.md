@@ -10,11 +10,11 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 82, DEFERRED 2
+- By status: NOT_STARTED 93, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 83, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 22 | 10 | 4 | 1 | 7 |
+| Application | 22 | 11 | 4 | 1 | 6 |
 | Channel Rack | 18 | 10 | 2 | 0 | 6 |
 | Piano Roll | 25 | 6 | 8 | 0 | 11 |
 | Playlist | 26 | 12 | 5 | 1 | 8 |
@@ -50,7 +50,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-013 | Keyboard shortcuts for core actions | P0 | ✓ | VERIFIED | Space, Cmd+Space, L, F4–F9, Alt+F8, Cmd+Z/S/O/N/R/M/H/B/A/D, Delete, arrows; listed in Help › Keyboard shortcuts. | `limeshot-app tests/ui.rs::window_shortcuts_toggle_editors`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo`<br>`limeshot-app tests/ui.rs::space_starts_and_stops_the_transport` |
 | APP-014 | Ask to save on close | P0 | ✓ | IMPLEMENTED | Closing the window with unsaved changes asks Save / Don't save / Cancel.<br>*Manual test only.* | — |
 | APP-015 | Project templates | P2 |  | NOT_STARTED | Templates folder with .lime files offered on New. | — |
-| APP-016 | Autosave and crash recovery | P1 |  | NOT_STARTED | Background autosave to the config folder; offer recovery after a crash. | — |
+| APP-016 | Autosave and crash recovery | P1 |  | VERIFIED | While there are unsaved changes, the project is written atomically every N minutes (Options › Autosave: off, 1, 2, 5 (default) or 10) to autosave/autosave.lime in the data folder with a session record (original file, time). Saving, a clean New/Open and quitting remove it. At the next start a leftover copy (a crash) opens 'Recover unsaved work?': Recover restores it as unsaved changes to its original file; Discard deletes it. A clean start never deletes another session's copy.<br>*One autosave slot per user: two LimeShot instances share it (the later write wins).* | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
 | APP-017 | Project info (title, author, comments) | P2 |  | IN_PROGRESS | Title is stored and editable via SetTitle (no UI dialog yet). | — |
 | APP-018 | Save new version | P2 |  | NOT_STARTED | File › Save new version. (LimeShot uses Cmd+N for New.) | — |
 | APP-019 | Project bundle (zip with samples) | P2 |  | NOT_STARTED | Export project + samples as a single archive. | — |

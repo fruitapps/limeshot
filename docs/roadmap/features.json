@@ -482,19 +482,25 @@
       "name": "Autosave and crash recovery",
       "description": "Periodic backup and recovery.",
       "fl_reference": "Autosave/backup folder.",
-      "limeshot_behavior": "Background autosave to the config folder; offer recovery after a crash.",
+      "limeshot_behavior": "While there are unsaved changes, the project is written atomically every N minutes (Options › Autosave: off, 1, 2, 5 (default) or 10) to autosave/autosave.lime in the data folder with a session record (original file, time). Saving, a clean New/Open and quitting remove it. At the next start a leftover copy (a crash) opens 'Recover unsaved work?': Recover restores it as unsaved changes to its original file; Discard deletes it. A clean start never deletes another session's copy.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "APP-003"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -503,7 +509,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": ""
+      "notes": "One autosave slot per user: two LimeShot instances share it (the later write wins)."
     },
     {
       "id": "APP-017",

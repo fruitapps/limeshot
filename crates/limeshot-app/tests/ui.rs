@@ -588,3 +588,44 @@ fn midi_export_and_import_round_trip_through_the_app() {
     assert_eq!(p.tempo, Tempo::from_bpm(124.0), "a project with notes keeps its tempo");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn autosave_survives_a_crash_and_is_removed_once_saved() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let autosave = || {
+        let mut a = limeshot_ui::autosave::Autosave::new(Some(dir.path().join("autosave")));
+        a.interval = Some(std::time::Duration::ZERO);
+        a
+    };
+    let mut h = harness(true);
+    h.state_mut().autosave = autosave();
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(99.0)));
+    h.step();
+    let info = h.state().autosave.find().expect("an autosave was written");
+    assert_eq!(info.original, None);
+    // "Crash": a new instance finds the copy and offers it.
+    drop(h);
+    let mut h = harness(false);
+    h.state_mut().autosave = autosave();
+    h.step();
+    h.step();
+    assert!(
+        h.state().autosave.find().is_some(),
+        "a clean start does not delete the crash copy"
+    );
+    h.state_mut().offer_recovery();
+    assert!(matches!(
+        h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::Recover(_))
+    ));
+    h.state_mut().dialog = None;
+    assert!(h.state_mut().recover(&info));
+    assert_eq!(h.state().project().tempo, Tempo::from_bpm(99.0));
+    assert!(h.state().doc.is_modified(), "recovered work is unsaved");
+    assert!(h.state().project().channels.len() >= 5, "the demo's channels came back");
+    // Saving removes the copy.
+    let saved = dir.path().join("saved.lime");
+    assert!(h.state_mut().save_to(&saved));
+    h.step();
+    assert!(h.state().autosave.find().is_none());
+}

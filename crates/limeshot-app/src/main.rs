@@ -63,6 +63,7 @@ fn main() -> eframe::Result {
     if let Some(path) = args.iter().find(|a| !a.starts_with("--")) {
         app.open_path(std::path::Path::new(path));
     }
+    app.offer_recovery();
     let icon = egui::IconData {
         rgba: limeshot_app::icon_rgba(256),
         width: 256,

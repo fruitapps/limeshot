@@ -137,6 +137,7 @@ pub struct LimeShotApp {
     themed_frames: u32,
     pub meter_hold: Vec<(f32, f32)>,
     pub clip_until: Option<Instant>,
+    pub autosave: crate::autosave::Autosave,
 }
 
 impl LimeShotApp {
@@ -144,6 +145,7 @@ impl LimeShotApp {
         let audio = settings.audio.clone();
         let mut app = Self::new_with_player(settings, bundled_samples, |s| Player::start(&audio, s));
         app.send(Msg::SongLoop(true));
+        app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app
     }
 
@@ -187,6 +189,7 @@ impl LimeShotApp {
             themed_frames: 0,
             meter_hold: Vec::new(),
             clip_until: None,
+            autosave: Default::default(),
         }
     }
 
@@ -540,6 +543,39 @@ impl LimeShotApp {
         }
     }
 
+    /// Show the recovery dialog if a previous session left an autosave behind.
+    pub fn offer_recovery(&mut self) {
+        if let Some(info) = self.autosave.find() {
+            self.dialog = Some(dialogs::Dialog::Recover(info));
+        }
+    }
+
+    /// Open the autosaved project as unsaved changes to its original file.
+    pub fn recover(&mut self, info: &crate::autosave::SessionInfo) -> bool {
+        match self.autosave.load() {
+            Ok(project) => {
+                self.send(Msg::Stop);
+                let project = absolutize_samples(&project, self.autosave.dir.as_deref());
+                self.doc.replace(project);
+                self.doc.mark_unsaved();
+                self.path = info.original.clone();
+                self.samples
+                    .set_project_dir(info.original.as_deref().and_then(Path::parent).map(Path::to_path_buf));
+                self.ui = self.fresh_ui_state();
+                self.ui.mode = PlayMode::Pattern;
+                self.send(Msg::Mode(PlayMode::Pattern));
+                self.compiled = None;
+                self.autosave.adopt();
+                self.toast("Recovered the autosaved project — save it to keep it");
+                true
+            }
+            Err(e) => {
+                self.toast_error(format!("Could not recover the autosave: {e}"));
+                false
+            }
+        }
+    }
+
     /// Import a MIDI file as a new pattern (one LimeSynth channel per MIDI track). An empty
     /// project also takes the file's tempo.
     pub fn import_midi(&mut self, path: &Path) -> bool {
@@ -644,6 +680,7 @@ impl LimeShotApp {
         ctx.set_zoom_factor(self.settings.ui_scale);
         self.player.collect_garbage();
         self.sync_engine();
+        crate::autosave::tick(self);
         dialogs::poll_export(self);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.allow_close && self.doc.is_modified() {
@@ -651,6 +688,8 @@ impl LimeShotApp {
             self.dialog = Some(dialogs::Dialog::ConfirmDiscard(Pending::Quit));
         }
         if self.allow_close {
+            // A normal exit: nothing to recover next time.
+            self.autosave.clear();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         // Meters and the playhead animate; keep frames coming at a modest rate.

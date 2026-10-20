@@ -71,6 +71,11 @@ impl Document {
         self.saved_state = self.state;
     }
 
+    /// Treat the current content as unsaved (a recovered autosave).
+    pub fn mark_unsaved(&mut self) {
+        self.saved_state = u64::MAX;
+    }
+
     fn new_state(&mut self) -> u64 {
         let s = self.next_state;
         self.next_state += 1;

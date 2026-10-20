@@ -16,6 +16,8 @@ pub struct Settings {
     /// Extra folders shown in the Browser.
     pub browser_folders: Vec<PathBuf>,
     pub ui_scale: f32,
+    /// Minutes between autosaves of unsaved changes; 0 turns autosave off.
+    pub autosave_minutes: u32,
 }
 
 impl Default for Settings {
@@ -25,6 +27,7 @@ impl Default for Settings {
             recent: Vec::new(),
             browser_folders: Vec::new(),
             ui_scale: 1.0,
+            autosave_minutes: 5,
         }
     }
 }
@@ -54,6 +57,7 @@ impl Settings {
                     1.0
                 };
                 s.recent.truncate(MAX_RECENT);
+                s.autosave_minutes = s.autosave_minutes.min(60);
                 s
             })
             .unwrap_or_default()

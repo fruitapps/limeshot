@@ -35,7 +35,12 @@ pub enum Dialog {
     ConfirmDiscard(Pending),
     Export(ExportOptions),
     Audio(AudioOptions),
-    Rename { target: RenameTarget, text: String },
+    Rename {
+        target: RenameTarget,
+        text: String,
+    },
+    /// A previous session left unsaved work behind.
+    Recover(crate::autosave::SessionInfo),
     About,
     Shortcuts,
 }
@@ -226,6 +231,31 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                     }
                     if ui.button("Cancel").clicked() {
                         keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::Recover(info) => {
+            let info = info.clone();
+            modal(ctx, "Recover unsaved work?", |ui| {
+                let from = info.original.as_ref().map_or_else(
+                    || "a project that was never saved".to_string(),
+                    |p| p.display().to_string(),
+                );
+                ui.label(format!(
+                    "LimeShot did not close normally last time. An autosaved copy of \u{201c}{}\u{201d} ({from}) from {} can be recovered.",
+                    info.title,
+                    info.age()
+                ));
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("Recover").strong()).clicked() {
+                        keep = false;
+                        app.recover(&info);
+                    }
+                    if ui.button("Discard").clicked() {
+                        keep = false;
+                        app.autosave.clear();
                     }
                 });
             });

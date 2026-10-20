@@ -14,6 +14,7 @@
 
 pub mod app;
 pub mod automation_ui;
+pub mod autosave;
 pub mod browser;
 pub mod channel_rack;
 pub mod dialogs;

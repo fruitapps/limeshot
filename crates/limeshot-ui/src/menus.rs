@@ -231,6 +231,20 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
                 let l = !app.ui.song_loop;
                 app.set_song_loop(l);
             }
+            ui.menu_button("Autosave", |ui| {
+                for (m, label) in [
+                    (0, "Off"),
+                    (1, "Every minute"),
+                    (2, "Every 2 minutes"),
+                    (5, "Every 5 minutes"),
+                    (10, "Every 10 minutes"),
+                ] {
+                    if toggle(ui, app.settings.autosave_minutes == m, label, "") {
+                        app.settings.autosave_minutes = m;
+                        app.settings.save();
+                    }
+                }
+            });
         });
         ui.menu_button("Help", |ui| {
             if item(ui, "Keyboard shortcuts", &key("F1")) {
