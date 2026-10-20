@@ -104,6 +104,11 @@ def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "check"
     data = json.loads(JSON_PATH.read_text(encoding="utf-8"))
     errors = validate(data)
+    # The keybinding and settings inventories reference feature ids; check them together.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import inventories
+
+    errors += inventories.run(mode, {f["id"] for f in data.get("features", [])})
     if errors:
         print("\n".join(errors))
         sys.exit(1)

@@ -24,6 +24,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Cmd+N / Cmd+O", "New / open project"),
     ("Cmd+S / Cmd+Shift+S", "Save / save as"),
     ("Cmd+R", "Export WAV"),
+    ("Cmd+Q", "Quit"),
     ("Cmd+= / Cmd+- / Cmd+0", "UI zoom"),
     ("+ / −", "Next / previous pattern"),
 ];
@@ -48,6 +49,7 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("Cmd+↑ / Cmd+↓", "Piano Roll: transpose an octave"),
     ("← / →", "Piano Roll / Playlist: nudge by the snap"),
+    ("Home", "Playlist: song position to the start"),
     ("Cmd+L", "Channel Rack: route channel to a free mixer track"),
     ("Alt+click", "Edit without snapping"),
 ];

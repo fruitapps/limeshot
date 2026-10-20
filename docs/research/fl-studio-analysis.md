@@ -108,10 +108,21 @@ headers keep the LED at the right.
 
 ## 11. Automation
 - **VERIFIED (`HelpAliases.scr`, playlist page):** Automation clips in the Playlist, an event editor, LFO tool, internal controllers and formula controllers. Most controls can be automated.
-- **LimeShot equivalent:** tracked (P1). The model reserves automation clips as a third `ClipKind`.
+- **OBSERVED live (session 5, `fl-automation-clip.png`):** right-clicking a Channel Rack knob opens a menu with Reset,
+  Edit events, Init song with this position, Create automation clip, Link to controller, Copy/Paste value, Type in
+  value and Set. *Create automation clip* adds an automation-clip channel ("808 Kick – Channel panning") to the Channel
+  Rack (whose filter switches to the Automation group) and to the Playlist picker, and places a clip at bar 1, track 1,
+  as long as the song, drawn as a flat line at the knob's value over a filled area. Clicking empty Playlist space
+  then places linked instances. Right-click on the curve does not delete the clip; it added a point, and a drag
+  between points changed the curve tension (hint bar: "Point 1 to 2 tension 33%"). The Playlist header shows STEP and
+  SLIDE options next to the automation icon (effect not observed).
+- **LimeShot equivalent:** automation clips (`limeshot_core::automation`): created from control context menus, listed in
+  the Playlist picker, edited in the clip (drag points, click the line to add, right-click a point to delete, ○ tension
+  handles), applied in Song mode.
 
 ## 12. Keyboard shortcuts
-See `basics_shortcuts.htm` (VERIFIED). The adopted subset is listed in `docs/architecture/ui.md`.
+See `basics_shortcuts.htm` (VERIFIED). Every FL shortcut is tracked against LimeShot in
+`docs/roadmap/keybindings.json` (76 so far; INFERRED entries still need checking), settings in `settings.json`.
 
 ## 13. Project lifecycle
 - **VERIFIED:** `.flp` project files (Info.plist document type), templates (`Data/Templates/*`), Save (Ctrl+S), Save As, "Save new version" (Ctrl+N), Export WAV (Ctrl+R), Export MP3 (Ctrl+Shift+R), Export MIDI, recent files Alt+0..9.

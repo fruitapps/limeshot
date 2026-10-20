@@ -82,6 +82,17 @@ errors, not per buffer.
 
 An empty song still runs one bar so the transport behaves.
 
+**Audio clips** are note events with `clip = true` and an `offset_secs`: the voice starts that far into the sample
+(`Voice::skip`) and is released at the clip end even on a one-shot sampler. After `play`, `locate` or a mode change the
+renderer *chases* audio clips: the first `schedule` also starts every clip event that began before the position and
+is still running, part-way through. Notes are not chased (as in FL Studio).
+
+**Automation** (Song mode only): the snapshot holds one `AutomationLane` per automation, its clips flattened to
+song-time points (a clip's end point holds its value until the next clip). Before every chunk — at most 64 frames while
+lanes exist — `apply_controls` loads channel volume/pan and mixer gain/pan from the snapshot into preallocated arrays,
+then overrides them with the lanes' values at the current tick; effect parameters go through `FxRack::set_param`,
+which keeps each processor's parameter array so one value can change. Evaluation is a binary search, allocation-free.
+
 ## Voices
 
 `Voice` (`voice.rs`) is a source plus an `Envelope`:
@@ -91,7 +102,9 @@ An empty song still runs one bar so the transport behaves.
   the end. Envelope: no attack (the onset lands on the exact sample), release = `release_ms`. One-shot samplers ignore
   the note length.
 * **LimeSynth**: one or two PolyBLEP oscillators (sine/square/saw/triangle; the second detuned by `detune_cents`), octave
-  offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud.
+  offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud. An optional
+  `ModState` (inline, no allocation) adds a TPT state-variable low-pass with an exponentially decaying filter envelope
+  and a sine LFO to pitch and cutoff, recomputed every 16 samples; it is absent at default settings.
 * **Click**: metronome blip (1760 Hz downbeat, 1320 Hz other beats, 30 ms decay).
 * **Preview**: a browser sample played once into the master.
 

@@ -8,27 +8,27 @@ automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **220**
+- Features tracked: **236**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 93, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 83, DEFERRED 2
+- By status: NOT_STARTED 102, RESEARCHED 2, IN_PROGRESS 10, IMPLEMENTED 34, VERIFIED 86, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 22 | 11 | 4 | 1 | 6 |
-| Channel Rack | 18 | 10 | 2 | 0 | 6 |
-| Piano Roll | 25 | 6 | 8 | 0 | 11 |
-| Playlist | 26 | 12 | 5 | 1 | 8 |
+| Application | 25 | 12 | 4 | 2 | 7 |
+| Channel Rack | 19 | 11 | 2 | 0 | 6 |
+| Piano Roll | 26 | 7 | 8 | 0 | 11 |
+| Playlist | 28 | 12 | 5 | 2 | 9 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
-| Instruments | 12 | 6 | 0 | 0 | 6 |
+| Instruments | 14 | 6 | 0 | 0 | 8 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
-| Automation | 9 | 3 | 0 | 0 | 6 |
+| Automation | 13 | 3 | 0 | 0 | 10 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
 | Browser | 10 | 1 | 5 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
-| Export | 12 | 5 | 0 | 0 | 7 |
+| Export | 13 | 5 | 0 | 0 | 8 |
 | Transport & Time | 13 | 7 | 4 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
-| UI | 9 | 6 | 2 | 0 | 1 |
+| UI | 11 | 6 | 2 | 1 | 2 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
 ## Application
@@ -57,6 +57,9 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-020 | MIDI settings | P1 |  | NOT_STARTED | Device list, enable inputs, controller type. | — |
 | APP-021 | Plugin manager | P2 |  | NOT_STARTED | Scan folders for CLAP/VST3/AU. | — |
 | APP-022 | Import FL Studio projects (.flp) | P3 |  | RESEARCHED | Read a documented subset of .flp. Needs an independently documented format description.<br>*Clean-room: only from public/independent format documentation; no decompilation.* | — |
+| APP-023 | Welcome window | P3 |  | NOT_STARTED | Planned (offline parts only: templates, recent files, demo song). | — |
+| APP-024 | Autosave interval setting | P2 |  | VERIFIED | Options › Autosave: off, 1, 2, 5 (default) or 10 minutes; stored in the settings. | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
+| APP-025 | Settings window | P2 |  | IN_PROGRESS | Audio settings have a dialog; UI scale, autosave and browser folders are set from menus and the Browser. A single window with pages is planned; settings.json tracks every setting. | — |
 
 ## Channel Rack
 
@@ -80,6 +83,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-016 | Channel step looping / ghost steps | P3 |  | NOT_STARTED | Per-channel loop length. | — |
 | SEQ-017 | Loop Starter (FL Cloud) | P3 |  | DEFERRED | Out of scope: requires an online service (LimeShot is offline-first). | — |
 | SEQ-018 | Multiple patterns | P0 | ✓ | VERIFIED | Toolbar pattern selector (prev/next/new/rename), F4 new, +/− switch; Patterns menu clone/delete. | `limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo` |
+| SEQ-019 | Audio clip channels | P1 |  | VERIFIED | A sample dropped on the Playlist adds a sampler channel (one-shot off) that the audio clip plays; dropping the same sample again reuses it.<br>*LimeShot uses its sampler for these channels instead of a separate Audio Clip generator.* | `limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it` |
 
 ## Piano Roll
 
@@ -110,6 +114,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-023 | Glue / slice notes | P2 |  | NOT_STARTED | Commands to glue touching notes and slice at a time. | — |
 | PR-024 | Resize from the left edge | P2 |  | NOT_STARTED | Drag left edge to change start and length. | — |
 | PR-025 | Waveform helper background | P3 |  | NOT_STARTED | Show a sample waveform behind the grid. | — |
+| PR-026 | New notes take the last note's length | P1 |  | VERIFIED | Identical: first note two steps, then the length of the last drawn or resized note. | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes` |
 
 ## Playlist
 
@@ -141,6 +146,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-024 | Clip offset (start inside pattern) | P2 |  | IN_PROGRESS | Model and sequencer support `offset`; no UI to set it yet. | — |
 | PL-025 | Pattern picker | P1 |  | VERIFIED | Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern. | `limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |
+| PL-027 | Picker lists audio and automation clips | P1 |  | IN_PROGRESS | Patterns and automation clips are listed and can be picked to place; audio clips are placed by dropping samples. | — |
+| PL-028 | Automation STEP / SLIDE display options | P3 |  | RESEARCHED | Not started; research first.<br>*UNKNOWN: what STEP and SLIDE change.* | — |
 
 ## Mixer
 
@@ -179,6 +186,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | INS-010 | Instrument presets | P2 |  | NOT_STARTED | Preset files for sampler/synth parameters. | — |
 | INS-011 | Per-channel polyphony limit / mono / porta | P2 |  | NOT_STARTED | Max voices, mono mode, glide. | — |
 | INS-012 | Drum synthesizer | P3 |  | NOT_STARTED | — | — |
+| INS-013 | LimeSynth filter modes and key tracking | P2 |  | NOT_STARTED | Planned (after INS-006). | — |
+| INS-014 | Sampler volume envelope | P2 |  | NOT_STARTED | Planned: the sampler has a release only. | — |
 
 ## Effects
 
@@ -213,6 +222,10 @@ automated tests or recorded manual verification. Everything else is not done.
 | AUT-007 | LFO / formula / peak controllers | P3 |  | NOT_STARTED | Planned. | — |
 | AUT-008 | Tempo automation | P2 |  | NOT_STARTED | Planned: the engine timeline assumes one tempo; tempo automation needs a tempo map. | — |
 | AUT-009 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned (after plugin hosting). | — |
+| AUT-010 | Automation clip channels in the Channel Rack | P2 |  | NOT_STARTED | Planned. Automations are listed in the Playlist picker instead. | — |
+| AUT-011 | Init song with this position | P3 |  | NOT_STARTED | Planned. | — |
+| AUT-012 | Automation point modes | P2 |  | NOT_STARTED | Planned: LimeShot has single-curve tension only (AUT-002). | — |
+| AUT-013 | Automated controls follow their automation | P2 |  | NOT_STARTED | Planned: the engine applies automation but the UI shows the set value. | — |
 
 ## Recording
 
@@ -274,6 +287,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-010 | Export ranges (time selection, loop) | P2 |  | NOT_STARTED | — | — |
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
 | EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
+| EXP-013 | Wrap the tail into the loop | P3 |  | NOT_STARTED | Planned. | — |
 
 ## Transport & Time
 
@@ -319,6 +333,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | UI-007 | Detachable windows (multi-monitor) | P2 |  | VERIFIED | Any editor window can be detached into its own OS window (egui viewport) from its title bar and re-attached; shortcuts work inside detached windows. `limeshot --detach=mixer` opens one detached at start.<br>*Detached state and positions are not persisted.* | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking (embedded fallback)`<br>`manual: limeshot --demo --detach=mixer --show=piano on macOS 26 — a second OS window 'Mixer — LimeShot' appeared and was captured (docs/screenshots/live-mixer-detached.png)` |
 | UI-008 | Offscreen UI rendering for review/regression | P1 |  | VERIFIED | `cargo run -p limeshot-app --example ui_shot -- out.png` renders the window with wgpu offscreen. | `cargo run -p limeshot-app --example ui_shot (docs/screenshots/*.png)` |
 | UI-009 | Channel Settings window | P1 |  | VERIFIED | Clicking a channel button in the Channel Rack toggles the Channel Settings window for that channel (sampler or LimeSynth parameters, root key, routing).<br>*Was a docked Inspector in session 2 (D19, superseded by D24).* | `limeshot-app tests/ui.rs::clicking_a_channel_button_toggles_its_settings_window`<br>`limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
+| UI-010 | Control context menu | P1 |  | IN_PROGRESS | Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.<br>*Observed 2026-10-20 (session 4) on a Channel Rack pan knob.* | — |
+| UI-011 | Customizable keyboard shortcuts | P2 |  | NOT_STARTED | Planned: a shortcuts page in the settings that rebinds the actions in keybindings.json, stored in settings.json, with conflict detection. Today the bindings are fixed and listed in Help › Keyboard shortcuts (F1). | — |
 
 ## Platform
 

@@ -6,12 +6,16 @@
    painting). Next: Playlist clip resize from the left edge and slip editing, Piano Roll right-click default length,
    Mixer send/route gestures, and Channel Settings layout. Repeat the real-input pass after UI changes (notes in the
    session 4 entry of `progress.md`).
-3. **Mixer:** sidechain inputs for the compressor (MIX-009), pre-fader sends, a gain-reduction meter, and remembering
+3. **Keybindings and settings** (`docs/roadmap/keybindings.json`, `settings.json`): check the INFERRED bindings
+   against the FL manual or the app, add the missing ones that are cheap (Alt+Up/Down channel move, F2 rename, F12,
+   Esc, Ctrl+Q dialog), then a Settings window with pages (APP-025) and remappable shortcuts (UI-011).
+4. **Mixer:** sidechain inputs for the compressor (MIX-009), pre-fader sends, a gain-reduction meter, and remembering
    window layout per project/settings.
-4. **Effects polish:** delay tempo sync, EQ curve display, presets for effects and instruments (FX-014, INS-010).
-5. **Audio clips** (PL-014) with more decoders (INS-008, symphonia), then **automation clips** (AUT-001…003).
-6. **MIDI input** (WF-003, `midir`) and MIDI recording (REC-002); **MIDI file import/export** (PR-020, EXP-012).
-7. **Piano Roll tools:** paint/slice/select tool palette (PR-012), scale highlighting (PR-013), quantize dialog.
-8. **Detachable panels** (UI-007) so the Channel Rack and Piano Roll can be seen together.
-9. **Autosave/recovery** (APP-016); **packaging** (PF-006).
-10. **Plugin hosting** (PLG-*): CLAP first, in an isolated crate.
+5. **Effects polish:** delay tempo sync, EQ curve display, presets for effects and instruments (FX-014, INS-010).
+6. **Audio and automation follow-ups:** more decoders (INS-008, symphonia), clip fades, automated controls moving on
+   screen (AUT-013), point modes (AUT-012), tempo automation (AUT-008), taller tracks or a curve editor for automation.
+7. **MIDI input** (WF-003, `midir`) and MIDI recording (REC-002). Open an exported `.mid` in another program once.
+8. **Piano Roll tools:** paint/slice/select tool palette (PR-012), scale highlighting (PR-013), quantize dialog.
+9. **Detachable panels** (UI-007) so the Channel Rack and Piano Roll can be seen together.
+10. **Packaging** (PF-006).
+11. **Plugin hosting** (PLG-*): CLAP first, in an isolated crate.

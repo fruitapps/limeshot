@@ -124,3 +124,27 @@ once silently edited the project. Standard egui widgets that issue commands go t
 **Why:** observed in FL Studio 2026.1.1 (session 4): right-click on an unlit step lights it, and a drag paints the state
 the first step was switched to. The manual's "right-click turns off" is outdated. LimeShot follows the observed
 behaviour; deleting in the Piano Roll and Playlist stays on right-click, as in FL.
+
+### D27. Audio clips play a sampler channel
+**Why:** FL Studio turns a sample dropped on the Playlist into an Audio Clip channel; reusing LimeShot's sampler as that
+channel gives audio clips volume, pan, pitch, trim and mixer routing without a second playback path. Clip offsets are
+ticks (no time-stretching): a tempo change moves the audio against the grid, as non-stretched clips do in FL.
+
+### D28. Automation runs in Song mode, on the control's own scale
+**Why:** automation clips live on the Playlist, so Pattern mode plays controls at their set values (FL Studio does
+the same for clip automation). Normalising on the control's travel (cube root for faders, log for frequencies) makes a
+straight line between points sound like moving the control. Values are applied every 64 frames from preallocated
+arrays, keeping the audio thread allocation-free; tempo automation needs a tempo map and is deferred (AUT-008).
+
+### D29. Own Standard MIDI File reader/writer
+**Why:** the format is small and public, input must be treated as hostile, and export should match playback exactly
+(it is built from the compiled program, swing included). A dependency would add little.
+
+### D30. An autosave belongs to the session that wrote or recovered it
+**Why:** removing the autosave whenever the project is clean would delete a crashed session's copy at the next start,
+before the user can recover it. A session only removes copies it owns.
+
+### D31. Keybindings and settings are tracked like features
+**Why:** FL Studio's shortcuts and settings are a large, user-facing surface. `keybindings.json` and `settings.json`
+record each one against LimeShot, and `scripts/inventories.py` (run by `features.py check` in CI) fails when a binding
+LimeShot claims is missing from the shortcuts help or a claimed setting is not a real field.

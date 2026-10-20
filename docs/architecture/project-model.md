@@ -10,16 +10,21 @@ Project
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
 │     id, name, color, instrument, volume, pan, muted, solo, mixer_track, root_key, extra{}
 │     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, release_ms, one_shot}
-│                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents}
+│                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
+│                        cutoff_hz, resonance, filter_env, filter_decay_ms, lfo_rate_hz, vibrato_cents, lfo_cutoff}
 │                | Unsupported(raw JSON)    (kept verbatim, silent)
 ├── patterns: [Pattern]
 │     id, name, color, length_steps (None = auto), notes: [Note], extra{}
 │     Note = {id, channel, key, start, length, velocity}   (ticks)
 ├── playlist
 │     tracks: [{name, muted}]
-│     clips:  [{id, source: Pattern(id), track, start, length, offset, muted, extra{}}]
-└── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
-      name, volume (linear, ≤ 2.0), pan, muted, solo, extra{}
+│     clips:  [{id, source, track, start, length, offset, muted, extra{}}]
+│     source = Pattern(id) | Audio(channel id) | Automation(id)
+├── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
+│     name, volume (linear, ≤ 2.0), pan, muted, solo, effects, routes, extra{}
+└── automations: [Automation]      — FL Studio's automation clips
+      id, name, color, target, points: [{tick, value 0–1, tension −1–1}], length, extra{}
+      target = ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index}
 ```
 
 * **Stable ids.** `ChannelId`, `PatternId`, `ClipId` and `NoteId` are `u32`s from one project-wide counter
@@ -33,6 +38,14 @@ Project
 * **Pattern length.** Auto rounds the last note *start* up to whole bars (minimum one bar). Manual is 1–512 steps.
 * **Clip window.** A clip plays its pattern's notes that start in `[offset, offset + length)`, each cut at the clip
   end. Patterns do not loop inside longer clips.
+* **Audio clips** reference a sampler channel (FL Studio's audio-clip channel), so the channel's settings and mixer
+  track apply. The clip plays the channel's sample from `offset` (ticks, converted at the project tempo) for `length`.
+  `AddAudioClip` reuses the channel of an existing audio clip with the same sample. Deleting the channel deletes its
+  clips.
+* **Automation clips** are linked instances of an `Automation`, like pattern clips. Values are normalised on the
+  control's own scale (`Mapping`: linear, logarithmic, or the fader's cube-root travel); a point's tension shapes the
+  segment after it. A target that no longer exists leaves the automation inert, not deleted.
+* **Trimming.** `ResizeClipStart` moves a clip's start while keeping its end; the offset moves with it (never below 0).
 * **Song length** is the end of the last clip rounded up to whole bars.
 
 ## Commands, undo and gestures

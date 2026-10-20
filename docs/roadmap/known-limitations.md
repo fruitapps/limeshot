@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-20 (session 2). Everything here is either not implemented or not verified.
+Current as of 2026-10-20 (session 5). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -11,13 +11,18 @@ Current as of 2026-10-20 (session 2). Everything here is either not implemented 
 ## Audio
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
 * Switching output devices was tested only with the default device.
-* WAV is the only sample format (no MP3/FLAC/OGG/AIFF).
+* WAV is the only sample format (no MP3/FLAC/OGG/AIFF); this includes audio clips.
 * Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). Mixer routing is
   post-fader only; there are no pre-fader sends, no sidechain, no delay tempo sync and no gain-reduction metering.
-* No automation, no tempo changes over time (one project tempo), one project-wide time signature.
+* Automation covers channel volume/pan, mixer volume/pan and effect parameters in Song mode only; no tempo automation
+  (one project tempo), no synth/sampler parameter automation, single-curve segments only. Automated controls do not
+  move on screen. Automation clips are edited in their Playlist clip, whose curve area is small at the default track
+  height.
+* Audio clips are not time-stretched; there are no crossfades or fades on clip edges.
 * Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
   aliasing when pitched far up).
-* LimeSynth: no filter, LFO or modulation; mono/legato and glide are not available.
+* LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
+  glide are not available.
 * The voice pool is fixed at 128 voices; the oldest voice is stolen abruptly (no fade).
 * Integer WAV export is clipped, not dithered. Export is stereo only; there are no stems.
 * The stream error callback logs through `log`, which may take a lock (error path only).
@@ -26,22 +31,23 @@ Current as of 2026-10-20 (session 2). Everything here is either not implemented 
 * Clipboard is app-internal (not the system clipboard). Quantize has no dialog (100% starts only from the UI). Swing is
   global only (no per-channel mix). No tool palette (draw-tool semantics only), no scale highlighting, no chord or arp tools.
 * Piano Roll ghost notes only show other channels in the same pattern.
-* Pattern clips do not loop when longer than their pattern; clip offsets exist in the model but have no UI.
-* No markers, loop regions or time selections; no audio or automation clips; no performance mode.
-* No MIDI devices, MIDI recording or MIDI files.
+* Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
+* No markers, loop regions or time selections; no performance mode.
+* No MIDI devices or MIDI recording. MIDI files: notes, tempo and time signature only; exported files were only read
+  back by LimeShot's own reader.
 * There is no confirmation when deleting a channel or pattern (undo restores it).
 
 ## Project and app
-* No templates, autosave or crash recovery. Recent files have no Alt+number shortcuts.
+* No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
+  (`docs/roadmap/keybindings.json`); settings are spread over menus and dialogs (`docs/roadmap/settings.json`).
+* One autosave slot per user: two LimeShot instances share it.
 * `.flp` files cannot be imported.
 * No plugin hosting.
 * Window positions, sizes and detached/maximised states are not remembered between sessions.
 * Accessibility: custom-painted editors expose no accessibility labels.
 
 ## Research
-* FL Studio's main window was captured live (session 2), but it could not be operated: Accessibility is not granted,
-  so REA's `observe-native-ui` refuses and synthetic clicks are impossible (the modal welcome dialog also blocks
-  opening demo projects). Items marked INFERRED/UNKNOWN in `docs/research/fl-studio-analysis.md` (clip looping, step
-  drag-paint details, default note length) still need confirmation.
-* The live LimeShot GUI was captured on macOS, but not clicked by a person or by synthetic input (same Accessibility
-  restriction). Interactions are covered by the headless `egui_kittest` tests.
+* FL Studio and LimeShot are now driven with synthetic input (Accessibility granted, session 4). Still unobserved in
+  FL: in-clip automation point dragging (synthetic drags did not register), the Playlist's STEP/SLIDE automation
+  options, and many shortcuts marked INFERRED in `docs/roadmap/keybindings.json`.
+* No person has used the GUI yet; synthetic real-input passes are recorded in `docs/development/progress.md`.

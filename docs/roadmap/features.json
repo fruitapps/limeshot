@@ -6561,6 +6561,463 @@
         ]
       },
       "notes": "Was a docked Inspector in session 2 (D19, superseded by D24)."
+    },
+    {
+      "id": "UI-010",
+      "category": "UI",
+      "name": "Control context menu",
+      "description": "Right-click menu on knobs, faders and sliders.",
+      "fl_reference": "Observed: right-click a knob › Reset, Edit events, Init song with this position, Create automation clip, Link to controller, Copy value, Paste value, Type in value…, Set….",
+      "limeshot_behavior": "Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-automation-clip.png"
+        ]
+      },
+      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob."
+    },
+    {
+      "id": "AUT-010",
+      "category": "Automation",
+      "name": "Automation clip channels in the Channel Rack",
+      "description": "Automation clips listed as channels.",
+      "fl_reference": "Observed: Create automation clip adds an automation-clip channel (“808 Kick – Channel panning”) and switches the rack filter to the Automation group.",
+      "limeshot_behavior": "Planned. Automations are listed in the Playlist picker instead.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "AUT-001",
+        "SEQ-012"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-automation-clip.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "AUT-011",
+      "category": "Automation",
+      "name": "Init song with this position",
+      "description": "Set the value a control starts the song with.",
+      "fl_reference": "Control context menu › Init song with this position (observed).",
+      "limeshot_behavior": "Planned.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "AUT-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": ""
+    },
+    {
+      "id": "AUT-012",
+      "category": "Automation",
+      "name": "Automation point modes",
+      "description": "Per-segment curve types.",
+      "fl_reference": "Automation clip points offer modes such as single curve, double curve, hold, stairs, smooth stairs, pulse and wave.",
+      "limeshot_behavior": "Planned: LimeShot has single-curve tension only (AUT-002).",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "AUT-002"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/automation_clips.htm"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "AUT-013",
+      "category": "Automation",
+      "name": "Automated controls follow their automation",
+      "description": "Knobs and faders move during playback.",
+      "fl_reference": "Automated controls display the automated value while the song plays.",
+      "limeshot_behavior": "Planned: the engine applies automation but the UI shows the set value.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "AUT-003"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": ""
+    },
+    {
+      "id": "PL-027",
+      "category": "Playlist",
+      "name": "Picker lists audio and automation clips",
+      "description": "All clip sources in the clip picker.",
+      "fl_reference": "The Playlist picker lists patterns, audio clips and automation clips (automation observed); the header icons filter which types it shows.",
+      "limeshot_behavior": "Patterns and automation clips are listed and can be picked to place; audio clips are placed by dropping samples.",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [
+        "PL-014",
+        "PL-015"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-automation-clip.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PL-028",
+      "category": "Playlist",
+      "name": "Automation STEP / SLIDE display options",
+      "description": "Playlist header options for automation clips.",
+      "fl_reference": "Observed in the Playlist header next to the automation icon: STEP and SLIDE toggles. Their effect has not been observed yet.",
+      "limeshot_behavior": "Not started; research first.",
+      "priority": "P3",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "PL-015"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-automation-clip.png"
+        ]
+      },
+      "notes": "UNKNOWN: what STEP and SLIDE change."
+    },
+    {
+      "id": "SEQ-019",
+      "category": "Channel Rack",
+      "name": "Audio clip channels",
+      "description": "Channels created for audio clips.",
+      "fl_reference": "A sample dropped on the Playlist becomes an Audio Clip channel in the Channel Rack.",
+      "limeshot_behavior": "A sample dropped on the Playlist adds a sampler channel (one-shot off) that the audio clip plays; dropping the same sample again reuses it.",
+      "priority": "P1",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [
+        "PL-014"
+      ],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": "LimeShot uses its sampler for these channels instead of a separate Audio Clip generator."
+    },
+    {
+      "id": "PR-026",
+      "category": "Piano Roll",
+      "name": "New notes take the last note's length",
+      "description": "Default length of drawn notes.",
+      "fl_reference": "Observed: the first note drawn in a new project is two steps long; after a note is resized, new notes take that length.",
+      "limeshot_behavior": "Identical: first note two steps, then the length of the last drawn or resized note.",
+      "priority": "P1",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-note-length.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-023",
+      "category": "Application",
+      "name": "Welcome window",
+      "description": "Start-up window with templates and demos.",
+      "fl_reference": "Observed: a Welcome window on start offers Loop Starter, chord progression, Remix, Record Audio, templates (Default, Empty) and demo projects.",
+      "limeshot_behavior": "Planned (offline parts only: templates, recent files, demo song).",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-015"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-dialog.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "INS-013",
+      "category": "Instruments",
+      "name": "LimeSynth filter modes and key tracking",
+      "description": "More filter options for LimeSynth.",
+      "fl_reference": "FL's synths offer low/high/band-pass filters and keyboard tracking.",
+      "limeshot_behavior": "Planned (after INS-006).",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "INS-006"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": ""
+    },
+    {
+      "id": "INS-014",
+      "category": "Instruments",
+      "name": "Sampler volume envelope",
+      "description": "ADSR for sampler channels.",
+      "fl_reference": "Channel Sampler › Envelope/instrument settings: volume, panning, cutoff, resonance and pitch envelopes with LFOs.",
+      "limeshot_behavior": "Planned: the sampler has a release only.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "INS-002"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-013",
+      "category": "Export",
+      "name": "Wrap the tail into the loop",
+      "description": "Seamless loop export.",
+      "fl_reference": "Export option “Wrap remainder” adds the effect tail to the start of the file.",
+      "limeshot_behavior": "Planned.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "EXP-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/fformats_save_wav.htm"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-024",
+      "category": "Application",
+      "name": "Autosave interval setting",
+      "description": "Choose how often to autosave.",
+      "fl_reference": "FL keeps backups in its Backup folder (observed in the Browser).",
+      "limeshot_behavior": "Options › Autosave: off, 1, 2, 5 (default) or 10 minutes; stored in the settings.",
+      "priority": "P2",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [
+        "APP-016"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-011",
+      "category": "UI",
+      "name": "Customizable keyboard shortcuts",
+      "description": "Rebind shortcuts and save them in the settings.",
+      "fl_reference": "FL Studio's shortcuts are fixed (some MIDI/controller mapping exists); tracked in keybindings.json.",
+      "limeshot_behavior": "Planned: a shortcuts page in the settings that rebinds the actions in keybindings.json, stored in settings.json, with conflict detection. Today the bindings are fixed and listed in Help › Keyboard shortcuts (F1).",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-025"
+      ],
+      "modules": [],
+      "tests": [],
+      "notes": "",
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/keybindings.json",
+          "docs/roadmap/settings.json"
+        ]
+      }
+    },
+    {
+      "id": "APP-025",
+      "category": "Application",
+      "name": "Settings window",
+      "description": "All application settings in one window with pages.",
+      "fl_reference": "Options › Settings: Audio, MIDI, General, File, Project, Info and Debug pages.",
+      "limeshot_behavior": "Audio settings have a dialog; UI scale, autosave and browser folders are set from menus and the Browser. A single window with pages is planned; settings.json tracks every setting.",
+      "priority": "P2",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [
+        "APP-011"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "tests": [],
+      "notes": "",
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/keybindings.json",
+          "docs/roadmap/settings.json"
+        ]
+      }
     }
   ]
 }

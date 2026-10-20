@@ -15,11 +15,12 @@ cargo build --workspace
 cargo run --release -p limeshot-app [-- --demo | path/to/song.lime] [--show=piano --detach=mixer]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
-cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty]
+cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth]
+cargo run -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid      # or import-midi in.mid out.lime
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
-python3 scripts/features.py check        # or `generate` after editing features.json
+python3 scripts/features.py check        # or `generate`; also checks keybindings.json and settings.json
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
 ```
 **Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. On the dev Mac, Screen Recording and
@@ -57,21 +58,26 @@ Preallocate in constructors. Add a test with several block sizes for any schedul
 
 ## Feature tracking
 `docs/roadmap/features.json` is canonical; regenerate `features.md` with `scripts/features.py generate`.
+FL Studio's shortcuts and settings are tracked in `docs/roadmap/keybindings.json` and `settings.json` (same command).
+When adding or changing a shortcut, update `shortcuts.rs`'s help tables and `keybindings.json` together; the check
+fails if a binding LimeShot claims is not in the help list, or a claimed setting is not a real field.
 IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verification) listed in `tests`. Update the status,
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-20, session 4)
+## Current state (2026-10-20, session 5)
 * Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
-  yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done.
+  yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done. Session 5 added audio
+  clips, automation clips, MIDI file import/export, the LimeSynth filter/LFO and autosave/recovery.
 * UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
   decision D24). **FL Studio is the source for UI/UX; ArtCraft only for the broad visual style.**
-* 220 features tracked: 70 verified, 34 implemented, 7 in progress, 106 not started, 1 researched, 2 deferred.
+* 236 features tracked: 86 verified, 34 implemented, 10 in progress, 102 not started, 2 researched, 2 deferred.
+  76 FL shortcuts and 27 FL settings tracked in their own inventories.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 
 ## Immediate next tasks
-See `docs/development/next-steps.md`: run CI on Windows and Linux, more live FL observation, then mixer sidechain,
-effects polish, audio and automation clips.
+See `docs/development/next-steps.md`: run CI on Windows and Linux, more live FL observation, keybindings/settings
+follow-ups, then mixer sidechain and effects polish.
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

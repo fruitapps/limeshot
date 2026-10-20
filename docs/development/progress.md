@@ -114,3 +114,32 @@ Verification: `cargo test --workspace` (101 tests) passes; Clippy (`-D warnings`
 
 Not verified: Windows/Linux (CI results not readable from this machine: `gh` is not installed and the repository is
 private).
+
+## 2026-10-20 — Session 5: expanding the MVP's core
+
+Done (each a commit with tests and feature records):
+1. **Audio clips** (PL-014, BR-010, SEQ-019): samples dropped on the Playlist become an audio-clip channel and a clip;
+   sample-accurate playback from the clip offset, part-way start when playback begins inside a clip, waveform overview,
+   trimming from the left edge for every clip kind, copy/paste of every clip kind.
+2. **Automation clips** (AUT-001…003, PL-015): FL's automation UX was observed live first (§11 of
+   `fl-studio-analysis.md`). Created from control context menus, edited in the clip, applied in Song mode to channel
+   and mixer volume/pan and effect parameters (also in exports).
+3. **MIDI files** (PR-020, EXP-012): own SMF reader/writer, File menu import/export, `limeshot-cli midi` and
+   `import-midi`.
+4. **LimeSynth** filter, filter envelope and LFO (INS-006); Channel Settings label column widened.
+5. **Autosave and crash recovery** (APP-016, APP-024). A test found that a recovered copy was never removed after saving;
+   fixed with explicit ownership (D30).
+6. **Inventories:** 16 new feature records (236 total), plus `keybindings.json` (76 FL shortcuts) and `settings.json`
+   (27 FL settings) checked by `scripts/inventories.py`. The check immediately found Cmd+Q and Home missing from
+   Help › Keyboard shortcuts.
+
+Real-input pass over the live app (`limeshot --demo`, synthetic CoreGraphics input): dragged "Lime Snare" from the
+Browser onto Track 6 (audio clip and channel created, song grew to 9 bars), played it in Song mode (1 voice, master
+meter), right-clicked the Kick fader › Create automation clip (clip on Track 4, listed in the picker), right-clicked
+the curve to add a point and dragged it. The Mixer was opaque (session 4's fix).
+
+Verification: `cargo test --workspace` (123 tests) passes; Clippy (`-D warnings`), `cargo fmt --check` and
+`scripts/features.py check` are clean. `limeshot-cli midi` → `import-midi` round-trips the demo (130 notes).
+
+Not verified: Windows/Linux (CI results still unread), exported MIDI in a third-party program, automation editing by a
+person (the curve area is small at the default track height).
