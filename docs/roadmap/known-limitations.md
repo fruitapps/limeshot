@@ -12,8 +12,8 @@ Current as of 2026-10-20 (session 2). Everything here is either not implemented 
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
 * Switching output devices was tested only with the default device.
 * WAV is the only sample format (no MP3/FLAC/OGG/AIFF).
-* Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). There are no sends, no
-  insert-to-insert routing, no sidechain, no delay tempo sync, and no gain-reduction metering.
+* Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). Mixer routing is
+  post-fader only; there are no pre-fader sends, no sidechain, no delay tempo sync and no gain-reduction metering.
 * No automation, no tempo changes over time (one project tempo), one project-wide time signature.
 * Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
   aliasing when pitched far up).

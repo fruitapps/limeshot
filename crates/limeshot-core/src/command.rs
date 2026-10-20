@@ -217,6 +217,13 @@ pub enum Command {
         track: u16,
         solo: bool,
     },
+    /// Route mixer track `from` to `to` at `level` (linear), update an existing route's level,
+    /// or (with `None`) remove the route. Routes that would create a feedback loop are refused.
+    SetRoute {
+        from: u16,
+        to: u16,
+        level: Option<f32>,
+    },
     /// Append an effect to a mixer track's insert chain (returns the effect id).
     AddEffect {
         track: u16,
@@ -340,6 +347,8 @@ impl Command {
             SetMixerPan { .. } => "Mixer pan",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
+            SetRoute { level: None, .. } => "Remove route",
+            SetRoute { .. } => "Route mixer track",
             AddEffect { .. } => "Add effect",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
@@ -355,6 +364,11 @@ impl Command {
         use Command::*;
         Some(match self {
             SetTempo(_) => "tempo".into(),
+            SetRoute {
+                from,
+                to,
+                level: Some(_),
+            } => format!("route{from}:{to}"),
             SetEffectParam {
                 track, effect, index, ..
             } => format!("fx{track}:{effect}:{index}"),
@@ -726,6 +740,28 @@ impl Command {
             SetMixerPan { track, pan } => mixer_track(p, track)?.pan = finite(pan)?.clamp(-1.0, 1.0),
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
+            SetRoute { from, to, level } => {
+                if usize::from(to) >= p.mixer.tracks.len() {
+                    return Err(CommandError::NoMixerTrack(to));
+                }
+                mixer_track(p, from)?;
+                match level {
+                    None => mixer_track(p, from)?.routes.retain(|r| r.to != to),
+                    Some(level) => {
+                        let level = finite(level)?.clamp(0.0, 2.0);
+                        if let Some(r) = mixer_track(p, from)?.routes.iter_mut().find(|r| r.to == to) {
+                            r.level = level;
+                        } else {
+                            if p.mixer.would_cycle(from, to) {
+                                return Err(CommandError::Invalid(format!(
+                                    "routing mixer track {from} to {to} would create a feedback loop"
+                                )));
+                            }
+                            mixer_track(p, from)?.routes.push(Route { to, level });
+                        }
+                    }
+                }
+            }
             AddEffect { track, kind } => {
                 if mixer_track(p, track)?.effects.len() >= crate::effects::MAX_EFFECTS {
                     return Err(CommandError::Invalid(format!(

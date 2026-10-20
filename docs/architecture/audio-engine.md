@@ -103,7 +103,11 @@ Per voice: `sample × envelope × velocity × instrument gain × channel volume 
 of `channel.mixer_track` (0 = master). Muted or non-soloed channels keep running silently, so unmuting is seamless;
 previews always sound.
 
-Per insert (1…n): `× volume × pan_gains(pan)` when audible, peak-metered, summed into the master. Master:
+Per insert, in `snapshot.mix_order` (a topological order from `Mixer::processing_order`: every track before the
+tracks it routes to): insert effects, then `× volume × pan_gains(pan)` when audible, peak-metered, then added into each
+destination of its routes at the route's level (post-fader; the master by default, other inserts as buses, several at
+once for parallel processing). Routing cycles cannot exist: `SetRoute` refuses them and `Project::sanitize` drops them
+from files. Master:
 `× volume × pan_gains(pan)`, peak-metered, written to the output. A master peak above 1.0 sets the clip flag.
 
 Pan law (`limeshot_dsp::pan_gains`): balance. `L = min(1, 1 − p)`, `R = min(1, 1 + p)`. Centre is unity, the far side
@@ -134,7 +138,7 @@ reused), `Msg::ClearEffects` retires every processor first. Restarting the strea
 Offline export builds all processors directly (`fx::build_all`) and keeps rendering the tail while the output is above
 −80 dBFS (`Renderer::is_ringing`), up to `max_tail_secs`.
 
-Sends and insert-to-insert routing are not implemented.
+Routing is post-fader only; there are no pre-fader sends or sidechain inputs yet.
 
 ## Device output
 

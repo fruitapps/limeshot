@@ -29,6 +29,13 @@ fn main() {
         app.show_window(Win::Mixer);
     }
     if args.iter().any(|a| a == "--fx") {
+        // Show routing too: the lead also feeds insert 6 as a parallel bus.
+        app.exec(limeshot_core::Command::SetRoute {
+            from: 4,
+            to: 6,
+            level: Some(0.6),
+        });
+        app.doc.mark_saved();
         app.ui.mixer.selected = 4;
         app.show_window(Win::Mixer);
     }

@@ -92,6 +92,8 @@ pub struct MixerTrackState {
     pub audible: bool,
     /// Insert chain in processing order. The engine keys processors by `id`.
     pub effects: Vec<EffectState>,
+    /// Post-fader outputs: (destination track, linear level). Empty for the master.
+    pub routes: Vec<(usize, f32)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,6 +112,9 @@ pub struct Snapshot {
     pub channels: Vec<ChannelState>,
     /// Index 0 is the master.
     pub mixer: Vec<MixerTrackState>,
+    /// Insert tracks in processing order (sources before the tracks they route to); the master
+    /// is processed after all of them.
+    pub mix_order: Vec<usize>,
     pub pattern: Program,
     pub song: Program,
 }
@@ -125,7 +130,9 @@ impl Default for Snapshot {
                 pan: 0.0,
                 audible: true,
                 effects: Vec::new(),
+                routes: Vec::new(),
             }],
+            mix_order: Vec::new(),
             pattern: Program::default(),
             song: Program::default(),
         }
@@ -234,6 +241,11 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                     params: e.params.clone(),
                 })
                 .collect(),
+            routes: if i == 0 {
+                Vec::new()
+            } else {
+                t.routes.iter().map(|r| (usize::from(r.to), r.level)).collect()
+            },
         })
         .collect::<Vec<_>>();
 
@@ -310,6 +322,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         } else {
             mixer
         },
+        mix_order: project.mixer.processing_order(),
         pattern: pattern_program,
         song,
     }

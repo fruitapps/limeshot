@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 105, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 71, DEFERRED 2
+- By status: NOT_STARTED 103, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 73, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -18,7 +18,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Channel Rack | 18 | 10 | 2 | 0 | 6 |
 | Piano Roll | 25 | 5 | 8 | 0 | 12 |
 | Playlist | 26 | 10 | 5 | 1 | 10 |
-| Mixer | 16 | 5 | 2 | 1 | 8 |
+| Mixer | 16 | 7 | 2 | 1 | 6 |
 | Instruments | 12 | 5 | 0 | 0 | 7 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 9 | 0 | 0 | 0 | 9 |
@@ -153,12 +153,12 @@ automated tests or recorded manual verification. Everything else is not done.
 | MIX-005 | Level meters and clip indicator | P0 | ✓ | IMPLEMENTED | Stereo peak meters (−60…+6 dB, 20 dB/s fall-back) per strip and in the toolbar; master clip LED.<br>*Peak values come from the engine (tested); meter drawing is manual-tested.* | — |
 | MIX-006 | Rename and add mixer tracks | P1 |  | IMPLEMENTED | Double-click name to rename; + adds a track. | — |
 | MIX-007 | Insert effect slots | P1 |  | VERIFIED | Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips.<br>*Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects.* | `limeshot-core effects::tests`<br>`limeshot-core document::tests::effect_chain_commands`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed` |
-| MIX-008 | Sends between tracks | P1 |  | NOT_STARTED | Post-fader sends to other inserts with feedback prevention. | — |
+| MIX-008 | Routing and sends between tracks | P1 |  | VERIFIED | Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent.<br>*Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency).* | `limeshot-core document::tests::routing_refuses_feedback_and_orders_tracks`<br>`limeshot-core document::tests::sanitize_breaks_routing_loops_from_files`<br>`limeshot-engine tests/audio.rs::mixer_routes_through_buses`<br>`limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track` |
 | MIX-009 | Sidechain routing | P2 |  | NOT_STARTED | Sidechain inputs for dynamics. | — |
 | MIX-010 | Built-in 3-band EQ | P1 |  | NOT_STARTED | Per-track 3-band parametric EQ.<br>*Available as the Lime EQ insert effect (FX-002); not built into every strip.* | — |
 | MIX-011 | Stereo separation, phase invert, swap L/R | P2 |  | IN_PROGRESS | Width and polarity are available through the Utility insert (FX-013); no per-strip controls or L/R swap. | — |
 | MIX-012 | Plugin delay compensation | P2 |  | NOT_STARTED | Latency reported by effects aligned across paths. | — |
-| MIX-013 | Insert-to-insert routing | P1 |  | NOT_STARTED | Insert output target other than master. | — |
+| MIX-013 | Insert-to-insert routing | P1 |  | VERIFIED | Covered by MIX-008: an insert can route to another insert instead of (or as well as) the master; inserts are processed in dependency order. | `limeshot-engine tests/audio.rs::mixer_routes_through_buses` |
 | MIX-014 | Current track (C) | P3 |  | NOT_STARTED | — | — |
 | MIX-015 | Mixer presets / track states | P3 |  | NOT_STARTED | — | — |
 | MIX-016 | External audio I/O per track | P2 |  | NOT_STARTED | Per-track device inputs/outputs. | — |

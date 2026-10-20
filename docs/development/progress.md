@@ -82,3 +82,7 @@ Found and fixed: viewing the Mixer committed a "Mixer volume" edit (egui slider 
 Verification: 95 tests pass; Clippy and fmt clean. Offscreen renders reviewed. The live app was started with
 `--demo --detach=mixer --show=piano`: a second OS window "Mixer — LimeShot" appeared, and both windows were captured
 (`docs/screenshots/live-macos.png`, `live-mixer-detached.png`).
+
+Then: **mixer routing** (MIX-008/013) — `Route`s on mixer tracks (inserts → master by default), `SetRoute` with feedback
+refusal, topological mixing order in the snapshot, FL-style route buttons and send knobs on strips, an Output section
+in the track panel. 99 tests pass.

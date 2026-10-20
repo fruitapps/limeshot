@@ -2850,20 +2850,30 @@
     {
       "id": "MIX-008",
       "category": "Mixer",
-      "name": "Sends between tracks",
+      "name": "Routing and sends between tracks",
       "description": "Bus routing.",
       "fl_reference": "Send switches/levels.",
-      "limeshot_behavior": "Post-fader sends to other inserts with feedback prevention.",
+      "limeshot_behavior": "Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::routing_refuses_feedback_and_orders_tracks",
+        "limeshot-core document::tests::sanitize_breaks_routing_loops_from_files",
+        "limeshot-engine tests/audio.rs::mixer_routes_through_buses",
+        "limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2871,7 +2881,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency)."
     },
     {
       "id": "MIX-009",
@@ -2992,19 +3002,24 @@
       "name": "Insert-to-insert routing",
       "description": "Route inserts to buses.",
       "fl_reference": "Route to this track only.",
-      "limeshot_behavior": "Insert output target other than master.",
+      "limeshot_behavior": "Covered by MIX-008: an insert can route to another insert instead of (or as well as) the master; inserts are processed in dependency order.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "MIX-008"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-engine"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::mixer_routes_through_buses"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",

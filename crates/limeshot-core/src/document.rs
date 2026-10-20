@@ -537,6 +537,79 @@ mod tests {
     }
 
     #[test]
+    fn routing_refuses_feedback_and_orders_tracks() {
+        let (mut d, _, _) = doc_with_channel();
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 0, level: 1.0 }]);
+        assert!(d.project().mixer.tracks[0].routes.is_empty());
+        // 1 → 2 (a bus), 2 → master already.
+        d.execute(Command::SetRoute {
+            from: 1,
+            to: 2,
+            level: Some(0.5),
+        })
+        .unwrap();
+        d.execute(Command::SetRoute {
+            from: 1,
+            to: 0,
+            level: None,
+        })
+        .unwrap();
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 2, level: 0.5 }]);
+        assert!(
+            d.execute(Command::SetRoute {
+                from: 2,
+                to: 1,
+                level: Some(1.0)
+            })
+            .is_err(),
+            "2 → 1 would loop"
+        );
+        assert!(
+            d.execute(Command::SetRoute {
+                from: 3,
+                to: 3,
+                level: Some(1.0)
+            })
+            .is_err(),
+            "self"
+        );
+        assert!(
+            d.execute(Command::SetRoute {
+                from: 0,
+                to: 3,
+                level: Some(1.0)
+            })
+            .is_err(),
+            "master has no routes"
+        );
+        d.execute(Command::SetRoute {
+            from: 3,
+            to: 1,
+            level: Some(1.0),
+        })
+        .unwrap();
+        let order = d.project().mixer.processing_order();
+        let pos = |t| order.iter().position(|x| *x == t).unwrap();
+        assert!(pos(3) < pos(1) && pos(1) < pos(2), "{order:?}");
+        assert_eq!(order.len(), d.project().mixer.tracks.len() - 1);
+    }
+
+    #[test]
+    fn sanitize_breaks_routing_loops_from_files() {
+        let mut p = Project::new();
+        p.mixer.tracks[1].routes = vec![Route { to: 2, level: 1.0 }];
+        p.mixer.tracks[2].routes = vec![Route { to: 1, level: 1.0 }, Route { to: 99, level: 1.0 }];
+        p.mixer.tracks[0].routes = vec![Route { to: 3, level: 1.0 }];
+        p.sanitize();
+        assert!(p.mixer.tracks[0].routes.is_empty());
+        assert_eq!(p.mixer.tracks[1].routes.len(), 1);
+        assert!(
+            p.mixer.tracks[2].routes.is_empty(),
+            "the loop-closing and out-of-range routes are dropped"
+        );
+    }
+
+    #[test]
     fn removing_channel_removes_its_notes() {
         let (mut d, ch, pat) = doc_with_channel();
         d.execute(Command::SetStep {

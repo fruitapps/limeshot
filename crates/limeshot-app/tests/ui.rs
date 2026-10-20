@@ -396,3 +396,36 @@ fn opening_windows_does_not_modify_the_project() {
         h.state().doc.history()
     );
 }
+
+#[test]
+fn mixer_route_buttons_route_the_selected_track() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 1;
+    for _ in 0..3 {
+        h.step();
+    }
+    let button = |h: &Harness<'static, LimeShotApp>, strip: u16| {
+        h.state()
+            .ui
+            .mixer
+            .route_buttons
+            .iter()
+            .find(|(s, _)| *s == strip)
+            .map(|(_, r)| r.center())
+            .expect("route button")
+    };
+    let p = button(&h, 6);
+    click(&mut h, p, PointerButton::Primary);
+    let routes = h.state().project().mixer.tracks[1].routes.clone();
+    assert!(routes.iter().any(|r| r.to == 6), "{routes:?}");
+    // Selecting the bus: the kick's strip button is blocked (it would loop) and clicking does nothing.
+    h.state_mut().ui.mixer.selected = 6;
+    h.step();
+    h.step();
+    let p = button(&h, 1);
+    click(&mut h, p, PointerButton::Primary);
+    assert!(h.state().project().mixer.tracks[6].routes.iter().all(|r| r.to != 1));
+}

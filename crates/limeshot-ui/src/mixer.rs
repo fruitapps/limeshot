@@ -15,9 +15,12 @@ const STRIP_W: f32 = 68.0;
 #[derive(Default)]
 pub struct State {
     pub selected: u16,
+    /// Route buttons drawn in the last frame: (strip, rectangle). For tests and tools.
+    pub route_buttons: Vec<(u16, Rect)>,
 }
 
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    app.ui.mixer.route_buttons.clear();
     let n = app.project().mixer.tracks.len();
     if app.meter_hold.len() != n {
         app.meter_hold = vec![(0.0, 0.0); n];
@@ -212,7 +215,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     });
     let cmd = r.changed().then_some(Command::SetMixerPan { track: i, pan });
     app.exec_gesture(&r, cmd);
-    let fader_h = (ui.available_height() - 58.0).max(80.0);
+    let fader_h = (ui.available_height() - 86.0).max(80.0);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         ui.add_space(4.0);
@@ -274,6 +277,92 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
             }
         }
     });
+    route_button(app, ui, i);
+}
+
+/// FL Studio's routing control at the bottom of each strip: with a track selected, every other
+/// strip shows whether the selected track sends to it. Click to route/unroute; drag the knob for
+/// the send level.
+fn route_button(app: &mut LimeShotApp, ui: &mut Ui, i: u16) {
+    let t = Theme::current();
+    let sel = app.ui.mixer.selected;
+    let (r, _) = ui.allocate_exact_size(vec2(STRIP_W - 12.0, 22.0), Sense::hover());
+    if sel == i || sel == 0 {
+        return;
+    }
+    let route = app
+        .project()
+        .mixer
+        .tracks
+        .get(usize::from(sel))
+        .and_then(|s| s.routes.iter().find(|x| x.to == i).copied());
+    let blocked = route.is_none() && app.project().mixer.would_cycle(sel, i);
+    let btn = Rect::from_min_size(r.min, vec2(22.0, 22.0));
+    app.ui.mixer.route_buttons.push((i, btn));
+    let resp = ui.interact(
+        btn,
+        ui.id().with(("route", i)),
+        if blocked { Sense::hover() } else { Sense::click() },
+    );
+    let fill = if route.is_some() {
+        t.accent
+    } else if resp.hovered() && !blocked {
+        t.raised_hover
+    } else {
+        t.raised
+    };
+    ui.painter().rect_filled(btn, CornerRadius::same(t.radius_sm), fill);
+    // A small "send" arrow pointing up into this strip.
+    let c = btn.center();
+    let col = if route.is_some() {
+        t.text_on_accent
+    } else if blocked {
+        t.text_faint
+    } else {
+        t.text_dim
+    };
+    ui.painter().add(egui::Shape::convex_polygon(
+        vec![c + vec2(-5.0, 2.0), c + vec2(5.0, 2.0), c + vec2(0.0, -5.0)],
+        col,
+        Stroke::NONE,
+    ));
+    ui.painter()
+        .line_segment([c + vec2(0.0, 2.0), c + vec2(0.0, 6.0)], Stroke::new(2.0, col));
+    let from_name = app
+        .project()
+        .mixer
+        .tracks
+        .get(usize::from(sel))
+        .map(|x| x.name.clone())
+        .unwrap_or_default();
+    let tip = if blocked {
+        format!("{from_name} cannot route here: it would create a feedback loop")
+    } else if route.is_some() {
+        format!("{from_name} sends here — click to remove the route")
+    } else {
+        format!("Route {from_name} to this track")
+    };
+    if resp.on_hover_text(tip).clicked() {
+        app.exec(Command::SetRoute {
+            from: sel,
+            to: i,
+            level: if route.is_some() { None } else { Some(1.0) },
+        });
+    }
+    if let Some(route) = route {
+        let mut level = route.level;
+        let mut kui = ui
+            .new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(r.min + vec2(28.0, 0.0), vec2(26.0, 22.0))));
+        let k = knob(&mut kui, &mut level, 0.0, 1.0, 1.0, 22.0, false, |v| {
+            format!("Send level {:+.1} dB", limeshot_dsp::gain_to_db(v))
+        });
+        let cmd = k.changed().then_some(Command::SetRoute {
+            from: sel,
+            to: i,
+            level: Some(level),
+        });
+        app.exec_gesture(&k, cmd);
+    }
 }
 
 fn select(app: &mut LimeShotApp, i: u16) {
@@ -334,15 +423,73 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     ui.label(n);
                 });
             }
-            ui.add_space(4.0);
-            ui.label(
-                RichText::new(if i == 0 {
-                    "Output: audio device"
-                } else {
-                    "Output: Master"
-                })
-                .color(t.text_dim),
-            );
+            ui.add_space(8.0);
+            section(ui, "Output");
+            if i == 0 {
+                ui.label(RichText::new("Audio device").color(t.text_dim));
+            } else if track.routes.is_empty() {
+                ui.label(RichText::new("Not routed: this track is silent.").color(t.warning));
+            }
+            for route in &track.routes {
+                let name = app
+                    .project()
+                    .mixer
+                    .tracks
+                    .get(usize::from(route.to))
+                    .map(|x| x.name.clone())
+                    .unwrap_or_default();
+                ui.horizontal(|ui| {
+                    ui.add_sized(
+                        vec2(70.0, 20.0),
+                        egui::Label::new(RichText::new(format!("→ {name}")).color(t.text)),
+                    );
+                    let mut db = limeshot_dsp::gain_to_db(route.level).max(-60.0);
+                    ui.spacing_mut().slider_width = (ui.available_width() - 110.0).max(50.0);
+                    let r = ui.add(egui::Slider::new(&mut db, -60.0..=6.0).fixed_decimals(1).suffix(" dB"));
+                    let level = if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) };
+                    let cmd = crate::widgets::user_changed(&r).then_some(Command::SetRoute {
+                        from: i,
+                        to: route.to,
+                        level: Some(level),
+                    });
+                    app.exec_gesture(&r, cmd);
+                    if ui.small_button("×").on_hover_text("Remove route").clicked() {
+                        app.exec(Command::SetRoute {
+                            from: i,
+                            to: route.to,
+                            level: None,
+                        });
+                    }
+                });
+            }
+            if i != 0 {
+                ui.menu_button("+ Route to…", |ui| {
+                    let targets: Vec<(u16, String, bool)> = app
+                        .project()
+                        .mixer
+                        .tracks
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(j, x)| u16::try_from(j).ok().map(|j| (j, x.name.clone())))
+                        .filter(|(j, _)| *j != i && !track.routes.iter().any(|r| r.to == *j))
+                        .map(|(j, n)| (j, n, !app.project().mixer.would_cycle(i, j)))
+                        .collect();
+                    for (j, n, ok) in targets {
+                        if ui
+                            .add_enabled(ok, egui::Button::new(n))
+                            .on_disabled_hover_text("Would create a feedback loop")
+                            .clicked()
+                        {
+                            app.exec(Command::SetRoute {
+                                from: i,
+                                to: j,
+                                level: Some(1.0),
+                            });
+                            ui.close();
+                        }
+                    }
+                });
+            }
             crate::effects_ui::chain(app, ui, i);
         });
     });

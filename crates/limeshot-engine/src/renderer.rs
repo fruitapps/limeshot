@@ -550,11 +550,15 @@ impl Renderer {
     }
 
     fn mix(&mut self, tracks: usize, frames: usize, out: &mut [f32]) {
-        let (master, inserts) = self.buses.split_at_mut(1);
-        let master = &mut master[0];
-        for (i, bus) in inserts.iter_mut().take(tracks - 1).enumerate() {
-            self.fx.process(i + 1, &mut bus[..2 * frames]);
-            let t = &self.snapshot.mixer[i + 1];
+        // Inserts in routing order: effects, fader and pan in place, then add the result into
+        // every destination (the master by default). Sources come before their destinations.
+        let snapshot = self.snapshot.clone();
+        for &i in &snapshot.mix_order {
+            if i == 0 || i >= tracks {
+                continue;
+            }
+            let Some(t) = snapshot.mixer.get(i) else { continue };
+            self.fx.process(i, &mut self.buses[i][..2 * frames]);
             let (pl, pr) = pan_gains(t.pan);
             let (gl, gr) = if t.audible {
                 (t.gain * pl, t.gain * pr)
@@ -562,16 +566,33 @@ impl Renderer {
                 (0.0, 0.0)
             };
             let mut peak = Peak::default();
-            for f in 0..frames {
-                let l = bus[2 * f] * gl;
-                let r = bus[2 * f + 1] * gr;
-                peak.left = peak.left.max(l.abs());
-                peak.right = peak.right.max(r.abs());
-                master[2 * f] += l;
-                master[2 * f + 1] += r;
+            {
+                let bus = &mut self.buses[i];
+                for f in 0..frames {
+                    bus[2 * f] *= gl;
+                    bus[2 * f + 1] *= gr;
+                    peak.left = peak.left.max(bus[2 * f].abs());
+                    peak.right = peak.right.max(bus[2 * f + 1].abs());
+                }
             }
-            self.peaks[i + 1] = peak;
+            self.peaks[i] = peak;
+            for &(to, level) in &t.routes {
+                if to == i || to >= tracks {
+                    continue;
+                }
+                let (src, dst) = if i < to {
+                    let (a, b) = self.buses.split_at_mut(to);
+                    (&a[i], &mut b[0])
+                } else {
+                    let (a, b) = self.buses.split_at_mut(i);
+                    (&b[0], &mut a[to])
+                };
+                for (d, s) in dst[..2 * frames].iter_mut().zip(&src[..2 * frames]) {
+                    *d += s * level;
+                }
+            }
         }
+        let master = &mut self.buses[0];
         self.fx.process(0, &mut master[..2 * frames]);
         let t = &self.snapshot.mixer[0];
         let (pl, pr) = pan_gains(t.pan);

@@ -346,8 +346,23 @@ pub struct MixerTrack {
     /// Insert effects, processed in order before the fader.
     #[serde(default)]
     pub effects: Vec<crate::effects::EffectSlot>,
+    /// Where this track's (post-fader) output goes. Inserts route to the master by default; the
+    /// master has no routes (it feeds the audio device). FL Studio's mixer routing.
+    #[serde(default = "default_routes")]
+    pub routes: Vec<Route>,
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// A mixer route: send this track's output to mixer track `to` at `level` (linear gain).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Route {
+    pub to: u16,
+    pub level: f32,
+}
+
+fn default_routes() -> Vec<Route> {
+    vec![Route { to: 0, level: 1.0 }]
 }
 
 impl MixerTrack {
@@ -359,6 +374,7 @@ impl MixerTrack {
             muted: false,
             solo: false,
             effects: Vec::new(),
+            routes: default_routes(),
             extra: Extra::new(),
         }
     }
@@ -372,12 +388,68 @@ pub struct Mixer {
 impl Mixer {
     pub const DEFAULT_INSERTS: usize = 16;
     pub const MAX_TRACKS: usize = 128;
+
+    /// Whether routing `from` → `to` would create a feedback loop (or a self/master-out route).
+    pub fn would_cycle(&self, from: u16, to: u16) -> bool {
+        if from == to || from == 0 {
+            return true;
+        }
+        // Is `from` reachable from `to`?
+        let mut stack = vec![to];
+        let mut seen = vec![false; self.tracks.len()];
+        while let Some(t) = stack.pop() {
+            if t == from {
+                return true;
+            }
+            let Some(track) = self.tracks.get(usize::from(t)) else {
+                continue;
+            };
+            if std::mem::replace(&mut seen[usize::from(t)], true) {
+                continue;
+            }
+            stack.extend(track.routes.iter().map(|r| r.to));
+        }
+        false
+    }
+
+    /// Insert tracks in processing order: every track comes before the tracks it routes to.
+    /// The master (0) is not included; it is always processed last. Assumes no cycles
+    /// (guaranteed by `SetRoute` and `Project::sanitize`).
+    pub fn processing_order(&self) -> Vec<usize> {
+        let n = self.tracks.len();
+        let mut indegree = vec![0usize; n];
+        for t in self.tracks.iter().skip(1) {
+            for r in &t.routes {
+                if let Some(d) = indegree.get_mut(usize::from(r.to)) {
+                    *d += 1;
+                }
+            }
+        }
+        let mut ready: Vec<usize> = (1..n).filter(|i| indegree[*i] == 0).collect();
+        ready.reverse();
+        let mut order = Vec::with_capacity(n);
+        while let Some(i) = ready.pop() {
+            order.push(i);
+            for r in &self.tracks[i].routes {
+                let to = usize::from(r.to);
+                if to == 0 || to >= n {
+                    continue;
+                }
+                indegree[to] -= 1;
+                if indegree[to] == 0 {
+                    ready.push(to);
+                }
+            }
+        }
+        order
+    }
 }
 
 impl Default for Mixer {
     fn default() -> Self {
         let mut tracks = vec![MixerTrack {
             volume: 1.0,
+            routes: Vec::new(),
             ..MixerTrack::new("Master")
         }];
         tracks.extend((1..=Self::DEFAULT_INSERTS).map(|i| MixerTrack::new(format!("Insert {i}"))));
@@ -514,6 +586,24 @@ impl Project {
             for e in &mut t.effects {
                 e.sanitize();
                 max_id = max_id.max(e.id);
+            }
+        }
+        // Routing: drop invalid routes, then re-add the rest one by one, skipping any that would
+        // close a feedback loop.
+        let wanted: Vec<Vec<Route>> = self.mixer.tracks.iter().map(|t| t.routes.clone()).collect();
+        for t in &mut self.mixer.tracks {
+            t.routes.clear();
+        }
+        for (from, routes) in wanted.into_iter().enumerate().skip(1) {
+            for r in routes {
+                let Ok(from16) = u16::try_from(from) else { continue };
+                let valid = usize::from(r.to) < tracks
+                    && !self.mixer.tracks[from].routes.iter().any(|x| x.to == r.to)
+                    && !self.mixer.would_cycle(from16, r.to);
+                if valid {
+                    let level = finite(r.level, 1.0).clamp(0.0, 2.0);
+                    self.mixer.tracks[from].routes.push(Route { to: r.to, level });
+                }
             }
         }
         for c in &mut self.channels {

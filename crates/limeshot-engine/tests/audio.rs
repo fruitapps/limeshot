@@ -733,3 +733,70 @@ fn effects_without_processors_are_bypassed() {
     );
     assert!(r.take_retired_effect().is_none());
 }
+
+#[test]
+fn mixer_routes_through_buses() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let peak = |f: &Fixture| {
+        let (a, _) = render(snapshot(f), ExportRange::Pattern, 512, SR);
+        a.iter().fold(0.0f32, |m, v| m.max(v.abs()))
+    };
+    let direct = peak(&f);
+    assert!(direct > 0.5);
+    // Kick (insert 1) → insert 3 at half level instead of the master; insert 3 → master.
+    f.doc
+        .execute(Command::SetMixerVolume { track: 3, volume: 1.0 })
+        .unwrap();
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 3,
+            level: Some(0.5),
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 0,
+            level: None,
+        })
+        .unwrap();
+    assert!((peak(&f) / direct - 0.5).abs() < 1e-4, "through the bus at half level");
+    // Muting the bus silences the kick; the bus's effects process it.
+    f.doc.execute(Command::SetMixerMute { track: 3, muted: true }).unwrap();
+    assert_eq!(peak(&f), 0.0);
+    f.doc.execute(Command::SetMixerMute { track: 3, muted: false }).unwrap();
+    // Parallel routing: the master as well as the bus → 1.5× in total.
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 0,
+            level: Some(1.0),
+        })
+        .unwrap();
+    assert!((peak(&f) / direct - 1.5).abs() < 1e-4);
+    // A track with no routes is silent.
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 0,
+            level: None,
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 3,
+            level: None,
+        })
+        .unwrap();
+    assert_eq!(peak(&f), 0.0);
+}

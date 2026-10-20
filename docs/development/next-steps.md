@@ -6,8 +6,8 @@
    FL Studio's UI and drive it. Then resolve the INFERRED/UNKNOWN items in `fl-studio-analysis.md` (clip looping D14,
    default note length, step drag-paint), and run a real-input pass over the live LimeShot window with the checklist
    in `progress.md`.
-3. **Mixer routing:** sends and insert-to-insert routing (MIX-008, MIX-013), then sidechain (MIX-009) and a
-   compressor gain-reduction meter.
+3. **Mixer:** sidechain inputs for the compressor (MIX-009), pre-fader sends, a gain-reduction meter, and remembering
+   window layout per project/settings.
 4. **Effects polish:** delay tempo sync, EQ curve display, presets for effects and instruments (FX-014, INS-010).
 5. **Audio clips** (PL-014) with more decoders (INS-008, symphonia), then **automation clips** (AUT-001…003).
 6. **MIDI input** (WF-003, `midir`) and MIDI recording (REC-002); **MIDI file import/export** (PR-020, EXP-012).
