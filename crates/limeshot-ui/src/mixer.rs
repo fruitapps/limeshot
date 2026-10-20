@@ -143,6 +143,50 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     if name.double_clicked() {
         app.dialog = Some(crate::dialogs::Dialog::rename_mixer(app, i));
     }
+    // Insert slots (names only; edit them in the Inspector).
+    let labels = crate::effects_ui::strip_labels(&track.effects);
+    let (fx_rect, fx_resp) = ui.allocate_exact_size(vec2(STRIP_W - 12.0, 44.0), Sense::click());
+    ui.painter()
+        .rect_filled(fx_rect, CornerRadius::same(t.radius_sm), t.sunken);
+    for (k, (name, on)) in labels.iter().take(3).enumerate() {
+        let y = fx_rect.top() + 7.0 + k as f32 * 13.0;
+        ui.painter().circle_filled(
+            pos2(fx_rect.left() + 6.0, y),
+            2.5,
+            if *on { t.accent } else { t.text_faint },
+        );
+        ui.painter().text(
+            pos2(fx_rect.left() + 12.0, y),
+            egui::Align2::LEFT_CENTER,
+            elide(name, 7),
+            mono(9.5),
+            if *on { t.text } else { t.text_dim },
+        );
+    }
+    if labels.len() > 3 {
+        ui.painter().text(
+            fx_rect.right_bottom() - vec2(4.0, 2.0),
+            egui::Align2::RIGHT_BOTTOM,
+            format!("+{}", labels.len() - 3),
+            mono(9.0),
+            t.text_dim,
+        );
+    }
+    if labels.is_empty() {
+        ui.painter().text(
+            fx_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "FX",
+            semibold(9.5),
+            t.text_faint,
+        );
+    }
+    if fx_resp
+        .on_hover_text("Insert effects — click to edit in the Inspector")
+        .clicked()
+    {
+        select(app, i);
+    }
     let mut pan = track.pan;
     let r = knob(ui, &mut pan, -1.0, 1.0, 0.0, 30.0, true, |v| {
         if v.abs() < 0.005 {
@@ -249,14 +293,19 @@ pub fn inspector(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.add_space(8.0);
             section(ui, "Level");
             let mut db = limeshot_dsp::gain_to_db(track.volume).max(-60.0);
-            let r = ui.add(egui::Slider::new(&mut db, -60.0..=6.0).suffix(" dB").text("Volume"));
+            let r = ui.add(
+                egui::Slider::new(&mut db, -60.0..=6.0)
+                    .suffix(" dB")
+                    .fixed_decimals(1)
+                    .text("Volume"),
+            );
             let cmd = r.changed().then(|| Command::SetMixerVolume {
                 track: i,
                 volume: if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) },
             });
             app.exec_gesture(&r, cmd);
             let mut pan = track.pan;
-            let r = ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).text("Pan"));
+            let r = ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan"));
             let cmd = r.changed().then_some(Command::SetMixerPan { track: i, pan });
             app.exec_gesture(&r, cmd);
             ui.add_space(8.0);
@@ -281,6 +330,7 @@ pub fn inspector(app: &mut LimeShotApp, ui: &mut Ui) {
                 })
                 .color(t.text_dim),
             );
+            crate::effects_ui::chain(app, ui, i);
         });
     });
 }

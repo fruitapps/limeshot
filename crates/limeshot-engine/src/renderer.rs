@@ -73,6 +73,9 @@ pub struct Renderer {
     start_tick: Tick,
     /// Set when Song mode reached its end without looping.
     finished: bool,
+    fx: crate::fx::FxRack,
+    /// Peak of the last block's output (for detecting when effect tails have died away).
+    last_peak: f32,
 }
 
 impl Renderer {
@@ -98,6 +101,8 @@ impl Renderer {
             timeline: Timeline::new(tempo, sample_rate),
             start_tick: 0,
             finished: false,
+            fx: crate::fx::FxRack::new(),
+            last_peak: 0.0,
         }
     }
 
@@ -114,6 +119,7 @@ impl Renderer {
         let tempo_changed = snapshot.tempo != self.snapshot.tempo;
         let channels = snapshot.channels.len();
         let old = std::mem::replace(&mut self.snapshot, snapshot);
+        self.fx.arrange(&self.snapshot);
         if tempo_changed {
             // Keep the musical position; continue at the new tempo from here.
             let tick = self.timeline.tick_at_sample(self.now);
@@ -512,11 +518,43 @@ impl Renderer {
         }
     }
 
+    /// Take ownership of an effect processor built on the control thread (see [`crate::fx`]). It
+    /// is placed by the next snapshot; call [`Renderer::rearrange`] to place it now.
+    pub fn adopt_effect(&mut self, id: u32, fx: Box<dyn limeshot_dsp::effects::Effect>) {
+        self.fx.adopt(id, fx);
+    }
+
+    /// Drop every effect processor (a different project was opened).
+    pub fn clear_effects(&mut self) {
+        self.fx.clear();
+    }
+
+    /// Re-apply the current snapshot's effect layout (after adopting processors).
+    pub fn rearrange(&mut self) {
+        let snapshot = self.snapshot.clone();
+        self.fx.arrange(&snapshot);
+    }
+
+    /// A processor that is no longer used; the caller drops it off the audio thread.
+    pub fn take_retired_effect(&mut self) -> Option<Box<dyn limeshot_dsp::effects::Effect>> {
+        self.fx.take_retired()
+    }
+
+    pub fn keep_retired_effect(&mut self, fx: Box<dyn limeshot_dsp::effects::Effect>) {
+        self.fx.keep_retired(fx);
+    }
+
+    /// Whether effects may still be producing sound (delay and reverb tails).
+    pub fn is_ringing(&self) -> bool {
+        self.fx.has_effects() && self.last_peak > 1e-4
+    }
+
     fn mix(&mut self, tracks: usize, frames: usize, out: &mut [f32]) {
         let (master, inserts) = self.buses.split_at_mut(1);
         let master = &mut master[0];
         for (i, bus) in inserts.iter_mut().take(tracks - 1).enumerate() {
-            let t = self.snapshot.mixer[i + 1];
+            self.fx.process(i + 1, &mut bus[..2 * frames]);
+            let t = &self.snapshot.mixer[i + 1];
             let (pl, pr) = pan_gains(t.pan);
             let (gl, gr) = if t.audible {
                 (t.gain * pl, t.gain * pr)
@@ -534,7 +572,8 @@ impl Renderer {
             }
             self.peaks[i + 1] = peak;
         }
-        let t = self.snapshot.mixer[0];
+        self.fx.process(0, &mut master[..2 * frames]);
+        let t = &self.snapshot.mixer[0];
         let (pl, pr) = pan_gains(t.pan);
         let (gl, gr) = if t.audible {
             (t.gain * pl, t.gain * pr)
@@ -553,6 +592,7 @@ impl Renderer {
         if peak.left > 1.0 || peak.right > 1.0 {
             self.master_clipped = true;
         }
+        self.last_peak = peak.left.max(peak.right);
         self.peaks[0] = peak;
         out[2 * frames..].fill(0.0);
     }

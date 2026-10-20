@@ -85,11 +85,21 @@ pub struct ChannelState {
     pub root_key: u8,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MixerTrackState {
     pub gain: f32,
     pub pan: f32,
     pub audible: bool,
+    /// Insert chain in processing order. The engine keys processors by `id`.
+    pub effects: Vec<EffectState>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EffectState {
+    pub id: u32,
+    pub kind: limeshot_core::EffectKind,
+    pub enabled: bool,
+    pub params: Vec<f32>,
 }
 
 /// Everything the engine needs to play, immutable once built.
@@ -114,6 +124,7 @@ impl Default for Snapshot {
                 gain: 1.0,
                 pan: 0.0,
                 audible: true,
+                effects: Vec::new(),
             }],
             pattern: Program::default(),
             song: Program::default(),
@@ -213,6 +224,16 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             gain: t.volume,
             pan: t.pan,
             audible: !t.muted && (i == 0 || !any_insert_solo || t.solo),
+            effects: t
+                .effects
+                .iter()
+                .map(|e| EffectState {
+                    id: e.id,
+                    kind: e.kind,
+                    enabled: e.enabled,
+                    params: e.params.clone(),
+                })
+                .collect(),
         })
         .collect::<Vec<_>>();
 

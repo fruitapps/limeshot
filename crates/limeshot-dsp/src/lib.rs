@@ -8,6 +8,7 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod effects;
 pub mod envelope;
 pub mod osc;
 pub mod sample;

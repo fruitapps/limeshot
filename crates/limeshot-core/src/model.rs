@@ -343,6 +343,9 @@ pub struct MixerTrack {
     pub pan: f32,
     pub muted: bool,
     pub solo: bool,
+    /// Insert effects, processed in order before the fader.
+    #[serde(default)]
+    pub effects: Vec<crate::effects::EffectSlot>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -355,6 +358,7 @@ impl MixerTrack {
             pan: 0.0,
             muted: false,
             solo: false,
+            effects: Vec::new(),
             extra: Extra::new(),
         }
     }
@@ -502,11 +506,16 @@ impl Project {
         self.swing = finite(self.swing, 0.0).clamp(0.0, 1.0);
         self.mixer.tracks.truncate(Mixer::MAX_TRACKS);
         let tracks = self.mixer.tracks.len();
+        let mut max_id = 0;
         for t in &mut self.mixer.tracks {
             t.volume = finite(t.volume, 0.8).clamp(0.0, 2.0);
             t.pan = finite(t.pan, 0.0).clamp(-1.0, 1.0);
+            t.effects.truncate(crate::effects::MAX_EFFECTS);
+            for e in &mut t.effects {
+                e.sanitize();
+                max_id = max_id.max(e.id);
+            }
         }
-        let mut max_id = 0;
         for c in &mut self.channels {
             c.volume = finite(c.volume, 0.78).clamp(0.0, 1.25);
             c.pan = finite(c.pan, 0.0).clamp(-1.0, 1.0);

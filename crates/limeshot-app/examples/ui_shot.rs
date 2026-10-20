@@ -27,6 +27,10 @@ fn main() {
     if args.iter().any(|a| a == "--mixer") {
         app.show_tab(limeshot_ui::app::DockTab::Mixer);
     }
+    if args.iter().any(|a| a == "--fx") {
+        app.ui.mixer.selected = 4;
+        app.ui.inspect = limeshot_ui::app::InspectTarget::MixerTrack;
+    }
     if args.iter().any(|a| a == "--settings")
         && let Some(c) = app.project().channels.first().map(|c| c.id)
     {

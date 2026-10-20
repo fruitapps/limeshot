@@ -20,7 +20,7 @@ pub enum ExportRange {
 pub struct RenderSettings {
     pub sample_rate: u32,
     pub range: ExportRange,
-    /// Longest time to let notes ring out after the end, in seconds.
+    /// Longest time to let notes and effect tails ring out after the end, in seconds.
     pub max_tail_secs: f32,
     /// Block size used for rendering (results do not depend on it; tests vary it).
     pub block: usize,
@@ -74,8 +74,12 @@ pub fn render_offline(
         return Err(ExportError::EmptySong);
     }
     let tempo = snapshot.tempo;
-    let mut r = Renderer::new(settings.sample_rate, snapshot);
+    let mut r = Renderer::new(settings.sample_rate, snapshot.clone());
     let sample_rate = r.sample_rate();
+    for (id, fx) in crate::fx::build_all(&snapshot, sample_rate) {
+        r.adopt_effect(id, fx);
+    }
+    r.rearrange();
     r.set_mode(match settings.range {
         ExportRange::Song => PlayMode::Song,
         ExportRange::Pattern => PlayMode::Pattern,
@@ -97,7 +101,7 @@ pub fn render_offline(
     r.pause();
     // The tail: until every voice has finished or the limit is reached.
     let mut tail = 0;
-    while tail < tail_max && r.active_voices() > 0 {
+    while tail < tail_max && (r.active_voices() > 0 || r.is_ringing()) {
         let n = block.min(tail_max - tail);
         r.render(&mut buf[..2 * n]);
         out.extend_from_slice(&buf[..2 * n]);

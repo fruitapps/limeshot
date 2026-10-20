@@ -130,7 +130,12 @@ fn play(project: &Project, o: &Opts) -> Result<(), String> {
     }
     let pattern = project.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
     let snap = Arc::new(limeshot_sequencer::compile(project, pattern, &cache));
-    let mut player = Player::start(&AudioConfig::default(), snap);
+    let mut player = Player::start(&AudioConfig::default(), snap.clone());
+    // Effect processors are built here (control thread) and sent before re-sending the snapshot.
+    for (id, fx) in limeshot_engine::fx::build_all(&snap, player.sample_rate()) {
+        player.send(Msg::Effect(id, fx));
+    }
+    player.send(Msg::Snapshot(snap));
     match player.output_description() {
         Ok(name) => println!("output: {name} at {} Hz", player.sample_rate()),
         Err(e) => println!("no output device ({e}); running the silent clock"),

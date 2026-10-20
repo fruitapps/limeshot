@@ -210,6 +210,56 @@ pub fn build(samples: &Path) -> Result<Document, String> {
     for (t, v) in [(1u16, 0.9f32), (2, 0.7), (3, 0.45), (4, 0.55), (5, 0.7)] {
         run(&mut d, Command::SetMixerVolume { track: t, volume: v })?;
     }
+    // Effects: a room on the lead, a dotted-eighth delay on the clap, a limiter on the master.
+    let room = id(
+        &mut d,
+        Command::AddEffect {
+            track: 4,
+            kind: EffectKind::Reverb,
+        },
+    )?;
+    run(
+        &mut d,
+        Command::SetEffectParam {
+            track: 4,
+            effect: room,
+            index: 4,
+            value: 0.3,
+        },
+    )?;
+    let echo = id(
+        &mut d,
+        Command::AddEffect {
+            track: 2,
+            kind: EffectKind::Delay,
+        },
+    )?;
+    // 3/16 of a beat-length at 124 BPM: 0.75 × 60000/124 ≈ 363 ms.
+    run(
+        &mut d,
+        Command::SetEffectParam {
+            track: 2,
+            effect: echo,
+            index: 0,
+            value: 363.0,
+        },
+    )?;
+    run(
+        &mut d,
+        Command::SetEffectParam {
+            track: 2,
+            effect: echo,
+            index: 4,
+            value: 0.25,
+        },
+    )?;
+    id(
+        &mut d,
+        Command::AddEffect {
+            track: 0,
+            kind: EffectKind::Limiter,
+        },
+    )?;
     for (t, name) in [(1u16, "Kick"), (2, "Clap"), (3, "Hat"), (4, "Lead"), (5, "Bass")] {
         run(
             &mut d,

@@ -1,0 +1,228 @@
+//! Insert effects as project data: which effects sit on a mixer track, in what order, with what
+//! parameter values. The DSP lives in `limeshot-dsp::effects`; this module only describes the
+//! effects (kinds, parameter specs) so the UI, validation and the engine agree.
+
+use serde::{Deserialize, Serialize};
+
+/// The built-in effects. All are original implementations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum EffectKind {
+    /// Gain, stereo width and polarity.
+    Utility,
+    /// Low shelf, peaking mid and high shelf.
+    Eq3,
+    /// Resonant state-variable filter (low-, band- or high-pass).
+    Filter,
+    /// Stereo feedback delay.
+    Delay,
+    /// Algorithmic room reverb.
+    Reverb,
+    /// Feed-forward compressor.
+    Compressor,
+    /// Brick-wall peak limiter.
+    Limiter,
+}
+
+/// One parameter of an effect.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ParamSpec {
+    pub name: &'static str,
+    pub min: f32,
+    pub max: f32,
+    pub default: f32,
+    pub unit: &'static str,
+    /// Display/edit on a logarithmic scale (frequencies, times).
+    pub log: bool,
+    /// Integer choices (e.g. filter mode); `labels` names them.
+    pub labels: &'static [&'static str],
+}
+
+const fn p(name: &'static str, min: f32, max: f32, default: f32, unit: &'static str, log: bool) -> ParamSpec {
+    ParamSpec {
+        name,
+        min,
+        max,
+        default,
+        unit,
+        log,
+        labels: &[],
+    }
+}
+
+const UTILITY: &[ParamSpec] = &[
+    p("Gain", -24.0, 24.0, 0.0, "dB", false),
+    p("Width", 0.0, 2.0, 1.0, "×", false),
+    ParamSpec {
+        name: "Polarity",
+        min: 0.0,
+        max: 1.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &["Normal", "Inverted"],
+    },
+];
+const EQ3: &[ParamSpec] = &[
+    p("Low gain", -18.0, 18.0, 0.0, "dB", false),
+    p("Low freq", 30.0, 600.0, 120.0, "Hz", true),
+    p("Mid gain", -18.0, 18.0, 0.0, "dB", false),
+    p("Mid freq", 200.0, 8000.0, 1000.0, "Hz", true),
+    p("Mid Q", 0.2, 8.0, 0.8, "", true),
+    p("High gain", -18.0, 18.0, 0.0, "dB", false),
+    p("High freq", 1500.0, 16000.0, 6000.0, "Hz", true),
+];
+const FILTER: &[ParamSpec] = &[
+    ParamSpec {
+        name: "Mode",
+        min: 0.0,
+        max: 2.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &["Low-pass", "Band-pass", "High-pass"],
+    },
+    p("Cutoff", 20.0, 20000.0, 2000.0, "Hz", true),
+    p("Resonance", 0.0, 0.95, 0.2, "", false),
+    p("Mix", 0.0, 1.0, 1.0, "", false),
+];
+const DELAY: &[ParamSpec] = &[
+    p("Time", 10.0, 2000.0, 375.0, "ms", true),
+    p("Feedback", 0.0, 0.95, 0.4, "", false),
+    p("Spread", 0.0, 1.0, 0.5, "", false),
+    p("Tone", 500.0, 18000.0, 6000.0, "Hz", true),
+    p("Mix", 0.0, 1.0, 0.3, "", false),
+];
+const REVERB: &[ParamSpec] = &[
+    p("Size", 0.0, 1.0, 0.6, "", false),
+    p("Damping", 0.0, 1.0, 0.4, "", false),
+    p("Pre-delay", 0.0, 120.0, 10.0, "ms", false),
+    p("Width", 0.0, 1.0, 1.0, "", false),
+    p("Mix", 0.0, 1.0, 0.25, "", false),
+];
+const COMPRESSOR: &[ParamSpec] = &[
+    p("Threshold", -60.0, 0.0, -18.0, "dB", false),
+    p("Ratio", 1.0, 20.0, 4.0, ":1", true),
+    p("Attack", 0.1, 200.0, 10.0, "ms", true),
+    p("Release", 10.0, 2000.0, 120.0, "ms", true),
+    p("Makeup", 0.0, 24.0, 0.0, "dB", false),
+];
+const LIMITER: &[ParamSpec] = &[
+    p("Ceiling", -24.0, 0.0, -0.3, "dB", false),
+    p("Release", 5.0, 1000.0, 80.0, "ms", true),
+];
+
+impl EffectKind {
+    pub const ALL: [EffectKind; 7] = [
+        EffectKind::Utility,
+        EffectKind::Eq3,
+        EffectKind::Filter,
+        EffectKind::Delay,
+        EffectKind::Reverb,
+        EffectKind::Compressor,
+        EffectKind::Limiter,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            EffectKind::Utility => "Utility",
+            EffectKind::Eq3 => "Lime EQ",
+            EffectKind::Filter => "Lime Filter",
+            EffectKind::Delay => "Lime Delay",
+            EffectKind::Reverb => "Lime Room",
+            EffectKind::Compressor => "Lime Comp",
+            EffectKind::Limiter => "Lime Limiter",
+        }
+    }
+
+    pub fn params(self) -> &'static [ParamSpec] {
+        match self {
+            EffectKind::Utility => UTILITY,
+            EffectKind::Eq3 => EQ3,
+            EffectKind::Filter => FILTER,
+            EffectKind::Delay => DELAY,
+            EffectKind::Reverb => REVERB,
+            EffectKind::Compressor => COMPRESSOR,
+            EffectKind::Limiter => LIMITER,
+        }
+    }
+
+    pub fn defaults(self) -> Vec<f32> {
+        self.params().iter().map(|p| p.default).collect()
+    }
+}
+
+/// An effect in a mixer track's insert chain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EffectSlot {
+    /// Project-unique id (from the project's id counter); the engine keys processors by it.
+    pub id: u32,
+    pub kind: EffectKind,
+    #[serde(default = "enabled_default")]
+    pub enabled: bool,
+    /// Parameter values in the units of `kind.params()`.
+    pub params: Vec<f32>,
+    #[serde(flatten)]
+    pub extra: crate::Extra,
+}
+
+fn enabled_default() -> bool {
+    true
+}
+
+impl EffectSlot {
+    pub fn new(id: u32, kind: EffectKind) -> Self {
+        Self {
+            id,
+            kind,
+            enabled: true,
+            params: kind.defaults(),
+            extra: crate::Extra::new(),
+        }
+    }
+
+    /// Bring `params` to the right length and clamp every value to its range.
+    pub fn sanitize(&mut self) {
+        let specs = self.kind.params();
+        self.params.resize(specs.len(), 0.0);
+        for (v, s) in self.params.iter_mut().zip(specs) {
+            *v = if v.is_finite() {
+                v.clamp(s.min, s.max)
+            } else {
+                s.default
+            };
+            if !s.labels.is_empty() {
+                *v = v.round();
+            }
+        }
+    }
+}
+
+/// Maximum effects per mixer track (FL Studio has 10 slots).
+pub const MAX_EFFECTS: usize = 10;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults_are_within_ranges() {
+        for k in EffectKind::ALL {
+            for s in k.params() {
+                assert!(s.min <= s.default && s.default <= s.max, "{k:?} {}", s.name);
+                assert!(
+                    !s.log || s.min > 0.0,
+                    "{k:?} {}: log scale needs a positive minimum",
+                    s.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn sanitize_repairs_params() {
+        let mut e = EffectSlot::new(1, EffectKind::Filter);
+        e.params = vec![7.3, f32::NAN];
+        e.sanitize();
+        assert_eq!(e.params, vec![2.0, 2000.0, 0.0, 0.0]);
+    }
+}

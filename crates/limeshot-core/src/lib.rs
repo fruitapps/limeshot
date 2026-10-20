@@ -13,10 +13,12 @@
 
 pub mod command;
 pub mod document;
+pub mod effects;
 pub mod model;
 pub mod time;
 
 pub use command::{Command, CommandError, Created, NewNote};
 pub use document::Document;
+pub use effects::{EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;
 pub use time::{BarBeatTick, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};

@@ -36,11 +36,10 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 const QUEUE: usize = 1024;
-const GARBAGE: usize = 64;
+const GARBAGE: usize = 256;
 const METER_SLOTS: usize = limeshot_core::Mixer::MAX_TRACKS;
 
 /// Control messages for the audio thread.
-#[derive(Debug)]
 pub enum Msg {
     Snapshot(Arc<Snapshot>),
     Play,
@@ -50,9 +49,21 @@ pub enum Msg {
     Mode(PlayMode),
     SongLoop(bool),
     Metronome(bool),
-    NoteOn { channel: u16, key: u8, velocity: f32 },
-    NoteOff { channel: u16, key: u8 },
+    NoteOn {
+        channel: u16,
+        key: u8,
+        velocity: f32,
+    },
+    NoteOff {
+        channel: u16,
+        key: u8,
+    },
     PreviewSample(Arc<SampleData>),
+    /// A processor for insert effect `id`, built on the control thread
+    /// (`limeshot_engine::fx::build`). Send it before the snapshot that uses it.
+    Effect(u32, Box<dyn limeshot_dsp::effects::Effect>),
+    /// Retire all effect processors (a different project was opened).
+    ClearEffects,
     StopPreview,
     Panic,
 }
@@ -125,11 +136,17 @@ impl Status {
     }
 }
 
+/// Objects the audio thread is done with, returned so the control thread frees them.
+enum Garbage {
+    Snapshot(#[allow(dead_code)] Arc<Snapshot>),
+    Effect(#[allow(dead_code)] Box<dyn limeshot_dsp::effects::Effect>),
+}
+
 /// What the audio thread owns.
 struct AudioState {
     renderer: Renderer,
     rx: rtrb::Consumer<Msg>,
-    garbage: rtrb::Producer<Arc<Snapshot>>,
+    garbage: rtrb::Producer<Garbage>,
     status: Arc<Status>,
     buf: Vec<f32>,
 }
@@ -145,7 +162,7 @@ impl AudioState {
                     let old = r.set_snapshot(s);
                     // If the return ring is full the old snapshot is dropped here; it only
                     // happens when the control thread stops collecting.
-                    let _ = self.garbage.push(old);
+                    let _ = self.garbage.push(Garbage::Snapshot(old));
                 }
                 Msg::Play => r.play(),
                 Msg::Stop => r.stop(),
@@ -159,6 +176,15 @@ impl AudioState {
                 Msg::PreviewSample(s) => r.preview_sample(s),
                 Msg::StopPreview => r.stop_sample_preview(),
                 Msg::Panic => r.all_notes_off(),
+                Msg::Effect(id, fx) => r.adopt_effect(id, fx),
+                Msg::ClearEffects => r.clear_effects(),
+            }
+        }
+        // Hand retired effect processors back; keep any the ring cannot take for later.
+        while let Some(fx) = self.renderer.take_retired_effect() {
+            if let Err(rtrb::PushError::Full(Garbage::Effect(fx))) = self.garbage.push(Garbage::Effect(fx)) {
+                self.renderer.keep_retired_effect(fx);
+                break;
             }
         }
     }
@@ -236,7 +262,7 @@ pub enum Output {
 /// The control-thread handle to playback.
 pub struct Player {
     tx: rtrb::Producer<Msg>,
-    garbage: rtrb::Consumer<Arc<Snapshot>>,
+    garbage: rtrb::Consumer<Garbage>,
     status: Arc<Status>,
     output: Output,
     sample_rate: u32,

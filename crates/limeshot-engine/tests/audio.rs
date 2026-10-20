@@ -617,3 +617,119 @@ fn metronome_clicks_on_every_beat() {
         assert!(o.abs_diff(i * 24_000) < 30, "beat {i} at {o}");
     }
 }
+
+#[test]
+fn insert_effects_process_the_track_and_extend_the_tail() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    // A 100 ms, single-echo delay on the drum's insert.
+    let id = f
+        .doc
+        .execute(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Delay,
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    for (index, value) in [(0usize, 100.0f32), (1, 0.0), (3, 18000.0), (4, 0.5)] {
+        f.doc
+            .execute(Command::SetEffectParam {
+                track: 1,
+                effect: id,
+                index,
+                value,
+            })
+            .unwrap();
+    }
+    let (audio, _) = render(snapshot(&f), ExportRange::Pattern, 512, SR);
+    // Dry click at 0, echo at 4800 frames (100 ms at 48 kHz); the mix halves both.
+    let hits: Vec<usize> = audio
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .enumerate()
+        .filter(|(_, x)| x[0].abs() > 0.05)
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(hits.first(), Some(&0));
+    assert!(
+        hits.iter().any(|&i| (4799..=4801).contains(&i)),
+        "echo at 100 ms: {hits:?}"
+    );
+
+    // A reverb on the master keeps the export going after the music ends (hit on the last step).
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 15,
+            on: true,
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::AddEffect {
+            track: 0,
+            kind: EffectKind::Reverb,
+        })
+        .unwrap();
+    let (audio, rep) = render(snapshot(&f), ExportRange::Pattern, 512, SR);
+    assert!(
+        rep.frames > rep.music_frames + SR as usize / 4,
+        "tail rendered: {} > {}",
+        rep.frames,
+        rep.music_frames
+    );
+    let tail = &audio[2 * rep.music_frames..];
+    assert!(tail.iter().any(|x| x.abs() > 1e-3), "reverb tail is audible");
+}
+
+#[test]
+fn effects_without_processors_are_bypassed() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let before = snapshot(&f);
+    f.doc
+        .execute(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Utility,
+        })
+        .unwrap();
+    // Realtime renderer that never received the processor: the chain is skipped, not a crash.
+    let mut r = Renderer::new(SR, before);
+    r.set_snapshot(snapshot(&f));
+    r.play();
+    let mut buf = vec![0.0; 2 * 512];
+    r.render(&mut buf);
+    assert!(buf[0] > 0.5);
+    // Adopting it later and rearranging inserts it.
+    let id = f.doc.project().mixer.tracks[1].effects[0].id;
+    let mut params = EffectKind::Utility.defaults();
+    params[0] = -60.0;
+    r.adopt_effect(id, limeshot_engine::fx::build(EffectKind::Utility, SR, &params));
+    r.rearrange();
+    r.stop();
+    r.play();
+    r.render(&mut buf);
+    // Built at −60 dB, but arranging applies the snapshot's parameters (0 dB).
+    assert!(
+        (buf[0] - 0.78).abs() < 1e-3,
+        "the snapshot's params are applied on arrange: {}",
+        buf[0]
+    );
+    assert!(r.take_retired_effect().is_none());
+}

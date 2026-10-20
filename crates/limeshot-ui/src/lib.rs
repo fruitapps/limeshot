@@ -16,6 +16,7 @@ pub mod app;
 pub mod browser;
 pub mod channel_rack;
 pub mod dialogs;
+pub mod effects_ui;
 pub mod icons;
 pub mod inspector;
 pub mod menus;

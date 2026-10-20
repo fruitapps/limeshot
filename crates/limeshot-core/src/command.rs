@@ -19,6 +19,8 @@ pub enum CommandError {
     NoMixerTrack(u16),
     #[error("no playlist track {0}")]
     NoPlaylistTrack(u32),
+    #[error("no effect {0}")]
+    NoEffect(u32),
     #[error("{0}")]
     Invalid(String),
 }
@@ -215,6 +217,31 @@ pub enum Command {
         track: u16,
         solo: bool,
     },
+    /// Append an effect to a mixer track's insert chain (returns the effect id).
+    AddEffect {
+        track: u16,
+        kind: crate::effects::EffectKind,
+    },
+    RemoveEffect {
+        track: u16,
+        effect: u32,
+    },
+    MoveEffect {
+        track: u16,
+        effect: u32,
+        delta: i32,
+    },
+    SetEffectEnabled {
+        track: u16,
+        effect: u32,
+        enabled: bool,
+    },
+    SetEffectParam {
+        track: u16,
+        effect: u32,
+        index: usize,
+        value: f32,
+    },
 
     /// Several commands applied as one undo step. Stops at the first error.
     Batch(Vec<Command>),
@@ -313,6 +340,11 @@ impl Command {
             SetMixerPan { .. } => "Mixer pan",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
+            AddEffect { .. } => "Add effect",
+            RemoveEffect { .. } => "Remove effect",
+            MoveEffect { .. } => "Move effect",
+            SetEffectEnabled { .. } => "Bypass effect",
+            SetEffectParam { .. } => "Effect parameter",
             Batch(_) => "Edit",
         }
     }
@@ -323,6 +355,9 @@ impl Command {
         use Command::*;
         Some(match self {
             SetTempo(_) => "tempo".into(),
+            SetEffectParam {
+                track, effect, index, ..
+            } => format!("fx{track}:{effect}:{index}"),
             SetSwing(_) => "swing".into(),
             SetChannelVolume { channel, .. } => format!("chvol{}", channel.0),
             SetChannelPan { channel, .. } => format!("chpan{}", channel.0),
@@ -691,6 +726,70 @@ impl Command {
             SetMixerPan { track, pan } => mixer_track(p, track)?.pan = finite(pan)?.clamp(-1.0, 1.0),
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
+            AddEffect { track, kind } => {
+                if mixer_track(p, track)?.effects.len() >= crate::effects::MAX_EFFECTS {
+                    return Err(CommandError::Invalid(format!(
+                        "a mixer track holds at most {} effects",
+                        crate::effects::MAX_EFFECTS
+                    )));
+                }
+                let id = p.alloc_id();
+                mixer_track(p, track)?
+                    .effects
+                    .push(crate::effects::EffectSlot::new(id, kind));
+                return Ok(Created(Some(id)));
+            }
+            RemoveEffect { track, effect } => {
+                let t = mixer_track(p, track)?;
+                let i = t
+                    .effects
+                    .iter()
+                    .position(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?;
+                t.effects.remove(i);
+            }
+            MoveEffect { track, effect, delta } => {
+                let t = mixer_track(p, track)?;
+                let i = t
+                    .effects
+                    .iter()
+                    .position(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?;
+                let j = (i as i64 + i64::from(delta)).clamp(0, t.effects.len() as i64 - 1) as usize;
+                let e = t.effects.remove(i);
+                t.effects.insert(j, e);
+            }
+            SetEffectEnabled { track, effect, enabled } => {
+                let t = mixer_track(p, track)?;
+                t.effects
+                    .iter_mut()
+                    .find(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?
+                    .enabled = enabled;
+            }
+            SetEffectParam {
+                track,
+                effect,
+                index,
+                value,
+            } => {
+                let v = finite(value)?;
+                let t = mixer_track(p, track)?;
+                let e = t
+                    .effects
+                    .iter_mut()
+                    .find(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?;
+                let spec = e
+                    .kind
+                    .params()
+                    .get(index)
+                    .ok_or_else(|| CommandError::Invalid(format!("no parameter {index}")))?;
+                let v = v.clamp(spec.min, spec.max);
+                if let Some(slot) = e.params.get_mut(index) {
+                    *slot = if spec.labels.is_empty() { v } else { v.round() };
+                }
+            }
 
             Batch(cmds) => {
                 let mut last = Created(None);

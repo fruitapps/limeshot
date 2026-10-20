@@ -20,6 +20,8 @@ pub struct Document {
     redo: Vec<(&'static str, Project, u64)>,
     /// Increments on every change (edit, undo, redo, replace).
     revision: u64,
+    /// Increments when the whole project is replaced (new/open); ids may repeat across generations.
+    generation: u64,
     /// Identifies the current content: undoing back to a saved state makes it unmodified again.
     state: u64,
     next_state: u64,
@@ -41,6 +43,7 @@ impl Document {
             undo: Vec::new(),
             redo: Vec::new(),
             revision: 0,
+            generation: 0,
             state: 0,
             next_state: 1,
             saved_state: 0,
@@ -54,6 +57,10 @@ impl Document {
 
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.generation
     }
 
     pub fn is_modified(&self) -> bool {
@@ -73,6 +80,7 @@ impl Document {
     /// Replace the whole project (new/open). Clears the history.
     pub fn replace(&mut self, project: Project) {
         self.project = project;
+        self.generation += 1;
         self.undo.clear();
         self.redo.clear();
         self.revision += 1;
@@ -172,6 +180,7 @@ impl Document {
 mod tests {
     use super::*;
     use crate::command::NewNote;
+    use crate::effects::EffectKind;
     use crate::model::*;
     use crate::time::{STEP_TICKS, Tempo, Tick};
 
@@ -451,6 +460,80 @@ mod tests {
         assert!(d.execute(Command::SetSwing(f32::NAN)).is_err());
         d.undo();
         assert_eq!(d.project().swing, 0.0);
+    }
+
+    #[test]
+    fn effect_chain_commands() {
+        let (mut d, _, _) = doc_with_channel();
+        let a = d
+            .execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Eq3,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        let b = d
+            .execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Reverb,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        d.execute(Command::MoveEffect {
+            track: 1,
+            effect: b,
+            delta: -5,
+        })
+        .unwrap();
+        let ids: Vec<u32> = d.project().mixer.tracks[1].effects.iter().map(|e| e.id).collect();
+        assert_eq!(ids, vec![b, a]);
+        d.execute(Command::SetEffectParam {
+            track: 1,
+            effect: a,
+            index: 0,
+            value: 99.0,
+        })
+        .unwrap();
+        assert_eq!(
+            d.project().mixer.tracks[1].effects[1].params[0],
+            18.0,
+            "clamped to the spec"
+        );
+        assert!(
+            d.execute(Command::SetEffectParam {
+                track: 1,
+                effect: a,
+                index: 40,
+                value: 0.0
+            })
+            .is_err()
+        );
+        d.execute(Command::SetEffectEnabled {
+            track: 1,
+            effect: a,
+            enabled: false,
+        })
+        .unwrap();
+        assert!(!d.project().mixer.tracks[1].effects[1].enabled);
+        d.execute(Command::RemoveEffect { track: 1, effect: b }).unwrap();
+        assert_eq!(d.project().mixer.tracks[1].effects.len(), 1);
+        for _ in 0..crate::effects::MAX_EFFECTS - 1 {
+            d.execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Utility,
+            })
+            .unwrap();
+        }
+        assert!(
+            d.execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Utility
+            })
+            .is_err(),
+            "slot limit"
+        );
     }
 
     #[test]

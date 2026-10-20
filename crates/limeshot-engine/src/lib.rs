@@ -11,6 +11,7 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod export;
+pub mod fx;
 pub mod renderer;
 pub mod voice;
 
