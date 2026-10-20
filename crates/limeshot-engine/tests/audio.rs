@@ -525,7 +525,7 @@ fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
 }
 
 fn sounding_frames(audio: &[f32]) -> usize {
-    audio.chunks_exact(2).take_while(|f| f[0].abs() > 1e-6).count()
+    audio.as_chunks::<2>().0.iter().take_while(|f| f[0].abs() > 1e-6).count()
 }
 
 #[test]

@@ -1,0 +1,146 @@
+# Audio engine
+
+This document describes the code as it is. Source: `crates/limeshot-engine`, `crates/limeshot-audio`, `crates/limeshot-sequencer`.
+
+## Data flow
+
+```
+Project (UI thread) ──compile()──▶ Arc<Snapshot> ──rtrb ring──▶ Renderer (audio thread) ──▶ device
+       ▲                                                          │
+       └────────── commands ◀── UI                old snapshots ◀─┘ (returned, dropped on the UI thread)
+```
+
+1. The UI edits the `Project` only through commands (`limeshot-core`).
+2. When the document revision, the current pattern or a loaded sample changes, `LimeShotApp::sync_engine` calls
+   `limeshot_sequencer::compile`. That produces an immutable `Snapshot`: resolved channel states (instrument, linear gains,
+   `audible` after mute/solo), mixer track states, and two `Program`s (tick-sorted note events plus a loop length):
+   * `pattern`: the current pattern, for Pattern mode,
+   * `song`: every unmuted clip on an unmuted track, flattened to absolute ticks, for Song mode.
+3. The snapshot goes to the audio thread as `Msg::Snapshot(Arc<Snapshot>)` through a bounded lock-free SPSC ring
+   (`rtrb`, 1024 slots). The renderer swaps it in and pushes the old one onto a 64-slot return ring. The UI drains
+   that ring every frame (`Player::collect_garbage`), so large frees never happen on the audio thread.
+
+There is exactly one note representation: the Piano Roll and Channel Rack edit `Pattern::notes`, and the
+sequencer compiles from it.
+
+## Threads and ownership
+
+| Thread | Owns | Talks to others through |
+|---|---|---|
+| UI / control | `Document`, `Player`, `SampleCache`, UI state | sends `Msg` (rtrb); reads `Status` atomics |
+| Audio (cpal callback) | `Renderer`, its voice pool and buses | pops `Msg`; pushes old snapshots; stores atomics |
+| Sample loader | nothing persistent | `std::sync::mpsc` job/result channels (never touched by the audio thread) |
+| Export worker (on demand) | a cloned `Arc<Snapshot>` and its own `Renderer` | `mpsc` result channel |
+| Silent clock (no device) | a `Renderer` | the same rings and atomics as the device callback |
+
+`Status` holds `AtomicU64` position, `AtomicBool` playing/song mode, `AtomicU32` voices and load, and per-track peak
+meters as `f32` bits in `AtomicU32`s. All accesses use `Relaxed`: each value is an independent indicator.
+
+## Real-time rules (enforced by construction)
+
+Inside `Renderer::render` and the cpal callback:
+
+* **No allocation in steady state.** The voice pool (128), mixer buses (128 × 2 × 1024 f32), action list (512) and
+  device scratch buffer are allocated once in `Renderer::new` and `Player::start`. `Vec`s are moved out and back
+  (`mem::take`), never grown.
+* **No locks, no I/O, no logging.** Messages are popped with `try`-style `rtrb` calls; at most 256 per callback.
+* **No large frees.** Replaced snapshots are returned to the UI. Voices hold `Arc<SampleData>` clones, but the
+  `SampleCache` keeps every decoded sample alive for the life of the app, so a voice ending only decrements a counter.
+* **No panics.** Crate roots deny `unwrap`, `expect`, `panic!`, `todo!`, `unimplemented!`. Slice access in the hot loop
+  is bounded by construction, and non-finite output samples are replaced with 0.
+
+Known gap: the cpal error callback uses `log::error!`, which may lock inside `env_logger`. It is only called on stream
+errors, not per buffer.
+
+## Timing
+
+* Musical time is integer **ticks at 960 PPQ** (`limeshot_core::time`). A step (16th note) is 240 ticks.
+* Tempo is stored as milli-BPM (`Tempo(u32)`, 10 000–522 000).
+* `Timeline { origin_tick, origin_sample, tempo, sample_rate }` maps ticks to samples exactly:
+  `sample(t) = origin_sample + ceil((t − origin_tick) · 60 000 · sr / (milli_bpm · 960))`, in `u128`.
+  A note sounds at the **first sample at or after** its exact time. The inverse (`first_tick_at_or_after`) is exact too,
+  so the set of events in a block is decided by absolute sample positions only. That is why onsets do not depend on the
+  block size (test: `block_size_does_not_change_the_output`, blocks of 1, 64, 77, 512, 1000 and 1024 frames give the
+  same output).
+* A tempo change while playing re-anchors the timeline at the current musical position. Scheduled note-offs are
+  recomputed from their stored end ticks (`tempo_change_while_playing_keeps_position`).
+* While stopped, the timeline origin follows the sample clock, so the playhead does not move.
+
+## Scheduling
+
+`Renderer::render(out)` processes up to `MAX_BLOCK` (1024) frames:
+
+1. Clear the buses of the tracks in use.
+2. While frames remain: if playing, `schedule()` finds the end of the current pass (`sample_of_tick(loop_length)`),
+   limits the chunk to it, and collects the note-ons whose ticks fall in `[first_tick(s0), first_tick(chunk_end))`, plus
+   metronome clicks on beat ticks. Each gets a frame offset `sample_of_tick(tick) − s0`.
+3. Voices are rendered between action offsets, and each action starts its voice exactly at its frame.
+4. At the end of a pass: Pattern mode (and Song mode with loop on) re-anchors the timeline at tick 0 and releases
+   gated notes. One-shot samples keep ringing across the loop. Song mode with loop off stops and sets `finished`.
+5. Note-offs: each sequenced voice stores `release_at` (an absolute sample) and is released at that exact frame inside
+   the voice loop.
+
+An empty song still runs one bar so the transport behaves.
+
+## Voices
+
+`Voice` (`voice.rs`) is a source plus an `Envelope`:
+
+* **Sampler**: linear-interpolated playback of interleaved stereo `SampleData`;
+  `step = src_rate / out_rate · 2^((key − root + pitch)/12)`; region `[start, end)` as fractions; reverse plays from
+  the end. Envelope: no attack (the onset lands on the exact sample), release = `release_ms`. One-shot samplers ignore
+  the note length.
+* **LimeSynth**: one or two PolyBLEP oscillators (sine/square/saw/triangle; the second detuned by `detune_cents`), octave
+  offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud.
+* **Click**: metronome blip (1760 Hz downbeat, 1320 Hz other beats, 30 ms decay).
+* **Preview**: a browser sample played once into the master.
+
+Stealing: when all 128 voices are busy, the oldest (lowest serial) is overwritten.
+
+## Mixing
+
+Per voice: `sample × envelope × velocity × instrument gain × channel volume × pan_gains(channel pan)`, added into the bus
+of `channel.mixer_track` (0 = master). Muted or non-soloed channels keep running silently, so unmuting is seamless;
+previews always sound.
+
+Per insert (1…n): `× volume × pan_gains(pan)` when audible, peak-metered, summed into the master. Master:
+`× volume × pan_gains(pan)`, peak-metered, written to the output. A master peak above 1.0 sets the clip flag.
+
+Pan law (`limeshot_dsp::pan_gains`): balance. `L = min(1, 1 − p)`, `R = min(1, 1 + p)`. Centre is unity, the far side
+fades linearly, and panning never boosts.
+
+Solo: if any channel is soloed, only soloed channels are audible. If any insert is soloed, only soloed inserts are
+audible. The master is never solo-muted.
+
+Insert effects, sends and insert-to-insert routing are not implemented. The bus-per-track structure is where they will
+go (effects between "bus filled" and "volume/pan").
+
+## Device output
+
+`limeshot_audio::Player::start(config, snapshot)`:
+
+* opens the configured device (by name) or the default output, the requested sample rate if a supported config range
+  contains it, and a fixed buffer size if within the device's range. Otherwise it uses the device defaults;
+* supports f32, i16, i32 and u16 device formats. Stereo goes to channels 0/1, extra channels get silence, and a mono
+  device gets (L+R)/2. Values are clamped to [−1, 1] before conversion;
+* measures callback time ÷ buffer duration as "load";
+* falls back to a **silent clock** thread (10 ms blocks at 48 kHz) if no device opens, so the UI still works.
+
+Changing settings restarts the stream with the last snapshot and transport flags.
+
+## Offline export
+
+`limeshot_engine::render_offline` builds a fresh `Renderer` with the snapshot. It sets Song (or Pattern) mode, turns
+looping off and renders exactly `sample_of_tick(length)` frames, then the tail until every voice ends (at most 4 s).
+`export_wav` writes 16/24-bit PCM (clipped, no dither) or 32-bit float. It runs on a worker thread from the UI. The same
+renderer as playback means the export tests also check playback scheduling.
+
+## Performance notes
+
+Measured on an Apple M-series laptop (debug and release builds):
+
+* realtime demo playback (5 voices, 512-frame buffers at 48 kHz): about 1% callback load;
+* offline render of the 15.7 s demo (debug build): well under 0.1 s in the test suite.
+
+No profiling-driven optimisation has been done yet. Voices are rendered sample by sample with a per-frame release
+check.
