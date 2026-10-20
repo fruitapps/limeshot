@@ -10,6 +10,7 @@
 
 pub mod effects;
 pub mod envelope;
+pub mod filter;
 pub mod osc;
 pub mod sample;
 

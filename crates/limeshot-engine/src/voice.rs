@@ -1,8 +1,9 @@
 //! Voices: one sounding note of a sampler, synth, metronome click or browser preview.
 
+use limeshot_dsp::filter::Svf;
 use limeshot_dsp::osc::Shape;
 use limeshot_dsp::{Adsr, Envelope, Oscillator, SampleData, key_to_hz};
-use limeshot_sequencer::InstrumentState;
+use limeshot_sequencer::{InstrumentState, SynthMods};
 use std::sync::Arc;
 
 /// Voices that are not tied to a channel play straight into the master.
@@ -23,10 +24,75 @@ pub enum Source {
     Synth {
         a: Oscillator,
         b: Option<Oscillator>,
+        /// Filter and LFO; `None` when they do nothing.
+        mods: Option<ModState>,
     },
     Click {
         osc: Oscillator,
     },
+}
+
+/// Modulation is recomputed every this many samples.
+const MOD_INTERVAL: u32 = 16;
+
+/// Per-voice LimeSynth filter, filter envelope and LFO.
+#[derive(Debug, Clone, Copy)]
+pub struct ModState {
+    cfg: SynthMods,
+    sample_rate: f32,
+    /// Oscillator frequencies before vibrato.
+    freq_a: f32,
+    freq_b: f32,
+    lfo_phase: f32,
+    lfo_inc: f32,
+    /// Filter envelope level, 1 at the note start, decaying towards 0.
+    env: f32,
+    env_coef: f32,
+    svf: Svf,
+    countdown: u32,
+}
+
+impl ModState {
+    fn new(cfg: SynthMods, sample_rate: f32, freq_a: f32, freq_b: f32) -> Self {
+        let decay_samples = (cfg.env_decay.max(0.001) * sample_rate).max(1.0);
+        Self {
+            cfg,
+            sample_rate,
+            freq_a,
+            freq_b,
+            lfo_phase: 0.0,
+            lfo_inc: cfg.lfo_rate.max(0.0) / sample_rate.max(1.0),
+            env: 1.0,
+            // Down to 1/1000 (−60 dB) over the decay time.
+            env_coef: 0.001f32.powf(1.0 / decay_samples),
+            svf: Svf::default(),
+            countdown: 0,
+        }
+    }
+
+    #[inline]
+    fn process(&mut self, x: f32, a: &mut Oscillator, b: Option<&mut Oscillator>) -> f32 {
+        if self.countdown == 0 {
+            self.countdown = MOD_INTERVAL;
+            let lfo = (self.lfo_phase * std::f32::consts::TAU).sin();
+            if self.cfg.vibrato_cents > 0.0 {
+                let k = 2f32.powf(self.cfg.vibrato_cents * lfo / 1200.0);
+                a.set_frequency(self.freq_a * k, self.sample_rate);
+                if let Some(b) = b {
+                    b.set_frequency(self.freq_b * k, self.sample_rate);
+                }
+            }
+            if self.cfg.filter_on() {
+                let oct = self.cfg.env_octaves * self.env + self.cfg.lfo_cutoff * lfo;
+                self.svf
+                    .set(self.cfg.cutoff * 2f32.powf(oct), self.cfg.resonance, self.sample_rate);
+            }
+        }
+        self.countdown -= 1;
+        self.lfo_phase = (self.lfo_phase + self.lfo_inc).fract();
+        self.env *= self.env_coef;
+        if self.cfg.filter_on() { self.svf.lowpass(x) } else { x }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -134,12 +200,14 @@ impl Voice {
                 gain,
                 octave,
                 detune_cents,
+                mods,
             } => {
                 let k = f32::from(key) + 12.0 * f32::from(*octave);
                 let f = key_to_hz(k);
+                let fb = f * 2f32.powf(detune_cents / 1200.0);
                 let a = Oscillator::new(*shape, f, sample_rate, 0.0);
-                let b = (detune_cents.abs() > 0.01)
-                    .then(|| Oscillator::new(*shape, f * 2f32.powf(detune_cents / 1200.0), sample_rate, 0.25));
+                let b = (detune_cents.abs() > 0.01).then(|| Oscillator::new(*shape, fb, sample_rate, 0.25));
+                let mods = mods.any().then(|| ModState::new(*mods, sample_rate, f, fb));
                 // Square and saw are harmonically dense; trim them so all shapes feel equally loud.
                 let shape_gain = match shape {
                     Shape::Sine | Shape::Triangle => 1.0,
@@ -148,7 +216,7 @@ impl Voice {
                 };
                 let osc_gain = if b.is_some() { 0.5 } else { 1.0 };
                 Some(Self {
-                    source: Source::Synth { a, b },
+                    source: Source::Synth { a, b, mods },
                     env: Envelope::start(*adsr, sample_rate),
                     key,
                     gain: velocity * gain * shape_gain * osc_gain,
@@ -263,8 +331,11 @@ impl Voice {
                 }
                 f
             }
-            Source::Synth { a, b } => {
-                let s = a.next() + b.as_mut().map_or(0.0, |o| o.next());
+            Source::Synth { a, b, mods } => {
+                let mut s = a.next() + b.as_mut().map_or(0.0, |o| o.next());
+                if let Some(m) = mods {
+                    s = m.process(s, a, b.as_mut());
+                }
                 (s, s)
             }
             Source::Click { osc } => {

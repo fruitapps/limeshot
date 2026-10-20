@@ -51,10 +51,11 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
 fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         ui.add_sized(
-            vec2(64.0, 22.0),
-            egui::Label::new(RichText::new(label).color(Theme::current().text_dim)),
+            vec2(76.0, 22.0),
+            egui::Label::new(RichText::new(label).color(Theme::current().text_dim)).truncate(),
         );
-        ui.spacing_mut().slider_width = (ui.available_width() - 70.0).max(60.0);
+        // Leave room for the value box ("1.5 kHz", "300 ms").
+        ui.spacing_mut().slider_width = (ui.available_width() - 84.0).max(60.0);
         add(ui);
     });
 }
@@ -323,6 +324,81 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
         pos2(x(q.attack_ms + q.decay_ms + hold + q.release_ms), y(0.0)),
     ];
     ui.painter().add(egui::Shape::line(pts, Stroke::new(1.5, t.accent)));
+    ui.add_space(4.0);
+    section(ui, "Filter");
+    row(ui, "Cutoff", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.cutoff_hz, 20.0..=20_000.0)
+                    .logarithmic(true)
+                    .custom_formatter(|v, _| {
+                        if v >= 19_999.0 {
+                            "Open".into()
+                        } else if v >= 1000.0 {
+                            format!("{:.1} kHz", v / 1000.0)
+                        } else {
+                            format!("{v:.0} Hz")
+                        }
+                    }),
+            )
+            .on_hover_text("Low-pass cutoff (12 dB/oct); fully right leaves the filter open"),
+        )
+    });
+    row(ui, "Resonance", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.resonance, 0.0..=0.95).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)),
+            ),
+        )
+    });
+    row(ui, "Envelope", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.filter_env, 0.0..=8.0)
+                    .fixed_decimals(1)
+                    .suffix(" oct"),
+            )
+            .on_hover_text("How far each note opens the cutoff at its start"),
+        )
+    });
+    row(ui, "Env decay", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.filter_decay_ms, 1.0..=4000.0)
+                    .logarithmic(true)
+                    .suffix(" ms"),
+            ),
+        )
+    });
+    ui.add_space(4.0);
+    section(ui, "LFO");
+    row(ui, "Rate", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.lfo_rate_hz, 0.05..=20.0)
+                    .logarithmic(true)
+                    .suffix(" Hz"),
+            ),
+        )
+    });
+    row(ui, "Vibrato", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.vibrato_cents, 0.0..=100.0)
+                    .fixed_decimals(0)
+                    .suffix(" ct"),
+            ),
+        )
+    });
+    row(ui, "To cutoff", |ui| {
+        track(
+            ui.add(
+                egui::Slider::new(&mut q.lfo_cutoff, 0.0..=4.0)
+                    .fixed_decimals(1)
+                    .suffix(" oct"),
+            ),
+        )
+    });
     if waveform_changed {
         app.exec(Command::SetInstrument {
             channel: cid,

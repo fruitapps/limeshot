@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -44,6 +44,13 @@ fn main() {
     {
         app.select_channel(c);
         app.show_window(Win::ChannelSettings);
+    }
+    if args.iter().any(|a| a == "--synth")
+        && let Some(c) = app.project().channels.get(3).map(|c| c.id)
+    {
+        app.select_channel(c);
+        app.show_window(Win::ChannelSettings);
+        app.ui.workspace.state_mut(Win::ChannelSettings).maximized = true;
     }
     if args.iter().any(|a| a == "--melody")
         && let Some(p) = app.project().patterns.get(1).map(|p| p.id)

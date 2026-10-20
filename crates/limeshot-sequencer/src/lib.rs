@@ -98,8 +98,38 @@ pub enum InstrumentState {
         gain: f32,
         octave: i8,
         detune_cents: f32,
+        mods: SynthMods,
     },
     Silent,
+}
+
+/// LimeSynth's filter and LFO settings, resolved for playback.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SynthMods {
+    /// Hz.
+    pub cutoff: f32,
+    pub resonance: f32,
+    /// Filter envelope depth in octaves.
+    pub env_octaves: f32,
+    /// Seconds for the filter envelope to decay.
+    pub env_decay: f32,
+    /// Hz.
+    pub lfo_rate: f32,
+    pub vibrato_cents: f32,
+    /// LFO to cutoff in octaves.
+    pub lfo_cutoff: f32,
+}
+
+impl SynthMods {
+    /// Whether the filter does anything (an open filter without modulation is bypassed, so
+    /// default settings sound exactly as before the filter existed).
+    pub fn filter_on(&self) -> bool {
+        self.cutoff < 19_999.0 || self.env_octaves > 0.0 || self.lfo_cutoff > 0.0 || self.resonance > 0.0
+    }
+
+    pub fn any(&self) -> bool {
+        self.filter_on() || self.vibrato_cents > 0.0
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -293,6 +323,15 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                     gain: db_to_gain(p.gain_db),
                     octave: p.octave,
                     detune_cents: p.detune_cents,
+                    mods: SynthMods {
+                        cutoff: p.cutoff_hz,
+                        resonance: p.resonance,
+                        env_octaves: p.filter_env,
+                        env_decay: p.filter_decay_ms / 1000.0,
+                        lfo_rate: p.lfo_rate_hz,
+                        vibrato_cents: p.vibrato_cents,
+                        lfo_cutoff: p.lfo_cutoff,
+                    },
                 },
                 Instrument::Unsupported(_) => InstrumentState::Silent,
             },

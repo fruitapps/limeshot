@@ -126,6 +126,20 @@ pub struct SynthParams {
     pub octave: i8,
     /// Detune of a second oscillator in cents; 0 disables it.
     pub detune_cents: f32,
+    /// Low-pass cutoff in Hz (20 000 = open).
+    pub cutoff_hz: f32,
+    /// Filter resonance, 0–0.95.
+    pub resonance: f32,
+    /// How far the filter envelope opens the cutoff at the note start, in octaves (0–8).
+    pub filter_env: f32,
+    /// Time for the filter envelope to fall back (exponential decay to about 1/1000).
+    pub filter_decay_ms: f32,
+    /// LFO rate in Hz.
+    pub lfo_rate_hz: f32,
+    /// LFO to pitch (vibrato depth) in cents.
+    pub vibrato_cents: f32,
+    /// LFO to cutoff, in octaves.
+    pub lfo_cutoff: f32,
 }
 
 impl Default for SynthParams {
@@ -139,6 +153,13 @@ impl Default for SynthParams {
             gain_db: -6.0,
             octave: 0,
             detune_cents: 0.0,
+            cutoff_hz: 20_000.0,
+            resonance: 0.0,
+            filter_env: 0.0,
+            filter_decay_ms: 300.0,
+            lfo_rate_hz: 5.0,
+            vibrato_cents: 0.0,
+            lfo_cutoff: 0.0,
         }
     }
 }
@@ -675,6 +696,13 @@ impl Project {
                     p.gain_db = finite(p.gain_db, -6.0).clamp(-60.0, 24.0);
                     p.octave = p.octave.clamp(-3, 3);
                     p.detune_cents = finite(p.detune_cents, 0.0).clamp(-100.0, 100.0);
+                    p.cutoff_hz = finite(p.cutoff_hz, 20_000.0).clamp(20.0, 20_000.0);
+                    p.resonance = finite(p.resonance, 0.0).clamp(0.0, 0.95);
+                    p.filter_env = finite(p.filter_env, 0.0).clamp(0.0, 8.0);
+                    p.filter_decay_ms = finite(p.filter_decay_ms, 300.0).clamp(1.0, 10_000.0);
+                    p.lfo_rate_hz = finite(p.lfo_rate_hz, 5.0).clamp(0.01, 40.0);
+                    p.vibrato_cents = finite(p.vibrato_cents, 0.0).clamp(0.0, 200.0);
+                    p.lfo_cutoff = finite(p.lfo_cutoff, 0.0).clamp(0.0, 4.0);
                 }
                 Instrument::Unsupported(_) => {}
             }

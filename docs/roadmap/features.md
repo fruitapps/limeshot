@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 81, DEFERRED 2
+- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 82, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -19,7 +19,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Piano Roll | 25 | 6 | 8 | 0 | 11 |
 | Playlist | 26 | 12 | 5 | 1 | 8 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
-| Instruments | 12 | 5 | 0 | 0 | 7 |
+| Instruments | 12 | 6 | 0 | 0 | 6 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 9 | 3 | 0 | 0 | 6 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
@@ -172,7 +172,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | INS-003 | LimeSynth: oscillators | P0 | ✓ | VERIFIED | Sine, square, saw, triangle (PolyBLEP), octave, optional detuned second oscillator. | `limeshot-dsp osc::tests::shapes_have_the_right_pitch_and_range`<br>`limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release` |
 | INS-004 | LimeSynth: ADSR envelope | P0 | ✓ | VERIFIED | Linear ADSR with release from current level. | `limeshot-dsp envelope::tests::stages_follow_the_settings`<br>`limeshot-dsp envelope::tests::release_during_attack_starts_from_current_level` |
 | INS-005 | Polyphony and voice stealing | P0 | ✓ | VERIFIED | 128-voice pool shared by all channels; oldest voice stolen; no allocation. | `limeshot-engine tests/audio.rs::synth_polyphony_and_voice_limit` |
-| INS-006 | Synth filter and modulation (LFO, filter env) | P1 |  | NOT_STARTED | State-variable low-pass with envelope and LFO. | — |
+| INS-006 | Synth filter and modulation (LFO, filter env) | P1 |  | VERIFIED | LimeSynth has a resonant 12 dB/oct low-pass per voice (TPT state-variable filter), a filter envelope (depth in octaves, exponential decay) and a sine LFO to pitch (vibrato, cents) and to cutoff (octaves); modulation updates every 16 samples. An open filter without modulation is bypassed, so existing sounds are unchanged. Channel Settings › Filter / LFO.<br>*No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note).* | `limeshot-dsp filter::tests::passes_below_and_cuts_above_the_cutoff`<br>`limeshot-engine tests/audio.rs::synth_filter_darkens_and_its_envelope_opens_it_at_the_note_start`<br>`limeshot-engine tests/audio.rs::synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch` |
 | INS-007 | Sampler loop points, time stretch, filter | P1 |  | NOT_STARTED | Loop region, ping-pong, filter. | — |
 | INS-008 | Additional audio formats (MP3, FLAC, OGG, AIFF) | P1 |  | NOT_STARTED | Decoder crate (e.g. symphonia) behind the SampleData interface. | — |
 | INS-009 | Multi-sample / drum kit instrument | P2 |  | NOT_STARTED | Key zones mapping samples. | — |

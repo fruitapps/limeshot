@@ -3310,17 +3310,27 @@
       "name": "Synth filter and modulation (LFO, filter env)",
       "description": "Subtractive shaping.",
       "fl_reference": "Channel settings envelopes, LFO.",
-      "limeshot_behavior": "State-variable low-pass with envelope and LFO.",
+      "limeshot_behavior": "LimeSynth has a resonant 12 dB/oct low-pass per voice (TPT state-variable filter), a filter envelope (depth in octaves, exponential decay) and a sine LFO to pitch (vibrato, cents) and to cutoff (octaves); modulation updates every 16 samples. An open filter without modulation is bypassed, so existing sounds are unchanged. Channel Settings › Filter / LFO.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp filter::tests::passes_below_and_cuts_above_the_cutoff",
+        "limeshot-engine tests/audio.rs::synth_filter_darkens_and_its_envelope_opens_it_at_the_note_start",
+        "limeshot-engine tests/audio.rs::synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3329,7 +3339,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note)."
     },
     {
       "id": "INS-007",

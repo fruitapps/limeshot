@@ -1022,3 +1022,109 @@ fn automation_drives_effect_parameters() {
         audio[2 * 48_000]
     );
 }
+
+/// A two-beat 220 Hz saw on the fixture's synth with `params`, rendered in Pattern mode.
+fn synth_note(params: SynthParams) -> Vec<f32> {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetInstrument {
+            channel: f.synth,
+            instrument: Instrument::Synth(SynthParams {
+                attack_ms: 0.0,
+                sustain: 1.0,
+                release_ms: 5.0,
+                ..params
+            }),
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::AddNote {
+            pattern: f.pat,
+            note: NewNote {
+                channel: f.synth,
+                key: 57,
+                start: 0,
+                length: 1920,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+    render(snapshot(&f), ExportRange::Pattern, 256, SR).0
+}
+
+/// RMS of the first difference (rises with high-frequency content) over frames `a..b`.
+fn brightness(audio: &[f32], a: usize, b: usize) -> f32 {
+    let l: Vec<f32> = audio[2 * a..2 * b].iter().step_by(2).copied().collect();
+    let s: f32 = l.windows(2).map(|w| (w[1] - w[0]).powi(2)).sum();
+    (s / l.len() as f32).sqrt()
+}
+
+#[test]
+fn synth_filter_darkens_and_its_envelope_opens_it_at_the_note_start() {
+    let open = synth_note(SynthParams::default());
+    let closed = synth_note(SynthParams {
+        cutoff_hz: 400.0,
+        ..Default::default()
+    });
+    assert!(
+        brightness(&closed, 10_000, 40_000) < 0.3 * brightness(&open, 10_000, 40_000),
+        "a 400 Hz low-pass removes most of a saw's upper harmonics"
+    );
+    let swept = synth_note(SynthParams {
+        cutoff_hz: 200.0,
+        filter_env: 6.0,
+        filter_decay_ms: 100.0,
+        ..Default::default()
+    });
+    assert!(
+        brightness(&swept, 0, 2_000) > 3.0 * brightness(&swept, 30_000, 32_000),
+        "bright attack, dark tail"
+    );
+}
+
+#[test]
+fn synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch() {
+    let mods = |p: SynthParams| {
+        let s = limeshot_sequencer::compile(
+            &{
+                let mut d = Document::default();
+                d.execute(Command::AddChannel {
+                    name: "S".into(),
+                    instrument: Instrument::Synth(p),
+                })
+                .unwrap();
+                d.project().clone()
+            },
+            PatternId(0),
+            &NoSamples,
+        );
+        match &s.channels[0].instrument {
+            limeshot_sequencer::InstrumentState::Synth { mods, .. } => *mods,
+            other => panic!("{other:?}"),
+        }
+    };
+    assert!(!mods(SynthParams::default()).any(), "default synth: no filter, no LFO");
+    let plain = synth_note(SynthParams::default());
+    let vib = synth_note(SynthParams {
+        vibrato_cents: 100.0,
+        lfo_rate_hz: 4.0,
+        ..Default::default()
+    });
+    // Zero crossings per 1/8 s window: constant without vibrato, varying with it.
+    let crossings = |a: &[f32]| -> Vec<usize> {
+        (0..6)
+            .map(|w| {
+                let s = &a[2 * (6_000 * w)..2 * (6_000 * (w + 1))];
+                s.iter()
+                    .step_by(2)
+                    .collect::<Vec<_>>()
+                    .windows(2)
+                    .filter(|x| *x[0] < 0.0 && *x[1] >= 0.0)
+                    .count()
+            })
+            .collect()
+    };
+    let (p, v) = (crossings(&plain), crossings(&vib));
+    assert!(p.iter().max().unwrap() - p.iter().min().unwrap() <= 1, "{p:?}");
+    assert!(v.iter().max().unwrap() - v.iter().min().unwrap() >= 3, "{v:?}");
+}
