@@ -40,6 +40,15 @@ pub struct NewNote {
     pub velocity: f32,
 }
 
+/// A channel to create with its notes, for [`Command::ImportPattern`]. Notes are
+/// (key, start, length, velocity).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportedChannel {
+    pub name: String,
+    pub instrument: Instrument,
+    pub notes: Vec<(u8, Tick, Tick, f32)>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Command {
     SetTitle(String),
@@ -152,6 +161,13 @@ pub enum Command {
 
     AddPattern {
         name: String,
+    },
+    /// Add a pattern holding notes for newly created channels (MIDI import), optionally setting
+    /// the tempo. One undo step; returns the pattern id.
+    ImportPattern {
+        name: String,
+        tempo: Option<Tempo>,
+        channels: Vec<ImportedChannel>,
     },
     ClonePattern(PatternId),
     RemovePattern(PatternId),
@@ -371,6 +387,7 @@ impl Command {
             ClearChannelNotes { .. } => "Clear channel",
             Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
+            ImportPattern { .. } => "Import MIDI",
             ClonePattern(_) => "Clone pattern",
             RemovePattern(_) => "Delete pattern",
             RenamePattern { .. } => "Rename pattern",
@@ -656,6 +673,36 @@ impl Command {
                     extra: Extra::new(),
                 });
                 return Ok(Created(Some(id)));
+            }
+            ImportPattern { name, tempo, channels } => {
+                if let Some(t) = tempo {
+                    p.tempo = t;
+                }
+                let pat = PatternId(AddPattern { name }.apply(p)?.0.unwrap_or_default());
+                for c in channels {
+                    let ch = ChannelId(
+                        AddChannel {
+                            name: c.name,
+                            instrument: c.instrument,
+                        }
+                        .apply(p)?
+                        .0
+                        .unwrap_or_default(),
+                    );
+                    let notes = c
+                        .notes
+                        .into_iter()
+                        .map(|(key, start, length, velocity)| NewNote {
+                            channel: ch,
+                            key,
+                            start,
+                            length,
+                            velocity,
+                        })
+                        .collect();
+                    add_notes(p, pat, notes)?;
+                }
+                return Ok(Created(Some(pat.0)));
             }
             ClonePattern(id) => {
                 let i = p

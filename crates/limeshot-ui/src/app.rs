@@ -540,6 +540,84 @@ impl LimeShotApp {
         }
     }
 
+    /// Import a MIDI file as a new pattern (one LimeSynth channel per MIDI track). An empty
+    /// project also takes the file's tempo.
+    pub fn import_midi(&mut self, path: &Path) -> bool {
+        let file = match limeshot_project::midi::read_file(path) {
+            Ok(f) => f,
+            Err(e) => {
+                self.toast_error(e.to_string());
+                return false;
+            }
+        };
+        let name = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "MIDI".into());
+        let empty =
+            self.project().patterns.iter().all(|p| p.notes.is_empty()) && self.project().playlist.clips.is_empty();
+        let cmd = match limeshot_project::midi::import_command(&file, &name, empty) {
+            Ok(c) => c,
+            Err(e) => {
+                self.toast_error(format!("{}: {e}", path.display()));
+                return false;
+            }
+        };
+        match self.exec(cmd) {
+            Some(id) => {
+                self.set_current_pattern(PatternId(id));
+                self.ui.place = None;
+                self.toast(format!(
+                    "Imported {} track(s) from {}",
+                    file.tracks.len(),
+                    path.display()
+                ));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Ask where to export the current pattern (or the song) as a MIDI file.
+    pub fn export_midi_dialog(&mut self, song: bool) {
+        let name = format!("{}.mid", sanitize_file_name(&self.project().title));
+        if let Some(mut p) = rfd::FileDialog::new()
+            .add_filter("MIDI file", &["mid"])
+            .set_file_name(name)
+            .save_file()
+        {
+            if p.extension().is_none() {
+                p.set_extension("mid");
+            }
+            self.export_midi(&p, song);
+        }
+    }
+
+    /// Write the current pattern (or the song) as a MIDI file, as it plays (swing included).
+    pub fn export_midi(&mut self, path: &Path, song: bool) -> bool {
+        let snap = compile(self.project(), self.current_pattern(), &limeshot_sequencer::NoSamples);
+        let program = if song { &snap.song } else { &snap.pattern };
+        let file = limeshot_project::midi::from_program(self.project(), program);
+        if file.tracks.is_empty() {
+            self.toast_error(if song {
+                "The song has no notes to export"
+            } else {
+                "The pattern has no notes to export"
+            });
+            return false;
+        }
+        match std::fs::write(path, limeshot_project::midi::write(&file)) {
+            Ok(()) => {
+                self.toast(format!("Exported {}", path.display()));
+                true
+            }
+            Err(e) => {
+                self.toast_error(format!("{}: {e}", path.display()));
+                false
+            }
+        }
+    }
+
     /// Restart audio output with the current settings.
     pub fn restart_audio(&mut self) {
         let snap = self.snapshot.clone();

@@ -19,7 +19,7 @@ pub mod model;
 pub mod time;
 
 pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
-pub use command::{Command, CommandError, Created, NewNote};
+pub use command::{Command, CommandError, Created, ImportedChannel, NewNote};
 pub use document::Document;
 pub use effects::{EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;

@@ -80,8 +80,21 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
                 app.save_as();
             }
             ui.separator();
+            if item(ui, "Import MIDI file…", "") {
+                let dialog = rfd::FileDialog::new().add_filter("MIDI file", &["mid", "midi"]);
+                if let Some(p) = dialog.pick_file() {
+                    app.import_midi(&p);
+                }
+            }
+            ui.separator();
             if item(ui, "Export WAV…", &key("Cmd+R")) {
                 app.dialog = Some(Dialog::export(app));
+            }
+            if item(ui, "Export MIDI file (pattern)…", "") {
+                app.export_midi_dialog(false);
+            }
+            if item(ui, "Export MIDI file (song)…", "") {
+                app.export_midi_dialog(true);
             }
             ui.separator();
             if item(ui, "Quit", &key("Cmd+Q")) {

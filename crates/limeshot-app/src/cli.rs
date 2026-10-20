@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]"
+        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>"
     );
     ExitCode::from(2)
 }
@@ -261,6 +261,39 @@ fn main() -> ExitCode {
                 Ok(())
             })()
         }
+        "midi" => match (o.positional.first(), o.positional.get(1)) {
+            (Some(p), Some(out)) => load(Path::new(p)).and_then(|proj| {
+                // The song, or with --pattern the first pattern (as `render` does).
+                let pattern = proj.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
+                let snap = limeshot_sequencer::compile(&proj, pattern, &limeshot_sequencer::NoSamples);
+                let program = if o.pattern { &snap.pattern } else { &snap.song };
+                let file = limeshot_project::midi::from_program(&proj, program);
+                if file.tracks.is_empty() {
+                    return Err("nothing to export: no notes".into());
+                }
+                std::fs::write(out, limeshot_project::midi::write(&file)).map_err(|e| format!("{out}: {e}"))?;
+                let notes: usize = file.tracks.iter().map(|t| t.notes.len()).sum();
+                println!("wrote {out}: {} tracks, {notes} notes", file.tracks.len());
+                Ok(())
+            }),
+            _ => return usage(),
+        },
+        "import-midi" => match (o.positional.first(), o.positional.get(1)) {
+            (Some(input), Some(out)) => (|| {
+                let path = Path::new(input);
+                let file = limeshot_project::midi::read_file(path).map_err(|e| e.to_string())?;
+                let name = path
+                    .file_stem()
+                    .map_or("MIDI".into(), |s| s.to_string_lossy().into_owned());
+                let mut doc = Document::new(Project::new());
+                let cmd = limeshot_project::midi::import_command(&file, &name, true).map_err(|e| e.to_string())?;
+                doc.execute(cmd).map_err(|e| e.to_string())?;
+                limeshot_project::save(doc.project(), Path::new(out)).map_err(|e| e.to_string())?;
+                println!("saved {out}: {} channels", doc.project().channels.len());
+                Ok(())
+            })(),
+            _ => return usage(),
+        },
         "demo" => {
             let Some(out) = o.positional.first() else {
                 return usage();

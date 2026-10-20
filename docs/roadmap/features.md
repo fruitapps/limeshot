@@ -10,13 +10,13 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **220**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 97, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 79, DEFERRED 2
+- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 81, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 22 | 10 | 4 | 1 | 7 |
 | Channel Rack | 18 | 10 | 2 | 0 | 6 |
-| Piano Roll | 25 | 5 | 8 | 0 | 12 |
+| Piano Roll | 25 | 6 | 8 | 0 | 11 |
 | Playlist | 26 | 12 | 5 | 1 | 8 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
 | Instruments | 12 | 5 | 0 | 0 | 7 |
@@ -25,7 +25,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Recording | 9 | 0 | 0 | 0 | 9 |
 | Browser | 10 | 1 | 5 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
-| Export | 12 | 4 | 0 | 0 | 8 |
+| Export | 12 | 5 | 0 | 0 | 7 |
 | Transport & Time | 13 | 7 | 4 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
 | UI | 9 | 6 | 2 | 0 | 1 |
@@ -104,7 +104,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-017 | Slide and portamento notes | P2 |  | NOT_STARTED | Slide flag on notes interpreted by LimeSynth. | — |
 | PR-018 | Note color groups | P3 |  | NOT_STARTED | Per-note color group. | — |
 | PR-019 | Copy / cut / paste notes | P1 |  | VERIFIED | Cmd+C/X/V copy, cut and paste notes; pasting puts them at the same times into the channel being edited and selects them (FL Studio behaviour).<br>*App-internal clipboard (not the system clipboard).* | `limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
-| PR-020 | MIDI file import / export | P1 |  | NOT_STARTED | Standard MIDI File reader/writer (own implementation). | — |
+| PR-020 | MIDI file import / export | P1 |  | VERIFIED | Own Standard MIDI File reader/writer (format 0/1, running status, note-on velocity 0, tempo, time signature, track names; SMPTE and format 2 refused; hostile input bounded). File › Import MIDI file… adds one pattern named after the file with a LimeSynth channel per MIDI track (and per MIDI channel within a track), in one undo step; an empty project also takes the file's tempo. CLI: limeshot-cli import-midi in.mid out.lime.<br>*Exported files were read back by LimeShot's own reader only; not yet checked in another program. Controller events, pitch bend and program changes are ignored on import.* | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-project midi::tests::reads_running_status_other_resolutions_and_note_on_zero`<br>`limeshot-project midi::tests::hostile_input_is_refused_not_panicked_on`<br>`limeshot-project midi::tests::import_command_builds_one_channel_per_track`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
 | PR-021 | MIDI recording into the Piano Roll | P1 |  | NOT_STARTED | Record from MIDI devices/typing keyboard. | — |
 | PR-022 | Time signature per pattern / time markers | P3 |  | NOT_STARTED | Project-wide signature only for now. | — |
 | PR-023 | Glue / slice notes | P2 |  | NOT_STARTED | Commands to glue touching notes and slice at a time. | — |
@@ -273,7 +273,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-009 | Stem export (per mixer track) | P2 |  | NOT_STARTED | — | — |
 | EXP-010 | Export ranges (time selection, loop) | P2 |  | NOT_STARTED | — | — |
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
-| EXP-012 | MIDI export | P1 |  | NOT_STARTED | — | — |
+| EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
 
 ## Transport & Time
 

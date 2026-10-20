@@ -563,3 +563,28 @@ fn automation_clips_are_created_from_controls_and_edited_in_the_playlist() {
     click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
     assert_eq!(points(&h).len(), 1);
 }
+
+#[test]
+fn midi_export_and_import_round_trip_through_the_app() {
+    let mut h = harness(true);
+    let dir = std::env::temp_dir().join(format!("limeshot-midi-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("song.mid");
+    let song_notes = {
+        let snap = h.state().snapshot().clone();
+        snap.song.events.len()
+    };
+    assert!(h.state_mut().export_midi(&path, true));
+    let patterns = h.state().project().patterns.len();
+    let channels = h.state().project().channels.len();
+    assert!(h.state_mut().import_midi(&path));
+    let p = h.state().project();
+    assert_eq!(p.patterns.len(), patterns + 1);
+    let imported = p.patterns.last().expect("pattern");
+    assert_eq!(imported.name, "song");
+    assert_eq!(imported.notes.len(), song_notes, "every song note comes back");
+    assert_eq!(h.state().current_pattern(), imported.id, "the import is selected");
+    assert!(p.channels.len() > channels);
+    assert_eq!(p.tempo, Tempo::from_bpm(124.0), "a project with notes keeps its tempo");
+    let _ = std::fs::remove_dir_all(&dir);
+}

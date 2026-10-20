@@ -1770,17 +1770,28 @@
       "name": "MIDI file import / export",
       "description": "Exchange notes.",
       "fl_reference": "Ctrl+M import, Ctrl+Shift+M export.",
-      "limeshot_behavior": "Standard MIDI File reader/writer (own implementation).",
+      "limeshot_behavior": "Own Standard MIDI File reader/writer (format 0/1, running status, note-on velocity 0, tempo, time signature, track names; SMPTE and format 2 refused; hostile input bounded). File › Import MIDI file… adds one pattern named after the file with a LimeSynth channel per MIDI track (and per MIDI channel within a track), in one undo step; an empty project also takes the file's tempo. CLI: limeshot-cli import-midi in.mid out.lime.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-project",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-project midi::tests::write_then_read_round_trips",
+        "limeshot-project midi::tests::reads_running_status_other_resolutions_and_note_on_zero",
+        "limeshot-project midi::tests::hostile_input_is_refused_not_panicked_on",
+        "limeshot-project midi::tests::import_command_builds_one_channel_per_track",
+        "limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1788,7 +1799,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Exported files were read back by LimeShot's own reader only; not yet checked in another program. Controller events, pitch bend and program changes are ignored on import."
     },
     {
       "id": "PR-021",
@@ -5378,19 +5389,26 @@
       "name": "MIDI export",
       "description": "Export notes.",
       "fl_reference": "Ctrl+Shift+M.",
-      "limeshot_behavior": "—",
+      "limeshot_behavior": "File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern].",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PR-020"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-project midi::tests::write_then_read_round_trips",
+        "limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
