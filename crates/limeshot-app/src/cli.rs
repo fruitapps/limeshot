@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>"
+        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
     );
     ExitCode::from(2)
 }
@@ -277,6 +277,24 @@ fn main() -> ExitCode {
                 Ok(())
             }),
             _ => return usage(),
+        },
+        "import-flp" => match o.positional.first() {
+            Some(input) => (|| {
+                let factory = limeshot_project::flp::default_factory_dir();
+                let (p, r) = limeshot_project::flp::import_file(Path::new(input), factory.as_deref())
+                    .map_err(|e| e.to_string())?;
+                println!(
+                    "{input}: FL Studio {} — {}",
+                    r.version.as_deref().unwrap_or("?"),
+                    r.summary()
+                );
+                if let Some(out) = o.positional.get(1) {
+                    limeshot_project::save(&p, Path::new(out)).map_err(|e| e.to_string())?;
+                    println!("saved {out}");
+                }
+                Ok(())
+            })(),
+            None => return usage(),
         },
         "import-midi" => match (o.positional.first(), o.positional.get(1)) {
             (Some(input), Some(out)) => (|| {
