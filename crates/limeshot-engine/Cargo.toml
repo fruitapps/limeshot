@@ -1,0 +1,19 @@
+[package]
+name = "limeshot-engine"
+description = "LimeShot renderer: voices, mixer and transport, shared by realtime playback and offline export"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+limeshot-core.workspace = true
+limeshot-dsp.workspace = true
+limeshot-sequencer.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

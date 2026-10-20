@@ -1,0 +1,19 @@
+[package]
+name = "limeshot-project"
+description = "LimeShot .lime project files: versioned format, migrations, atomic saving"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+limeshot-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

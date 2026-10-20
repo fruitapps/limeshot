@@ -1,0 +1,17 @@
+[package]
+name = "limeshot-dsp"
+description = "LimeShot DSP building blocks: oscillators, envelopes, panning, sample decoding"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hound.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

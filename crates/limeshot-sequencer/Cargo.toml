@@ -1,0 +1,14 @@
+[package]
+name = "limeshot-sequencer"
+description = "Compiles a LimeShot project into immutable, time-sorted playback programs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+limeshot-core.workspace = true
+limeshot-dsp.workspace = true
+
+[lints]
+workspace = true

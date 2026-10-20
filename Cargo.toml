@@ -1,0 +1,53 @@
+[workspace]
+resolver = "3"
+members = ["crates/limeshot-core", "crates/limeshot-project", "crates/limeshot-dsp", "crates/limeshot-sequencer", "crates/limeshot-engine"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
+repository = "https://github.com/limeshot/limeshot"
+
+[workspace.dependencies]
+limeshot-core = { path = "crates/limeshot-core" }
+limeshot-project = { path = "crates/limeshot-project" }
+limeshot-dsp = { path = "crates/limeshot-dsp" }
+limeshot-sequencer = { path = "crates/limeshot-sequencer" }
+limeshot-engine = { path = "crates/limeshot-engine" }
+limeshot-audio = { path = "crates/limeshot-audio" }
+limeshot-ui = { path = "crates/limeshot-ui" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+log = "0.4"
+env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
+hound = "3.5"
+rtrb = "0.3"
+cpal = "0.16"
+egui = "0.36"
+eframe = { version = "0.36", default-features = false, features = ["default_fonts", "glow", "accesskit", "wayland", "x11"] }
+rfd = "0.17"
+directories = "6"
+tempfile = "3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+too_many_arguments = "allow"
+type_complexity = "allow"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
