@@ -1,26 +1,26 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-20.
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-20 (session 2).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **217**
-- MVP features: **69** — 67 implemented or verified, 44 verified
-- By status: NOT_STARTED 120, RESEARCHED 1, IN_PROGRESS 6, IMPLEMENTED 37, VERIFIED 51, DEFERRED 2
+- Features tracked: **220**
+- MVP features: **69** — 67 implemented or verified, 47 verified
+- By status: NOT_STARTED 106, RESEARCHED 1, IN_PROGRESS 7, IMPLEMENTED 34, VERIFIED 70, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 22 | 10 | 4 | 1 | 7 |
-| Channel Rack | 18 | 7 | 3 | 0 | 8 |
-| Piano Roll | 25 | 3 | 8 | 0 | 14 |
-| Playlist | 24 | 9 | 4 | 1 | 10 |
-| Mixer | 16 | 4 | 2 | 0 | 10 |
+| Channel Rack | 18 | 10 | 2 | 0 | 6 |
+| Piano Roll | 25 | 5 | 8 | 0 | 12 |
+| Playlist | 26 | 10 | 5 | 1 | 10 |
+| Mixer | 16 | 5 | 2 | 1 | 8 |
 | Instruments | 12 | 5 | 0 | 0 | 7 |
-| Effects | 15 | 0 | 0 | 0 | 15 |
+| Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 9 | 0 | 0 | 0 | 9 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
 | Browser | 10 | 0 | 5 | 0 | 5 |
@@ -28,14 +28,14 @@ automated tests or recorded manual verification. Everything else is not done.
 | Export | 12 | 4 | 0 | 0 | 8 |
 | Transport & Time | 13 | 7 | 4 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
-| UI | 8 | 1 | 5 | 0 | 2 |
+| UI | 9 | 5 | 2 | 0 | 2 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
 ## Application
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| APP-001 | New project | P0 | ✓ | IMPLEMENTED | File › New / Cmd+N: one empty pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.<br>*The ask-to-save flow is exercised manually only.* | `limeshot-core model::tests::new_project_has_one_pattern_and_master` |
+| APP-001 | New project | P0 | ✓ | IMPLEMENTED | File › New / Cmd+N: a 140 BPM project (FL Studio's default, observed) with one pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.<br>*The ask-to-save flow is exercised manually only.* | `limeshot-core model::tests::new_project_has_one_pattern_and_master` |
 | APP-002 | Open project | P0 | ✓ | VERIFIED | File › Open / Cmd+O loads .lime files; damaged or newer files show an error and leave the open project untouched. | `limeshot-project tests::save_and_reload_is_identical`<br>`limeshot-project tests::refuses_newer_and_foreign_files`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | APP-003 | Save / Save as (atomic) | P0 | ✓ | VERIFIED | Writes a temp file, fsyncs, renames over the target; Save as picks a new path. | `limeshot-project tests::save_and_reload_is_identical`<br>`limeshot-project tests::overwriting_keeps_one_file` |
 | APP-004 | Modified-state detection | P0 | ✓ | VERIFIED | Window title shows • when modified; undoing back to the saved state clears it. | `limeshot-core document::tests::modified_tracks_saves` |
@@ -62,7 +62,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| SEQ-001 | Step sequencing | P0 | ✓ | VERIFIED | Step buttons per channel; left-click/drag paints on, right-click/drag paints off; steps are notes at 240-tick steps with the channel's root key. | `limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid`<br>`limeshot-engine tests/audio.rs::tempo_change_moves_onsets`<br>`limeshot-app tests/ui.rs::clicking_a_step_button_writes_a_note`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
+| SEQ-001 | Step sequencing | P0 | ✓ | VERIFIED | Step buttons per channel; left-click/drag paints on, right-click/drag paints off; steps are notes at 240-tick steps with the channel's root key. | `limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid`<br>`limeshot-engine tests/audio.rs::tempo_change_moves_onsets`<br>`limeshot-app tests/ui.rs::clicking_a_step_button_writes_a_note`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end`<br>`limeshot-app tests/ui.rs::dragging_across_steps_paints_them_in_one_undo_step` |
 | SEQ-002 | Add sampler / synth channels | P0 | ✓ | VERIFIED | Add menu, Channel Rack + Add, or drop a WAV from the Browser. | `limeshot-core document::tests::new_channels_take_free_inserts`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | SEQ-003 | Channel mute and solo | P0 | ✓ | VERIFIED | LED: left-click mutes, right-click or Cmd+click solos. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves`<br>`limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master` |
 | SEQ-004 | Channel volume and pan | P0 | ✓ | VERIFIED | Knobs (drag, Shift fine, wheel, double-click reset); default 78% volume. | `limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
@@ -70,13 +70,13 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-006 | Pattern length (auto / manual) | P0 | ✓ | VERIFIED | Auto (whole bars covering the last note) or a fixed number of steps. | `limeshot-core model::tests::auto_pattern_length_covers_last_note` |
 | SEQ-007 | Rename, recolor, clone, delete, reorder channels | P1 |  | IMPLEMENTED | Right-click channel button: rename, color, clone, delete, move up/down. | `limeshot-core document::tests::removing_channel_removes_its_notes` |
 | SEQ-008 | Piano-roll preview in rack | P1 |  | IMPLEMENTED | Mini note preview; click opens the Piano Roll for that channel. | — |
-| SEQ-009 | Channel settings window | P0 | ✓ | IMPLEMENTED | Click channel name: sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or synth parameters, root key.<br>*Exercised by the offscreen screenshot and render-without-panic test; parameter widgets are standard egui sliders.* | — |
-| SEQ-010 | Swing (global and per channel) | P1 |  | NOT_STARTED | Global swing in the rack header, per-channel amount; applied in the sequencer compile step. | — |
+| SEQ-009 | Channel settings window | P0 | ✓ | VERIFIED | Instrument parameters live in the docked Inspector (right panel): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. Clicking a channel name shows it there.<br>*Replaces FL Studio's floating Channel Settings window with a docked panel (ArtCraft style).* | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
+| SEQ-010 | Swing (global and per channel) | P1 |  | VERIFIED | Global swing knob in the Channel Rack header (0–100%): notes exactly on the second 16th of each pair are delayed by up to half a step (≈67% gives a triplet feel), in Pattern and Song playback.<br>*Per-channel swing mix and 'truncate swing notes' are not implemented.* | `limeshot-sequencer tests::swing_delays_every_second_sixteenth`<br>`limeshot-core document::tests::swing_is_clamped_and_undoable` |
 | SEQ-011 | Graph editor (per-step properties) | P2 |  | NOT_STARTED | Edit step velocity/pan/release/pitch in the rack. | — |
 | SEQ-012 | Channel filter groups | P2 |  | NOT_STARTED | Named channel groups with a filter selector. | — |
 | SEQ-013 | Zip / unzip channels | P3 |  | NOT_STARTED | Collapse rows. | — |
 | SEQ-014 | Fill / rotate / advanced fill | P2 |  | NOT_STARTED | Channel menu fill and rotate commands. | — |
-| SEQ-015 | Copy / paste steps between channels and patterns | P1 |  | NOT_STARTED | Copy the selected channel's notes and paste into another channel/pattern. | — |
+| SEQ-015 | Copy / paste steps between channels and patterns | P1 |  | VERIFIED | With the Channel Rack focused, Cmd+C/X copy/cut the selected channel's notes in the current pattern; Cmd+V replaces the selected channel's notes. Step patterns are re-pitched to the target channel's root key so they stay steps. | `limeshot-app tests/ui.rs::channel_rack_copies_steps_between_channels` |
 | SEQ-016 | Channel step looping / ghost steps | P3 |  | NOT_STARTED | Per-channel loop length. | — |
 | SEQ-017 | Loop Starter (FL Cloud) | P3 |  | DEFERRED | Out of scope: requires an online service (LimeShot is offline-first). | — |
 | SEQ-018 | Multiple patterns | P0 | ✓ | VERIFIED | Toolbar pattern selector (prev/next/new/rename), F4 new, +/− switch; Patterns menu clone/delete. | `limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo` |
@@ -98,12 +98,12 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-011 | Channel target selector | P0 | ✓ | IMPLEMENTED | Channel combo box in the header. | — |
 | PR-012 | Paint, slice, mute, stamp, zoom tools | P1 |  | NOT_STARTED | Tool selector with paint, slice, mute, chord stamp. | — |
 | PR-013 | Scale highlighting / snap to scale | P2 |  | NOT_STARTED | Scale selector, shading rows out of key, optional snapping. | — |
-| PR-014 | Quantize | P1 |  | NOT_STARTED | Quantize command with strength. | — |
+| PR-014 | Quantize | P1 |  | VERIFIED | Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only.<br>*No quantize dialog (strength, lengths, swing template) yet.* | `limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths`<br>`limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
 | PR-015 | Chords, arpeggiator, strum, humanize, legato | P2 |  | NOT_STARTED | Tools menu with these transforms as commands. | — |
 | PR-016 | Note properties: pan, release, mod X/Y, fine pitch | P2 |  | NOT_STARTED | Additional lane targets stored per note. | — |
 | PR-017 | Slide and portamento notes | P2 |  | NOT_STARTED | Slide flag on notes interpreted by LimeSynth. | — |
 | PR-018 | Note color groups | P3 |  | NOT_STARTED | Per-note color group. | — |
-| PR-019 | Copy / cut / paste notes | P1 |  | NOT_STARTED | Clipboard of notes relative to the selection start. | — |
+| PR-019 | Copy / cut / paste notes | P1 |  | VERIFIED | Cmd+C/X/V copy, cut and paste notes; pasting puts them at the same times into the channel being edited and selects them (FL Studio behaviour).<br>*App-internal clipboard (not the system clipboard).* | `limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
 | PR-020 | MIDI file import / export | P1 |  | NOT_STARTED | Standard MIDI File reader/writer (own implementation). | — |
 | PR-021 | MIDI recording into the Piano Roll | P1 |  | NOT_STARTED | Record from MIDI devices/typing keyboard. | — |
 | PR-022 | Time signature per pattern / time markers | P3 |  | NOT_STARTED | Project-wide signature only for now. | — |
@@ -115,7 +115,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| PL-001 | Pattern clips (linked instances) | P0 | ✓ | VERIFIED | Left-click empty space places the current pattern; every clip of a pattern plays the same data. | `limeshot-core document::tests::clips_are_linked_until_made_unique`<br>`limeshot-sequencer tests::playlist_flattens_linked_clips`<br>`limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
+| PL-001 | Pattern clips (linked instances) | P0 | ✓ | VERIFIED | Left-click empty space places the current pattern; every clip of a pattern plays the same data. | `limeshot-core document::tests::clips_are_linked_until_made_unique`<br>`limeshot-sequencer tests::playlist_flattens_linked_clips`<br>`limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern`<br>`limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-002 | Move clips (time and track) | P0 | ✓ | VERIFIED | Drag moves the selection with snap; arrows nudge. | `limeshot-core document::tests::clip_duplicate_and_move` |
 | PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge; content is truncated (pattern plays once).<br>*Deviation/INFERRED: LimeShot does not loop a pattern inside a longer clip.* | `limeshot-sequencer tests::clip_truncates_notes` |
 | PL-004 | Delete clips | P0 | ✓ | VERIFIED | Right-click or right-drag deletes; Delete key removes the selection. | `limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
@@ -139,6 +139,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-022 | Consolidate / render to audio clip | P2 |  | NOT_STARTED | Render a selection to an audio clip. | — |
 | PL-023 | Crossfades and time stretching | P2 |  | NOT_STARTED | Fades and stretch on audio clips. | — |
 | PL-024 | Clip offset (start inside pattern) | P2 |  | IN_PROGRESS | Model and sequencer support `offset`; no UI to set it yet. | — |
+| PL-025 | Pattern picker | P1 |  | VERIFIED | Patterns column left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit, right-click to rename/clone/delete, + for a new pattern. | `limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
+| PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V; in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |
 
 ## Mixer
 
@@ -150,11 +152,11 @@ automated tests or recorded manual verification. Everything else is not done.
 | MIX-004 | Mute and solo | P0 | ✓ | VERIFIED | M and S buttons; right-click/Cmd+click on M solos; master never solo-muted. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves`<br>`limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master` |
 | MIX-005 | Level meters and clip indicator | P0 | ✓ | IMPLEMENTED | Stereo peak meters (−60…+6 dB, 20 dB/s fall-back) per strip and in the toolbar; master clip LED.<br>*Peak values come from the engine (tested); meter drawing is manual-tested.* | — |
 | MIX-006 | Rename and add mixer tracks | P1 |  | IMPLEMENTED | Double-click name to rename; + adds a track. | — |
-| MIX-007 | Insert effect slots | P1 |  | NOT_STARTED | Ordered effect slots processed before the fader. | — |
+| MIX-007 | Insert effect slots | P1 |  | VERIFIED | Up to 10 insert effects per mixer track (master included), processed in order before the fader; add, bypass, reorder and remove in the Inspector; names show on the strip.<br>*Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects.* | `limeshot-core effects::tests`<br>`limeshot-core document::tests::effect_chain_commands`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed` |
 | MIX-008 | Sends between tracks | P1 |  | NOT_STARTED | Post-fader sends to other inserts with feedback prevention. | — |
 | MIX-009 | Sidechain routing | P2 |  | NOT_STARTED | Sidechain inputs for dynamics. | — |
-| MIX-010 | Built-in 3-band EQ | P1 |  | NOT_STARTED | Per-track 3-band parametric EQ. | — |
-| MIX-011 | Stereo separation, phase invert, swap L/R | P2 |  | NOT_STARTED | Per-track stereo controls. | — |
+| MIX-010 | Built-in 3-band EQ | P1 |  | NOT_STARTED | Per-track 3-band parametric EQ.<br>*Available as the Lime EQ insert effect (FX-002); not built into every strip.* | — |
+| MIX-011 | Stereo separation, phase invert, swap L/R | P2 |  | IN_PROGRESS | Width and polarity are available through the Utility insert (FX-013); no per-strip controls or L/R swap. | — |
 | MIX-012 | Plugin delay compensation | P2 |  | NOT_STARTED | Latency reported by effects aligned across paths. | — |
 | MIX-013 | Insert-to-insert routing | P1 |  | NOT_STARTED | Insert output target other than master. | — |
 | MIX-014 | Current track (C) | P3 |  | NOT_STARTED | — | — |
@@ -182,19 +184,19 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| FX-001 | Effect processing framework (insert chain) | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-002 | Parametric equalizer | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-003 | Filters (LP/HP/BP) | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-004 | Compressor | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-005 | Limiter / maximiser | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-001 | Effect processing framework (insert chain) | P1 |  | VERIFIED | Effect trait (set_params/process/reset), FxRack chains keyed by effect id, real-time-safe adoption and retirement, tails in exports. | `limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed`<br>`limeshot-dsp effects::tests::nonsense_params_stay_finite` |
+| FX-002 | Parametric equalizer | P1 |  | VERIFIED | Lime EQ: low shelf, peaking mid (Q), high shelf (RBJ biquads).<br>*Three bands only; no graphical EQ curve yet.* | `limeshot-dsp effects::tests::eq_boosts_and_cuts_its_band` |
+| FX-003 | Filters (LP/HP/BP) | P1 |  | VERIFIED | Lime Filter: TPT state-variable filter, low/band/high-pass, resonance, mix. | `limeshot-dsp effects::tests::filter_modes` |
+| FX-004 | Compressor | P1 |  | VERIFIED | Lime Comp: feed-forward, stereo-linked peak detector, hard knee; threshold, ratio, attack, release, makeup.<br>*No sidechain input, no knee or lookahead, no gain-reduction meter in the UI.* | `limeshot-dsp effects::tests::compressor_reduces_loud_signals_by_the_ratio` |
+| FX-005 | Limiter / maximiser | P1 |  | VERIFIED | Lime Limiter: instant-attack peak limiter; ceiling and release. The output never exceeds the ceiling.<br>*No lookahead, so fast peaks are shaped hard.* | `limeshot-dsp effects::tests::limiter_never_exceeds_the_ceiling` |
 | FX-006 | Noise gate | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-007 | Reverb | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-008 | Delay | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-007 | Reverb | P1 |  | VERIFIED | Lime Room: pre-delay, 8 damped combs and 4 allpasses per side; size, damping, pre-delay, width, mix. | `limeshot-dsp effects::tests::reverb_has_a_decaying_tail` |
+| FX-008 | Delay | P1 |  | VERIFIED | Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide.<br>*No tempo sync yet.* | `limeshot-dsp effects::tests::delay_echoes_after_the_delay_time`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail` |
 | FX-009 | Distortion / saturation / waveshaper | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-010 | Chorus / flanger / phaser | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-011 | Pitch shifting | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-012 | Stereo processing | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
-| FX-013 | Utility (gain, phase, balance, mono) | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-013 | Utility (gain, phase, balance, mono) | P2 |  | VERIFIED | Utility: gain, stereo width (M/S), polarity. | `limeshot-dsp effects::tests::utility_gain_width_polarity` |
 | FX-014 | Effect presets | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-015 | Analysers (spectrum, oscilloscope) | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 
@@ -308,14 +310,15 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| UI-001 | Main window layout (toolbar, browser, workspace) | P0 | ✓ | IMPLEMENTED | Menu bar, global toolbar, resizable browser side panel, workspace with child windows, status/hint bar. | `limeshot-app tests/ui.rs::renders_frames_without_panicking` |
-| UI-002 | Child windows with toggles (F5–F9) and arrange | P0 | ✓ | VERIFIED | egui windows constrained to the workspace; View menu; Cmd+Shift+H arranges. | `limeshot-app tests/ui.rs::window_shortcuts_toggle_editors` |
-| UI-003 | LimeShot theme tokens and drawn icons | P0 | ✓ | IMPLEMENTED | Single semantic token set (Lime Dark); every icon and the logo drawn in code; app icon rasterised in code. | — |
+| UI-001 | Main window layout (toolbar, browser, workspace) | P0 | ✓ | VERIFIED | ArtCraft-style docked layout: header with menus, flat toolbar, Browser (left), Playlist as the central workspace with FL's pattern picker, Inspector (right), and a bottom dock with Channel Rack / Piano Roll / Mixer tabs; status bar with hints.<br>*Panels can be hidden and resized; they cannot yet be torn off or rearranged.* | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
+| UI-002 | Child windows with toggles (F5–F9) and arrange | P0 | ✓ | VERIFIED | F6/F7/F9 show the dock tab (press again to hide the dock), F5 maximises the Playlist, Alt+F8 Browser, Cmd+I Inspector; the toolbar buttons do the same.<br>*Replaces floating editor windows.* | `limeshot-app tests/ui.rs::window_shortcuts_switch_dock_tabs` |
+| UI-003 | LimeShot theme tokens and drawn icons | P0 | ✓ | VERIFIED | Semantic tokens (Lime Dark: neutral near-black surfaces, lime accent), Inter and JetBrains Mono (OFL) fonts, flat controls, upper-case section labels; all icons and the logo drawn in code.<br>*Single theme. Verified visually: offscreen renders (docs/screenshots) and a live macOS capture.* | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
 | UI-004 | Hint bar and tooltips | P1 |  | IMPLEMENTED | Status bar shows hover hints; every control has a tooltip. | — |
 | UI-005 | UI scaling / HiDPI | P1 |  | IMPLEMENTED | egui pixels-per-point plus View › Zoom (Cmd+= / Cmd+- / Cmd+0), persisted. | — |
 | UI-006 | Additional themes (light, high contrast) | P3 |  | NOT_STARTED | Token set is ready for more themes. | — |
 | UI-007 | Detachable windows (multi-monitor) | P2 |  | NOT_STARTED | egui multi-viewport. | — |
-| UI-008 | Offscreen UI rendering for review/regression | P1 |  | IMPLEMENTED | `cargo run -p limeshot-app --example ui_shot -- out.png` renders the window with wgpu offscreen. | — |
+| UI-008 | Offscreen UI rendering for review/regression | P1 |  | VERIFIED | `cargo run -p limeshot-app --example ui_shot -- out.png` renders the window with wgpu offscreen. | `cargo run -p limeshot-app --example ui_shot (docs/screenshots/*.png)` |
+| UI-009 | Inspector panel | P1 |  | VERIFIED | Right panel showing the selected channel's instrument or the selected mixer track (level, routing, insert chain).<br>*ArtCraft-style docked property panel.* | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
 
 ## Platform
 

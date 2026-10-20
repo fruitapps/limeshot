@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-20. Everything here is either not implemented or not verified.
+Current as of 2026-10-20 (session 2). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -12,7 +12,8 @@ Current as of 2026-10-20. Everything here is either not implemented or not verif
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
 * Switching output devices was tested only with the default device.
 * WAV is the only sample format (no MP3/FLAC/OGG/AIFF).
-* No effects of any kind, no sends, no insert-to-insert routing, no EQ.
+* Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). There are no sends, no
+  insert-to-insert routing, no sidechain, no delay tempo sync, and no gain-reduction metering.
 * No automation, no tempo changes over time (one project tempo), one project-wide time signature.
 * Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
   aliasing when pitched far up).
@@ -22,7 +23,8 @@ Current as of 2026-10-20. Everything here is either not implemented or not verif
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
 ## Editing
-* No copy/paste, no quantize, no swing, no tool palette (draw-tool semantics only), no scale highlighting, no chord or arp tools.
+* Clipboard is app-internal (not the system clipboard). Quantize has no dialog (100% starts only from the UI). Swing is
+  global only (no per-channel mix). No tool palette (draw-tool semantics only), no scale highlighting, no chord or arp tools.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * Pattern clips do not loop when longer than their pattern; clip offsets exist in the model but have no UI.
 * No markers, loop regions or time selections; no audio or automation clips; no performance mode.
@@ -33,11 +35,14 @@ Current as of 2026-10-20. Everything here is either not implemented or not verif
 * No templates, autosave or crash recovery. Recent files have no Alt+number shortcuts.
 * `.flp` files cannot be imported.
 * No plugin hosting.
-* Child windows cannot detach into OS windows. Default positions can overlap on small screens (View › Arrange
-  windows, Cmd+Shift+H).
+* Panels are docked (Browser, Inspector, bottom dock); they cannot be torn off into OS windows or rearranged, and
+  the Channel Rack and Piano Roll share the dock, so they are not visible at the same time.
 * Accessibility: custom-painted editors expose no accessibility labels.
 
 ## Research
-* FL Studio was not observed live: Screen Recording permission was missing and the REA MCP tools need a Claude Code
-  restart. Interaction details come from the official manual. Items marked INFERRED/UNKNOWN in
-  `docs/research/fl-studio-analysis.md` still need confirmation.
+* FL Studio's main window was captured live (session 2), but it could not be operated: Accessibility is not granted,
+  so REA's `observe-native-ui` refuses and synthetic clicks are impossible (the modal welcome dialog also blocks
+  opening demo projects). Items marked INFERRED/UNKNOWN in `docs/research/fl-studio-analysis.md` (clip looping, step
+  drag-paint details, default note length) still need confirmation.
+* The live LimeShot GUI was captured on macOS, but not clicked by a person or by synthetic input (same Accessibility
+  restriction). Interactions are covered by the headless `egui_kittest` tests.

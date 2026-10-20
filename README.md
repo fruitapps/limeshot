@@ -16,9 +16,11 @@ route channels to mixer tracks, set volume and pan, save and reopen `.lime` proj
 is checked by an automated end-to-end test (`crates/limeshot-app/tests/mvp_workflow.rs`) and by realtime
 playback on macOS.
 
-Not there yet: effects, automation, recording, MIDI devices, plugin hosting, audio clips, MP3/FLAC export.
+It also has swing, quantize, copy/paste, and insert effects (EQ, filter, delay, reverb, compressor, limiter, utility).
+
+Not there yet: sends, automation, recording, MIDI devices, plugin hosting, audio clips, MP3/FLAC export.
 See [docs/roadmap/known-limitations.md](docs/roadmap/known-limitations.md) and the full inventory of
-217 tracked features in [docs/roadmap/features.md](docs/roadmap/features.md).
+220 tracked features in [docs/roadmap/features.md](docs/roadmap/features.md).
 
 | Platform | State |
 |---|---|
@@ -62,8 +64,8 @@ applies a JSON list of the same typed commands the UI uses:
 cargo test --workspace
 ```
 
-The suite (72 tests) covers musical timing, scheduling across buffer sizes and sample rates,
-synth/sampler behaviour, mixing, project round trips, undo/redo, and the UI driven with synthetic input.
+The suite (92 tests) covers musical timing, scheduling across buffer sizes and sample rates,
+synth/sampler behaviour, effects, mixing, project round trips, undo/redo, and the UI driven with synthetic input.
 
 ## Layout
 
@@ -71,7 +73,7 @@ synth/sampler behaviour, mixing, project round trips, undo/redo, and the UI driv
 |---|---|
 | `limeshot-core` | Musical time (960 PPQ ticks), project model, typed commands, undo/redo |
 | `limeshot-project` | `.lime` file format: versioned envelope, migrations, atomic saving |
-| `limeshot-dsp` | Oscillators, envelopes, pan law, WAV I/O |
+| `limeshot-dsp` | Oscillators, envelopes, pan law, WAV I/O, insert effects |
 | `limeshot-sequencer` | Compiles a project into an immutable playback snapshot |
 | `limeshot-engine` | Renderer (voices, scheduling, mixer, transport) shared by playback and export |
 | `limeshot-audio` | cpal device output, lock-free control, background sample loading |

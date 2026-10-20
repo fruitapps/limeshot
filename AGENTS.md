@@ -15,7 +15,7 @@ cargo build --workspace
 cargo run --release -p limeshot-app [-- --demo | path/to/song.lime]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
-cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --settings --melody --empty]
+cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty]
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
@@ -23,8 +23,8 @@ python3 scripts/features.py check        # or `generate` after editing features.
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
 ```
 **Look at the UI** after UI changes. Render with `ui_shot` and read the PNG (screen capture of a live window may be
-blocked by macOS permissions). The headless UI tests in `crates/limeshot-app/tests/ui.rs` use pointer positions from
-the default 1440×900 layout. Update them if the layout moves.
+blocked by macOS permissions; with Screen Recording granted, `screencapture -l <window id>` captures the live app). The
+headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions from geometry the editors record.
 
 ## Workspace
 | Crate | Role |
@@ -33,9 +33,9 @@ the default 1440×900 layout. Update them if the layout moves.
 | `limeshot-project` | `.lime` I/O: versioned envelope, `migrate`, unknown-field preservation, atomic save, relative sample paths |
 | `limeshot-dsp` | oscillators (PolyBLEP), ADSR, pan law, dB, WAV read/write |
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
-| `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), offline `render_offline`/`export_wav` |
+| `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
 | `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread |
-| `limeshot-ui` | egui app: `app.rs` state/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `dialogs`, `theme`, `icons`, `widgets` |
+| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `inspector`, `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
 | `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot` example, MVP and UI tests |
 
 ## Coding conventions
@@ -60,10 +60,11 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-20)
-* Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows and Linux
-  CI not yet run).
-* 217 features tracked: 51 verified, 37 implemented, 6 in progress, 120 not started, 1 researched, 2 deferred.
+## Current state (2026-10-20, session 2)
+* Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
+  yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done.
+* UI: ArtCraft-style docked layout (`docs/architecture/ui.md`); editors are panels, not windows.
+* 220 features tracked: 70 verified, 34 implemented, 7 in progress, 106 not started, 1 researched, 2 deferred.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 
 ## Immediate next tasks

@@ -42,3 +42,30 @@ repository configured); multi-device audio switching.
 5. Browser: click a sample (preview); double-click (loads into the selected sampler); drag onto the Channel Rack (new
    channel).
 6. Cmd+S, quit, reopen; File › Export WAV; play the file in another player.
+
+## 2026-10-20 — Session 2: live observation, ArtCraft-style UI, editing depth, insert effects
+
+Permissions: Screen Recording granted; Accessibility not granted.
+
+Done:
+1. **FL Studio live capture.** `screencapture -l` of the main window and welcome dialog (`docs/research/evidence/
+   screenshots/`). Recorded the observed layout (toolbar rows, PAT/SONG pills, 140 BPM default, B:S:T display, Playlist
+   maximised with a pattern picker, LED track headers) in `fl-studio-analysis.md` §1a. REA `observe-native-ui` still
+   refuses without Accessibility (`evidence/rea/observe-ui-965.json`).
+2. **UI redesign** after studying the ArtCraft apps' screenshots and theme code (FilmCraft tokens, Inter/JetBrains Mono,
+   SoundCraft clips and mixer): docked layout, Inspector, dock tabs, pattern picker, flat toolbar, new tokens and fonts.
+   Verified with offscreen renders and a live capture of the running app (`docs/screenshots/live-macos.png`).
+3. **Bug found by a new UI test and fixed:** drag-painting steps switched to erasing after the first step.
+4. **Editing:** swing (sequencer), quantize (command + Alt+Q + button), copy/cut/paste for notes, rack steps and clips.
+5. **Insert effects** (model, commands, original DSP, real-time-safe processor hand-off, export tails, Inspector
+   editor, strip slots). The demo song uses a reverb, a delay and a master limiter.
+6. Window title now uses the project title for unsaved projects.
+
+Verification on this machine:
+* `cargo test --workspace`: 92 tests pass. Clippy (`-D warnings`) and `cargo fmt --check` are clean.
+* `limeshot-cli demo … --render`: 16.81 s with effect tails, peak −3.7 dBFS.
+* `limeshot-cli play out/demo.lime --seconds 4`: realtime with effects at 5.9% audio load, position correct.
+* Live app launched (`limeshot --demo`); window captured and reviewed.
+
+Not verified: Windows/Linux (no CI run; no remote), operating the live GUI with real input, FL Studio interaction
+details.

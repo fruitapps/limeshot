@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-20",
+  "updated": "2026-10-20 (session 2)",
   "features": [
     {
       "id": "APP-001",
@@ -9,7 +9,7 @@
       "name": "New project",
       "description": "Start an empty project.",
       "fl_reference": "File › New; templates offered.",
-      "limeshot_behavior": "File › New / Cmd+N: one empty pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.",
+      "limeshot_behavior": "File › New / Cmd+N: a 140 BPM project (FL Studio's default, observed) with one pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": true,
@@ -700,7 +700,8 @@
         "limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid",
         "limeshot-engine tests/audio.rs::tempo_change_moves_onsets",
         "limeshot-app tests/ui.rs::clicking_a_step_button_writes_a_note",
-        "limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end"
+        "limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end",
+        "limeshot-app tests/ui.rs::dragging_across_steps_paints_them_in_one_undo_step"
       ],
       "reference": {
         "application": "FL Studio",
@@ -938,9 +939,9 @@
       "name": "Channel settings window",
       "description": "Edit instrument parameters.",
       "fl_reference": "Click channel button opens Channel Settings.",
-      "limeshot_behavior": "Click channel name: sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or synth parameters, root key.",
+      "limeshot_behavior": "Instrument parameters live in the docked Inspector (right panel): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. Clicking a channel name shows it there.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -950,7 +951,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -958,7 +961,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "Exercised by the offscreen screenshot and render-without-panic test; parameter widgets are standard egui sliders."
+      "notes": "Replaces FL Studio's floating Channel Settings window with a docked panel (ArtCraft style)."
     },
     {
       "id": "SEQ-010",
@@ -966,19 +969,26 @@
       "name": "Swing (global and per channel)",
       "description": "Delay every second 16th.",
       "fl_reference": "Global swing knob × channel swing.",
-      "limeshot_behavior": "Global swing in the rack header, per-channel amount; applied in the sequencer compile step.",
+      "limeshot_behavior": "Global swing knob in the Channel Rack header (0–100%): notes exactly on the second 16th of each pair are delayed by up to half a step (≈67% gives a triplet feel), in Pattern and Song playback.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "SEQ-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-sequencer tests::swing_delays_every_second_sixteenth",
+        "limeshot-core document::tests::swing_is_clamped_and_undoable"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -986,7 +996,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": ""
+      "notes": "Per-channel swing mix and 'truncate swing notes' are not implemented."
     },
     {
       "id": "SEQ-011",
@@ -1098,17 +1108,21 @@
       "name": "Copy / paste steps between channels and patterns",
       "description": "Clipboard for steps.",
       "fl_reference": "Ctrl+C/X/V with channel selected.",
-      "limeshot_behavior": "Copy the selected channel's notes and paste into another channel/pattern.",
+      "limeshot_behavior": "With the Channel Rack focused, Cmd+C/X copy/cut the selected channel's notes in the current pattern; Cmd+V replaces the selected channel's notes. Step patterns are re-pitched to the target channel's root key so they stay steps.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::channel_rack_copies_steps_between_channels"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1586,17 +1600,23 @@
       "name": "Quantize",
       "description": "Quantise note starts/lengths.",
       "fl_reference": "Alt+Q quantize, Ctrl+Q quick quantize.",
-      "limeshot_behavior": "Quantize command with strength.",
+      "limeshot_behavior": "Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths",
+        "limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1604,7 +1624,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "No quantize dialog (strength, lengths, swing template) yet."
     },
     {
       "id": "PR-015",
@@ -1719,17 +1739,21 @@
       "name": "Copy / cut / paste notes",
       "description": "Clipboard.",
       "fl_reference": "Ctrl+C/X/V.",
-      "limeshot_behavior": "Clipboard of notes relative to the selection start.",
+      "limeshot_behavior": "Cmd+C/X/V copy, cut and paste notes; pasting puts them at the same times into the channel being edited and selects them (FL Studio behaviour).",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1737,7 +1761,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "App-internal clipboard (not the system clipboard)."
     },
     {
       "id": "PR-020",
@@ -1921,7 +1945,8 @@
       "tests": [
         "limeshot-core document::tests::clips_are_linked_until_made_unique",
         "limeshot-sequencer tests::playlist_flattens_linked_clips",
-        "limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern"
+        "limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern",
+        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2789,19 +2814,30 @@
       "name": "Insert effect slots",
       "description": "Per-track effect chains.",
       "fl_reference": "10 FX slots per track.",
-      "limeshot_behavior": "Ordered effect slots processed before the fader.",
+      "limeshot_behavior": "Up to 10 insert effects per mixer track (master included), processed in order before the fader; add, bypass, reorder and remove in the Inspector; names show on the strip.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-engine",
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core effects::tests",
+        "limeshot-core document::tests::effect_chain_commands",
+        "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail",
+        "limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2809,7 +2845,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects."
     },
     {
       "id": "MIX-008",
@@ -2892,7 +2928,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Available as the Lime EQ insert effect (FX-002); not built into every strip."
     },
     {
       "id": "MIX-011",
@@ -2900,12 +2936,14 @@
       "name": "Stereo separation, phase invert, swap L/R",
       "description": "Stereo utilities.",
       "fl_reference": "Track properties.",
-      "limeshot_behavior": "Per-track stereo controls.",
+      "limeshot_behavior": "Width and polarity are available through the Utility insert (FX-013); no per-strip controls or L/R swap.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
@@ -3417,17 +3455,25 @@
       "name": "Effect processing framework (insert chain)",
       "description": "Effect processing framework (insert chain).",
       "fl_reference": "Mixer FX slots, plugin wrapper",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Effect trait (set_params/process/reset), FxRack chains keyed by effect id, real-time-safe adoption and retirement, tails in exports.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-dsp",
+        "limeshot-audio"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail",
+        "limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed",
+        "limeshot-dsp effects::tests::nonsense_params_stay_finite"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3444,19 +3490,23 @@
       "name": "Parametric equalizer",
       "description": "Parametric equalizer.",
       "fl_reference": "Fruity Parametric EQ 2",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime EQ: low shelf, peaking mid (Q), high shelf (RBJ biquads).",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::eq_boosts_and_cuts_its_band"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3465,7 +3515,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "Three bands only; no graphical EQ curve yet."
     },
     {
       "id": "FX-003",
@@ -3473,19 +3523,23 @@
       "name": "Filters (LP/HP/BP)",
       "description": "Filters (LP/HP/BP).",
       "fl_reference": "Fruity Filter, Love Philter",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Filter: TPT state-variable filter, low/band/high-pass, resonance, mix.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::filter_modes"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3502,19 +3556,23 @@
       "name": "Compressor",
       "description": "Compressor.",
       "fl_reference": "Fruity Compressor, Limiter",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Comp: feed-forward, stereo-linked peak detector, hard knee; threshold, ratio, attack, release, makeup.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::compressor_reduces_loud_signals_by_the_ratio"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3523,7 +3581,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "No sidechain input, no knee or lookahead, no gain-reduction meter in the UI."
     },
     {
       "id": "FX-005",
@@ -3531,19 +3589,23 @@
       "name": "Limiter / maximiser",
       "description": "Limiter / maximiser.",
       "fl_reference": "Fruity Limiter, Maximus",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Limiter: instant-attack peak limiter; ceiling and release. The output never exceeds the ceiling.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::limiter_never_exceeds_the_ceiling"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3552,7 +3614,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "No lookahead, so fast peaks are shaped hard."
     },
     {
       "id": "FX-006",
@@ -3589,19 +3651,23 @@
       "name": "Reverb",
       "description": "Reverb.",
       "fl_reference": "Fruity Reeverb 2, LuxeVerb",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Room: pre-delay, 8 damped combs and 4 allpasses per side; size, damping, pre-delay, width, mix.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::reverb_has_a_decaying_tail"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3618,19 +3684,24 @@
       "name": "Delay",
       "description": "Delay.",
       "fl_reference": "Fruity Delay 3",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::delay_echoes_after_the_delay_time",
+        "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3639,7 +3710,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "No tempo sync yet."
     },
     {
       "id": "FX-009",
@@ -3763,19 +3834,23 @@
       "name": "Utility (gain, phase, balance, mono)",
       "description": "Utility (gain, phase, balance, mono).",
       "fl_reference": "Fruity Balance, Phase Inverter",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Utility: gain, stereo width (M/S), polarity.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::utility_gain_width_polarity"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5894,38 +5969,7 @@
       "name": "Main window layout (toolbar, browser, workspace)",
       "description": "FL-style workspace.",
       "fl_reference": "Toolbar, docked browser, child windows.",
-      "limeshot_behavior": "Menu bar, global toolbar, resizable browser side panel, workspace with child windows, status/hint bar.",
-      "priority": "P0",
-      "status": "IMPLEMENTED",
-      "mvp": true,
-      "dependencies": [],
-      "modules": [
-        "limeshot-ui"
-      ],
-      "acceptance_criteria": [
-        "Behaves as described under 'LimeShot intended behaviour'.",
-        "Has an automated test or a documented manual test procedure."
-      ],
-      "tests": [
-        "limeshot-app tests/ui.rs::renders_frames_without_panicking"
-      ],
-      "reference": {
-        "application": "FL Studio",
-        "version": "FL Studio 2026 (26.1.1.5313)",
-        "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
-          "docs/research/fl-studio-analysis.md"
-        ]
-      },
-      "notes": ""
-    },
-    {
-      "id": "UI-002",
-      "category": "UI",
-      "name": "Child windows with toggles (F5–F9) and arrange",
-      "description": "Window management.",
-      "fl_reference": "F5 Playlist, F6 rack, F7 piano roll, F9 mixer.",
-      "limeshot_behavior": "egui windows constrained to the workspace; View menu; Cmd+Shift+H arranges.",
+      "limeshot_behavior": "ArtCraft-style docked layout: header with menus, flat toolbar, Browser (left), Playlist as the central workspace with FL's pattern picker, Inspector (right), and a bottom dock with Channel Rack / Piano Roll / Mixer tabs; status bar with hints.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -5938,7 +5982,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::window_shortcuts_toggle_editors"
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5948,7 +5992,38 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": ""
+      "notes": "Panels can be hidden and resized; they cannot yet be torn off or rearranged."
+    },
+    {
+      "id": "UI-002",
+      "category": "UI",
+      "name": "Child windows with toggles (F5–F9) and arrange",
+      "description": "Window management.",
+      "fl_reference": "F5 Playlist, F6 rack, F7 piano roll, F9 mixer.",
+      "limeshot_behavior": "F6/F7/F9 show the dock tab (press again to hide the dock), F5 maximises the Playlist, Alt+F8 Browser, Cmd+I Inspector; the toolbar buttons do the same.",
+      "priority": "P0",
+      "status": "VERIFIED",
+      "mvp": true,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::window_shortcuts_switch_dock_tabs"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
+          "docs/research/fl-studio-analysis.md"
+        ]
+      },
+      "notes": "Replaces floating editor windows."
     },
     {
       "id": "UI-003",
@@ -5956,9 +6031,9 @@
       "name": "LimeShot theme tokens and drawn icons",
       "description": "Visual identity.",
       "fl_reference": "—",
-      "limeshot_behavior": "Single semantic token set (Lime Dark); every icon and the logo drawn in code; app icon rasterised in code.",
+      "limeshot_behavior": "Semantic tokens (Lime Dark: neutral near-black surfaces, lime accent), Inter and JetBrains Mono (OFL) fonts, flat controls, upper-case section labels; all icons and the logo drawn in code.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -5969,7 +6044,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5978,7 +6055,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": ""
+      "notes": "Single theme. Verified visually: offscreen renders (docs/screenshots) and a live macOS capture."
     },
     {
       "id": "UI-004",
@@ -6100,7 +6177,7 @@
       "fl_reference": "—",
       "limeshot_behavior": "`cargo run -p limeshot-app --example ui_shot -- out.png` renders the window with wgpu offscreen.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -6110,7 +6187,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "cargo run -p limeshot-app --example ui_shot (docs/screenshots/*.png)"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6280,6 +6359,99 @@
         ]
       },
       "notes": ""
+    },
+    {
+      "id": "PL-025",
+      "category": "Playlist",
+      "name": "Pattern picker",
+      "description": "List of patterns beside the Playlist.",
+      "fl_reference": "Clip picker panel on the left of the Playlist (observed in fl-main.png).",
+      "limeshot_behavior": "Patterns column left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit, right-click to rename/clone/delete, + for a new pattern.",
+      "priority": "P1",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [
+        "PL-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Clicking a pattern makes it the one the Playlist places.",
+        "Usage counts match the clips."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-main.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PL-026",
+      "category": "Playlist",
+      "name": "Copy / cut / paste clips",
+      "description": "Clipboard for clips.",
+      "fl_reference": "Ctrl+C / X / V in the Playlist.",
+      "limeshot_behavior": "Cmd+C/X/V; in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.",
+      "priority": "P1",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "PL-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Copied clips paste with the same tracks, lengths and relative timing."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+        ]
+      },
+      "notes": "No automated test yet."
+    },
+    {
+      "id": "UI-009",
+      "category": "UI",
+      "name": "Inspector panel",
+      "description": "Docked property panel.",
+      "fl_reference": "Channel Settings and Mixer track properties windows.",
+      "limeshot_behavior": "Right panel showing the selected channel's instrument or the selected mixer track (level, routing, insert chain).",
+      "priority": "P1",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [
+        "UI-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Selecting a channel or mixer track shows its properties.",
+        "Edits are commands with undo."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/artcraft-architecture.md"
+        ]
+      },
+      "notes": "ArtCraft-style docked property panel."
     }
   ]
 }

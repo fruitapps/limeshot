@@ -112,8 +112,29 @@ fades linearly, and panning never boosts.
 Solo: if any channel is soloed, only soloed channels are audible. If any insert is soloed, only soloed inserts are
 audible. The master is never solo-muted.
 
-Insert effects, sends and insert-to-insert routing are not implemented. The bus-per-track structure is where they will
-go (effects between "bus filled" and "volume/pan").
+### Insert effects
+
+Each mixer track (master included) has an insert chain of up to 10 effects (`limeshot_dsp::effects`: Utility, Lime EQ,
+Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter). In `mix()`, each bus runs its chain after the voices are
+summed and before volume/pan.
+
+Processors own delay lines, so they must be allocated off the audio thread:
+
+1. `LimeShotApp::send_effect_processors` (control thread) builds a processor for every effect id it has not sent yet
+   (`limeshot_engine::fx::build`, at the device rate) and sends `Msg::Effect(id, Box<dyn Effect>)`, **before** the
+   snapshot that refers to it.
+2. The renderer's `FxRack` adopts it into a preallocated pool. When a snapshot arrives, `FxRack::arrange` moves
+   processors into per-track chains by id (vectors are preallocated: 128 tracks × 10 slots), applies the snapshot's
+   parameters, and parks anything unreferenced in `retired`.
+3. The audio callback returns retired processors through the garbage ring (`Garbage::Effect`), and the control thread
+   drops them.
+
+A snapshot effect whose processor has not arrived is bypassed. When the project is replaced (new/open; ids may be
+reused), `Msg::ClearEffects` retires every processor first. Restarting the stream rebuilds all of them at the new rate.
+Offline export builds all processors directly (`fx::build_all`) and keeps rendering the tail while the output is above
+−80 dBFS (`Renderer::is_ringing`), up to `max_tail_secs`.
+
+Sends and insert-to-insert routing are not implemented.
 
 ## Device output
 
