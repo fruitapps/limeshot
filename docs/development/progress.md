@@ -197,3 +197,10 @@ Windows/Linux CI running, then expand, starting with the Piano Roll tools. Each 
    PR-004…007 and PR-009…011 are VERIFIED by five new UI tests (selection gestures, velocity lane, wheel/arrow
    scrolling and zoom, Shift/Cmd arrows, keyboard audition, ruler locate, ghosts, channel selector). Live check:
    Cmd+wheel zooms both ways and the playhead draws during playback.
+3. **Playlist, Mixer and app.** FL 2026.1.1's Playlist menus (two new screenshots) list Shift+arrows to shift clips,
+   Cmd+A/Cmd+D, Shift+I invert, Opt+M mute, Cmd+G merge. LimeShot moved clips with plain arrows (KB-069 INFERRED);
+   it now uses Shift+arrows, plain arrows scroll (inferred from the Piano Roll: FL could not be brought to the front
+   for a live check this time) and Shift+I inverts. The toolbar's position readout now exposes its text to
+   accessibility. New UI tests verify PL-003/006/008/009, MIX-005 (Song playback reaches the master meter),
+   APP-001/014 (New asks to save; Cancel / Don't save) and TR-005/006; APP-012 is VERIFIED by its recorded manual
+   checks. All MVP features except the platform ones (PF-002…004, waiting for CI) are now VERIFIED.

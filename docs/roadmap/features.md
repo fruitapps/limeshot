@@ -9,16 +9,16 @@ automated tests or recorded manual verification. Everything else is not done.
 ## Summary
 
 - Features tracked: **237**
-- MVP features: **69** — 67 implemented or verified, 56 verified
-- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 20, VERIFIED 102, DEFERRED 2
+- MVP features: **69** — 67 implemented or verified, 66 verified
+- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 112, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 25 | 13 | 4 | 2 | 6 |
+| Application | 25 | 16 | 1 | 2 | 6 |
 | Channel Rack | 20 | 14 | 0 | 0 | 6 |
 | Piano Roll | 26 | 15 | 0 | 0 | 11 |
-| Playlist | 28 | 12 | 5 | 2 | 9 |
-| Mixer | 16 | 7 | 2 | 1 | 6 |
+| Playlist | 28 | 16 | 1 | 2 | 9 |
+| Mixer | 16 | 8 | 1 | 1 | 6 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 13 | 3 | 0 | 0 | 10 |
@@ -26,7 +26,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Browser | 10 | 5 | 1 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
 | Export | 13 | 5 | 0 | 0 | 8 |
-| Transport & Time | 13 | 7 | 4 | 0 | 2 |
+| Transport & Time | 13 | 9 | 2 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
 | UI | 11 | 6 | 2 | 1 | 2 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
@@ -35,7 +35,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| APP-001 | New project | P0 | ✓ | IMPLEMENTED | File › New / Cmd+N: a 140 BPM project (FL Studio's default, observed) with one pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.<br>*The ask-to-save flow is exercised manually only.* | `limeshot-core model::tests::new_project_has_one_pattern_and_master` |
+| APP-001 | New project | P0 | ✓ | VERIFIED | File › New / Cmd+N: a 140 BPM project (FL Studio's default, observed) with one pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes. | `limeshot-core model::tests::new_project_has_one_pattern_and_master`<br>`crates/limeshot-app/tests/ui.rs::new_project_asks_to_save_unsaved_changes` |
 | APP-002 | Open project | P0 | ✓ | VERIFIED | File › Open / Cmd+O loads .lime files; damaged or newer files show an error and leave the open project untouched. | `limeshot-project tests::save_and_reload_is_identical`<br>`limeshot-project tests::refuses_newer_and_foreign_files`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | APP-003 | Save / Save as (atomic) | P0 | ✓ | VERIFIED | Writes a temp file, fsyncs, renames over the target; Save as picks a new path. | `limeshot-project tests::save_and_reload_is_identical`<br>`limeshot-project tests::overwriting_keeps_one_file` |
 | APP-004 | Modified-state detection | P0 | ✓ | VERIFIED | Window title shows • when modified; undoing back to the saved state clears it. | `limeshot-core document::tests::modified_tracks_saves` |
@@ -46,9 +46,9 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-009 | Relative asset references | P0 | ✓ | VERIFIED | Sample paths inside the project folder are stored relative (with / separators), others absolute. | `limeshot-project tests::save_and_reload_is_identical` |
 | APP-010 | Recent files | P1 |  | VERIFIED | File › Open recent lists the last 10 projects (persisted in settings).<br>*Alt+0..9 not bound.* | `limeshot-ui settings::tests::round_trip_and_recent_list` |
 | APP-011 | Application settings persistence | P1 |  | VERIFIED | JSON in the platform config folder (directories crate): audio device, recent files, browser folders, UI scale. | `limeshot-ui settings::tests::round_trip_and_recent_list` |
-| APP-012 | Audio device settings | P0 | ✓ | IMPLEMENTED | Options › Audio settings: device, sample rate and buffer size from what the device reports; Apply restarts the stream.<br>*Verified manually that the default device opens (MacBook Pro Speakers, 48 kHz). Switching devices has not been tested on hardware with several outputs. No ASIO.* | `limeshot-audio devices::tests::buffer_size_requests_are_validated` |
+| APP-012 | Audio device settings | P0 | ✓ | VERIFIED | Options › Audio settings: device, sample rate and buffer size from what the device reports; Apply restarts the stream.<br>*Verified manually that the default device opens (MacBook Pro Speakers, 48 kHz). Switching devices has not been tested on hardware with several outputs. No ASIO. Recorded manual verification: the default device opens and plays (sessions 4–7, MacBook Pro Speakers, 48 kHz).* | `limeshot-audio devices::tests::buffer_size_requests_are_validated` |
 | APP-013 | Keyboard shortcuts for core actions | P0 | ✓ | VERIFIED | Space, Cmd+Space, L, F4–F9, Alt+F8, Cmd+Z/S/O/N/R/M/H/B/A/D, Delete, arrows; listed in Help › Keyboard shortcuts. | `limeshot-app tests/ui.rs::window_shortcuts_toggle_editors`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo`<br>`limeshot-app tests/ui.rs::space_starts_and_stops_the_transport` |
-| APP-014 | Ask to save on close | P0 | ✓ | IMPLEMENTED | Closing the window with unsaved changes asks Save / Don't save / Cancel.<br>*Manual test only.* | — |
+| APP-014 | Ask to save on close | P0 | ✓ | VERIFIED | Closing the window with unsaved changes asks Save / Don't save / Cancel.<br>*The UI test covers New (Cancel and Don't save); closing the window uses the same dialog (Pending::Quit).* | `crates/limeshot-app/tests/ui.rs::new_project_asks_to_save_unsaved_changes` |
 | APP-015 | Project templates | P2 |  | NOT_STARTED | Templates folder with .lime files offered on New. | — |
 | APP-016 | Autosave and crash recovery | P1 |  | VERIFIED | While there are unsaved changes, the project is written atomically every N minutes (Options › Autosave: off, 1, 2, 5 (default) or 10) to autosave/autosave.lime in the data folder with a session record (original file, time). Saving, a clean New/Open and quitting remove it. At the next start a leftover copy (a crash) opens 'Recover unsaved work?': Recover restores it as unsaved changes to its original file; Discard deletes it. A clean start never deletes another session's copy.<br>*One autosave slot per user: two LimeShot instances share it (the later write wins).* | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
 | APP-017 | Project info (title, author, comments) | P2 |  | IN_PROGRESS | Title is stored and editable via SetTitle (no UI dialog yet). | — |
@@ -123,13 +123,13 @@ automated tests or recorded manual verification. Everything else is not done.
 |---|---|---|---|---|---|---|
 | PL-001 | Pattern clips (linked instances) | P0 | ✓ | VERIFIED | Left-click empty space places the current pattern; every clip of a pattern plays the same data. | `limeshot-core document::tests::clips_are_linked_until_made_unique`<br>`limeshot-sequencer tests::playlist_flattens_linked_clips`<br>`limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern`<br>`limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-002 | Move clips (time and track) | P0 | ✓ | VERIFIED | Drag moves the selection with snap; arrows nudge. | `limeshot-core document::tests::clip_duplicate_and_move` |
-| PL-003 | Resize clips | P0 | ✓ | IMPLEMENTED | Drag the right edge to change the length; drag the left edge to trim or reveal the start (the clip offset moves, the end stays). A pattern clip plays its pattern once and is silent after it (FL Studio, D14).<br>*Matches FL Studio: observed live in FL Studio 2026.1.1 that a pattern clip lengthened past its pattern is silent after the pattern ends (no looping; evidence/screenshots/fl-clip-no-loop.png). Decision D14.* | `limeshot-sequencer tests::clip_truncates_notes`<br>`limeshot-core document::tests::trimming_a_clip_start_moves_its_offset` |
+| PL-003 | Resize clips | P0 | ✓ | VERIFIED | Drag the right edge to change the length; drag the left edge to trim or reveal the start (the clip offset moves, the end stays). A pattern clip plays its pattern once and is silent after it (FL Studio, D14).<br>*Matches FL Studio: observed live in FL Studio 2026.1.1 that a pattern clip lengthened past its pattern is silent after the pattern ends (no looping; evidence/screenshots/fl-clip-no-loop.png). Decision D14.* | `limeshot-sequencer tests::clip_truncates_notes`<br>`limeshot-core document::tests::trimming_a_clip_start_moves_its_offset`<br>`crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows`<br>`crates/limeshot-app/tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge` |
 | PL-004 | Delete clips | P0 | ✓ | VERIFIED | Right-click or right-drag deletes; Delete key removes the selection. | `limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
 | PL-005 | Duplicate clips (Ctrl+B) | P0 | ✓ | VERIFIED | Cmd+B or clip menu › Duplicate. | `limeshot-core document::tests::clip_duplicate_and_move` |
-| PL-006 | Select clips | P0 | ✓ | IMPLEMENTED | Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D. | — |
+| PL-006 | Select clips | P0 | ✓ | VERIFIED | Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D, Shift+I invert.<br>*FL 2026.1.1's Playlist Select menu (fl-playlist-select-menu.png): Cmd+A, Cmd+D, Shift+I invert; LimeShot has those. Select by source/muted/overlapping/stacked and time around selection are not implemented.* | `crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows` |
 | PL-007 | Snap clips to grid | P0 | ✓ | VERIFIED | Uses the global snap; Alt bypasses. | `limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern` |
-| PL-008 | Zoom, scroll, bar/beat ruler | P0 | ✓ | IMPLEMENTED | Cmd+wheel zoom, wheel/Shift+wheel scroll, ruler with bar numbers. | — |
-| PL-009 | Playhead and set song position | P0 | ✓ | IMPLEMENTED | Ruler click/drag sets the song position and switches to Song mode; Home returns to start. | — |
+| PL-008 | Zoom, scroll, bar/beat ruler | P0 | ✓ | VERIFIED | Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers.<br>*Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist).* | `crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position`<br>`crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows` |
+| PL-009 | Playhead and set song position | P0 | ✓ | VERIFIED | Ruler click/drag sets the song position and switches to Song mode; Home returns to start. | `crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position` |
 | PL-010 | Song mode drives the engine | P0 | ✓ | VERIFIED | Song program = flattened clips; loops at the end (toggle) or stops. | `limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement`<br>`limeshot-engine tests/audio.rs::song_stops_at_the_end_without_loop`<br>`limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | PL-011 | Make unique | P0 | ✓ | VERIFIED | Clip ▾ menu › Make unique clones the pattern for that clip. | `limeshot-core document::tests::clips_are_linked_until_made_unique` |
 | PL-012 | Playlist tracks: add, rename, mute | P0 | ✓ | VERIFIED | + Track; double-click to rename; LED mutes the track. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves` |
@@ -158,7 +158,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | MIX-002 | Volume faders | P0 | ✓ | VERIFIED | Fader 0…+6 dB with a perceptual travel; Shift fine; double-click resets. | `limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master` |
 | MIX-003 | Pan | P0 | ✓ | VERIFIED | Pan knob; balance law (centre unity, never boosts). | `limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master`<br>`limeshot-dsp tests::pan_law` |
 | MIX-004 | Mute and solo | P0 | ✓ | VERIFIED | M and S buttons; right-click/Cmd+click on M solos; master never solo-muted. | `limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves`<br>`limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master` |
-| MIX-005 | Level meters and clip indicator | P0 | ✓ | IMPLEMENTED | Stereo peak meters (−60…+6 dB, 20 dB/s fall-back) per strip and in the toolbar; master clip LED.<br>*Peak values come from the engine (tested); meter drawing is manual-tested.* | — |
+| MIX-005 | Level meters and clip indicator | P0 | ✓ | VERIFIED | Stereo peak meters (−60…+6 dB, 20 dB/s fall-back) per strip and in the toolbar; master clip LED.<br>*The UI test plays the demo in Song mode and checks the master peak reaches the Mixer's meter hold; the drawing itself was checked in screenshots.* | `crates/limeshot-app/tests/ui.rs::song_playback_drives_the_master_meter` |
 | MIX-006 | Rename and add mixer tracks | P1 |  | IMPLEMENTED | Double-click name to rename; + adds a track. | — |
 | MIX-007 | Insert effect slots | P1 |  | VERIFIED | Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips.<br>*Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects.* | `limeshot-core effects::tests`<br>`limeshot-core document::tests::effect_chain_commands`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed` |
 | MIX-008 | Routing and sends between tracks | P1 |  | VERIFIED | Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent.<br>*Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency).* | `limeshot-core document::tests::routing_refuses_feedback_and_orders_tracks`<br>`limeshot-core document::tests::sanitize_breaks_routing_loops_from_files`<br>`limeshot-engine tests/audio.rs::mixer_routes_through_buses`<br>`limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track` |
@@ -298,8 +298,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | TR-002 | Play / pause / stop | P0 | ✓ | VERIFIED | Toolbar buttons and Space/Cmd+Space; stop returns to where playback started. | `limeshot-app tests/ui.rs::space_starts_and_stops_the_transport`<br>`limeshot-engine tests/audio.rs::realtime_transport_loops_pattern_and_reports_position` |
 | TR-003 | Pattern / Song mode | P0 | ✓ | VERIFIED | Toolbar PAT/SONG switch and L. | `limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo`<br>`limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement` |
 | TR-004 | Tempo | P0 | ✓ | VERIFIED | Toolbar field (drag/type), 10–522 BPM stored as milli-BPM; changes while playing keep the musical position. | `limeshot-core time::tests::tempo_clamps_and_formats`<br>`limeshot-engine tests/audio.rs::tempo_change_while_playing_keeps_position`<br>`limeshot-engine tests/audio.rs::tempo_change_moves_onsets` |
-| TR-005 | Time signature | P0 | ✓ | IMPLEMENTED | Toolbar numerator/denominator; affects bar length, grid, metronome downbeat and auto pattern length.<br>*Project-wide only.* | `limeshot-core time::tests::signature_lengths` |
-| TR-006 | Position display | P0 | ✓ | IMPLEMENTED | Bar:beat:tick and minutes:seconds; click returns to start. | `limeshot-core time::tests::bar_beat_tick_display` |
+| TR-005 | Time signature | P0 | ✓ | VERIFIED | Toolbar numerator/denominator; affects bar length, grid, metronome downbeat and auto pattern length.<br>*Project-wide only.* | `limeshot-core time::tests::signature_lengths`<br>`crates/limeshot-app/tests/ui.rs::toolbar_time_signature_and_position_readout` |
+| TR-006 | Position display | P0 | ✓ | VERIFIED | Bar:beat:tick and minutes:seconds; click returns to start.<br>*The readout exposes its text to accessibility (session 7), which the test reads.* | `limeshot-core time::tests::bar_beat_tick_display`<br>`crates/limeshot-app/tests/ui.rs::toolbar_time_signature_and_position_readout` |
 | TR-007 | Exact musical timing (ticks ↔ samples) | P0 | ✓ | VERIFIED | 960 PPQ integer ticks; exact u128 tick↔sample mapping; block-size independent onsets. | `limeshot-core time::tests::no_drift_after_an_hour`<br>`limeshot-core time::tests::first_tick_inverts_sample_of_tick`<br>`limeshot-engine tests/audio.rs::block_size_does_not_change_the_output` |
 | TR-008 | Metronome | P1 |  | VERIFIED | Toolbar toggle / Cmd+M; synthesized click, higher on the downbeat. | `limeshot-engine tests/audio.rs::metronome_clicks_on_every_beat` |
 | TR-009 | Song loop toggle | P1 |  | VERIFIED | Toolbar loop toggle. | `limeshot-engine tests/audio.rs::song_stops_at_the_end_without_loop` |

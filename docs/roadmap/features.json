@@ -11,7 +11,7 @@
       "fl_reference": "File › New; templates offered.",
       "limeshot_behavior": "File › New / Cmd+N: a 140 BPM project (FL Studio's default, observed) with one pattern, 16 playlist tracks, master + 16 inserts; asks to save unsaved changes.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -23,7 +23,8 @@
         "Unsaved changes prompt before discarding."
       ],
       "tests": [
-        "limeshot-core model::tests::new_project_has_one_pattern_and_master"
+        "limeshot-core model::tests::new_project_has_one_pattern_and_master",
+        "crates/limeshot-app/tests/ui.rs::new_project_asks_to_save_unsaved_changes"
       ],
       "reference": {
         "application": "FL Studio",
@@ -33,7 +34,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": "The ask-to-save flow is exercised manually only."
+      "notes": ""
     },
     {
       "id": "APP-002",
@@ -363,7 +364,7 @@
       "fl_reference": "Options › Audio settings (F10).",
       "limeshot_behavior": "Options › Audio settings: device, sample rate and buffer size from what the device reports; Apply restarts the stream.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -385,7 +386,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": "Verified manually that the default device opens (MacBook Pro Speakers, 48 kHz). Switching devices has not been tested on hardware with several outputs. No ASIO."
+      "notes": "Verified manually that the default device opens (MacBook Pro Speakers, 48 kHz). Switching devices has not been tested on hardware with several outputs. No ASIO. Recorded manual verification: the default device opens and plays (sessions 4–7, MacBook Pro Speakers, 48 kHz)."
     },
     {
       "id": "APP-013",
@@ -428,7 +429,7 @@
       "fl_reference": "Prompt on close.",
       "limeshot_behavior": "Closing the window with unsaved changes asks Save / Don't save / Cancel.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -438,7 +439,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::new_project_asks_to_save_unsaved_changes"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -447,7 +450,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": "Manual test only."
+      "notes": "The UI test covers New (Cancel and Don't save); closing the window uses the same dialog (Pending::Quit)."
     },
     {
       "id": "APP-015",
@@ -2050,7 +2053,7 @@
       "fl_reference": "Shift+drag edge.",
       "limeshot_behavior": "Drag the right edge to change the length; drag the left edge to trim or reveal the start (the clip offset moves, the end stays). A pattern clip plays its pattern once and is silent after it (FL Studio, D14).",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -2063,7 +2066,9 @@
       ],
       "tests": [
         "limeshot-sequencer tests::clip_truncates_notes",
-        "limeshot-core document::tests::trimming_a_clip_start_moves_its_offset"
+        "limeshot-core document::tests::trimming_a_clip_start_moves_its_offset",
+        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows",
+        "crates/limeshot-app/tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2142,9 +2147,9 @@
       "name": "Select clips",
       "description": "Selection.",
       "fl_reference": "Ctrl+drag, Ctrl+A.",
-      "limeshot_behavior": "Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D.",
+      "limeshot_behavior": "Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D, Shift+I invert.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -2154,15 +2159,18 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm",
+          "docs/research/evidence/screenshots/fl-playlist-select-menu.png"
         ]
       },
-      "notes": ""
+      "notes": "FL 2026.1.1's Playlist Select menu (fl-playlist-select-menu.png): Cmd+A, Cmd+D, Shift+I invert; LimeShot has those. Select by source/muted/overlapping/stacked and time around selection are not implemented."
     },
     {
       "id": "PL-007",
@@ -2200,9 +2208,9 @@
       "name": "Zoom, scroll, bar/beat ruler",
       "description": "Timeline navigation.",
       "fl_reference": "Zoom, scroll, ruler.",
-      "limeshot_behavior": "Cmd+wheel zoom, wheel/Shift+wheel scroll, ruler with bar numbers.",
+      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -2212,7 +2220,10 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position",
+        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2220,7 +2231,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist)."
     },
     {
       "id": "PL-009",
@@ -2230,7 +2241,7 @@
       "fl_reference": "Click ruler to set position.",
       "limeshot_behavior": "Ruler click/drag sets the song position and switches to Song mode; Home returns to start.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -2240,7 +2251,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2828,7 +2841,7 @@
       "fl_reference": "Peak meters in dB.",
       "limeshot_behavior": "Stereo peak meters (−60…+6 dB, 20 dB/s fall-back) per strip and in the toolbar; master clip LED.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -2840,7 +2853,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::song_playback_drives_the_master_meter"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2848,7 +2863,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Peak values come from the engine (tested); meter drawing is manual-tested."
+      "notes": "The UI test plays the demo in Song mode and checks the master peak reaches the Mixer's meter hold; the drawing itself was checked in screenshots."
     },
     {
       "id": "MIX-006",
@@ -5623,7 +5638,7 @@
       "fl_reference": "Per project / pattern.",
       "limeshot_behavior": "Toolbar numerator/denominator; affects bar length, grid, metronome downbeat and auto pattern length.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -5635,7 +5650,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-core time::tests::signature_lengths"
+        "limeshot-core time::tests::signature_lengths",
+        "crates/limeshot-app/tests/ui.rs::toolbar_time_signature_and_position_readout"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5655,7 +5671,7 @@
       "fl_reference": "Bar:Step:Tick or M:S:CS.",
       "limeshot_behavior": "Bar:beat:tick and minutes:seconds; click returns to start.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -5667,7 +5683,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-core time::tests::bar_beat_tick_display"
+        "limeshot-core time::tests::bar_beat_tick_display",
+        "crates/limeshot-app/tests/ui.rs::toolbar_time_signature_and_position_readout"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5677,7 +5694,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "The readout exposes its text to accessibility (session 7), which the test reads."
     },
     {
       "id": "TR-007",

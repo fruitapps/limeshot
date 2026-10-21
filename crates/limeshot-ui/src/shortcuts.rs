@@ -45,16 +45,19 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     (
         "↑ / ↓",
-        "Piano Roll: scroll · Channel Rack: select the previous / next channel",
+        "Piano Roll / Playlist: scroll · Channel Rack: select the previous / next channel",
     ),
     (
         "Shift+↑ / Shift+↓",
         "Piano Roll: transpose a semitone (all of the channel's notes when none is selected)",
     ),
     ("Cmd+↑ / Cmd+↓", "Piano Roll: transpose an octave"),
-    ("Shift+← / Shift+→", "Piano Roll: nudge by the snap"),
-    ("← / →", "Piano Roll: scroll · Playlist: nudge by the snap"),
-    ("Shift+I", "Piano Roll: invert the selection"),
+    (
+        "Shift+← / Shift+→",
+        "Piano Roll / Playlist: nudge by the snap (Shift+↑/↓ in the Playlist: move clips a track)",
+    ),
+    ("← / →", "Piano Roll / Playlist: scroll"),
+    ("Shift+I", "Piano Roll / Playlist: invert the selection"),
     ("Home", "Playlist: song position to the start"),
     (
         "Cmd+L",

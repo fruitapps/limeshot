@@ -422,6 +422,9 @@ pub fn readout(ui: &mut Ui, size: egui::Vec2, main: &str, caption: &str, tip: &s
         mono(8.5),
         t.text_dim,
     );
+    // Painted text is invisible to screen readers; expose the value as the button's label.
+    let label = format!("{main} {caption}");
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), &label));
     resp.on_hover_text(tip)
 }
 

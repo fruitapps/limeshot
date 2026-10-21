@@ -1243,3 +1243,184 @@ fn piano_roll_keyboard_ruler_ghosts_and_channel_selector() {
     h.step();
     assert_eq!(h.state().selected_channel(), Some(bass));
 }
+
+/// The demo with a maximised Playlist and the Channel Rack closed.
+fn playlist_harness() -> Harness<'static, LimeShotApp> {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    h.step();
+    h.step();
+    h
+}
+
+#[test]
+fn playlist_clips_select_resize_and_move_with_shift_arrows() {
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let clips = h.state().project().playlist.clips.clone();
+    let (a, b) = (clips[0].clone(), clips[1].clone());
+    assert_eq!((a.track, b.track), (0, 0));
+    click(&mut h, g.pos(a.start + a.length / 2, 0), PointerButton::Primary);
+    assert_eq!(h.state().ui.playlist.selection, vec![a.id], "a click selects");
+    click_with(
+        &mut h,
+        g.pos(b.start + b.length / 2, 0),
+        PointerButton::Primary,
+        Modifiers::COMMAND,
+    );
+    assert_eq!(h.state().ui.playlist.selection, vec![a.id, b.id], "Cmd-click adds");
+    h.key_press_modifiers(Modifiers::SHIFT, Key::I);
+    h.step();
+    assert_eq!(
+        h.state().ui.playlist.selection.len(),
+        clips.len() - 2,
+        "Shift+I inverts"
+    );
+    h.key_press_modifiers(Modifiers::COMMAND, Key::D);
+    h.step();
+    assert!(h.state().ui.playlist.selection.is_empty());
+
+    // Shift+arrows move the selection; plain arrows scroll (FL Studio's Playlist Edit menu).
+    h.state_mut().ui.playlist.selection = vec![b.id];
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowDown);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowRight);
+    h.step();
+    let moved = h.state().project().clip(b.id).expect("clip").clone();
+    assert_eq!((moved.track, moved.start), (1, b.start + STEP_TICKS));
+    let y = h.state().ui.playlist.scroll.y;
+    h.key_press(Key::ArrowDown);
+    h.step();
+    assert!(h.state().ui.playlist.scroll.y > y);
+    assert_eq!(
+        h.state().project().clip(b.id).expect("clip").track,
+        1,
+        "plain arrows do not move clips"
+    );
+
+    // Dragging the right edge resizes (to the snap: a step).
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let edge = g.pos(a.start + a.length, 0) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(a.start + a.length / 2 + 7, 0));
+    h.step();
+    assert_eq!(h.state().project().clip(a.id).expect("clip").length, a.length / 2);
+}
+
+#[test]
+fn playlist_wheel_zoom_and_ruler_set_the_song_position() {
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let zoom = h.state().ui.playlist.zoom_x;
+    h.event(Event::PointerMoved(g.grid.center()));
+    h.event(Event::ModifiersChanged(Modifiers::COMMAND));
+    h.event(Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Point,
+        delta: vec2(0.0, 60.0),
+        modifiers: Modifiers::COMMAND,
+        phase: egui::TouchPhase::Move,
+    });
+    for _ in 0..20 {
+        h.step();
+    }
+    h.event(Event::ModifiersChanged(Modifiers::NONE));
+    h.step();
+    assert!(h.state().ui.playlist.zoom_x > zoom, "Cmd+wheel zooms");
+    // The ruler sits just above the grid: clicking it sets the song position (beat snap) and
+    // switches to Song mode.
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let at = egui::pos2(g.pos(2 * bar + 30, 0).x, g.grid.top() - 6.0);
+    click(&mut h, at, PointerButton::Primary);
+    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Song);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == 2 * bar);
+}
+
+#[test]
+fn song_playback_drives_the_master_meter() {
+    let mut h = playlist_harness();
+    h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+    h.state_mut().show_window(Win::Mixer);
+    h.step();
+    h.key_press(Key::Space);
+    h.step();
+    wait_for(&mut h, "master level", |a| a.player.status().peak(0).0 > 0.01);
+    wait_for(&mut h, "the meter hold", |a| {
+        a.meter_hold.first().is_some_and(|m| m.0 > 0.01)
+    });
+    h.key_press(Key::Space);
+    h.step();
+    wait_for(&mut h, "the stop", |a| !a.is_playing());
+}
+
+#[test]
+fn new_project_asks_to_save_unsaved_changes() {
+    let mut h = harness(false);
+    // Unmodified: Cmd+N starts a new project at once.
+    h.key_press_modifiers(Modifiers::COMMAND, Key::N);
+    h.step();
+    assert!(h.state().dialog.is_none());
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(90.0)));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::N);
+    h.step();
+    assert!(matches!(
+        h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::ConfirmDiscard(
+            limeshot_ui::app::Pending::New
+        ))
+    ));
+    h.get_by_label("Cancel").click();
+    h.step();
+    h.step();
+    assert_eq!(
+        h.state().project().tempo,
+        Tempo::from_bpm(90.0),
+        "Cancel keeps the project"
+    );
+    h.key_press_modifiers(Modifiers::COMMAND, Key::N);
+    h.step();
+    h.get_by_label("Don't save").click();
+    h.step();
+    h.step();
+    let p = h.state().project();
+    assert_ne!(p.tempo, Tempo::from_bpm(90.0), "a fresh project");
+    assert!(p.channels.is_empty() && p.patterns.len() == 1);
+    assert!(!h.state().doc.is_modified());
+}
+
+#[test]
+fn toolbar_time_signature_and_position_readout() {
+    let mut h = harness(true);
+    h.step();
+    // Type 3 into the beats-per-bar field.
+    let numerator = h
+        .query_all_by_value("4")
+        .next()
+        .expect("beats-per-bar field")
+        .rect()
+        .center();
+    click(&mut h, numerator, PointerButton::Primary);
+    h.event(Event::Key {
+        key: Key::A,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::COMMAND,
+    });
+    h.event(Event::Text("3".into()));
+    h.step();
+    h.key_press(Key::Enter);
+    h.step();
+    h.step();
+    let sig = h.state().project().time_signature;
+    assert_eq!((sig.numerator, sig.denominator), (3, 4));
+    assert_eq!(sig.ticks_per_bar(), 3 * PPQ);
+    // The readout shows bar:beat:tick of the song position; clicking it returns to the start.
+    let bar = sig.ticks_per_bar();
+    h.state_mut().locate(bar + PPQ);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == bar + PPQ);
+    h.step();
+    let readout = h.query_by_label_contains("2:02:000").map(|n| n.rect().center());
+    let readout = readout.expect("readout shows 2:02:000");
+    click(&mut h, readout, PointerButton::Primary);
+    wait_for(&mut h, "the return to the start", |a| a.player.status().position() == 0);
+}

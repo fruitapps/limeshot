@@ -713,11 +713,11 @@
       "context": "Playlist",
       "action": "Select all",
       "fl_keys": "Ctrl+A",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+A",
       "status": "IMPLEMENTED",
       "feature": "PL-006",
-      "notes": ""
+      "notes": "FL 2026.1.1 Playlist Select menu."
     },
     {
       "id": "KB-066",
@@ -735,33 +735,33 @@
       "context": "Playlist",
       "action": "Delete selection",
       "fl_keys": "Delete",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Delete / Backspace",
       "status": "IMPLEMENTED",
       "feature": "PL-004",
-      "notes": ""
+      "notes": "FL 2026.1.1 Playlist Edit menu (Del)."
     },
     {
       "id": "KB-068",
       "context": "Playlist",
       "action": "Copy / cut / paste clips",
       "fl_keys": "Ctrl+C / Ctrl+X / Ctrl+V",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+C / Cmd+X / Cmd+V",
       "status": "IMPLEMENTED",
       "feature": "PL-026",
-      "notes": ""
+      "notes": "FL 2026.1.1 Playlist Edit menu."
     },
     {
       "id": "KB-069",
       "context": "Playlist",
-      "action": "Nudge clips",
-      "fl_keys": "Left / Right",
-      "confidence": "INFERRED",
-      "limeshot_keys": "← / →",
+      "action": "Shift clips left / right / up / down",
+      "fl_keys": "Shift+Left / Shift+Right / Shift+Up / Shift+Down",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+← / Shift+→ / Shift+↑ / Shift+↓",
       "status": "IMPLEMENTED",
       "feature": "PL-002",
-      "notes": ""
+      "notes": "FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. LimeShot used plain arrows before session 7; plain arrows now scroll."
     },
     {
       "id": "KB-070",
@@ -916,6 +916,50 @@
       "status": "NOT_STARTED",
       "feature": "PR-012",
       "notes": "FL 2026.1.1 Edit menu (macOS labels)."
+    },
+    {
+      "id": "KB-084",
+      "context": "Playlist",
+      "action": "Invert selection",
+      "fl_keys": "Shift+I",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+I",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
+      "notes": "FL 2026.1.1 Playlist Select menu."
+    },
+    {
+      "id": "KB-085",
+      "context": "Playlist",
+      "action": "Deselect",
+      "fl_keys": "Cmd+D",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+D",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
+      "notes": "FL 2026.1.1 Playlist Select menu."
+    },
+    {
+      "id": "KB-086",
+      "context": "Playlist",
+      "action": "Mute / unmute selected clips",
+      "fl_keys": "Opt+M / Shift+Opt+M",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-005",
+      "notes": "FL 2026.1.1 Playlist Edit menu."
+    },
+    {
+      "id": "KB-087",
+      "context": "Playlist",
+      "action": "Merge selected clips",
+      "fl_keys": "Cmd+G",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": "FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G."
     }
   ]
 }

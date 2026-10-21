@@ -1536,9 +1536,19 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::NONE, Key::Home) {
         app.locate(0);
     }
-    if sel.is_empty() {
-        return;
+    if key(ctx, Modifiers::SHIFT, Key::I) {
+        // Invert selection (FL Studio's Playlist Select menu: Shift+I).
+        app.ui.playlist.selection = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .map(|c| c.id)
+            .filter(|id| !sel.contains(id))
+            .collect();
     }
+    // FL Studio's Playlist Edit menu: Shift+Left/Right/Up/Down shift the selected clips. Plain
+    // arrows scroll the view, as in the Piano Roll.
     let sig = app.project().time_signature;
     let g = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS) as i64;
     for (k, dt, dtrack) in [
@@ -1547,12 +1557,26 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         (Key::ArrowUp, 0, -1),
         (Key::ArrowDown, 0, 1),
     ] {
-        if key(ctx, Modifiers::NONE, k) {
+        if key(ctx, Modifiers::SHIFT, k) && !sel.is_empty() {
             app.exec(Command::MoveClips {
                 clips: sel.clone(),
                 dt,
                 dtrack,
             });
+        }
+    }
+    // Checked after the Shift variants: a shortcut without modifiers also matches Shift.
+    let (step_x, step_y) = (app.ui.playlist.zoom_x, app.ui.playlist.track_h);
+    for (k, dx, dy) in [
+        (Key::ArrowLeft, -step_x, 0.0),
+        (Key::ArrowRight, step_x, 0.0),
+        (Key::ArrowUp, 0.0, -step_y),
+        (Key::ArrowDown, 0.0, step_y),
+    ] {
+        if key(ctx, Modifiers::NONE, k) {
+            let st = &mut app.ui.playlist;
+            st.scroll.x = (st.scroll.x + dx).max(0.0);
+            st.scroll.y = (st.scroll.y + dy).max(0.0);
         }
     }
 }

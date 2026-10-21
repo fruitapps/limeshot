@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **83** — IMPLEMENTED 45, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 32
+Tracked: **87** — IMPLEMENTED 47, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 34
 
 ## Global
 
@@ -105,13 +105,17 @@ Tracked: **83** — IMPLEMENTED 45, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 32
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
 | KB-064 | Draw / paint / delete / mute / slip / slice / select / zoom / playback tools | `P / B / D / T / S / C / E / Z / Y` | VERIFIED | — | NOT_STARTED | PL-017 |  |
-| KB-065 | Select all | `Ctrl+A` | INFERRED | `Cmd+A` | IMPLEMENTED | PL-006 |  |
+| KB-065 | Select all | `Ctrl+A` | OBSERVED | `Cmd+A` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-066 | Duplicate selection | `Ctrl+B` | VERIFIED | `Cmd+B` | IMPLEMENTED | PL-005 |  |
-| KB-067 | Delete selection | `Delete` | INFERRED | `Delete / Backspace` | IMPLEMENTED | PL-004 |  |
-| KB-068 | Copy / cut / paste clips | `Ctrl+C / Ctrl+X / Ctrl+V` | INFERRED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | PL-026 |  |
-| KB-069 | Nudge clips | `Left / Right` | INFERRED | `← / →` | IMPLEMENTED | PL-002 |  |
+| KB-067 | Delete selection | `Delete` | OBSERVED | `Delete / Backspace` | IMPLEMENTED | PL-004 | FL 2026.1.1 Playlist Edit menu (Del). |
+| KB-068 | Copy / cut / paste clips | `Ctrl+C / Ctrl+X / Ctrl+V` | OBSERVED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | PL-026 | FL 2026.1.1 Playlist Edit menu. |
+| KB-069 | Shift clips left / right / up / down | `Shift+Left / Shift+Right / Shift+Up / Shift+Down` | OBSERVED | `Shift+← / Shift+→ / Shift+↑ / Shift+↓` | IMPLEMENTED | PL-002 | FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. LimeShot used plain arrows before session 7; plain arrows now scroll. |
 | KB-070 | Add time marker | `Alt+T` | INFERRED | — | NOT_STARTED | PL-016 |  |
 | KB-071 | Song position to the start | `Home` | INFERRED | `Home` | IMPLEMENTED | PL-009 |  |
+| KB-084 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
+| KB-085 | Deselect | `Cmd+D` | OBSERVED | `Cmd+D` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
+| KB-086 | Mute / unmute selected clips | `Opt+M / Shift+Opt+M` | OBSERVED | — | NOT_STARTED | PL-005 | FL 2026.1.1 Playlist Edit menu. |
+| KB-087 | Merge selected clips | `Cmd+G` | OBSERVED | — | NOT_STARTED | PL-022 | FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G. |
 
 ## Mixer
 
