@@ -30,6 +30,7 @@ FIELD_SOURCES = {
     "settings.": ROOT / "crates/limeshot-ui/src/settings.rs",
     "ui.": ROOT / "crates/limeshot-ui/src/app.rs",
     "project.": ROOT / "crates/limeshot-core/src/model.rs",
+    "dialog.": ROOT / "crates/limeshot-ui/src/dialogs.rs",
 }
 
 CONFIDENCE = ["VERIFIED", "OBSERVED", "INFERRED"]
@@ -193,10 +194,12 @@ def generate_st(st):
     for s in items:
         by_page.setdefault(s["page"], []).append(s)
     for page, ss in by_page.items():
-        lines += ["", f"## {page}", "", "| ID | Setting | FL Studio | Conf. | LimeShot | Status | Feature | Notes |", "|---|---|---|---|---|---|---|---|"]
+        lines += ["", f"## {page}", "", "| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|"]
         for s in ss:
             lines.append(
-                f"| {s['id']} | {esc(s['setting'])} | {esc(s['fl_reference'])} | {s['confidence']} | "
+                f"| {s['id']} | {esc(s.get('section', ''))} | {esc(s['setting'])} | {esc(s.get('control', ''))} | "
+                f"{esc(s.get('fl_default', ''))} | {esc(s['fl_reference'])} | {s['confidence']} | "
                 f"{'`' + s['limeshot_setting'] + '`' if s['limeshot_setting'] else '—'} | {s['status']} | {s['feature']} | {esc(s['notes'])} |"
             )
     return "\n".join(lines) + "\n"

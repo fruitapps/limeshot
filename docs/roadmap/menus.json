@@ -386,7 +386,7 @@
       "limeshot": "File › Export WAV…",
       "status": "DIFFERENT",
       "feature": "EXP-001",
-      "notes": "Same key; LimeShot's label says WAV."
+      "notes": "Same key; LimeShot's label says WAV. Opens: settings.json page 'Render'."
     },
     {
       "id": "MENU-023",
@@ -404,7 +404,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "EXP-005",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Render'."
     },
     {
       "id": "MENU-024",
@@ -422,7 +422,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "EXP-006",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Render'."
     },
     {
       "id": "MENU-025",
@@ -440,7 +440,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "EXP-006",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Render'."
     },
     {
       "id": "MENU-026",
@@ -476,7 +476,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "EXP-006",
-      "notes": "AAC in an MP4 container."
+      "notes": "AAC in an MP4 container. Opens: settings.json page 'Render'."
     },
     {
       "id": "MENU-028",
@@ -1265,7 +1265,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-021",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Plugin Manager'."
     },
     {
       "id": "MENU-073",
@@ -1571,7 +1571,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "PR-022",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Patterns dialogs'."
     },
     {
       "id": "MENU-091",
@@ -1588,7 +1588,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Patterns dialogs'."
     },
     {
       "id": "MENU-092",
@@ -2661,7 +2661,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-020",
-      "notes": ""
+      "notes": "Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-154",
@@ -2678,7 +2678,7 @@
       "limeshot": "Options › Audio settings…",
       "status": "IMPLEMENTED",
       "feature": "APP-012",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Audio' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-155",
@@ -2695,7 +2695,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-025",
-      "notes": ""
+      "notes": "Opens: settings.json page 'General' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-156",
@@ -2712,7 +2712,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-025",
-      "notes": ""
+      "notes": "Opens: settings.json page 'File' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-157",
@@ -2729,7 +2729,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "UI-006",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Theme' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-158",
@@ -2746,7 +2746,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-021",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Plugin Manager'."
     },
     {
       "id": "MENU-159",
@@ -2763,7 +2763,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-030",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Project' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-160",
@@ -2780,7 +2780,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-017",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Info' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-161",
@@ -2797,7 +2797,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "APP-031",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Debug' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-162",
@@ -2814,7 +2814,7 @@
       "limeshot": "",
       "status": "NOT_PLANNED",
       "feature": "",
-      "notes": ""
+      "notes": "Opens: settings.json page 'Account' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
     },
     {
       "id": "MENU-163",

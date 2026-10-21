@@ -1,11 +1,11 @@
 # Roadmap and feature tracking
 
-* [`features.json`](features.json) — **the canonical inventory** (270 features, schema below).
+* [`features.json`](features.json) — **the canonical inventory** (272 features, schema below).
 * [`features.md`](features.md) — generated overview; run `python3 scripts/features.py generate` after editing the JSON.
 * [`menus.json`](menus.json) / [`menus.md`](menus.md) — every item of FL Studio's main menu bar against LimeShot's menus
   (status, keys, feature links; static lists such as templates and plugins).
-* [`keybindings.json`](keybindings.json) / [`settings.json`](settings.json) — FL Studio's shortcuts and settings against
-  LimeShot's (`.md` views generated alongside).
+* [`keybindings.json`](keybindings.json) / [`settings.json`](settings.json) — FL Studio's shortcuts and every control of its
+  settings window and menu dialogs against LimeShot's (`.md` views generated alongside).
 * [`mvp.md`](mvp.md) — the MVP definition and its acceptance status.
 * [`milestones.md`](milestones.md) — milestone plan and state.
 * [`known-limitations.md`](known-limitations.md) — what does not work yet, stated plainly.

@@ -266,3 +266,33 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
   name ("No parameter" before anything was tweaked).
 - **Confidence:** OBSERVED. **LimeShot equivalent:** `crates/limeshot-ui/src/menus.rs`; the per-item comparison is
   `menus.md` (APP-026 tracks the menu bar as a whole).
+
+## 19. Dialogs opened from the main menus (session 14)
+- **OBSERVED live (2026-10-22, `fl-dlg-*.png`):** every control is recorded in `docs/roadmap/settings.json` (page =
+  tab or dialog, section, control type, default value; generated view `settings.md`). Nothing was changed or saved:
+  each dialog was opened, read and closed.
+- **One settings window, ten tabs.** Options › MIDI / Audio / General / File / Theme settings, Project general settings,
+  Project info and Debugging log all open the *same* window ("Settings – <page title>") on a different tab: MIDI, Audio,
+  General, File, Theme | Project, Info | Debug, Account, About (three tab groups). Page titles: MIDI input / output
+  devices, Audio devices / mixer, System / miscellaneous, Files & folders, Look and feel, Current project, Project
+  credits, Debugging log. Pages are split into titled, collapsible sections (General: Display, Language, Input, Undo
+  history, Hints and warnings, Updates and privacy, Miscellaneous, Advanced; it scrolls). Switches are round LEDs,
+  choices are drop-down buttons with a ▸, numbers are red value fields. Settings apply at once; there is no OK/Cancel.
+- **Render dialog.** File › Export › Wave file… (Cmd+R) first shows the macOS save panel (name, folder, File Format),
+  then a window "Rendering to <file>": Project type (Mode Full song / Pattern; Tail Cut / Leave / Wrap remainder; length,
+  time and disk space), Output format (several of WAV, MP3, OGG, FLAC, MID, M4A at once; WAV bit depth 16/24 int, 32
+  float; Stereo / Mono merged / left / right; MP3/OGG bitrate, FLAC depth and compression), Quality (Resampling 2-point
+  linear … 256-point sinc in three quality groups; HQ for all plugins; Disable maximum polyphony; Dithering),
+  Miscellaneous (markers, tempo info, Split mixer tracks, Trim PDC silence, insert/master effects), Upload, Show file(s)
+  when complete, Start. Nothing is written before Start. Esc closes an open drop-down, not the dialog.
+- **Plugin Manager** (Options › Manage plugins) is a separate app with its own menu bar: Find installed plugins, Verify
+  plugins, FL Studio folder, Plugin search paths (format + folder, checkable), Scan options, Always on top, and a
+  sortable table (favourite, Name, Status, Format, Kind, Effect/Synth, Vendor, Filename; 315 plugins here) with Find.
+- **Patterns › Set time signature…** opens the Piano Roll with a small "Time signature change" dialog (Numerator,
+  Denominator, Accept). **Patterns › Transpose…** shows an inline "Semitones" field with ✓/✗ at the pointer.
+  **File › New from template › Change default template…** showed nothing visible (UNKNOWN; the default template is also
+  set in General › Miscellaneous). The **Welcome** window (`fl-dlg-welcome.png`): Start a new project cards (Launch Loop
+  Starter, Create a chord progression, Remix a song, Record Audio, Default, Empty), News, Recent projects, Ask Gopher,
+  "Do not show this in the future".
+- **LimeShot equivalent:** an Audio settings dialog and an Export WAV dialog (range, sample rate, bit depth). APP-025
+  (one settings window with pages) should follow FL's tab layout; the per-control gaps are in `settings.md`.

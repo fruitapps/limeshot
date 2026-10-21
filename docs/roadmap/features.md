@@ -1,20 +1,20 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-22 (session 13).
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-22 (session 14).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **270**
+- Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 113, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 9, VERIFIED 130, DEFERRED 4
+- By status: NOT_STARTED 115, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 9, VERIFIED 130, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 32 | 16 | 1 | 4 | 11 |
+| Application | 33 | 16 | 1 | 4 | 12 |
 | Channel Rack | 22 | 17 | 0 | 0 | 5 |
 | Piano Roll | 29 | 18 | 0 | 0 | 11 |
 | Playlist | 29 | 20 | 1 | 1 | 7 |
@@ -25,7 +25,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Recording | 11 | 0 | 0 | 0 | 11 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 3 | 1 | 2 | 5 |
-| Export | 17 | 5 | 0 | 0 | 12 |
+| Export | 18 | 5 | 0 | 0 | 13 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
 | Workflow | 13 | 0 | 1 | 1 | 11 |
 | UI | 18 | 8 | 1 | 1 | 8 |
@@ -67,6 +67,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-030 | Project general settings | P2 |  | NOT_STARTED | Not implemented. | — |
 | APP-031 | Debugging log and diagnostics | P3 |  | NOT_STARTED | Not implemented. | — |
 | APP-032 | Help index, tutorials and about | P2 |  | IN_PROGRESS | Help › About LimeShot and Help › Keyboard shortcuts exist; no manual, tutorials or release notes. | — |
+| APP-033 | Project statistics and working time | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Channel Rack
 
@@ -310,6 +311,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-015 | Export in the last used format(s) | P2 |  | NOT_STARTED | Not implemented. | — |
 | EXP-016 | Video export | P3 |  | NOT_STARTED | Not implemented. | — |
 | EXP-017 | Project bones and project data files | P3 |  | NOT_STARTED | Not implemented. | — |
+| EXP-018 | Several formats and mono in one render | P2 |  | NOT_STARTED | Not implemented. | — |
 
 ## Transport & Time
 

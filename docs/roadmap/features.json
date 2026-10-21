@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-22 (session 13)",
+  "updated": "2026-10-22 (session 14)",
   "features": [
     {
       "id": "APP-001",
@@ -8297,6 +8297,70 @@
         "evidence": [
           "docs/roadmap/menus.json",
           "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-018",
+      "category": "Export",
+      "name": "Several formats and mono in one render",
+      "description": "Tick several output formats to render them in one pass, and render mono (merged, left or right).",
+      "fl_reference": "Render dialog › Output format WAV/MP3/OGG/FLAC/MID/M4A switches; channel menu Stereo / Mono (merged) / Mono (left only) / Mono (right only).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "EXP-001"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "One render writes every ticked format next to each other.",
+        "Mono modes write one channel."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/settings.json",
+          "docs/research/evidence/screenshots/fl-dlg-render.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-033",
+      "category": "Application",
+      "name": "Project statistics and working time",
+      "description": "Project info shows when the project was started, the version that last saved it, time spent, and counts of plugins, channels, tracks, clips and notes.",
+      "fl_reference": "Options › Project info: statistics lines and Reset working time.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-017"
+      ],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Working time is counted while the project is open and saved in it.",
+        "Reset working time sets it to zero."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/settings.json",
+          "docs/research/evidence/screenshots/fl-dlg-settings-info.png"
         ]
       },
       "notes": ""

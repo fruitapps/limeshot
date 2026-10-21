@@ -118,12 +118,12 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-019 | Import |  | submenu |  |  | File › Import MIDI file… | DIFFERENT | PR-020 | LimeShot has a flat item instead of the submenu. |
 | MENU-020 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MIDI file... |  | dialog |  |  | File › Import MIDI file… | DIFFERENT | PR-020 |  |
 | MENU-021 | Export |  | submenu |  |  | File › Export WAV… | DIFFERENT | EXP-001 | LimeShot has flat File items (Export WAV…, Export MIDI file (pattern/song)…) instead of the submenu. |
-| MENU-022 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Wave file... | Audio | dialog | `Cmd+R` |  | File › Export WAV… | DIFFERENT | EXP-001 | Same key; LimeShot's label says WAV. |
-| MENU-023 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MP3 file... | Audio | dialog | `Shift+Cmd+R` |  | — | NOT_STARTED | EXP-005 |  |
-| MENU-024 | &nbsp;&nbsp;&nbsp;&nbsp;↳ OGG file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 |  |
-| MENU-025 | &nbsp;&nbsp;&nbsp;&nbsp;↳ FLAC file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 |  |
+| MENU-022 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Wave file... | Audio | dialog | `Cmd+R` |  | File › Export WAV… | DIFFERENT | EXP-001 | Same key; LimeShot's label says WAV. Opens: settings.json page 'Render'. |
+| MENU-023 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MP3 file... | Audio | dialog | `Shift+Cmd+R` |  | — | NOT_STARTED | EXP-005 | Opens: settings.json page 'Render'. |
+| MENU-024 | &nbsp;&nbsp;&nbsp;&nbsp;↳ OGG file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | Opens: settings.json page 'Render'. |
+| MENU-025 | &nbsp;&nbsp;&nbsp;&nbsp;↳ FLAC file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | Opens: settings.json page 'Render'. |
 | MENU-026 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MIDI file... | Audio | dialog | `Shift+Cmd+M` |  | File › Export MIDI file (song)… | DIFFERENT | EXP-012 | LimeShot has separate pattern and song items and no shortcut. |
-| MENU-027 | &nbsp;&nbsp;&nbsp;&nbsp;↳ M4A file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | AAC in an MP4 container. |
+| MENU-027 | &nbsp;&nbsp;&nbsp;&nbsp;↳ M4A file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | AAC in an MP4 container. Opens: settings.json page 'Render'. |
 | MENU-028 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Last exported format(s)... | Audio | dialog |  |  | — | NOT_STARTED | EXP-015 |  |
 | MENU-029 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Master... | Audio | dialog | `Opt+Cmd+M` |  | — | NOT_PLANNED |  | FL Cloud mastering (cloud icon). |
 | MENU-030 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Upload... | Audio | dialog |  |  | — | NOT_PLANNED |  | Upload to Image-Line's distribution service. |
@@ -178,7 +178,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-069 | Browse all installed plugins | Other | action |  |  | — | NOT_STARTED | BR-008 |  |
 | MENU-070 | Browse presets | Other | action |  |  | — | NOT_STARTED | PLG-008 |  |
 | MENU-071 | Refresh plugin list (fast scan) | Other | action |  |  | plugin menus › Find plugins… | DIFFERENT | PLG-004 |  |
-| MENU-072 | Manage plugins | Other | dialog |  |  | — | NOT_STARTED | APP-021 |  |
+| MENU-072 | Manage plugins | Other | dialog |  |  | — | NOT_STARTED | APP-021 | Opens: settings.json page 'Plugin Manager'. |
 | MENU-073 | Manage FL Cloud plugins... | Other | dialog |  |  | — | NOT_PLANNED |  |  |
 | MENU-074 | Automation for last tweaked parameter | Other | action |  | disabled | — | NOT_STARTED | AUT-003 | Disabled until a control was tweaked. LimeShot creates automation from a control's context menu. |
 | MENU-075 | Pattern | Other | action |  |  | Add › Pattern | IMPLEMENTED | SEQ-018 |  |
@@ -201,8 +201,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-087 | Group selected... |  | dialog |  |  | — | NOT_STARTED | SEQ-022 | In the native macOS menu mirror; hidden in-window with one pattern. |
 | MENU-088 | Rename group... |  | dialog |  |  | — | NOT_STARTED | SEQ-022 | As Group selected. |
 | MENU-089 | Ungroup selected... |  | action |  |  | — | NOT_STARTED | SEQ-022 | As Group selected. |
-| MENU-090 | Set time signature... |  | dialog |  |  | — | NOT_STARTED | PR-022 |  |
-| MENU-091 | Transpose... |  | dialog |  |  | — | NOT_STARTED | SEQ-021 |  |
+| MENU-090 | Set time signature... |  | dialog |  |  | — | NOT_STARTED | PR-022 | Opens: settings.json page 'Patterns dialogs'. |
+| MENU-091 | Transpose... |  | dialog |  |  | — | NOT_STARTED | SEQ-021 | Opens: settings.json page 'Patterns dialogs'. |
 | MENU-092 | Insert one |  | action | `Shift+Cmd+Ins` |  | — | NOT_STARTED | SEQ-021 |  |
 | MENU-093 | Clone |  | action | `Shift+Cmd+C` |  | Patterns › Clone pattern | DIFFERENT | SEQ-018 | LimeShot has no key. |
 | MENU-094 | Delete |  | action | `Shift+Cmd+Del` |  | Patterns › Delete pattern | DIFFERENT | SEQ-018 | LimeShot has no key. |
@@ -274,16 +274,16 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| MENU-153 | MIDI settings | System | dialog | `F10` |  | — | NOT_STARTED | APP-020 |  |
-| MENU-154 | Audio settings | System | dialog |  |  | Options › Audio settings… | IMPLEMENTED | APP-012 |  |
-| MENU-155 | General settings | System | dialog |  |  | — | NOT_STARTED | APP-025 |  |
-| MENU-156 | File settings | System | dialog |  |  | — | NOT_STARTED | APP-025 |  |
-| MENU-157 | Theme settings | System | dialog |  |  | — | NOT_STARTED | UI-006 |  |
-| MENU-158 | Manage plugins | System | dialog |  |  | — | NOT_STARTED | APP-021 |  |
-| MENU-159 | Project general settings | Project | dialog |  |  | — | NOT_STARTED | APP-030 |  |
-| MENU-160 | Project info | Project | dialog | `F11` |  | — | NOT_STARTED | APP-017 |  |
-| MENU-161 | Debugging log | Info | dialog |  |  | — | NOT_STARTED | APP-031 |  |
-| MENU-162 | Account settings | Info | dialog |  |  | — | NOT_PLANNED |  |  |
+| MENU-153 | MIDI settings | System | dialog | `F10` |  | — | NOT_STARTED | APP-020 | Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-154 | Audio settings | System | dialog |  |  | Options › Audio settings… | IMPLEMENTED | APP-012 | Opens: settings.json page 'Audio' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-155 | General settings | System | dialog |  |  | — | NOT_STARTED | APP-025 | Opens: settings.json page 'General' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-156 | File settings | System | dialog |  |  | — | NOT_STARTED | APP-025 | Opens: settings.json page 'File' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-157 | Theme settings | System | dialog |  |  | — | NOT_STARTED | UI-006 | Opens: settings.json page 'Theme' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-158 | Manage plugins | System | dialog |  |  | — | NOT_STARTED | APP-021 | Opens: settings.json page 'Plugin Manager'. |
+| MENU-159 | Project general settings | Project | dialog |  |  | — | NOT_STARTED | APP-030 | Opens: settings.json page 'Project' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-160 | Project info | Project | dialog | `F11` |  | — | NOT_STARTED | APP-017 | Opens: settings.json page 'Info' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-161 | Debugging log | Info | dialog |  |  | — | NOT_STARTED | APP-031 | Opens: settings.json page 'Debug' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-162 | Account settings | Info | dialog |  |  | — | NOT_PLANNED |  | Opens: settings.json page 'Account' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
 | MENU-163 | Enable MIDI remote control | MIDI | toggle |  | checked | — | NOT_STARTED | WF-003 |  |
 | MENU-164 | Enable MIDI output | MIDI | toggle |  |  | — | NOT_STARTED | WF-005 |  |
 | MENU-165 | Enable MIDI master sync | MIDI | toggle |  |  | — | NOT_STARTED | WF-012 |  |

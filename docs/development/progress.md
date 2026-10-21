@@ -497,3 +497,20 @@ in-window menu bar, every submenu, no dialogs yet; static lists (templates, plug
 
 Result: of FL's 268 menu items LimeShot has 12 as in FL and 35 in another form; 194 are not started and 27 are not
 planned (Image-Line services). No code changed. Verification: `scripts/features.py check` is clean.
+
+## 2026-10-22 — Session 14: dialogs the main menus open
+
+Second layer of the outside-in pass (owner's request): the windows and dialogs behind the main menu items.
+
+1. **FL observed live** (synthetic input; `fl-studio-analysis.md` §19, `fl-dlg-*.png`): the settings window with all
+   ten tabs (General scrolled through, collapsed sections expanded), the render dialog and its drop-downs (after the
+   macOS save panel; closed without rendering), the Plugin Manager app, Set time signature…, Transpose… and the Welcome
+   window. Nothing in FL was changed or saved.
+2. **`settings.json`** grew from 28 to 188 records and gained `section`, `control` and `fl_default`; the 28 old
+   records were refined in place (most INFERRED → OBSERVED, with FL's exact labels). A `dialog.*` prefix lets a record
+   name an option of a LimeShot dialog (export range, bit depth); the check reads it from `dialogs.rs`.
+3. **Links:** 18 menu records now say which settings page they open. New features EXP-018 (several formats / mono in
+   one render) and APP-033 (project statistics and working time).
+
+Result: LimeShot has 15 of the 188 settings, 2 partly; 156 are not started and 15 not planned. No code changed.
+`scripts/features.py check` is clean.
