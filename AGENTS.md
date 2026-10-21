@@ -15,7 +15,7 @@ cargo build --workspace
 cargo run --release -p limeshot-app [-- --demo | path/to/song.lime] [--show=piano --detach=mixer]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
-cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth --plugin]
+cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth --plugin [--plugin-window]]
 cargo run -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid      # or import-midi in.mid out.lime
 cargo run -p limeshot-app --bin limeshot-cli -- import-flp song.flp out/song.lime    # FL Studio project → .lime
 cargo run -p limeshot-project --example make_flp_fixtures                           # regenerate synthetic .flp fixtures

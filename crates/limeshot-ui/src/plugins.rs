@@ -373,7 +373,8 @@ impl PluginHost {
     /// Bring the running plugins in line with `project`: create missing ones (sending their audio
     /// halves to the audio thread with `send`, ahead of the snapshot) and drop removed ones.
     pub fn sync(&mut self, project: &Project, generation: u64, sample_rate: u32, send: &mut dyn FnMut(Msg)) {
-        if self.generation != Some(generation) {
+        let opened = self.generation != Some(generation);
+        if opened {
             // A different project: the audio thread retires every processor (ClearEffects).
             self.generation = Some(generation);
             self.windows.clear();
@@ -382,6 +383,7 @@ impl PluginHost {
             self.errors.clear();
         }
         let wanted = wanted(project);
+        let saved_windows: Vec<(Target, &PluginRef)> = if opened { wanted.clone() } else { Vec::new() };
         self.live.retain(|t, l| {
             wanted
                 .iter()
@@ -414,6 +416,7 @@ impl PluginHost {
                 }
             }
         }
+        self.restore_windows(saved_windows);
     }
 
     pub fn is_loaded(&self, target: Target) -> bool {
@@ -426,6 +429,10 @@ impl PluginHost {
 
     pub fn instance(&self, target: Target) -> Option<&Vst3Instance> {
         self.live.get(&target).map(|l| &l.instance)
+    }
+
+    pub(crate) fn instance_mut(&mut self, target: Target) -> Option<&mut Vst3Instance> {
+        self.live.get_mut(&target).map(|l| &mut l.instance)
     }
 
     /// Per frame: forward edits made in plugin windows, drop processors returned by exports.
@@ -449,7 +456,8 @@ impl PluginHost {
         }
     }
 
-    /// Read every running plugin's state into the project (before saving).
+    /// Read every running plugin's state, and where its window is, into the project (before
+    /// saving).
     pub fn store_states(&self, doc: &mut Document) {
         for (target, l) in &self.live {
             match l.instance.state() {
@@ -458,6 +466,7 @@ impl PluginHost {
                 }
                 Err(e) => log::warn!("could not read a plugin's state: {e}"),
             }
+            doc.store_plugin_window(*target, self.window_place(*target));
         }
     }
 
@@ -612,6 +621,25 @@ pub fn add_channel(app: &mut LimeShotApp, e: &Entry) {
             let err = err.to_string();
             app.toast_error(format!("{}: {err}", e.name));
         }
+    }
+}
+
+/// The plugin a channel or insert runs.
+pub(crate) fn plugin_ref(project: &Project, target: Target) -> Option<&PluginRef> {
+    match target {
+        Target::Channel(c) => match &project.channel(c)?.instrument {
+            Instrument::Plugin(p) => Some(p),
+            _ => None,
+        },
+        Target::Effect { track, effect } => project
+            .mixer
+            .tracks
+            .get(usize::from(track))?
+            .effects
+            .iter()
+            .find(|e| e.id == effect)?
+            .plugin
+            .as_ref(),
     }
 }
 

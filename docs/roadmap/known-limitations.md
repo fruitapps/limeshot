@@ -64,9 +64,12 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
 * VST3 plugins: plugin editor windows work on macOS only (on Windows and Linux the Plugin tab lists the
-  parameters); the windows have no presets menu, keyboard-focus toggle, captionize or wrapper options page (FL's),
-  the user cannot resize a resizable editor by its window edge (only by the plugin's own handle, as in FL), and
-  their positions are remembered for the session only. No
+  parameters); the windows have no ▸ menu, captionize or wrapper options page (FL's), the user cannot resize a
+  resizable editor by its window edge (only by the plugin's own handle, as in FL). The presets menu lists factory
+  programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
+  their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
+  characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
+  view directly. No
   automation of plugin parameters, parameter changes are not undo steps, no delay compensation for plugin latency,
   no custom plugin folders, and a plugin that crashes while playing takes LimeShot down (only scanning is isolated).
   Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin

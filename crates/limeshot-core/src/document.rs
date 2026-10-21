@@ -110,8 +110,18 @@ impl Document {
     /// not an edit: it makes no undo step and does not change the revision, because the sound
     /// does not change. Returns false if `target` has no plugin.
     pub fn store_plugin_state(&mut self, target: PluginTarget, state: crate::PluginState) -> bool {
+        self.plugin_mut(target).map(|p| p.state = state).is_some()
+    }
+
+    /// Store where a plugin's window is (before saving). Like [`Document::store_plugin_state`]
+    /// this is not an edit. Returns false if `target` has no plugin.
+    pub fn store_plugin_window(&mut self, target: PluginTarget, window: Option<crate::PluginWindow>) -> bool {
+        self.plugin_mut(target).map(|p| p.window = window).is_some()
+    }
+
+    fn plugin_mut(&mut self, target: PluginTarget) -> Option<&mut crate::PluginRef> {
         let p = &mut self.project;
-        let plugin = match target {
+        match target {
             PluginTarget::Channel(id) => {
                 p.channels
                     .iter_mut()
@@ -127,13 +137,6 @@ impl Document {
                 .get_mut(usize::from(track))
                 .and_then(|t| t.effects.iter_mut().find(|e| e.id == effect))
                 .and_then(|e| e.plugin.as_mut()),
-        };
-        match plugin {
-            Some(plugin) => {
-                plugin.state = state;
-                true
-            }
-            None => false,
         }
     }
 

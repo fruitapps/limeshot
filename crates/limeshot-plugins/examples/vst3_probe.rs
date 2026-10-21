@@ -34,12 +34,15 @@ fn main() {
                     peak = buf.iter().fold(peak, |m, s| m.max(s.abs()));
                 }
                 let state = inst.state().map(|s| s.len()).unwrap_or(0);
+                let programs = inst.program_names();
                 println!(
-                    "{} [{:?}] {} params, peak {peak:.3}, state {state} B, latency {}",
+                    "{} [{:?}] {} params, peak {peak:.3}, state {state} B, latency {}, {} programs{}",
                     c.name,
                     c.kind,
                     inst.params().len(),
-                    inst.latency_samples()
+                    inst.latency_samples(),
+                    programs.len(),
+                    programs.iter().take(4).map(|p| format!(" [{p}]")).collect::<String>()
                 );
             }
             Err(e) => println!("{}: {e}", c.name),

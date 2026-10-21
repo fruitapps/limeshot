@@ -33,6 +33,7 @@ mod editor;
 mod host;
 mod instance;
 mod module;
+pub mod preset;
 pub mod scan;
 pub mod testing;
 mod util;
@@ -40,6 +41,7 @@ mod util;
 pub use editor::{EditorSize, NativeWindow, Vst3Editor};
 pub use instance::{NoteEvent, NoteEventKind, ParamInfo, Transport, Vst3Instance, Vst3Processor};
 pub use module::Vst3Module;
+pub use preset::VstPreset;
 
 use std::path::PathBuf;
 

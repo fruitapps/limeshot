@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -257,6 +257,22 @@ fn main() {
                     modifiers: egui::Modifiers::NONE,
                 });
                 harness.step();
+                harness.step();
+            }
+        }
+    }
+    if args.iter().any(|a| a == "--plugin-window") {
+        // With --plugin: the Lime Test Tone channel's plugin window (embedded without viewports).
+        let st = harness.state_mut();
+        let tone = st
+            .project()
+            .channels
+            .iter()
+            .find(|c| matches!(c.instrument, limeshot_core::Instrument::Plugin(_)))
+            .map(|c| c.id);
+        if let Some(c) = tone {
+            st.plugins.open_window(limeshot_ui::plugins::Target::Channel(c), None);
+            for _ in 0..4 {
                 harness.step();
             }
         }

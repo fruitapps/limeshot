@@ -3550,6 +3550,92 @@ fn a_plugin_channel_button_toggles_the_plugin_window_with_its_tabs() {
 }
 
 #[test]
+fn plugin_window_presets_step_and_the_window_place_is_saved_in_the_project() {
+    use limeshot_ui::plugin_window::{Preset, Tab};
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").id;
+    let target = Target::Channel(ch);
+    h.state_mut().plugins.open_window(target, None);
+    for _ in 0..3 {
+        h.step();
+    }
+    // The presets menu lists the plugin's factory programs; the current one is selected.
+    let w = h.state().plugins.window(target).expect("window");
+    let names: Vec<String> = w.presets().iter().map(Preset::name).collect();
+    assert_eq!(names[..3], ["Medium", "Quiet", "Loud"]);
+    assert_eq!(w.current_preset(), Some(0));
+
+    // FL Studio's Presets ▶ loads the next program and marks the project modified.
+    h.state_mut().doc.mark_saved();
+    h.get_by_label("▶").click();
+    for _ in 0..2 {
+        h.step();
+    }
+    assert_eq!(
+        h.state().plugins.window(target).and_then(|w| w.current_preset()),
+        Some(1)
+    );
+    assert_eq!(
+        h.state().plugins.instance(target).map(|i| i.param(0)),
+        Some(0.25),
+        "Quiet"
+    );
+    assert!(h.state().doc.is_modified());
+    // ◀ twice wraps round to the last entry.
+    h.get_by_label("◀").click();
+    h.step();
+    h.get_by_label("◀").click();
+    h.step();
+    let last = h.state().plugins.window(target).map(|w| w.presets().len() - 1);
+    assert_eq!(h.state().plugins.window(target).and_then(|w| w.current_preset()), last);
+    // The menu picks one by name.
+    h.get_by_label_contains("⏷").click();
+    h.step();
+    h.get_by_label("Loud").click();
+    for _ in 0..2 {
+        h.step();
+    }
+    assert_eq!(h.state().plugins.instance(target).map(|i| i.param(0)), Some(1.0));
+
+    // The keyboard toggle switches on and off.
+    h.get_by_label("⌨").click();
+    h.step();
+    assert_eq!(
+        h.state().plugins.window(target).map(|w| w.keyboard_to_plugin),
+        Some(true)
+    );
+
+    // Saving keeps the window's place, tab and toggle; reopening the project reopens it.
+    h.get_by_label("Settings").click();
+    for _ in 0..3 {
+        h.step();
+    }
+    let dir = tempfile::tempdir().expect("dir");
+    let path = dir.path().join("windows.lime");
+    assert!(h.state_mut().save_to(&path));
+    let Instrument::Plugin(saved) = &h.state().project().channel(ch).expect("ch").instrument else {
+        panic!("plugin channel");
+    };
+    let place = saved.window.clone().expect("window saved");
+    assert!(place.open);
+    assert_eq!(place.tab, "settings");
+    assert!(place.keyboard_to_plugin);
+
+    let mut h2 = harness(false);
+    h2.state_mut().open_path(&path);
+    for _ in 0..3 {
+        h2.step();
+    }
+    let w = h2.state().plugins.window(target).expect("reopened with the project");
+    assert_eq!(w.tab, Tab::Settings);
+    assert!(w.keyboard_to_plugin);
+}
+
+#[test]
 fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
     use limeshot_ui::plugin_window::Tab;
     use limeshot_ui::plugins::Target;

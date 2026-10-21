@@ -514,3 +514,28 @@ Second layer of the outside-in pass (owner's request): the windows and dialogs b
 
 Result: LimeShot has 15 of the 188 settings, 2 partly; 156 are not started and 15 not planned. No code changed.
 `scripts/features.py check` is clean.
+
+## 2026-10-22 — Session 15: plugin window extras (presets, keyboard toggle, saved places)
+
+Continuing the mandatory VST3 work (`next-steps.md` 4), FL's wrapper extras from the session 12 observation
+(`fl-studio-analysis.md` §17).
+
+1. **Presets (PLG-008).** `limeshot-plugins` reads a plugin's factory programs (the `kIsProgramChange` parameter;
+   names from `IUnitInfo` program lists, else the parameter's text) and reads and writes `.vstpreset` files
+   (`preset.rs`, Steinberg's documented chunk format) found under `<vendor>/<plugin>` in the platform's preset
+   folders. The plugin window's tab row now ends like FL's title bar: a presets menu (factory programs, then files,
+   then Save preset as…), Presets ◀ ▶ for channels (wrapping) and the keyboard toggle. Lime Test Tone gained three
+   factory programs for tests. `vst3_probe` prints the programs: Elephant, Quiet Piano 2 Lite, M1, OTT, Guitar Rig
+   7 and the Arturia plugins have them (Arturia's only as numbered slots).
+2. **Keyboard toggle.** When on, characters typed in the plugin window go to the editor first
+   (`IPlugView::onKeyDown`); LimeShot's shortcuts act only when the plugin did not take them.
+3. **Window places in the project.** `PluginRef.window` (position, tab, Settings size, keyboard toggle, open) is
+   written when saving, like the plugin state (not an edit), sanitised on load, and windows that were open reopen
+   with the project.
+
+Verification: `cargo test --workspace` passes (new: preset parsing and folder search, factory programs, `.vstpreset`
+round trip through a plugin, the window record's JSON and sanitising, and a UI test that steps presets with ◀ ▶,
+picks one from the menu, flips the keyboard toggle, saves, reopens and finds the window open on its tab); Clippy
+(`-D warnings`), `cargo fmt --check` and `scripts/features.py check` are clean. Looked at with
+`ui_shot --plugin --plugin-window`. Not done: a live pass with a real plugin's window (PLG-008 stays IMPLEMENTED).
+

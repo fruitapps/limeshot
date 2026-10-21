@@ -54,6 +54,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | EXP-015 | P2 | NOT_STARTED | Export in the last used format(s) | MENU-028 File › Export › Last exported format(s)... |
 | PL-022 | P2 | NOT_STARTED | Consolidate / render to audio clip | MENU-098 Patterns › Quick render as audio clip<br>MENU-099 Patterns › Render as audio clip...<br>MENU-100 Patterns › Render and replace... |
 | PL-023 | P2 | NOT_STARTED | Crossfades and time stretching | MENU-250 Tools › Switch all audio clip channels to<br>MENU-251 Tools › Switch selected audio clip channels to |
+| PLG-008 | P2 | IMPLEMENTED | Plugin preset management | MENU-070 Add › Browse presets |
 | REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record |
 | REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount |
 | REC-010 | P2 | NOT_STARTED | Start on input and blend recorded notes | MENU-169 Options › Start on input<br>MENU-170 Options › Blend recorded notes |
@@ -74,7 +75,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | EXP-017 | P3 | NOT_STARTED | Project bones and project data files | MENU-041 File › Export › Project bones...<br>MENU-042 File › Export › Project data files... |
 | PL-019 | P3 | NOT_STARTED | Performance mode | MENU-242 Tools › Prepare for performance mode |
 | PL-030 | P3 | DEFERRED | Stem separation (Remix a song) | MENU-183 Tools › Remix a song... |
-| PLG-008 | P3 | NOT_STARTED | Plugin preset management | MENU-070 Add › Browse presets |
 | PLG-011 | P3 | NOT_STARTED | Plugin performance monitor | MENU-121 View › Plugin performance monitor |
 | PR-022 | P3 | NOT_STARTED | Time signature per pattern / time markers | MENU-090 Patterns › Set time signature... |
 | PR-028 | P3 | NOT_STARTED | Chord progression tool | MENU-185 Tools › Chord progression tool... |

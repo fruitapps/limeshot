@@ -235,7 +235,9 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
     states, Route to free mixer track.
 - **LimeShot equivalent (PLG-006):** see `features.json`. Each plugin channel and plugin insert has one wrapper window
   (its own OS window): a title bar row with Editor and Settings tabs (channels: the LimeShot Channel Settings page;
-  effects: the parameter list), then the plugin's native view on the Editor tab.
+  effects: the parameter list), then the plugin's native view on the Editor tab. Session 15 added the right end of
+  FL's title bar to the tab row: a presets menu (PLG-008), Presets ◀ ▶ for channels and the keyboard toggle; window
+  places are saved in the project.
 
 ## 18. Main menu bar (session 13, outside-in pass)
 - **OBSERVED live (2026-10-22, `fl-menu-*.png`; Accessibility dump of the mirrored macOS menu bar in

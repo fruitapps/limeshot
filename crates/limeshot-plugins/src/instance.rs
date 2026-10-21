@@ -45,6 +45,11 @@ impl ParamInfo {
     pub fn is_bypass(&self) -> bool {
         self.flags & ParameterInfo_::ParameterFlags_::kIsBypass != 0
     }
+
+    /// The parameter that selects one of the plugin's factory programs (VST3 `kIsProgramChange`).
+    pub fn is_program_change(&self) -> bool {
+        self.flags & ParameterInfo_::ParameterFlags_::kIsProgramChange != 0
+    }
 }
 
 /// What both halves share; tears the plugin down when the last half goes.
@@ -93,6 +98,7 @@ impl Drop for Core {
 /// The control-thread side of a plugin: parameters, state, latency.
 pub struct Vst3Instance {
     core: Arc<Core>,
+    class_id: String,
     params: Vec<ParamInfo>,
     to_audio: rtrb::Producer<(u32, f64)>,
 }
@@ -284,7 +290,15 @@ impl Vst3Instance {
                 transport: Transport::default(),
                 sample_rate,
             };
-            Ok((Vst3Instance { core, params, to_audio }, processor))
+            Ok((
+                Vst3Instance {
+                    core,
+                    class_id: class_id.to_owned(),
+                    params,
+                    to_audio,
+                },
+                processor,
+            ))
         }
     }
 
@@ -385,6 +399,75 @@ impl Vst3Instance {
         let _ = self.to_audio.push((id, value));
     }
 
+    /// The parameter that picks the plugin's factory program, if it has one with two or more
+    /// programs. FL Studio's Presets ◀ ▶ step through these.
+    pub fn program_param(&self) -> Option<&ParamInfo> {
+        self.params.iter().find(|p| p.is_program_change() && p.step_count > 0)
+    }
+
+    /// The names of the plugin's factory programs (empty when it has none).
+    pub fn program_names(&self) -> Vec<String> {
+        let Some(p) = self.program_param() else {
+            return Vec::new();
+        };
+        let n = p.step_count;
+        if let Some(names) = self.unit_program_names(n + 1) {
+            return names;
+        }
+        (0..=n)
+            .map(|i| self.param_text(p.id, f64::from(i) / f64::from(n)))
+            .collect()
+    }
+
+    /// Program names from the controller's unit info (`IUnitInfo`), where plugins name their
+    /// programs when the program parameter's text is only a number: the first program list with
+    /// `count` programs.
+    fn unit_program_names(&self, count: i32) -> Option<Vec<String>> {
+        let units = self.core.controller.as_ref()?.cast::<IUnitInfo>()?;
+        // SAFETY: queries on the live controller into zeroed structs and buffers of the
+        // documented types.
+        unsafe {
+            for l in 0..units.getProgramListCount().max(0) {
+                let mut info: ProgramListInfo = std::mem::zeroed();
+                if units.getProgramListInfo(l, &mut info) != kResultOk || info.programCount != count {
+                    continue;
+                }
+                let names: Vec<String> = (0..count)
+                    .map(|i| {
+                        let mut s: String128 = [0; 128];
+                        if units.getProgramName(info.id, i, &mut s) == kResultOk {
+                            from_wstr(&s)
+                        } else {
+                            String::new()
+                        }
+                    })
+                    .collect();
+                // Some plugins name every slot the same ("ProgramChange"); the parameter's own
+                // text (a number) tells them apart better.
+                if names.iter().any(|n| !n.trim().is_empty()) && (count < 2 || names.iter().any(|n| *n != names[0])) {
+                    return Some(names);
+                }
+            }
+        }
+        None
+    }
+
+    /// The factory program now selected.
+    pub fn program(&self) -> Option<usize> {
+        let p = self.program_param()?;
+        let n = f64::from(p.step_count);
+        Some((self.param(p.id) * n).round().clamp(0.0, n) as usize)
+    }
+
+    /// Select factory program `index` (clamped to the list).
+    pub fn set_program(&mut self, index: usize) {
+        let Some((id, n)) = self.program_param().map(|p| (p.id, p.step_count)) else {
+            return;
+        };
+        let i = (index as f64).min(f64::from(n));
+        self.set_param(id, i / f64::from(n));
+    }
+
     /// How the plugin shows `value` (normalised) of parameter `id`, such as "-6.0 dB".
     pub fn param_text(&self, id: u32, value: f64) -> String {
         let Some(c) = &self.core.controller else {
@@ -454,6 +537,30 @@ impl Vst3Instance {
     /// Restore a blob from [`state`](Self::state).
     pub fn set_state(&mut self, blob: &[u8]) -> Result<(), PluginError> {
         let (component, controller) = split_state(blob).ok_or(PluginError::State)?;
+        self.load_states(component, controller)
+    }
+
+    /// Load a `.vstpreset` made for this plugin (FL Studio's Presets menu).
+    pub fn load_preset(&mut self, preset: &crate::VstPreset) -> Result<(), PluginError> {
+        if !preset.class_id.eq_ignore_ascii_case(&self.class_id) {
+            return Err(PluginError::NoClass(preset.class_id.clone()));
+        }
+        self.load_states(&preset.component, &preset.controller)
+    }
+
+    /// The plugin's current state as a `.vstpreset`.
+    pub fn preset(&self) -> Result<crate::VstPreset, PluginError> {
+        let (component, controller) = split_state(&self.state()?)
+            .map(|(a, b)| (a.to_vec(), b.to_vec()))
+            .ok_or(PluginError::State)?;
+        Ok(crate::VstPreset {
+            class_id: self.class_id.to_ascii_uppercase(),
+            component,
+            controller,
+        })
+    }
+
+    fn load_states(&mut self, component: &[u8], controller: &[u8]) -> Result<(), PluginError> {
         let stream = |bytes: &[u8]| ComWrapper::new(MemoryStream::with_data(bytes.to_vec()));
         // SAFETY: state calls on live objects with live streams.
         unsafe {

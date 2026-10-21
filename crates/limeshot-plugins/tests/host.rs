@@ -93,6 +93,43 @@ fn state_round_trips_into_a_new_instance() {
     assert!(b.set_state(b"garbage").is_err());
 }
 
+#[test]
+fn factory_programs_are_listed_and_selected() {
+    let m = testing::module().unwrap();
+    let (mut tone, _p) = Vst3Instance::new(&m, &testing::tone_class(), SR, 64).unwrap();
+    assert_eq!(tone.program_names(), ["Medium", "Quiet", "Loud"]);
+    assert_eq!(tone.program(), Some(0));
+    tone.set_program(2);
+    assert_eq!(tone.program(), Some(2));
+    assert_eq!(tone.param(0), 1.0, "Loud sets the level");
+    tone.set_program(9);
+    assert_eq!(tone.program(), Some(2), "clamped to the list");
+    let (g, _pg) = gain(64);
+    assert!(g.program_names().is_empty());
+    assert_eq!(g.program(), None);
+}
+
+#[test]
+fn a_vstpreset_saves_and_loads_the_state() {
+    let (mut a, mut pa) = gain(64);
+    a.set_param(0, 0.4);
+    pa.process(&mut [1.0, 1.0], &[], &Transport::default());
+    let preset = a.preset().unwrap();
+    assert_eq!(preset.class_id, testing::gain_class().to_ascii_uppercase());
+    let bytes = preset.to_bytes();
+
+    let (mut b, _pb) = gain(64);
+    b.load_preset(&limeshot_plugins::VstPreset::parse(&bytes).unwrap())
+        .unwrap();
+    assert!((b.param(0) - 0.4).abs() < 1e-12);
+    let m = testing::module().unwrap();
+    let (mut tone, _p) = Vst3Instance::new(&m, &testing::tone_class(), SR, 64).unwrap();
+    assert!(
+        tone.load_preset(&preset).is_err(),
+        "a preset for another plugin is refused"
+    );
+}
+
 fn crossings(x: &[f32]) -> usize {
     x.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count()
 }

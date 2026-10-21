@@ -23,6 +23,9 @@ pub struct PluginRef {
     /// The plugin's own state (opaque), saved base64-encoded.
     #[serde(default, skip_serializing_if = "PluginState::is_empty")]
     pub state: PluginState,
+    /// The plugin window's place, saved with the project as FL Studio does (not an edit).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<PluginWindow>,
     #[serde(flatten)]
     pub extra: crate::Extra,
 }
@@ -36,6 +39,7 @@ impl PluginRef {
             name: name.into(),
             vendor: String::new(),
             state: PluginState::default(),
+            window: None,
             extra: crate::Extra::new(),
         }
     }
@@ -58,6 +62,46 @@ impl PluginRef {
         }
         if self.state.len() > MAX_STATE_BYTES {
             self.state = PluginState::default();
+        }
+        if let Some(w) = &mut self.window {
+            w.sanitize();
+        }
+    }
+}
+
+/// Where a plugin window was and how it was set up, in screen points.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PluginWindow {
+    /// Whether the window was open (it reopens with the project).
+    #[serde(default)]
+    pub open: bool,
+    /// The window's top-left corner; none until it was first placed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<[f32; 2]>,
+    /// "plugin" (the plugin's own editor) or "settings".
+    #[serde(default)]
+    pub tab: String,
+    /// The Settings tab's size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settings_size: Option<[f32; 2]>,
+    /// FL Studio's keyboard toggle: the plugin gets keystrokes before LimeShot's shortcuts.
+    #[serde(default)]
+    pub keyboard_to_plugin: bool,
+    #[serde(flatten)]
+    pub extra: crate::Extra,
+}
+
+impl PluginWindow {
+    pub fn sanitize(&mut self) {
+        let ok = |v: [f32; 2], lo: f32| v.iter().all(|x| x.is_finite() && (lo..=100_000.0).contains(x));
+        if self.position.is_some_and(|p| !ok(p, -100_000.0)) {
+            self.position = None;
+        }
+        if self.settings_size.is_some_and(|s| !ok(s, 1.0)) {
+            self.settings_size = None;
+        }
+        if self.tab.len() > 32 {
+            self.tab.clear();
         }
     }
 }
@@ -190,5 +234,32 @@ mod tests {
         assert_eq!(back, p);
         let bad = json.replace("AAEC+g==", "not base64");
         assert!(serde_json::from_str::<PluginRef>(&bad).unwrap().state.is_empty());
+    }
+
+    #[test]
+    fn a_plugin_window_round_trips_and_bad_values_are_dropped() {
+        let mut p = PluginRef::vst3("/x/Y.vst3", "00112233445566778899AABBCCDDEEFF", "Y");
+        let json = serde_json::to_string(&p).unwrap();
+        assert!(!json.contains("window"), "no window saved until it was opened: {json}");
+        p.window = Some(PluginWindow {
+            open: true,
+            position: Some([120.0, -40.0]),
+            tab: "settings".into(),
+            settings_size: Some([440.0, 560.0]),
+            keyboard_to_plugin: true,
+            extra: Default::default(),
+        });
+        let back: PluginRef = serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+        assert_eq!(back, p);
+
+        let mut bad: PluginRef = serde_json::from_str(
+            r#"{"format":"VST3","path":"p","class_id":"c","name":"n",
+                "window":{"open":true,"position":[1e30,0],"settings_size":[0,5]}}"#,
+        )
+        .unwrap();
+        bad.sanitize();
+        let w = bad.window.unwrap();
+        assert!(w.open);
+        assert_eq!((w.position, w.settings_size), (None, None));
     }
 }

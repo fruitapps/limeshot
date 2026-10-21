@@ -4,7 +4,8 @@
 //! * **Lime Test Gain** (effect): stereo in and out, one parameter (linear gain, 0–1), with a
 //!   separate controller class, as most commercial plugins have, and a minimal editor.
 //! * **Lime Test Tone** (instrument): a sine for the last held key, one parameter (level), with
-//!   processor and controller in one object, and no editor.
+//!   processor and controller in one object, no editor, and three factory programs (a
+//!   program-change parameter that sets the level).
 
 use std::cell::Cell;
 use std::ffi::{c_char, c_void};
@@ -109,6 +110,16 @@ unsafe fn last_change(changes: *mut IParameterChanges) -> Option<f64> {
         }
         out
     }
+}
+
+const NO_PROGRAMS: &[(&str, f64)] = &[];
+/// Lime Test Tone's factory programs: a name and the level each sets.
+const TONE_PROGRAMS: &[(&str, f64)] = &[("Medium", 0.5), ("Quiet", 0.25), ("Loud", 1.0)];
+
+/// The program a normalised program-change value selects.
+fn program_index(programs: &[(&str, f64)], value: f64) -> usize {
+    let n = programs.len().saturating_sub(1);
+    (value.clamp(0.0, 1.0) * n as f64).round() as usize
 }
 
 /// Bus description shared by both processors.
@@ -239,9 +250,10 @@ macro_rules! stereo_processor {
     };
 }
 
-/// An edit controller with the single normalised parameter `self.value()`.
+/// An edit controller with the normalised parameter `self.value()` (id 0) and, when `$programs`
+/// lists two or more `(name, value)` pairs, a program-change parameter (id 1) that sets it.
 macro_rules! one_param_controller {
-    ($t:ty, $name:expr, $default:expr) => {
+    ($t:ty, $name:expr, $default:expr, $programs:expr) => {
         impl IEditControllerTrait for $t {
             unsafe fn setComponentState(&self, state: *mut IBStream) -> tresult {
                 // SAFETY: the host passes a live stream.
@@ -257,14 +269,26 @@ macro_rules! one_param_controller {
                 kResultOk
             }
             unsafe fn getParameterCount(&self) -> i32 {
-                1
+                if $programs.len() > 1 { 2 } else { 1 }
             }
             unsafe fn getParameterInfo(&self, index: i32, info: *mut ParameterInfo) -> tresult {
-                if index != 0 || info.is_null() {
+                if index > i32::from($programs.len() > 1) || index < 0 || info.is_null() {
                     return kInvalidArgument;
                 }
                 // SAFETY: checked non-null.
                 let info = unsafe { &mut *info };
+                if index == 1 {
+                    info.id = 1;
+                    copy_wstr("Program", &mut info.title);
+                    copy_wstr("Program", &mut info.shortTitle);
+                    copy_wstr("", &mut info.units);
+                    info.stepCount = $programs.len() as i32 - 1;
+                    info.defaultNormalizedValue = 0.0;
+                    info.unitId = 0;
+                    info.flags =
+                        ParameterInfo_::ParameterFlags_::kIsProgramChange | ParameterInfo_::ParameterFlags_::kIsList;
+                    return kResultOk;
+                }
                 info.id = 0;
                 copy_wstr($name, &mut info.title);
                 copy_wstr($name, &mut info.shortTitle);
@@ -276,7 +300,16 @@ macro_rules! one_param_controller {
                 kResultOk
             }
             unsafe fn getParamStringByValue(&self, id: u32, value: f64, string: *mut String128) -> tresult {
-                if id != 0 || string.is_null() {
+                if string.is_null() {
+                    return kInvalidArgument;
+                }
+                if id == 1 {
+                    let i = program_index($programs, value);
+                    // SAFETY: checked non-null.
+                    copy_wstr($programs.get(i).map_or("", |p| p.0), unsafe { &mut *string });
+                    return kResultOk;
+                }
+                if id != 0 {
                     return kInvalidArgument;
                 }
                 // SAFETY: checked non-null.
@@ -293,13 +326,29 @@ macro_rules! one_param_controller {
                 value
             }
             unsafe fn getParamNormalized(&self, id: u32) -> f64 {
-                if id == 0 { self.value().get() } else { 0.0 }
+                match id {
+                    0 => self.value().get(),
+                    1 => {
+                        let v = self.value().get();
+                        let n = $programs.len().saturating_sub(1).max(1) as f64;
+                        $programs
+                            .iter()
+                            .position(|p| (p.1 - v).abs() < 1e-9)
+                            .map_or(0.0, |i| i as f64 / n)
+                    }
+                    _ => 0.0,
+                }
             }
             unsafe fn setParamNormalized(&self, id: u32, value: f64) -> tresult {
-                if id != 0 {
-                    return kInvalidArgument;
+                match id {
+                    0 => self.value().set(value),
+                    1 if $programs.len() > 1 => {
+                        if let Some(p) = $programs.get(program_index($programs, value)) {
+                            self.value().set(p.1);
+                        }
+                    }
+                    _ => return kInvalidArgument,
                 }
-                self.value().set(value);
                 kResultOk
             }
             unsafe fn setComponentHandler(&self, handler: *mut IComponentHandler) -> tresult {
@@ -553,7 +602,7 @@ impl IPlugViewTrait for TestView {
 }
 
 plugin_base!(GainController);
-one_param_controller!(GainController, "Gain", 1.0);
+one_param_controller!(GainController, "Gain", 1.0, NO_PROGRAMS);
 
 #[derive(Clone, Copy)]
 struct Voice {
@@ -644,7 +693,7 @@ impl Tone {
 
 plugin_base!(Tone);
 component!(Tone, None::<TUID>, false, true);
-one_param_controller!(Tone, "Level", 0.5);
+one_param_controller!(Tone, "Level", 0.5, TONE_PROGRAMS);
 
 impl IAudioProcessorTrait for Tone {
     unsafe fn setBusArrangements(

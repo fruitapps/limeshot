@@ -12,15 +12,22 @@
 //! * A plugin without an editor, or one this platform cannot show yet, gets LimeShot's parameter
 //!   list on the Plugin tab.
 //! * The window floats above LimeShot's main window and hides while another application is active.
+//! * On the right of the tab row, as in FL's title bar: the presets menu (the plugin's factory
+//!   programs, then its `.vstpreset` files; Save preset as…), Presets ◀ ▶ (channels only) and the
+//!   keyboard toggle, which lets the plugin handle keystrokes before LimeShot's shortcuts.
+//! * Each window's place, tab, keyboard toggle and whether it is open are saved in the project
+//!   (FL does the same) and come back when the project opens.
 //!
 //! On backends without separate windows (headless tests) the wrapper is an egui window inside the
 //! main one, and the Plugin tab shows the parameter list.
 
 use std::collections::HashMap;
 use std::hash::{Hash as _, Hasher as _};
+use std::path::PathBuf;
 
 use egui::{Context, Pos2, RichText, Ui, Vec2, ViewportBuilder, ViewportClass, ViewportId, vec2};
-use limeshot_plugins::{NativeWindow, Vst3Editor};
+use limeshot_core::{PluginRef, PluginWindow};
+use limeshot_plugins::{NativeWindow, Vst3Editor, VstPreset};
 
 use crate::app::LimeShotApp;
 use crate::plugins::{PluginHost, Target};
@@ -44,11 +51,78 @@ pub enum Tab {
 }
 
 /// What a closed window remembers for the next time it opens.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Memory {
     pub tab: Tab,
     pub position: Option<Pos2>,
     pub settings_size: Vec2,
+    pub keyboard_to_plugin: bool,
+}
+
+impl Default for Memory {
+    fn default() -> Self {
+        Self {
+            tab: Tab::Editor,
+            position: None,
+            settings_size: SETTINGS_SIZE,
+            keyboard_to_plugin: false,
+        }
+    }
+}
+
+impl Memory {
+    /// The project file's form of the window (`open`: whether it is open now).
+    pub fn to_project(self, open: bool) -> PluginWindow {
+        PluginWindow {
+            open,
+            position: self.position.map(|p| [p.x, p.y]),
+            tab: match self.tab {
+                Tab::Editor => "plugin",
+                Tab::Settings => "settings",
+            }
+            .into(),
+            settings_size: Some([self.settings_size.x, self.settings_size.y]),
+            keyboard_to_plugin: self.keyboard_to_plugin,
+            extra: Default::default(),
+        }
+    }
+
+    pub fn from_project(w: &PluginWindow) -> Self {
+        Self {
+            tab: if w.tab == "settings" {
+                Tab::Settings
+            } else {
+                Tab::Editor
+            },
+            position: w.position.map(|[x, y]| Pos2::new(x, y)),
+            settings_size: w
+                .settings_size
+                .map(|[x, y]| vec2(x.max(320.0), y.max(240.0)))
+                .unwrap_or(SETTINGS_SIZE),
+            keyboard_to_plugin: w.keyboard_to_plugin,
+        }
+    }
+}
+
+/// One entry of a plugin's presets menu.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Preset {
+    /// One of the plugin's factory programs (index into its program list).
+    Program(usize, String),
+    /// A `.vstpreset` file.
+    File(PathBuf),
+}
+
+impl Preset {
+    pub fn name(&self) -> String {
+        match self {
+            Preset::Program(_, n) => n.clone(),
+            Preset::File(p) => p
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+        }
+    }
 }
 
 /// An open plugin window.
@@ -74,15 +148,17 @@ pub struct Wrapper {
     /// A hash of the plugin's state when the window opened, to notice changes the plugin did not
     /// report.
     state_at_open: Option<u64>,
+    /// FL's keyboard toggle: keystrokes go to the plugin before LimeShot's shortcuts.
+    pub keyboard_to_plugin: bool,
+    /// The presets menu, read when the window first opens (and after Save preset as…).
+    presets: Option<Vec<Preset>>,
+    /// The preset last chosen in this window, an index into `presets`.
+    preset: Option<usize>,
 }
 
 impl Wrapper {
     fn new(memory: Option<Memory>) -> Self {
-        let m = memory.unwrap_or(Memory {
-            tab: Tab::Editor,
-            position: None,
-            settings_size: SETTINGS_SIZE,
-        });
+        let m = memory.unwrap_or_default();
         Self {
             tab: m.tab,
             editor: None,
@@ -96,7 +172,29 @@ impl Wrapper {
             applied: None,
             settling: 0,
             state_at_open: None,
+            keyboard_to_plugin: m.keyboard_to_plugin,
+            presets: None,
+            preset: None,
         }
+    }
+
+    fn memory(&self) -> Memory {
+        Memory {
+            tab: self.tab,
+            position: self.position,
+            settings_size: self.settings_size,
+            keyboard_to_plugin: self.keyboard_to_plugin,
+        }
+    }
+
+    /// The presets menu's entries (empty until the window's first frame).
+    pub fn presets(&self) -> &[Preset] {
+        self.presets.as_deref().unwrap_or_default()
+    }
+
+    /// The preset last chosen, or the plugin's current factory program.
+    pub fn current_preset(&self) -> Option<usize> {
+        self.preset
     }
 
     /// Whether the plugin has an editor of its own (known from the window's first frame).
@@ -136,14 +234,7 @@ impl PluginHost {
         let Some(w) = self.windows.remove(&target) else {
             return false;
         };
-        self.window_memory.insert(
-            target,
-            Memory {
-                tab: w.tab,
-                position: w.position,
-                settings_size: w.settings_size,
-            },
-        );
+        self.window_memory.insert(target, w.memory());
         let before = w.state_at_open;
         drop(w);
         before.is_some() && before != state_hash(self, target)
@@ -165,6 +256,121 @@ impl PluginHost {
 
     pub fn window(&self, target: Target) -> Option<&Wrapper> {
         self.windows.get(&target)
+    }
+
+    /// The project file's form of the window of the plugin at `target`: open, closed (with what
+    /// it remembers) or never opened (`None`).
+    pub fn window_place(&self, target: Target) -> Option<PluginWindow> {
+        match self.windows.get(&target) {
+            Some(w) => Some(w.memory().to_project(true)),
+            None => self.window_memory.get(&target).map(|m| m.to_project(false)),
+        }
+    }
+
+    /// Take the window places saved in a project that was just opened, reopening the windows
+    /// that were open.
+    pub(crate) fn restore_windows<'a>(&mut self, plugins: impl IntoIterator<Item = (Target, &'a PluginRef)>) {
+        for (target, p) in plugins {
+            let Some(w) = &p.window else { continue };
+            self.window_memory.insert(target, Memory::from_project(w));
+            if w.open {
+                self.open_window(target, None);
+            }
+        }
+    }
+
+    /// Step through the presets menu (FL's Presets ◀ ▶), wrapping at the ends. Returns true when
+    /// a preset was loaded.
+    pub fn step_preset(&mut self, target: Target, by: isize) -> bool {
+        let Some(w) = self.windows.get(&target) else {
+            return false;
+        };
+        let n = w.presets().len() as isize;
+        if n == 0 {
+            return false;
+        }
+        let next = match w.preset {
+            Some(i) => (i as isize + by).rem_euclid(n),
+            None if by < 0 => n - 1,
+            None => 0,
+        };
+        self.load_preset(target, next as usize)
+    }
+
+    /// Load entry `index` of the window's presets menu. Returns true when it loaded.
+    pub fn load_preset(&mut self, target: Target, index: usize) -> bool {
+        let Some(preset) = self.windows.get(&target).and_then(|w| w.presets().get(index)).cloned() else {
+            return false;
+        };
+        let Some(inst) = self.instance_mut(target) else {
+            return false;
+        };
+        let loaded = match &preset {
+            Preset::Program(i, _) => {
+                inst.set_program(*i);
+                true
+            }
+            Preset::File(path) => match VstPreset::read(path).and_then(|p| inst.load_preset(&p)) {
+                Ok(()) => true,
+                Err(e) => {
+                    log::warn!("{}: {e}", path.display());
+                    false
+                }
+            },
+        };
+        if loaded && let Some(w) = self.windows.get_mut(&target) {
+            w.preset = Some(index);
+        }
+        loaded
+    }
+
+    /// Read the presets menu for the window at `target`: the plugin's factory programs, then the
+    /// `.vstpreset` files made for it in the standard preset folders.
+    fn read_presets(&mut self, target: Target, plugin: Option<&PluginRef>) {
+        let (programs, current) = match self.instance(target) {
+            Some(i) => (i.program_names(), i.program()),
+            None => (Vec::new(), None),
+        };
+        let mut list: Vec<Preset> = programs
+            .into_iter()
+            .enumerate()
+            .map(|(i, n)| Preset::Program(i, n))
+            .collect();
+        if let Some(p) = plugin {
+            let dirs = limeshot_plugins::preset::preset_dirs();
+            list.extend(
+                limeshot_plugins::preset::find_presets(&dirs, &p.vendor, &p.name, &p.class_id)
+                    .into_iter()
+                    .map(Preset::File),
+            );
+        }
+        if let Some(w) = self.windows.get_mut(&target) {
+            w.preset = w.preset.or(current).filter(|&i| i < list.len());
+            w.presets = Some(list);
+        }
+    }
+
+    /// Save the plugin's state as a `.vstpreset` at `path`, and list it in the presets menu.
+    pub fn save_preset(
+        &mut self,
+        target: Target,
+        path: &std::path::Path,
+        plugin: Option<&PluginRef>,
+    ) -> Result<(), String> {
+        let inst = self.instance(target).ok_or("the plugin is not running")?;
+        let bytes = inst.preset().map_err(|e| e.to_string())?.to_bytes();
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+        self.read_presets(target, plugin);
+        if let Some(w) = self.windows.get_mut(&target) {
+            w.preset = w
+                .presets()
+                .iter()
+                .position(|p| matches!(p, Preset::File(f) if f == path));
+        }
+        Ok(())
     }
 }
 
@@ -236,6 +442,8 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
             w.editor = editor;
             w.state_at_open = state;
         }
+        let plugin = crate::plugins::plugin_ref(app.project(), target).cloned();
+        app.plugins.read_presets(target, plugin.as_ref());
     }
     let Some(w) = app.plugins.windows.get(&target) else {
         return;
@@ -269,7 +477,7 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
             vctx.send_viewport_cmd(egui::ViewportCommand::Resizable(wanted.1));
             vctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(wanted.0));
         }
-        if class != ViewportClass::EmbeddedWindow {
+        if class != ViewportClass::EmbeddedWindow && !keys_to_plugin(app, &vctx, target) {
             crate::shortcuts::handle(app, &vctx);
         }
         let t = Theme::current();
@@ -352,6 +560,43 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     }
 }
 
+/// With the keyboard toggle on, typed characters go to the plugin's editor first. Returns true
+/// when the plugin took one, so LimeShot's shortcuts leave this frame's keys alone.
+fn keys_to_plugin(app: &LimeShotApp, ctx: &Context, target: Target) -> bool {
+    let Some(w) = app.plugins.window(target) else {
+        return false;
+    };
+    if !w.keyboard_to_plugin {
+        return false;
+    }
+    let Some(ed) = w.editor.as_ref().filter(|e| e.is_attached()) else {
+        return false;
+    };
+    let typed: Vec<char> = ctx.input(|i| {
+        i.events
+            .iter()
+            .filter_map(|e| match e {
+                egui::Event::Text(t) => Some(t.chars().collect::<Vec<_>>()),
+                _ => None,
+            })
+            .flatten()
+            .collect()
+    });
+    let mut taken = false;
+    for c in typed {
+        taken |= ed.key_down(c);
+    }
+    taken
+}
+
+/// What the right end of the tab row asked for.
+enum Action {
+    Preset(isize),
+    Load(usize),
+    SaveAs,
+    Keyboard,
+}
+
 /// The tab row. Returns the tab clicked.
 fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
     let t = Theme::current();
@@ -365,6 +610,7 @@ fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
         Target::Effect { .. } => None,
     };
     let mut pick = None;
+    let mut act = None;
     let width = ui.available_width();
     ui.allocate_ui_with_layout(
         vec2(width, HEADER),
@@ -396,15 +642,119 @@ fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
                     pick = Some(tab);
                 }
             }
-            if let Some(name) = plugin_name {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.add_space(8.0);
-                    ui.label(RichText::new(name).color(t.text_faint));
-                });
-            }
+            let mut action = None;
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_space(6.0);
+                action = title_buttons(ui, w, target, plugin_name.as_deref());
+            });
+            act = action;
         },
     );
+    if let Some(a) = act {
+        run(app, target, a);
+    }
     pick
+}
+
+/// The presets menu, Presets ◀ ▶ and the keyboard toggle, right to left.
+fn title_buttons(ui: &mut Ui, w: &Wrapper, target: Target, plugin_name: Option<&str>) -> Option<Action> {
+    let t = Theme::current();
+    let mut action = None;
+    let on = w.keyboard_to_plugin;
+    let key = RichText::new("⌨")
+        .size(15.0)
+        .color(if on { t.accent } else { t.text_dim });
+    if ui
+        .add(egui::Button::new(key).selected(on).frame(on))
+        .hint("Allow the plugin to handle keystrokes before LimeShot does")
+        .clicked()
+    {
+        action = Some(Action::Keyboard);
+    }
+    let has = !w.presets().is_empty();
+    if matches!(target, Target::Channel(_)) {
+        for (label, by, hint) in [("▶", 1, "Next preset"), ("◀", -1, "Previous preset")] {
+            if ui
+                .add_enabled(has, egui::Button::new(label).frame(false))
+                .hint(hint)
+                .clicked()
+            {
+                action = Some(Action::Preset(by));
+            }
+        }
+    }
+    let current = w.preset.and_then(|i| w.presets().get(i)).map(Preset::name);
+    let label = current
+        .or(plugin_name.map(str::to_owned))
+        .unwrap_or_else(|| "Presets".into());
+    let label = RichText::new(format!("{label} ⏷")).color(t.text_faint);
+    egui::containers::menu::MenuButton::new(label)
+        .ui(ui, |ui| {
+            ui.set_min_width(200.0);
+            ui.label(RichText::new("Presets").font(semibold(11.0)).color(t.text_faint));
+            if !has {
+                ui.add_enabled(false, egui::Button::new("No presets found"));
+            }
+            egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+                let mut files = false;
+                for (i, p) in w.presets().iter().enumerate() {
+                    if matches!(p, Preset::File(_)) && !files {
+                        files = true;
+                        ui.separator();
+                    }
+                    if ui
+                        .add(egui::Button::new(p.name()).selected(w.preset == Some(i)))
+                        .clicked()
+                    {
+                        action = Some(Action::Load(i));
+                        ui.close();
+                    }
+                }
+            });
+            ui.separator();
+            if ui.button("Save preset as…").clicked() {
+                action = Some(Action::SaveAs);
+                ui.close();
+            }
+        })
+        .0
+        .hint("The plugin's presets");
+    action
+}
+
+fn run(app: &mut LimeShotApp, target: Target, action: Action) {
+    let changed = match action {
+        Action::Preset(by) => app.plugins.step_preset(target, by),
+        Action::Load(i) => app.plugins.load_preset(target, i),
+        Action::Keyboard => {
+            if let Some(w) = app.plugins.windows.get_mut(&target) {
+                w.keyboard_to_plugin = !w.keyboard_to_plugin;
+            }
+            false
+        }
+        Action::SaveAs => {
+            let plugin = crate::plugins::plugin_ref(app.project(), target).cloned();
+            let dir = plugin
+                .as_ref()
+                .and_then(|p| limeshot_plugins::preset::user_preset_dir(&p.vendor, &p.name));
+            let mut dialog = rfd::FileDialog::new().add_filter("VST3 preset", &["vstpreset"]);
+            if let Some(d) = &dir {
+                let _ = std::fs::create_dir_all(d);
+                dialog = dialog.set_directory(d);
+            }
+            if let Some(mut path) = dialog.save_file() {
+                path.set_extension("vstpreset");
+                match app.plugins.save_preset(target, &path, plugin.as_ref()) {
+                    Ok(()) => app.toast(format!("Saved preset {}", path.display())),
+                    Err(e) => app.toast_error(format!("Could not save the preset: {e}")),
+                }
+            }
+            false
+        }
+    };
+    if changed {
+        app.doc.mark_unsaved();
+    }
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
