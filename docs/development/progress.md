@@ -261,3 +261,9 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    and `RotateNotes`; the channel button's menu has Fill each 2/4/8 steps and Rotate left/right, Shift+Cmd+Left/Right
    rotate the selected channels in the Channel Rack and, by the snap, the Piano Roll's selection (KB-040, KB-081).
    Tested in core and UI. Advanced fill… is not done.
+5. **Graph editor (SEQ-011).** Observed live in FL 2026.1.1: the panel under the step row, its lanes, and drags that
+   draw a line (new screenshot). Notes gained `pan` (added to the channel's pan in the engine, saved only when set,
+   sanitised on load) and `Command::SetNoteValues`, whose merge key makes a whole drag one undo step. The Channel
+   Rack's header button or the channel menu's Graph editor opens the panel under the rack for the selected channel,
+   aligned with its steps, with Velocity and Pan lanes. Tested in core, engine (note pan adds to channel pan) and UI.
+   `ui_shot --graph`.

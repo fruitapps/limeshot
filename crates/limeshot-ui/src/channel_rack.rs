@@ -11,6 +11,9 @@
 //! FL Studio 2026.1.1): a click selects only that channel, Ctrl-, Shift- or right-click toggles it.
 //! Alt+Up/Down moves, Alt+Delete deletes (after a confirmation) and Ctrl+L routes the selected
 //! channels.
+//!
+//! The graph editor (FL Studio's, toggled from the header or the channel menu) shows the selected
+//! channel's step velocities or pans under the rack, one bar per step; drag across it to draw.
 
 use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
@@ -35,6 +38,12 @@ pub struct State {
     pub step_strips: Vec<(ChannelId, Rect, u32)>,
     /// Screen rectangles of each channel's selector LED in the last frame.
     pub leds: Vec<(ChannelId, Rect)>,
+    /// The graph editor's lane, when it is open.
+    pub graph: Option<NoteProp>,
+    /// The graph editor's drawing area in the last frame.
+    pub graph_rect: Option<Rect>,
+    /// While drawing in the graph: the last (step, value) and the values set so far.
+    graph_drag: Option<((u32, f32), Vec<(NoteId, f32)>)>,
 }
 
 impl State {
@@ -112,6 +121,18 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         .color(t.text_dim),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let open = app.ui.rack.graph.is_some();
+                    if crate::widgets::icon_button(
+                        ui,
+                        crate::icons::Icon::Graph,
+                        open,
+                        22.0,
+                        "Graph editor: step velocity and pan",
+                    )
+                    .clicked()
+                    {
+                        app.ui.rack.graph = if open { None } else { Some(NoteProp::Velocity) };
+                    }
                     ui.menu_button("+ Add channel", |ui| {
                         if ui.button("Sampler").clicked() {
                             crate::menus::add_sampler(app);
@@ -216,12 +237,134 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
             });
         }
+        app.ui.rack.graph_rect = None;
+        if let (Some(prop), Some(ch)) = (app.ui.rack.graph, sel.and_then(|c| channels.iter().find(|x| x.id == c))) {
+            graph_editor(app, ui, ch, pid, prop);
+        }
     });
     // Dropping a sample anywhere else in the rack makes a new channel.
     let rack_rect = ui.min_rect();
     let drop = ui.interact(rack_rect, ui.id().with("drop"), Sense::hover());
     if let Some(p) = drop.dnd_release_payload::<DraggedSample>() {
         browser::new_sampler_channel(app, &p.0);
+    }
+}
+
+const GRAPH_H: f32 = 96.0;
+
+/// FL Studio's graph editor for the selected channel: a bar per lit step, under the step strip.
+fn graph_editor(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, prop: NoteProp) {
+    let t = Theme::current();
+    let Some((_, strip, steps)) = app.ui.rack.step_strips.iter().find(|s| s.0 == ch.id).copied() else {
+        return;
+    };
+    ui.add_space(4.0);
+    let (row, _) = ui.allocate_exact_size(vec2(ui.available_width().max(strip.right()), GRAPH_H), Sense::hover());
+    let graph = Rect::from_min_max(pos2(strip.left(), row.top()), pos2(strip.right(), row.bottom()));
+    app.ui.rack.graph_rect = Some(graph);
+    // Lane tabs, right-aligned under the channel button.
+    let mut tab_ui = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(Rect::from_min_max(
+                pos2(graph.left() - 150.0, row.top()),
+                pos2(graph.left() - 8.0, row.bottom()),
+            ))
+            .layout(egui::Layout::top_down(egui::Align::Max)),
+    );
+    for (p, label) in [(NoteProp::Velocity, "Velocity"), (NoteProp::Pan, "Pan")] {
+        if tab_ui.selectable_label(prop == p, label).clicked() {
+            app.ui.rack.graph = Some(p);
+        }
+    }
+    let painter = ui.painter_at(graph);
+    painter.rect_filled(graph, CornerRadius::same(t.radius_sm), t.sunken);
+    if prop == NoteProp::Pan {
+        painter.line_segment(
+            [
+                pos2(graph.left(), graph.center().y),
+                pos2(graph.right(), graph.center().y),
+            ],
+            Stroke::new(1.0, t.grid_beat),
+        );
+    }
+    let notes: Vec<(u32, Note)> = app
+        .project()
+        .pattern(pid)
+        .map(|p| {
+            (0..steps)
+                .filter_map(|s| p.step_note(ch.id, ch.root_key, s).map(|n| (s, *n)))
+                .collect()
+        })
+        .unwrap_or_default();
+    let color = rgb(ch.color);
+    let y_of = |v: f32| match prop {
+        NoteProp::Velocity => graph.bottom() - v * graph.height(),
+        NoteProp::Pan => graph.center().y - v * graph.height() * 0.5,
+    };
+    for (s, n) in &notes {
+        let x0 = graph.left() + *s as f32 * STEP_W;
+        let v = match prop {
+            NoteProp::Velocity => n.velocity,
+            NoteProp::Pan => n.pan,
+        };
+        let base = y_of(0.0);
+        let r = Rect::from_x_y_ranges(
+            x0 + 4.0..=x0 + STEP_W - 6.0,
+            y_of(v).min(base)..=y_of(v).max(base) + 1.0,
+        );
+        painter.rect_filled(r, 0.0, color);
+    }
+    let resp = ui.interact(graph, ui.id().with(("graph", ch.id)), Sense::click_and_drag());
+    let value_at = |p: egui::Pos2| match prop {
+        NoteProp::Velocity => ((graph.bottom() - p.y) / graph.height()).clamp(0.0, 1.0),
+        NoteProp::Pan => ((graph.center().y - p.y) / (graph.height() * 0.5)).clamp(-1.0, 1.0),
+    };
+    let step_at = |x: f32| (((x - graph.left()) / STEP_W).floor().max(0.0) as u32).min(steps - 1);
+    if let Some(p) = resp.hover_pos() {
+        let v = value_at(p);
+        app.hint(match prop {
+            NoteProp::Velocity => format!("Velocity {:.0}% — drag across the steps to draw", v * 100.0),
+            NoteProp::Pan => format!("{} — drag across the steps to draw", pan_text(v)),
+        });
+    }
+    let pressed = resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.any_pressed());
+    if let Some(p) = resp.interact_pointer_pos() {
+        let here = (step_at(p.x), value_at(p));
+        if pressed || app.ui.rack.graph_drag.is_none() {
+            app.doc.begin_gesture();
+            app.ui.rack.graph_drag = Some((here, Vec::new()));
+        }
+        if let Some((last, mut values)) = app.ui.rack.graph_drag.take() {
+            // Draw a line from the last point, as FL Studio does for fast drags.
+            let (a, b) = if last.0 <= here.0 { (last, here) } else { (here, last) };
+            for (s, n) in &notes {
+                if *s < a.0 || *s > b.0 {
+                    continue;
+                }
+                let k = if b.0 > a.0 {
+                    (*s - a.0) as f32 / (b.0 - a.0) as f32
+                } else {
+                    0.0
+                };
+                let v = a.1 + (b.1 - a.1) * k;
+                match values.iter_mut().find(|x| x.0 == n.id) {
+                    Some(x) => x.1 = v,
+                    None => values.push((n.id, v)),
+                }
+            }
+            if !values.is_empty() {
+                app.exec(Command::SetNoteValues {
+                    pattern: pid,
+                    prop,
+                    values: values.clone(),
+                });
+            }
+            app.ui.rack.graph_drag = Some((here, values));
+        }
+    }
+    if app.ui.rack.graph_drag.is_some() && !ui.input(|i| i.pointer.any_down()) {
+        app.ui.rack.graph_drag = None;
+        app.doc.end_gesture();
     }
 }
 
@@ -393,6 +536,11 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     if ui.button("Piano Roll").clicked() {
         app.select_channel(ch.id);
         app.show_window(Win::PianoRoll);
+        ui.close();
+    }
+    if ui.button("Graph editor").clicked() {
+        app.select_channel(ch.id);
+        app.ui.rack.graph = Some(app.ui.rack.graph.unwrap_or(NoteProp::Velocity));
         ui.close();
     }
     if ui.button("Channel Settings").clicked() {

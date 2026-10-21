@@ -37,6 +37,7 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog.
+* The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
   Playlist-only and not saved with the project. No performance mode.

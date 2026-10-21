@@ -81,6 +81,10 @@ headers keep the LED at the right.
   Fill each 4 steps leaves exactly steps 1, 5, 9 and 13 lit (the old step is cleared). Shift+Cmd+Right moves them to 2,
   6, 10, 14; Shift+Cmd+Left twice to 4, 8, 12, 16 (step 1 wraps round to 16). The rack's top-left dropdown is the
   channel filter group ("All", "Audio" …): with "Audio" only the audio channel showed.
+- **OBSERVED live (session 8, `fl-rack-graph-editor.png`):** Graph editor (channel menu) opens a panel attached under
+  the channel's step row, one column per step, with lane tabs Note, Vel, Rel, Fine, Pan, X, Y, Shift, Rep. Vel shows
+  a bar per lit step (default about 78 %); a fast drag across the panel draws a straight line through the steps it
+  passes. Pan shows a short centre mark per lit step; the hint bar names the lane and the value under the pointer.
 - **LimeShot equivalent:** `ChannelRack` window. Rows carry mute/solo, pan knob, volume knob, mixer-target spinner, name button and step buttons. Steps are notes at `step × 240 ticks` with the channel's root key. Left-click toggles a step on, right-click toggles it off. A channel with non-step notes shows a mini preview (clicking it opens the Piano Roll). Pattern length is Auto or a fixed number of steps.
 
 ## 3. Piano Roll

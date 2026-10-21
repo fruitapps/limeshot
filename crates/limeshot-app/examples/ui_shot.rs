@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -90,6 +90,30 @@ fn main() {
         app.ui.mixer.selected = 5;
         app.show_window(Win::Mixer);
         app.ui.workspace.state_mut(Win::Mixer).maximized = true;
+    }
+    if args.iter().any(|a| a == "--graph")
+        && let Some(hat) = app.project().channels.get(2).map(|c| c.id)
+    {
+        // The graph editor on the hats, with an accent pattern drawn into the velocities.
+        let pid = app.current_pattern();
+        let values: Vec<(limeshot_core::NoteId, f32)> = app
+            .project()
+            .pattern(pid)
+            .map(|p| {
+                p.notes_for(hat)
+                    .enumerate()
+                    .map(|(i, n)| (n.id, if i % 2 == 0 { 0.9 } else { 0.45 }))
+                    .collect()
+            })
+            .unwrap_or_default();
+        app.exec(limeshot_core::Command::SetNoteValues {
+            pattern: pid,
+            prop: limeshot_core::NoteProp::Velocity,
+            values,
+        });
+        app.doc.mark_saved();
+        app.select_channel(hat);
+        app.ui.rack.graph = Some(limeshot_core::NoteProp::Velocity);
     }
     if args.iter().any(|a| a == "--settings")
         && let Some(c) = app.project().channels.first().map(|c| c.id)

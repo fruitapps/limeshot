@@ -1405,3 +1405,53 @@ fn sidechained_compressor_ducks_on_the_key_track() {
     }
     assert!(most > 10.0, "{most}");
 }
+
+#[test]
+fn note_pan_adds_to_the_channel_pan() {
+    let mut f = fixture();
+    let id = NoteId(
+        f.doc
+            .execute(Command::AddNote {
+                pattern: f.pat,
+                note: NewNote {
+                    channel: f.synth,
+                    key: 69,
+                    start: 0,
+                    length: PPQ,
+                    velocity: 0.8,
+                },
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+    );
+    let lr = |doc: &Document| {
+        let snap = Arc::new(compile(doc.project(), f.pat, &NoSamples));
+        let (a, _) = render(snap, ExportRange::Pattern, 256, SR);
+        let l = a.iter().step_by(2).fold(0.0f32, |m, v| m.max(v.abs()));
+        let r = a.iter().skip(1).step_by(2).fold(0.0f32, |m, v| m.max(v.abs()));
+        (l, r)
+    };
+    let (l0, r0) = lr(&f.doc);
+    assert!((l0 - r0).abs() < 1e-6 && l0 > 0.0);
+    let pan = |doc: &mut Document, v: f32| {
+        doc.execute(Command::SetNoteValues {
+            pattern: f.pat,
+            prop: NoteProp::Pan,
+            values: vec![(id, v)],
+        })
+        .unwrap();
+    };
+    pan(&mut f.doc, 1.0);
+    let (l, r) = lr(&f.doc);
+    assert!(l < 1e-6 && r >= r0 * 0.99, "hard right: {l} {r}");
+    // Note pan and channel pan add up (and clamp): left channel, note right → centre.
+    f.doc
+        .execute(Command::SetChannelPan {
+            channel: f.synth,
+            pan: -1.0,
+        })
+        .unwrap();
+    let (l, r) = lr(&f.doc);
+    assert!((l - r).abs() < 1e-6 && (l - l0).abs() < 1e-4, "{l} {r} vs {l0}");
+}

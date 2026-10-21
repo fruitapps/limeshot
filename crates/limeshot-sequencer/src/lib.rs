@@ -35,6 +35,8 @@ pub struct NoteEvent {
     pub channel: u16,
     pub key: u8,
     pub velocity: f32,
+    /// The note's own pan, added to the channel's (-1 to 1).
+    pub pan: f32,
     /// Seconds into the channel's sample at which playback starts (audio clips trimmed at the
     /// start); 0 for notes.
     pub offset_secs: f64,
@@ -51,6 +53,7 @@ impl NoteEvent {
             channel,
             key,
             velocity,
+            pan: 0.0,
             offset_secs: 0.0,
             clip: false,
         }
@@ -392,13 +395,16 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                 .filter(|n| n.start < length && !n.muted)
                 .filter_map(|n| {
                     let tick = n.start + swing(n.start);
-                    Some(NoteEvent::note(
-                        tick,
-                        n.length.min(length.saturating_sub(tick)).max(1),
-                        channel_index(n.channel)?,
-                        n.key,
-                        n.velocity,
-                    ))
+                    Some(NoteEvent {
+                        pan: n.pan,
+                        ..NoteEvent::note(
+                            tick,
+                            n.length.min(length.saturating_sub(tick)).max(1),
+                            channel_index(n.channel)?,
+                            n.key,
+                            n.velocity,
+                        )
+                    })
                 })
                 .collect();
             events.sort_by_key(|e| (e.tick, e.channel, e.key));
@@ -444,13 +450,10 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             if tick >= clip.end() {
                 continue;
             }
-            song_events.push(NoteEvent::note(
-                tick,
-                n.length.min(clip.end() - tick),
-                channel,
-                n.key,
-                n.velocity,
-            ));
+            song_events.push(NoteEvent {
+                pan: n.pan,
+                ..NoteEvent::note(tick, n.length.min(clip.end() - tick), channel, n.key, n.velocity)
+            });
         }
     }
     song_events.sort_by_key(|e| (e.tick, e.channel, e.key));

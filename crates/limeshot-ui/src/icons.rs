@@ -43,6 +43,8 @@ pub enum Icon {
     ToolSelect,
     ToolZoom,
     ToolPlayback,
+    /// FL Studio's graph editor: a few bars of different heights.
+    Graph,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -178,6 +180,11 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             ));
             p.line_segment([at(2.0, -2.5), at(6.0, 2.5)], line);
             p.line_segment([at(2.0, 2.5), at(6.0, -2.5)], line);
+        }
+        Icon::Graph => {
+            for (x, h) in [(-5.0f32, 5.0f32), (-1.7, 9.0), (1.6, 3.5), (4.9, 7.0)] {
+                p.rect_filled(Rect::from_min_max(at(x - 1.2, 5.5 - h), at(x + 1.2, 5.5)), 0.4, c);
+            }
         }
         Icon::ToolSlip => {
             // Two arrowheads pointing apart around a bar (FL Studio's slip icon).

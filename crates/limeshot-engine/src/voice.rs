@@ -104,6 +104,8 @@ pub struct Voice {
     pub key: u8,
     /// Velocity × instrument gain.
     pub gain: f32,
+    /// The note's pan, added to the channel's.
+    pub pan: f32,
     /// Started by the sequencer (as opposed to a preview).
     pub sequenced: bool,
     /// Absolute engine sample at which the note releases (`u64::MAX`: no scheduled release).
@@ -122,6 +124,7 @@ impl Default for Voice {
             channel: NO_CHANNEL,
             key: 0,
             gain: 0.0,
+            pan: 0.0,
             sequenced: false,
             release_at: u64::MAX,
             end_tick: u64::MAX,

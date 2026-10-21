@@ -1033,26 +1033,36 @@
       "category": "Channel Rack",
       "name": "Graph editor (per-step properties)",
       "description": "Per-step velocity, pan, pitch…",
-      "fl_reference": "Ctrl+K graph editor.",
-      "limeshot_behavior": "Edit step velocity/pan/release/pitch in the rack.",
+      "fl_reference": "Graph editor (channel menu, or the Channel Rack's graph button): lanes Note, Vel, Rel, Fine, Pan, X, Y, Shift, Rep under the steps.",
+      "limeshot_behavior": "The graph editor (the Channel Rack header's graph button, or Graph editor in the channel menu) shows the selected channel's lit steps as bars under its step strip, in a Velocity or a Pan lane. A drag draws a line across the steps (one undo step). Notes have their own pan, added to the channel's (saved only when set).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core (Note::pan, SetNoteValues)",
+        "limeshot-sequencer",
+        "limeshot-engine (voice pan)",
+        "limeshot-ui::channel_rack"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "ui.rs graph_editor_draws_step_velocity_and_pan",
+        "limeshot-engine audio.rs note_pan_adds_to_the_channel_pan",
+        "limeshot-core model::tests::note_pan_is_saved_only_when_set"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "docs/research/evidence/screenshots/fl-rack-graph-editor.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 8). LimeShot has the Velocity and Pan lanes; Note (pitch) would turn a step into a piano-roll note in LimeShot's model, and release, fine pitch, Mod X/Y, shift and repeat are not modelled yet."
     },
     {
       "id": "SEQ-012",

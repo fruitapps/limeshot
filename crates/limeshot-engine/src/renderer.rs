@@ -47,6 +47,7 @@ enum Action {
         channel: u16,
         key: u8,
         velocity: f32,
+        pan: f32,
         end_tick: Tick,
         offset_secs: f64,
         clip: bool,
@@ -493,6 +494,7 @@ impl Renderer {
                             channel: e.channel,
                             key: e.key,
                             velocity: e.velocity,
+                            pan: e.pan,
                             end_tick: e.end(),
                             offset_secs: e.offset_secs + tl.seconds(t_lo - e.tick),
                             clip: true,
@@ -512,6 +514,7 @@ impl Renderer {
                     channel: e.channel,
                     key: e.key,
                     velocity: e.velocity,
+                    pan: e.pan,
                     end_tick: e.tick + e.length,
                     offset_secs: e.offset_secs,
                     clip: e.clip,
@@ -584,6 +587,7 @@ impl Renderer {
                 channel,
                 key,
                 velocity,
+                pan,
                 end_tick,
                 offset_secs,
                 clip,
@@ -606,6 +610,7 @@ impl Renderer {
                     }
                 }
                 v.channel = channel;
+                v.pan = pan;
                 v.sequenced = true;
                 v.end_tick = end_tick;
                 v.release_at = if one_shot {
@@ -632,7 +637,7 @@ impl Renderer {
             let (track, gl, gr, audible) = match snapshot.channels.get(i) {
                 Some(ch) => {
                     let (volume, pan) = self.chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
-                    let (pl, pr) = pan_gains(pan);
+                    let (pl, pr) = pan_gains((pan + v.pan).clamp(-1.0, 1.0));
                     (
                         ch.mixer_track.min(tracks - 1),
                         volume * pl,

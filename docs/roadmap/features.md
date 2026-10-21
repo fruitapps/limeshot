@@ -10,12 +10,12 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 120, DEFERRED 2
+- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 121, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 16 | 1 | 2 | 6 |
-| Channel Rack | 20 | 15 | 0 | 0 | 5 |
+| Channel Rack | 20 | 16 | 0 | 0 | 4 |
 | Piano Roll | 27 | 18 | 0 | 0 | 9 |
 | Playlist | 28 | 18 | 1 | 2 | 7 |
 | Mixer | 16 | 10 | 1 | 1 | 4 |
@@ -75,7 +75,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-008 | Piano-roll preview in rack | P1 |  | VERIFIED | Mini note preview; click opens the Piano Roll for that channel. | `crates/limeshot-app/tests/ui.rs::clicking_a_note_preview_in_the_rack_opens_the_piano_roll` |
 | SEQ-009 | Channel settings window | P0 | ✓ | VERIFIED | Channel Settings window (opened by clicking the channel button): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
 | SEQ-010 | Swing (global and per channel) | P1 |  | VERIFIED | Global swing knob in the Channel Rack header (0–100%): notes exactly on the second 16th of each pair are delayed by up to half a step (≈67% gives a triplet feel), in Pattern and Song playback.<br>*Per-channel swing mix and 'truncate swing notes' are not implemented.* | `limeshot-sequencer tests::swing_delays_every_second_sixteenth`<br>`limeshot-core document::tests::swing_is_clamped_and_undoable` |
-| SEQ-011 | Graph editor (per-step properties) | P2 |  | NOT_STARTED | Edit step velocity/pan/release/pitch in the rack. | — |
+| SEQ-011 | Graph editor (per-step properties) | P2 |  | VERIFIED | The graph editor (the Channel Rack header's graph button, or Graph editor in the channel menu) shows the selected channel's lit steps as bars under its step strip, in a Velocity or a Pan lane. A drag draws a line across the steps (one undo step). Notes have their own pan, added to the channel's (saved only when set).<br>*Observed live in FL 2026.1.1 (session 8). LimeShot has the Velocity and Pan lanes; Note (pitch) would turn a step into a piano-roll note in LimeShot's model, and release, fine pitch, Mod X/Y, shift and repeat are not modelled yet.* | `ui.rs graph_editor_draws_step_velocity_and_pan`<br>`limeshot-engine audio.rs note_pan_adds_to_the_channel_pan`<br>`limeshot-core model::tests::note_pan_is_saved_only_when_set` |
 | SEQ-012 | Channel filter groups | P2 |  | NOT_STARTED | Named channel groups with a filter selector. | — |
 | SEQ-013 | Zip / unzip channels | P3 |  | NOT_STARTED | Collapse rows. | — |
 | SEQ-014 | Fill / rotate / advanced fill | P2 |  | VERIFIED | The channel button's menu has Fill each 2/4/8 steps (replaces the channel's steps in the current pattern) and Rotate left/right; Shift+Cmd+Left/Right rotate the selected channels' steps by one step, wrapping round the pattern. The Piano Roll rotates the selection (or the channel) by the snap with the same keys.<br>*Observed live in FL 2026.1.1 (session 8). Advanced fill… (FL's dialog) is not implemented.* | `limeshot-core document::tests::fill_and_rotate_steps`<br>`ui.rs channel_menu_fills_and_shortcuts_rotate_steps`<br>`ui.rs piano_roll_rotates_notes_with_shift_cmd_arrows` |

@@ -175,6 +175,13 @@ pub enum Command {
         pattern: PatternId,
         channel: ChannelId,
     },
+    /// Set one property of several notes, each to its own value (FL Studio's graph editor). A
+    /// drag sends the whole set each time, so it stays one undo step.
+    SetNoteValues {
+        pattern: PatternId,
+        prop: NoteProp,
+        values: Vec<(NoteId, f32)>,
+    },
     /// Replace the channel's notes with a step every `every` steps over the pattern's length
     /// (FL Studio's Fill each 2/4/8 steps).
     FillSteps {
@@ -462,6 +469,10 @@ impl Command {
             GlueNotes { .. } => "Glue notes",
             ClearChannelNotes { .. } => "Clear channel",
             FillSteps { .. } => "Fill steps",
+            SetNoteValues { prop, .. } => match prop {
+                NoteProp::Velocity => "Note velocity",
+                NoteProp::Pan => "Note pan",
+            },
             RotateNotes { .. } => "Rotate",
             Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
@@ -538,6 +549,7 @@ impl Command {
             AddNote { pattern, note } => format!("addn{}:{}", pattern.0, note.channel.0),
             SetNotesMuted { pattern, muted, .. } => format!("mute{}:{muted}", pattern.0),
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
+            SetNoteValues { pattern, prop, .. } => format!("graph{}:{prop:?}", pattern.0),
             // A Playlist paint stroke or mute drag is one undo step too.
             AddClip { track, .. } | PlaceClip { track, .. } => format!("addc{track}"),
             SetClipMuted { muted, .. } => format!("cmute{muted}"),
@@ -664,6 +676,7 @@ impl Command {
                             length: STEP_TICKS,
                             velocity: 0.78,
                             muted: false,
+                            pan: 0.0,
                         });
                         sort_notes(pat);
                     }
@@ -820,6 +833,22 @@ impl Command {
                 pattern: pid,
                 channel: cid,
             } => pattern(p, pid)?.notes.retain(|n| n.channel != cid),
+            SetNoteValues {
+                pattern: pid,
+                prop,
+                values,
+            } => {
+                let pat = pattern(p, pid)?;
+                for (id, v) in values {
+                    let v = finite(v)?;
+                    if let Some(n) = pat.notes.iter_mut().find(|n| n.id == id) {
+                        match prop {
+                            NoteProp::Velocity => n.velocity = v.clamp(0.0, 1.0),
+                            NoteProp::Pan => n.pan = v.clamp(-1.0, 1.0),
+                        }
+                    }
+                }
+            }
             FillSteps {
                 pattern: pid,
                 channel: cid,
@@ -843,6 +872,7 @@ impl Command {
                         length: STEP_TICKS,
                         velocity: 0.78,
                         muted: false,
+                        pan: 0.0,
                     });
                 }
                 sort_notes(pat);
@@ -1332,6 +1362,13 @@ impl Command {
     }
 }
 
+/// A note property the graph editor edits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NoteProp {
+    Velocity,
+    Pan,
+}
+
 fn place_clip(p: &mut Project, source: ClipSource, track: u32, start: Tick, length: Tick, offset: Tick) -> R {
     match source {
         ClipSource::Pattern(id) if p.pattern(id).is_none() => return Err(CommandError::NoPattern(id)),
@@ -1384,6 +1421,7 @@ fn add_notes(p: &mut Project, pid: PatternId, notes: Vec<NewNote>) -> R {
             length: n.length.max(1),
             velocity: finite(n.velocity)?.clamp(0.0, 1.0),
             muted: false,
+            pan: 0.0,
         });
     }
     let pat = pattern(p, pid)?;

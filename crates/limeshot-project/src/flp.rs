@@ -602,6 +602,7 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
                 length,
                 velocity: (f32::from(n.velocity) / 128.0).clamp(0.0, 1.0),
                 muted: false,
+                pan: 0.0,
             });
         }
         r.notes += notes.len();

@@ -2143,3 +2143,48 @@ fn piano_roll_rotates_notes_with_shift_cmd_arrows() {
     let bar = h.state().project().time_signature.ticks_per_bar();
     assert_eq!(starts, vec![3 * PPQ - STEP_TICKS, bar - STEP_TICKS]);
 }
+
+#[test]
+fn graph_editor_draws_step_velocity_and_pan() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let kick = h.state().project().channels[0].id;
+    let notes = |h: &Harness<'static, LimeShotApp>| -> Vec<(Tick, f32, f32)> {
+        let p = h.state().project().pattern(pat).expect("pattern");
+        p.notes_for(kick)
+            .map(|n| (n.start / STEP_TICKS, n.velocity, n.pan))
+            .collect()
+    };
+    assert_eq!(notes(&h).iter().map(|n| n.0).collect::<Vec<_>>(), vec![0, 4, 8, 12]);
+    // The channel menu opens the graph editor on that channel.
+    let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Secondary);
+    h.get_by_label("Graph editor").click();
+    h.step();
+    h.step();
+    assert_eq!(h.state().ui.rack.graph, Some(NoteProp::Velocity));
+    let g = h.state().ui.rack.graph_rect.expect("graph drawn");
+    let x = |step: f32| g.left() + (step + 0.5) * 22.0;
+    let history = h.state().doc.history().len();
+    // A drag from step 1 near the top to step 13 near the bottom draws a falling line.
+    drag(
+        &mut h,
+        egui::pos2(x(0.0), g.top() + 1.0),
+        egui::pos2(x(12.0), g.bottom() - g.height() * 0.25),
+    );
+    h.step();
+    let v: Vec<f32> = notes(&h).iter().map(|n| n.1).collect();
+    assert!(v[0] > 0.95 && (v[3] - 0.25).abs() < 0.05, "{v:?}");
+    assert!(v[0] > v[1] && v[1] > v[2] && v[2] > v[3], "{v:?}");
+    assert_eq!(h.state().doc.history().len(), history + 1, "one undo step");
+    // The Pan lane: a click high on step 5 pans that step right.
+    h.get_by_label("Pan").click();
+    h.step();
+    click(&mut h, egui::pos2(x(4.0), g.top() + 2.0), PointerButton::Primary);
+    let n = notes(&h);
+    assert!(n[1].2 > 0.9 && n[0].2 == 0.0, "{n:?}");
+    // The header button closes it.
+    h.state_mut().ui.rack.graph = None;
+    h.step();
+    assert!(h.state().ui.rack.graph_rect.is_none());
+}

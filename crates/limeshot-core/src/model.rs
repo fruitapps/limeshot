@@ -251,6 +251,14 @@ pub struct Note {
     /// A muted note stays in the pattern but does not play (FL Studio's Mute tool).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub muted: bool,
+    /// -1 (left) to 1 (right), added to the channel's pan (FL Studio's note panning, edited in
+    /// the graph editor). Saved only when set.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub pan: f32,
+}
+
+fn is_zero(v: &f32) -> bool {
+    *v == 0.0
 }
 
 impl Note {
@@ -803,6 +811,7 @@ impl Project {
                 n.key = n.key.min(127);
                 n.length = n.length.max(1);
                 n.velocity = finite(n.velocity, 0.8).clamp(0.0, 1.0);
+                n.pan = finite(n.pan, 0.0).clamp(-1.0, 1.0);
                 max_id = max_id.max(n.id.0);
             }
             p.notes.sort_by_key(|n| (n.start, n.key, n.id));
@@ -878,6 +887,7 @@ mod tests {
             length: 10,
             velocity: 1.0,
             muted: false,
+            pan: 0.0,
         });
         assert_eq!(p.patterns[0].length(sig), 7680);
         p.patterns[0].length_steps = Some(8);
@@ -890,6 +900,24 @@ mod tests {
         let i: Instrument = serde_json::from_value(raw.clone()).unwrap();
         assert!(matches!(i, Instrument::Unsupported(_)));
         assert_eq!(serde_json::to_value(&i).unwrap(), raw);
+    }
+
+    #[test]
+    fn note_pan_is_saved_only_when_set() {
+        let mut n = Note {
+            id: NoteId(1),
+            channel: ChannelId(2),
+            key: 60,
+            start: 0,
+            length: 240,
+            velocity: 0.78,
+            muted: false,
+            pan: 0.0,
+        };
+        assert!(serde_json::to_value(n).unwrap().get("pan").is_none());
+        n.pan = -0.5;
+        let back: Note = serde_json::from_str(&serde_json::to_string(&n).unwrap()).unwrap();
+        assert_eq!(back.pan, -0.5);
     }
 
     #[test]
@@ -950,6 +978,7 @@ mod tests {
             length: 0,
             velocity: 1.0,
             muted: false,
+            pan: 0.0,
         });
         p.sanitize();
         let c = &p.channels[0];
