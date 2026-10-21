@@ -148,16 +148,19 @@ pub enum Snap {
     #[default]
     Step,
     HalfStep,
+    /// Triplets: three per step (FL Studio's "1/3 step").
+    ThirdStep,
     QuarterStep,
 }
 
 impl Snap {
-    pub const ALL: [Snap; 7] = [
+    pub const ALL: [Snap; 8] = [
         Snap::Bar,
         Snap::Beat,
         Snap::HalfBeat,
         Snap::Step,
         Snap::HalfStep,
+        Snap::ThirdStep,
         Snap::QuarterStep,
         Snap::None,
     ];
@@ -171,6 +174,7 @@ impl Snap {
             Snap::HalfBeat => Some((sig.ticks_per_beat() / 2).max(1)),
             Snap::Step => Some(STEP_TICKS),
             Snap::HalfStep => Some(STEP_TICKS / 2),
+            Snap::ThirdStep => Some(STEP_TICKS / 3),
             Snap::QuarterStep => Some(STEP_TICKS / 4),
         }
     }
@@ -183,6 +187,7 @@ impl Snap {
             Snap::HalfBeat => "1/2 beat",
             Snap::Step => "Step",
             Snap::HalfStep => "1/2 step",
+            Snap::ThirdStep => "1/3 step",
             Snap::QuarterStep => "1/4 step",
         }
     }
@@ -305,6 +310,8 @@ mod tests {
         assert_eq!(Snap::Step.round(120, s), 240);
         assert_eq!(Snap::Bar.floor(5000, s), 3840);
         assert_eq!(Snap::None.round(77, s), 77);
+        assert_eq!(Snap::ThirdStep.ticks(s), Some(80));
+        assert_eq!(Snap::ThirdStep.round(130, s), 160);
     }
 
     #[test]

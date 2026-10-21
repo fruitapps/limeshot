@@ -2603,6 +2603,8 @@ fn the_grid_follows_the_snap() {
     assert_eq!(grid_step(ppt, sig, Snap::Step), STEP_TICKS);
     assert_eq!(grid_step(ppt, sig, Snap::HalfStep), STEP_TICKS / 2);
     assert_eq!(grid_step(ppt, sig, Snap::QuarterStep), STEP_TICKS / 4);
+    // Owner's list (session 11): a 1/3-step (triplet) snap.
+    assert_eq!(grid_step(ppt, sig, Snap::ThirdStep), STEP_TICKS / 3);
     // Coarser snaps keep the zoom's lines; too-dense lines are left out.
     assert_eq!(grid_step(ppt, sig, Snap::Bar), STEP_TICKS);
     assert_eq!(grid_step(ppt / 8.0, sig, Snap::QuarterStep), sig.ticks_per_bar());
