@@ -1281,9 +1281,9 @@
       "name": "Note selection (click, rectangle, select all)",
       "description": "Select notes.",
       "fl_reference": "Ctrl+click/drag, Ctrl+A, Shift+I invert.",
-      "limeshot_behavior": "Cmd+click toggles, Cmd+drag rectangle, Cmd+A all, Cmd+D none, double-click a note selects its pitch row.",
+      "limeshot_behavior": "Click selects; Cmd+click toggles; Cmd+drag rectangle; Cmd+A all, Cmd+D none, Shift+I invert; double-click a note selects its pitch row.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1293,15 +1293,18 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_selection_gestures"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/evidence/screenshots/fl-piano-select-menu.png"
         ]
       },
-      "notes": "Invert selection not implemented."
+      "notes": "Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Not implemented: select by colour/odd/random/muted/overlapping, select time around selection, magic lasso."
     },
     {
       "id": "PR-003",
@@ -1343,7 +1346,7 @@
       "fl_reference": "Event lane lollipops; Alt+wheel.",
       "limeshot_behavior": "Velocity lane: click/drag a stem; applies to the selection when the note is selected.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1355,7 +1358,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release"
+        "limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_velocity_lane_sets_velocity"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1364,7 +1368,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "SetNoteVelocity is unit-tested through the engine; the lane drag is manual-tested only."
+      "notes": "The UI test sets one note's velocity by clicking its stem and a selection's by dragging, as one undo step."
     },
     {
       "id": "PR-005",
@@ -1372,9 +1376,9 @@
       "name": "Zoom and scroll",
       "description": "Navigate the grid.",
       "fl_reference": "Zoom handles, Page Up/Down, middle-drag.",
-      "limeshot_behavior": "Wheel scrolls, Shift+wheel horizontal, Cmd+wheel zoom (anchored at the pointer), +/− buttons, taller keys.",
+      "limeshot_behavior": "Wheel scrolls, Shift+wheel horizontal, Cmd+wheel or pinch zooms (anchored at the pointer), arrow keys scroll, +/− buttons, taller keys.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1384,7 +1388,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1392,7 +1398,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1."
     },
     {
       "id": "PR-006",
@@ -1402,7 +1408,7 @@
       "fl_reference": "Left-click keys previews.",
       "limeshot_behavior": "Click/drag on the keyboard plays the channel; new and dragged notes are auditioned.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1415,7 +1421,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::preview_plays_without_transport"
+        "limeshot-engine tests/audio.rs::preview_plays_without_transport",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1434,7 +1441,7 @@
       "fl_reference": "Playhead follows in pattern mode.",
       "limeshot_behavior": "Playhead line in Pattern mode; ruler click locates.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1444,7 +1451,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1452,7 +1461,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "The playhead line during Pattern playback was checked in the live app (session 7 real-input pass); the ruler click is tested."
     },
     {
       "id": "PR-008",
@@ -1491,9 +1500,9 @@
       "name": "Transpose and nudge with keys",
       "description": "Keyboard editing.",
       "fl_reference": "Shift+arrows nudge, Ctrl+Up/Down octave.",
-      "limeshot_behavior": "↑/↓ semitone, Cmd+↑/↓ octave, ←/→ by snap.",
+      "limeshot_behavior": "Shift+↑/↓ semitone, Cmd+↑/↓ octave, Shift+←/→ by the snap; the selection, or every note of the channel when nothing is selected.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -1503,15 +1512,18 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_shift_arrows_transpose_and_nudge"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/evidence/screenshots/fl-piano-edit-menu.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed in FL 2026.1.1 (fl-piano-edit-menu.png): Shift+Up/Down transpose, Cmd+Up/Down an octave, Shift+Left/Right shift; with nothing selected they apply to all of the channel's notes. Plain arrows scroll. Rotate (Shift+Cmd+Left/Right) and Discard lengths (Shift+D) are not implemented."
     },
     {
       "id": "PR-010",
@@ -1521,7 +1533,7 @@
       "fl_reference": "Ghost notes from same pattern and overlapping clips.",
       "limeshot_behavior": "Notes of other channels in the same pattern are drawn as ghosts (not editable).",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -1531,7 +1543,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1539,7 +1553,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Ghosts from overlapping playlist clips not implemented."
+      "notes": "Ghosts from overlapping playlist clips not implemented. The UI test checks ghosts cannot be deleted and that clicking on one adds a note to the edited channel."
     },
     {
       "id": "PR-011",
@@ -1549,7 +1563,7 @@
       "fl_reference": "Target channel dropdown.",
       "limeshot_behavior": "Channel combo box in the header.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -1559,7 +1573,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",

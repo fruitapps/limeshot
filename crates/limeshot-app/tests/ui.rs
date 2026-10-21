@@ -1002,3 +1002,244 @@ fn dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one() {
     assert_eq!(h.state().project().channels.len(), n + 1);
     assert_eq!(h.state().project().channels[n].name, "Lime Hat Open");
 }
+
+fn drag_with(h: &mut Harness<'static, LimeShotApp>, from: Pos2, to: Pos2, mods: Modifiers) {
+    h.event(Event::ModifiersChanged(mods));
+    drag(h, from, to);
+    h.event(Event::ModifiersChanged(Modifiers::NONE));
+    h.step();
+}
+
+/// The demo's Melody pattern open in a maximised Piano Roll on the Lead channel.
+fn melody_piano_roll() -> (Harness<'static, LimeShotApp>, PatternId, ChannelId) {
+    let mut h = harness(true);
+    let lead = h.state().project().channels[3].id;
+    let melody = h.state().project().patterns[1].id;
+    h.state_mut().set_current_pattern(melody);
+    h.state_mut().select_channel(lead);
+    h.state_mut().show_window(Win::PianoRoll);
+    h.state_mut().ui.workspace.state_mut(Win::PianoRoll).maximized = true;
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::PianoRoll;
+    for _ in 0..3 {
+        h.step();
+    }
+    (h, melody, lead)
+}
+
+fn pattern_notes(h: &Harness<'static, LimeShotApp>, pat: PatternId, ch: ChannelId) -> Vec<Note> {
+    h.state()
+        .project()
+        .pattern(pat)
+        .map(|p| p.notes_for(ch).copied().collect())
+        .unwrap_or_default()
+}
+
+fn piano_geometry(h: &Harness<'static, LimeShotApp>) -> limeshot_ui::piano_roll::Geometry {
+    h.state().ui.piano.geometry.expect("piano roll drawn")
+}
+
+#[test]
+fn piano_roll_selection_gestures() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let notes = pattern_notes(&h, pat, lead);
+    let g = piano_geometry(&h);
+    let at = |n: &Note| g.pos(n.start + n.length / 3, n.key);
+    click(&mut h, at(&notes[1]), PointerButton::Primary);
+    assert_eq!(
+        h.state().ui.piano.selection,
+        vec![notes[1].id],
+        "a click selects the note"
+    );
+    click_with(&mut h, at(&notes[2]), PointerButton::Primary, Modifiers::COMMAND);
+    assert_eq!(
+        h.state().ui.piano.selection,
+        vec![notes[1].id, notes[2].id],
+        "Cmd-click adds"
+    );
+    click_with(&mut h, at(&notes[1]), PointerButton::Primary, Modifiers::COMMAND);
+    assert_eq!(h.state().ui.piano.selection, vec![notes[2].id], "and removes");
+    assert_eq!(pattern_notes(&h, pat, lead), notes, "selecting does not edit");
+
+    h.key_press(Key::I); // no modifier: nothing
+    h.key_press_modifiers(Modifiers::SHIFT, Key::I);
+    h.step();
+    let mut inverted: Vec<NoteId> = notes.iter().map(|n| n.id).filter(|id| *id != notes[2].id).collect();
+    inverted.sort();
+    let mut got = h.state().ui.piano.selection.clone();
+    got.sort();
+    assert_eq!(got, inverted, "Shift+I inverts the selection");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::D);
+    h.step();
+    assert!(h.state().ui.piano.selection.is_empty(), "Cmd+D deselects");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.step();
+    assert_eq!(h.state().ui.piano.selection.len(), notes.len(), "Cmd+A selects all");
+
+    // Cmd+drag on empty space: rectangle selection of the first bar's notes above key 70.
+    let from = g.pos(0, 79) + vec2(2.0, 0.0);
+    let to = g.pos(STEP_TICKS * 15, 71);
+    drag_with(&mut h, from, to, Modifiers::COMMAND);
+    let mut want: Vec<NoteId> = notes
+        .iter()
+        .filter(|n| n.start < STEP_TICKS * 15 && n.key >= 71)
+        .map(|n| n.id)
+        .collect();
+    want.sort();
+    let mut got = h.state().ui.piano.selection.clone();
+    got.sort();
+    assert_eq!(got, want, "rectangle selection");
+    assert_eq!(pattern_notes(&h, pat, lead), notes);
+
+    // Double-click a note: every note of that pitch.
+    double_click(&mut h, at(&notes[0]));
+    let mut want: Vec<NoteId> = notes.iter().filter(|n| n.key == notes[0].key).map(|n| n.id).collect();
+    want.sort();
+    let mut got = h.state().ui.piano.selection.clone();
+    got.sort();
+    assert_eq!(got, want);
+    assert_eq!(want.len(), 3, "A4 appears three times in the melody");
+}
+
+#[test]
+fn piano_roll_velocity_lane_sets_velocity() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let notes = pattern_notes(&h, pat, lead);
+    let g = piano_geometry(&h);
+    let undo = h.state().doc.history().len();
+    click(&mut h, g.vel_pos(notes[4].start, 0.25), PointerButton::Primary);
+    let vel = |h: &Harness<'static, LimeShotApp>, i: usize| pattern_notes(h, pat, lead)[i].velocity;
+    assert!((vel(&h, 4) - 0.25).abs() < 0.03, "{}", vel(&h, 4));
+    assert_eq!(vel(&h, 3), notes[3].velocity, "only that note");
+    // With notes 0 and 1 selected, dragging note 0's stem sets both, in one undo step.
+    h.state_mut().ui.piano.selection = vec![notes[0].id, notes[1].id];
+    let undo = undo + 1;
+    drag(&mut h, g.vel_pos(notes[0].start, 0.3), g.vel_pos(notes[0].start, 0.9));
+    h.step();
+    assert!((vel(&h, 0) - 0.9).abs() < 0.03 && (vel(&h, 1) - 0.9).abs() < 0.03);
+    assert_eq!(vel(&h, 2), notes[2].velocity);
+    assert_eq!(h.state().doc.history().len(), undo + 1, "the drag is one undo step");
+}
+
+#[test]
+fn piano_roll_wheel_and_arrows_zoom_and_scroll() {
+    let (mut h, _, _) = melody_piano_roll();
+    let g = piano_geometry(&h);
+    let p = g.grid.center();
+    let wheel = |h: &mut Harness<'static, LimeShotApp>, dy: f32, mods: Modifiers| {
+        h.event(Event::PointerMoved(p));
+        h.event(Event::ModifiersChanged(mods));
+        h.event(Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: vec2(0.0, dy),
+            modifiers: mods,
+            phase: egui::TouchPhase::Move,
+        });
+        for _ in 0..20 {
+            h.step();
+        }
+        h.event(Event::ModifiersChanged(Modifiers::NONE));
+        h.step();
+    };
+    let zoom = h.state().ui.piano.zoom_x;
+    wheel(&mut h, 60.0, Modifiers::COMMAND);
+    assert!(h.state().ui.piano.zoom_x > zoom, "Cmd+wheel zooms in");
+    let y = h.state().ui.piano.scroll.y;
+    wheel(&mut h, -60.0, Modifiers::NONE);
+    assert!(h.state().ui.piano.scroll.y > y, "the wheel scrolls");
+    let x = h.state().ui.piano.scroll.x;
+    wheel(&mut h, -60.0, Modifiers::SHIFT);
+    assert!(h.state().ui.piano.scroll.x > x, "Shift+wheel scrolls sideways");
+    // Plain arrows scroll too (FL Studio); they do not edit notes.
+    let y = h.state().ui.piano.scroll.y;
+    h.key_press(Key::ArrowDown);
+    h.step();
+    assert!(h.state().ui.piano.scroll.y > y);
+    assert!(!h.state().doc.is_modified());
+}
+
+#[test]
+fn piano_roll_shift_arrows_transpose_and_nudge() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let notes = pattern_notes(&h, pat, lead);
+    h.state_mut().ui.piano.selection = vec![notes[0].id];
+    let first = |h: &Harness<'static, LimeShotApp>| {
+        pattern_notes(h, pat, lead)
+            .into_iter()
+            .find(|n| n.id == notes[0].id)
+            .expect("note")
+    };
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowUp);
+    h.step();
+    assert_eq!(first(&h).key, notes[0].key + 1);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::ArrowDown);
+    h.step();
+    assert_eq!(first(&h).key, notes[0].key - 11);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowRight);
+    h.step();
+    assert_eq!(
+        first(&h).start,
+        notes[0].start + STEP_TICKS,
+        "nudge by the snap (a step)"
+    );
+    let others: Vec<Note> = pattern_notes(&h, pat, lead)
+        .into_iter()
+        .filter(|n| n.id != notes[0].id)
+        .collect();
+    assert_eq!(others, notes[1..], "only the selection moved");
+    // Nothing selected: every note of the channel moves (FL Studio).
+    h.state_mut().ui.piano.selection.clear();
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowDown);
+    h.step();
+    let after = pattern_notes(&h, pat, lead);
+    assert!(after.iter().zip(&notes).skip(1).all(|(a, b)| a.key + 1 == b.key));
+}
+
+#[test]
+fn piano_roll_keyboard_ruler_ghosts_and_channel_selector() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let bass = h.state().project().channels[4].id;
+    // A Bass note in the same pattern shows as a ghost in Lead's Piano Roll.
+    let ghost_start = 2 * h.state().project().time_signature.ticks_per_bar();
+    h.state_mut().exec(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: bass,
+            key: 70,
+            start: ghost_start,
+            length: 4 * STEP_TICKS,
+            velocity: 0.8,
+        },
+    });
+    h.step();
+    let g = piano_geometry(&h);
+    // Right-clicking the ghost does not delete it (it belongs to another channel) …
+    click(&mut h, g.pos(ghost_start + STEP_TICKS, 70), PointerButton::Secondary);
+    assert_eq!(pattern_notes(&h, pat, bass).len(), 1, "ghosts cannot be edited");
+    // … and a left click there adds a Lead note.
+    let n = pattern_notes(&h, pat, lead).len();
+    click(&mut h, g.pos(ghost_start + STEP_TICKS, 70), PointerButton::Primary);
+    assert_eq!(pattern_notes(&h, pat, lead).len(), n + 1);
+    assert_eq!(pattern_notes(&h, pat, bass).len(), 1);
+
+    // Holding a key on the keyboard plays the channel.
+    let key = egui::pos2(g.keys.right() - 6.0, g.pos(0, 72).y);
+    h.event(Event::PointerMoved(key));
+    h.step();
+    press(&mut h, key, PointerButton::Primary, true);
+    wait_for(&mut h, "the auditioned note", |a| a.player.status().voices() > 0);
+    press(&mut h, key, PointerButton::Primary, false);
+
+    // Clicking the ruler moves the playhead there (Pattern mode).
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let r = egui::pos2(g.pos(bar + 10, 72).x, g.ruler.center().y);
+    click(&mut h, r, PointerButton::Primary);
+    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Pattern);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == bar);
+
+    // The channel selector switches the edited channel.
+    h.get_by_value("Lead").click();
+    h.step();
+    h.get_by_label("■ Bass").click();
+    h.step();
+    assert_eq!(h.state().selected_channel(), Some(bass));
+}

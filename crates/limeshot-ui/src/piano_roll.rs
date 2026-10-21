@@ -125,6 +125,10 @@ impl View {
 #[derive(Debug, Clone, Copy)]
 pub struct Geometry {
     pub grid: Rect,
+    pub ruler: Rect,
+    pub keys: Rect,
+    /// The velocity lane.
+    pub vel: Rect,
     pub ppt: f32,
     pub key_h: f32,
     pub scroll: Vec2,
@@ -139,6 +143,12 @@ impl Geometry {
             scroll: self.scroll,
         };
         pos2(v.x(tick), v.y(key) + self.key_h / 2.0)
+    }
+
+    /// The point in the velocity lane above `tick`'s stem at `velocity` (0–1).
+    pub fn vel_pos(&self, tick: Tick, velocity: f32) -> Pos2 {
+        let x = self.grid.left() + tick as f32 * self.ppt - self.scroll.x + 1.0;
+        pos2(x, self.vel.bottom() - 4.0 - velocity * (self.vel.height() - 8.0))
     }
 }
 
@@ -255,6 +265,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     };
     st.geometry = Some(Geometry {
         grid,
+        ruler,
+        keys,
+        vel,
         ppt: view.ppt,
         key_h: view.key_h,
         scroll: view.scroll,
@@ -857,26 +870,37 @@ fn velocity_lane(
     }
 }
 
+/// Cmd+wheel (or a pinch) zooms horizontally around the pointer. egui reports these as a zoom
+/// delta, not as scrolling. Returns whether it zoomed.
+pub fn wheel_zoom(ui: &Ui, grid: Rect, zoom_x: &mut f32, scroll_x: &mut f32, min: f32, max: f32) -> bool {
+    let factor = ui.input(|i| i.zoom_delta());
+    if factor == 1.0 {
+        return false;
+    }
+    let anchor = ui
+        .input(|i| i.pointer.hover_pos())
+        .map(|p| p.x - grid.left())
+        .unwrap_or(0.0);
+    let old = *zoom_x;
+    *zoom_x = (*zoom_x * factor).clamp(min, max);
+    *scroll_x = ((*scroll_x + anchor) * *zoom_x / old - anchor).max(0.0);
+    true
+}
+
 fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     let hovered = ui.rect_contains_pointer(full);
     if !hovered {
+        return;
+    }
+    let st = &mut app.ui.piano;
+    if wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 12.0, 800.0) {
         return;
     }
     let (delta, mods) = ui.input(|i| (i.smooth_scroll_delta, i.modifiers));
     if delta == Vec2::ZERO {
         return;
     }
-    let st = &mut app.ui.piano;
-    if mods.command {
-        let factor = (1.0 + delta.y * 0.004).clamp(0.5, 2.0);
-        let anchor = ui
-            .input(|i| i.pointer.hover_pos())
-            .map(|p| p.x - grid.left())
-            .unwrap_or(0.0);
-        let old = st.zoom_x;
-        st.zoom_x = (st.zoom_x * factor).clamp(12.0, 800.0);
-        st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
-    } else if mods.shift {
+    if mods.shift {
         st.scroll.x = (st.scroll.x - delta.y - delta.x).max(0.0);
     } else {
         st.scroll.x = (st.scroll.x - delta.x).max(0.0);
@@ -1013,26 +1037,56 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             .map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect())
             .unwrap_or_default();
     }
-    if sel.is_empty() {
-        return;
+    if key(ctx, Modifiers::SHIFT, Key::I) {
+        // Invert selection (FL Studio: Select › Invert selection, Shift+I).
+        app.ui.piano.selection = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes_for(cid).map(|n| n.id).filter(|id| !sel.contains(id)).collect())
+            .unwrap_or_default();
     }
+    // Plain arrows scroll the view; Shift+arrows transpose / nudge and Cmd+Up/Down transpose an
+    // octave. As in FL Studio, these edits apply to every note of the channel when none is
+    // selected (observed in FL Studio 2026.1.1).
+    let targets = if sel.is_empty() {
+        app.project()
+            .pattern(pid)
+            .map(|p| p.notes_for(cid).map(|n| n.id).collect())
+            .unwrap_or_default()
+    } else {
+        sel
+    };
     let sig = app.project().time_signature;
     let grid = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS) as i64;
     for (mods, k, dt, dk) in [
-        (Modifiers::NONE, Key::ArrowUp, 0, 1),
-        (Modifiers::NONE, Key::ArrowDown, 0, -1),
+        (Modifiers::SHIFT, Key::ArrowUp, 0, 1),
+        (Modifiers::SHIFT, Key::ArrowDown, 0, -1),
         (Modifiers::COMMAND, Key::ArrowUp, 0, 12),
         (Modifiers::COMMAND, Key::ArrowDown, 0, -12),
-        (Modifiers::NONE, Key::ArrowLeft, -grid, 0),
-        (Modifiers::NONE, Key::ArrowRight, grid, 0),
+        (Modifiers::SHIFT, Key::ArrowLeft, -grid, 0),
+        (Modifiers::SHIFT, Key::ArrowRight, grid, 0),
     ] {
-        if key(ctx, mods, k) {
+        if key(ctx, mods, k) && !targets.is_empty() {
             app.exec(Command::MoveNotes {
                 pattern: pid,
-                notes: sel.clone(),
+                notes: targets.clone(),
                 dt,
                 dkey: dk,
             });
+        }
+    }
+    // Checked after the Shift/Cmd variants: a shortcut without modifiers also matches Shift.
+    let step_y = 3.0 * app.ui.piano.key_h;
+    let step_x = app.ui.piano.zoom_x;
+    for (k, dx, dy) in [
+        (Key::ArrowUp, 0.0, -step_y),
+        (Key::ArrowDown, 0.0, step_y),
+        (Key::ArrowLeft, -step_x, 0.0),
+        (Key::ArrowRight, step_x, 0.0),
+    ] {
+        if key(ctx, Modifiers::NONE, k) {
+            app.ui.piano.scroll.x = (app.ui.piano.scroll.x + dx).max(0.0);
+            app.ui.piano.scroll.y = (app.ui.piano.scroll.y + dy).max(0.0);
         }
     }
 }

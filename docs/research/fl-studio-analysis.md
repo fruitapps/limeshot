@@ -85,6 +85,12 @@ headers keep the LED at the right.
 - **OBSERVED live (`fl-note-length.png`):** in a fresh project the first note drawn is **two steps** (an eighth note)
   long with snap "Line". After a note is resized, new notes take that length. Step notes from the Channel Rack show as
   short notes on the channel's root key (C5); other channels' notes appear as grey ghost notes.
+- **OBSERVED live (session 7, `fl-piano-edit-menu.png`, `fl-piano-select-menu.png`):** the Piano Roll menu lists
+  macOS shortcuts: Cut/Copy/Paste Cmd+X/C/V, Duplicate Cmd+B, Delete Del, Shift left/right Shift+Left/Right, Rotate
+  Shift+Cmd+Left/Right, Transpose Shift+Up/Down, octave Cmd+Up/Down, Discard lengths Shift+D, Mute Opt+M, Unmute
+  Shift+Opt+M, Insert/Delete space Cmd+Ins/Del; Select: Deselect Cmd+D, Select all Cmd+A, one/more at random Shift+R/M,
+  by color Shift+C, odd Shift+O, Invert Shift+I, time around selection Cmd+Enter. Plain Up/Down scroll the view (about
+  three rows per press). With nothing selected, Shift+Up transposes every note of the channel.
 - **LimeShot equivalent:** custom-painted Piano Roll. Draw-tool semantics (left add/move/resize, right delete, Ctrl rectangle select, Alt no-snap), a velocity lane, keyboard auditioning, horizontal and vertical zoom and scroll, a playhead, Delete, Ctrl+A, Ctrl+B duplicate, Shift+Up/Down transpose by a semitone, Ctrl+Up/Down by an octave. Ghost notes, slice and paint tools are tracked (P1).
 
 ## 4. Playlist and arrangement

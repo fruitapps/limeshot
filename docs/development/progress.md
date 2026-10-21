@@ -189,3 +189,11 @@ Windows/Linux CI running, then expand, starting with the Piano Roll tools. Each 
    Option+Up and Option+Delete behave as in the tests.
    Test note: the egui_kittest harness advances 0.25 s per frame, so double-clicks set the frame time explicitly
    (`double_click` in `tests/ui.rs`).
+2. **Piano Roll basics.** FL 2026.1.1's Piano Roll menu lists its macOS shortcuts (two new screenshots): transpose
+   and nudge are Shift+arrows, plain arrows scroll, and with nothing selected the edit applies to all of the
+   channel's notes. LimeShot used plain arrows (KB-057/058 "DIFFERENT"); it now matches, and Shift+I inverts the
+   selection. **Bug found by the new tests:** Cmd+wheel zoom never worked in the Piano Roll or the Playlist (egui
+   reports Cmd+wheel and pinch as a zoom delta, not as scrolling); both now use `piano_roll::wheel_zoom`. PR-002,
+   PR-004…007 and PR-009…011 are VERIFIED by five new UI tests (selection gestures, velocity lane, wheel/arrow
+   scrolling and zoom, Shift/Cmd arrows, keyboard audition, ruler locate, ghosts, channel selector). Live check:
+   Cmd+wheel zooms both ways and the playhead draws during playback.

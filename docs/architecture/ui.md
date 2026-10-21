@@ -75,7 +75,9 @@ Cmd+Z / Cmd+Shift+Z (or Cmd+Y) undo/redo, Cmd+N/O/S/Shift+S/R new/open/save/save
 
 Focused editor (the last one clicked): Delete/Backspace, Cmd+A, Cmd+D, Cmd+B duplicate, Cmd+C/X/V (notes; the selected
 channel's steps in the rack; clips in the Playlist, pasted at the song position in Song mode), Alt+Q quantize (Piano Roll),
-arrows (transpose/nudge in the Piano Roll, nudge/move in the Playlist, channel selection in the rack). Channel Rack:
+arrows (scroll in the Piano Roll, where Shift+arrows transpose/nudge and Cmd+Up/Down transpose an octave —
+the selection or, with none, every note of the channel; nudge/move in the Playlist; channel selection in the rack),
+Shift+I invert the Piano Roll selection. Channel Rack:
 Alt+Up/Down move, Alt+Delete delete (with FL's confirmation) and Cmd+L route the selected channels; F2 renames the
 current pattern.
 

@@ -9,14 +9,14 @@ automated tests or recorded manual verification. Everything else is not done.
 ## Summary
 
 - Features tracked: **237**
-- MVP features: **69** — 67 implemented or verified, 50 verified
-- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 28, VERIFIED 94, DEFERRED 2
+- MVP features: **69** — 67 implemented or verified, 56 verified
+- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 20, VERIFIED 102, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 13 | 4 | 2 | 6 |
 | Channel Rack | 20 | 14 | 0 | 0 | 6 |
-| Piano Roll | 26 | 7 | 8 | 0 | 11 |
+| Piano Roll | 26 | 15 | 0 | 0 | 11 |
 | Playlist | 28 | 12 | 5 | 2 | 9 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
@@ -91,16 +91,16 @@ automated tests or recorded manual verification. Everything else is not done.
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
 | PR-001 | Add, move, resize, delete notes | P0 | ✓ | VERIFIED | Same mouse conventions; Alt bypasses snap; Delete removes the selection. New notes are two steps long until a note is drawn or resized; after that they take its length (as observed in FL Studio).<br>*Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png).* | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes`<br>`limeshot-core document::tests::notes_move_resize_and_duplicate` |
-| PR-002 | Note selection (click, rectangle, select all) | P0 | ✓ | IMPLEMENTED | Cmd+click toggles, Cmd+drag rectangle, Cmd+A all, Cmd+D none, double-click a note selects its pitch row.<br>*Invert selection not implemented.* | — |
+| PR-002 | Note selection (click, rectangle, select all) | P0 | ✓ | VERIFIED | Click selects; Cmd+click toggles; Cmd+drag rectangle; Cmd+A all, Cmd+D none, Shift+I invert; double-click a note selects its pitch row.<br>*Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Not implemented: select by colour/odd/random/muted/overlapping, select time around selection, magic lasso.* | `crates/limeshot-app/tests/ui.rs::piano_roll_selection_gestures` |
 | PR-003 | Snap to grid | P0 | ✓ | VERIFIED | Global snap (bar, beat, ½ beat, step, ½, ¼ step, none); Alt bypasses. | `limeshot-core time::tests::snapping`<br>`limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes` |
-| PR-004 | Velocity editing | P0 | ✓ | IMPLEMENTED | Velocity lane: click/drag a stem; applies to the selection when the note is selected.<br>*SetNoteVelocity is unit-tested through the engine; the lane drag is manual-tested only.* | `limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release` |
-| PR-005 | Zoom and scroll | P0 | ✓ | IMPLEMENTED | Wheel scrolls, Shift+wheel horizontal, Cmd+wheel zoom (anchored at the pointer), +/− buttons, taller keys. | — |
-| PR-006 | Piano-key auditioning | P0 | ✓ | IMPLEMENTED | Click/drag on the keyboard plays the channel; new and dragged notes are auditioned. | `limeshot-engine tests/audio.rs::preview_plays_without_transport` |
-| PR-007 | Playback position display | P0 | ✓ | IMPLEMENTED | Playhead line in Pattern mode; ruler click locates. | — |
+| PR-004 | Velocity editing | P0 | ✓ | VERIFIED | Velocity lane: click/drag a stem; applies to the selection when the note is selected.<br>*The UI test sets one note's velocity by clicking its stem and a selection's by dragging, as one undo step.* | `limeshot-engine tests/audio.rs::piano_roll_notes_play_and_release`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_velocity_lane_sets_velocity` |
+| PR-005 | Zoom and scroll | P0 | ✓ | VERIFIED | Wheel scrolls, Shift+wheel horizontal, Cmd+wheel or pinch zooms (anchored at the pointer), arrow keys scroll, +/− buttons, taller keys.<br>*Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1.* | `crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll` |
+| PR-006 | Piano-key auditioning | P0 | ✓ | VERIFIED | Click/drag on the keyboard plays the channel; new and dragged notes are auditioned. | `limeshot-engine tests/audio.rs::preview_plays_without_transport`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
+| PR-007 | Playback position display | P0 | ✓ | VERIFIED | Playhead line in Pattern mode; ruler click locates.<br>*The playhead line during Pattern playback was checked in the live app (session 7 real-input pass); the ruler click is tested.* | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
 | PR-008 | Duplicate selection (Ctrl+B) | P1 |  | VERIFIED | Cmd+B copies the selection right by its span rounded up to beats; copies become selected. | `limeshot-core document::tests::notes_move_resize_and_duplicate` |
-| PR-009 | Transpose and nudge with keys | P1 |  | IMPLEMENTED | ↑/↓ semitone, Cmd+↑/↓ octave, ←/→ by snap. | — |
-| PR-010 | Ghost notes | P1 |  | IMPLEMENTED | Notes of other channels in the same pattern are drawn as ghosts (not editable).<br>*Ghosts from overlapping playlist clips not implemented.* | — |
-| PR-011 | Channel target selector | P0 | ✓ | IMPLEMENTED | Channel combo box in the header. | — |
+| PR-009 | Transpose and nudge with keys | P1 |  | VERIFIED | Shift+↑/↓ semitone, Cmd+↑/↓ octave, Shift+←/→ by the snap; the selection, or every note of the channel when nothing is selected.<br>*Observed in FL 2026.1.1 (fl-piano-edit-menu.png): Shift+Up/Down transpose, Cmd+Up/Down an octave, Shift+Left/Right shift; with nothing selected they apply to all of the channel's notes. Plain arrows scroll. Rotate (Shift+Cmd+Left/Right) and Discard lengths (Shift+D) are not implemented.* | `crates/limeshot-app/tests/ui.rs::piano_roll_shift_arrows_transpose_and_nudge` |
+| PR-010 | Ghost notes | P1 |  | VERIFIED | Notes of other channels in the same pattern are drawn as ghosts (not editable).<br>*Ghosts from overlapping playlist clips not implemented. The UI test checks ghosts cannot be deleted and that clicking on one adds a note to the edited channel.* | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
+| PR-011 | Channel target selector | P0 | ✓ | VERIFIED | Channel combo box in the header. | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
 | PR-012 | Paint, slice, mute, stamp, zoom tools | P1 |  | NOT_STARTED | Tool selector with paint, slice, mute, chord stamp. | — |
 | PR-013 | Scale highlighting / snap to scale | P2 |  | NOT_STARTED | Scale selector, shading rows out of key, optional snapping. | — |
 | PR-014 | Quantize | P1 |  | VERIFIED | Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only.<br>*No quantize dialog (strength, lengths, swing template) yet.* | `limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths`<br>`limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |

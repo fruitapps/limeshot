@@ -1439,21 +1439,15 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     if !ui.rect_contains_pointer(full) {
         return;
     }
+    let st = &mut app.ui.playlist;
+    if crate::piano_roll::wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 3.0, 400.0) {
+        return;
+    }
     let (delta, mods) = ui.input(|i| (i.smooth_scroll_delta, i.modifiers));
     if delta == Vec2::ZERO {
         return;
     }
-    let st = &mut app.ui.playlist;
-    if mods.command {
-        let factor = (1.0 + delta.y * 0.004).clamp(0.5, 2.0);
-        let anchor = ui
-            .input(|i| i.pointer.hover_pos())
-            .map(|p| p.x - grid.left())
-            .unwrap_or(0.0);
-        let old = st.zoom_x;
-        st.zoom_x = (st.zoom_x * factor).clamp(3.0, 400.0);
-        st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
-    } else if mods.shift {
+    if mods.shift {
         st.scroll.x = (st.scroll.x - delta.y - delta.x).max(0.0);
     } else {
         st.scroll.x = (st.scroll.x - delta.x).max(0.0);

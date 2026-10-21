@@ -570,11 +570,11 @@
       "context": "Piano Roll",
       "action": "Deselect",
       "fl_keys": "Ctrl+D",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+D",
       "status": "IMPLEMENTED",
       "feature": "PR-002",
-      "notes": ""
+      "notes": "Listed in FL 2026.1.1's Piano Roll Select menu."
     },
     {
       "id": "KB-053",
@@ -625,22 +625,22 @@
       "context": "Piano Roll",
       "action": "Transpose a semitone",
       "fl_keys": "Shift+Up / Shift+Down",
-      "confidence": "VERIFIED",
-      "limeshot_keys": "↑ / ↓",
-      "status": "DIFFERENT",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+↑ / Shift+↓",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
-      "notes": "LimeShot uses the plain arrows."
+      "notes": "Applies to every note of the channel when none is selected (observed). Plain arrows scroll."
     },
     {
       "id": "KB-058",
       "context": "Piano Roll",
       "action": "Nudge the selection",
       "fl_keys": "Shift+Left / Shift+Right",
-      "confidence": "VERIFIED",
-      "limeshot_keys": "← / →",
-      "status": "DIFFERENT",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+← / Shift+→",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
-      "notes": "LimeShot nudges by the snap with the plain arrows."
+      "notes": "FL calls it Shift left/right (moves by the snap)."
     },
     {
       "id": "KB-059",
@@ -861,6 +861,61 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-020",
       "notes": "A mouse binding, listed for completeness. A plain click selects only that channel."
+    },
+    {
+      "id": "KB-079",
+      "context": "Piano Roll",
+      "action": "Invert selection",
+      "fl_keys": "Shift+I",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+I",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
+      "notes": "From FL 2026.1.1's Select menu."
+    },
+    {
+      "id": "KB-080",
+      "context": "Piano Roll",
+      "action": "Scroll the view",
+      "fl_keys": "Up / Down / Left / Right",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "↑ / ↓ / ← / →",
+      "status": "IMPLEMENTED",
+      "feature": "PR-005",
+      "notes": "Up/Down move about three rows per press in FL 2026.1.1."
+    },
+    {
+      "id": "KB-081",
+      "context": "Piano Roll",
+      "action": "Rotate selection left / right",
+      "fl_keys": "Shift+Cmd+Left / Shift+Cmd+Right",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-009",
+      "notes": "FL 2026.1.1 Edit menu (macOS labels)."
+    },
+    {
+      "id": "KB-082",
+      "context": "Piano Roll",
+      "action": "Discard lengths",
+      "fl_keys": "Shift+D",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Edit menu."
+    },
+    {
+      "id": "KB-083",
+      "context": "Piano Roll",
+      "action": "Mute / unmute selected notes",
+      "fl_keys": "Opt+M / Shift+Opt+M",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-012",
+      "notes": "FL 2026.1.1 Edit menu (macOS labels)."
     }
   ]
 }
