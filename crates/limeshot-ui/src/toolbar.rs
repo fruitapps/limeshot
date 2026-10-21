@@ -161,17 +161,13 @@ fn pattern_selector(app: &mut LimeShotApp, ui: &mut Ui) {
         .find(|p| p.0 == cur)
         .map(|p| (p.1.clone(), p.2))
         .unwrap_or((String::new(), limeshot_core::PALETTE[0]));
-    if icon_button(ui, Icon::Minus, false, 22.0, "Previous pattern (−)").clicked()
-        && let Some(i) = pats.iter().position(|p| p.0 == cur)
-        && i > 0
-    {
-        app.set_current_pattern(pats[i - 1].0);
-    }
     let (r, _) = ui.allocate_exact_size(vec2(4.0, 18.0), Sense::hover());
     ui.painter()
         .rect_filled(r, CornerRadius::same(2), crate::theme::rgb(color));
+    // The patterns, then "Create new" (FL Studio's selector menu: its Find first empty… makes a
+    // new pattern). The − and + buttons are gone; −/+ on the keyboard still step through them.
     ComboBox::from_id_salt("pattern_selector")
-        .width(116.0)
+        .width(140.0)
         .selected_text(name)
         .show_ui(ui, |ui| {
             for (id, n, c) in &pats {
@@ -180,21 +176,16 @@ fn pattern_selector(app: &mut LimeShotApp, ui: &mut Ui) {
                     app.set_current_pattern(*id);
                 }
             }
+            ui.separator();
+            if ui
+                .button("Create new")
+                .on_hover_text("A new, empty pattern (F4)")
+                .clicked()
+            {
+                crate::menus::add_pattern(app);
+                ui.close();
+            }
         });
-    if icon_button(
-        ui,
-        Icon::Plus,
-        false,
-        22.0,
-        "Next pattern (+); after the last, adds a new one",
-    )
-    .clicked()
-    {
-        match pats.iter().position(|p| p.0 == cur) {
-            Some(i) if i + 1 < pats.len() => app.set_current_pattern(pats[i + 1].0),
-            _ => crate::menus::add_pattern(app),
-        }
-    }
 }
 
 fn snap_and_options(app: &mut LimeShotApp, ui: &mut Ui) {

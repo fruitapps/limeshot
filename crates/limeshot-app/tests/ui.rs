@@ -3334,3 +3334,27 @@ fn windows_raise_on_click_pin_on_top_and_maximise_on_double_click() {
     let after = window_rect(&h, Win::ChannelRack);
     assert!((after.min - before.min).length() < 1.0 && (after.size() - before.size()).length() < 1.0);
 }
+
+/// Owner's list item 16: the toolbar's pattern selector has no − and + buttons; its list ends
+/// with Create new (FL Studio's selector menu makes a new pattern from it too).
+#[test]
+fn the_pattern_selector_creates_new_patterns_from_its_list() {
+    let mut h = harness(true);
+    let n = h.state().project().patterns.len();
+    let cur = h.state().current_pattern();
+    let name = h.state().project().pattern(cur).expect("pattern").name.clone();
+    assert!(h.query_by_label("Previous pattern (−)").is_none());
+    let combo = h
+        .query_all_by_value(&name)
+        .chain(h.query_all_by_label(&name))
+        .find(|node| node.rect().top() < 120.0)
+        .expect("the selector in the toolbar")
+        .rect()
+        .center();
+    click(&mut h, combo, PointerButton::Primary);
+    h.get_by_label("Create new").click();
+    h.step();
+    h.step();
+    assert_eq!(h.state().project().patterns.len(), n + 1);
+    assert_eq!(h.state().current_pattern(), h.state().project().patterns[n].id);
+}

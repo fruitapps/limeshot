@@ -1251,7 +1251,7 @@
       "name": "Multiple patterns",
       "description": "Several reusable patterns.",
       "fl_reference": "Up to 999 patterns; toolbar selector.",
-      "limeshot_behavior": "Toolbar pattern selector (prev/next/new/rename), F4 new, +/− switch; Patterns menu clone/delete.",
+      "limeshot_behavior": "Toolbar pattern selector: the list of patterns, then Create new (no − / + buttons); F4 new, + / − keys switch; Patterns menu clone/delete.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -1268,7 +1268,8 @@
         "limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement",
         "limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo",
         "limeshot-core document::tests::pattern_color_changes_in_one_undo_step",
-        "limeshot-app tests/ui.rs::pattern_color_is_picked_from_swatches"
+        "limeshot-app tests/ui.rs::pattern_color_is_picked_from_swatches",
+        "limeshot-app tests/ui.rs::the_pattern_selector_creates_new_patterns_from_its_list"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1277,7 +1278,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "Session 9: patterns can be recoloured from a palette swatch picker (Patterns menu, the Playlist's pattern picker and pattern clip menus; Command::SetPatternColor). The channel menu's Color uses the same picker."
+      "notes": "Session 9: patterns can be recoloured from a palette swatch picker (Patterns menu, the Playlist's pattern picker and pattern clip menus; Command::SetPatternColor). The channel menu's Color uses the same picker. Session 11 (owner's list item 16): FL 2026.1.1's selector menu lists the patterns next to Find first empty…/Find next empty… (which make a new pattern), Clone, Delete etc., and FL keeps a + button beside the selector; LimeShot drops both buttons at the owner's request and offers Create new in the list."
     },
     {
       "id": "PR-001",

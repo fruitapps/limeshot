@@ -415,3 +415,5 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
     longer a fixed backdrop (in FL a click on it raised it over the Channel Rack). Double-clicking a title bar
     maximises or restores the window, as in FL. A pin button keeps a window above the others (LimeShot's own; FL's
     editor windows have none).
+11. **Pattern selector (item 16).** The toolbar's − and + buttons are gone; the selector's list ends with Create
+    new. (FL keeps a + button and makes new patterns with Find first empty… in the same menu.)
