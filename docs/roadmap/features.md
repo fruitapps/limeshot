@@ -10,12 +10,12 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 121, DEFERRED 2
+- By status: NOT_STARTED 93, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 122, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 16 | 1 | 2 | 6 |
-| Channel Rack | 20 | 16 | 0 | 0 | 4 |
+| Channel Rack | 20 | 17 | 0 | 0 | 3 |
 | Piano Roll | 27 | 18 | 0 | 0 | 9 |
 | Playlist | 28 | 18 | 1 | 2 | 7 |
 | Mixer | 16 | 10 | 1 | 1 | 4 |
@@ -76,7 +76,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-009 | Channel settings window | P0 | ✓ | VERIFIED | Channel Settings window (opened by clicking the channel button): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
 | SEQ-010 | Swing (global and per channel) | P1 |  | VERIFIED | Global swing knob in the Channel Rack header (0–100%): notes exactly on the second 16th of each pair are delayed by up to half a step (≈67% gives a triplet feel), in Pattern and Song playback.<br>*Per-channel swing mix and 'truncate swing notes' are not implemented.* | `limeshot-sequencer tests::swing_delays_every_second_sixteenth`<br>`limeshot-core document::tests::swing_is_clamped_and_undoable` |
 | SEQ-011 | Graph editor (per-step properties) | P2 |  | VERIFIED | The graph editor (the Channel Rack header's graph button, or Graph editor in the channel menu) shows the selected channel's lit steps as bars under its step strip, in a Velocity or a Pan lane. A drag draws a line across the steps (one undo step). Notes have their own pan, added to the channel's (saved only when set).<br>*Observed live in FL 2026.1.1 (session 8). LimeShot has the Velocity and Pan lanes; Note (pitch) would turn a step into a piano-roll note in LimeShot's model, and release, fine pitch, Mod X/Y, shift and repeat are not modelled yet.* | `ui.rs graph_editor_draws_step_velocity_and_pan`<br>`limeshot-engine audio.rs note_pan_adds_to_the_channel_pan`<br>`limeshot-core model::tests::note_pan_is_saved_only_when_set` |
-| SEQ-012 | Channel filter groups | P2 |  | NOT_STARTED | Named channel groups with a filter selector. | — |
+| SEQ-012 | Channel filter groups | P2 |  | VERIFIED | Channels have an optional filter group, saved with the project. The Channel Rack's dropdown shows All, each group, or Unsorted; Alt+G (or Group selected… in the channel menu) names the selected channels' group and shows it. Empty groups disappear. Audio clip channels start in an "Audio" group, as in FL Studio.<br>*Observed live in FL 2026.1.1 (session 8). The chosen filter is not saved with the project.* | `limeshot-core document::tests::channel_groups_are_set_and_listed`<br>`ui.rs channel_filter_groups_hide_other_channels` |
 | SEQ-013 | Zip / unzip channels | P3 |  | NOT_STARTED | Collapse rows. | — |
 | SEQ-014 | Fill / rotate / advanced fill | P2 |  | VERIFIED | The channel button's menu has Fill each 2/4/8 steps (replaces the channel's steps in the current pattern) and Rotate left/right; Shift+Cmd+Left/Right rotate the selected channels' steps by one step, wrapping round the pattern. The Piano Roll rotates the selection (or the channel) by the snap with the same keys.<br>*Observed live in FL 2026.1.1 (session 8). Advanced fill… (FL's dialog) is not implemented.* | `limeshot-core document::tests::fill_and_rotate_steps`<br>`ui.rs channel_menu_fills_and_shortcuts_rotate_steps`<br>`ui.rs piano_roll_rotates_notes_with_shift_cmd_arrows` |
 | SEQ-015 | Copy / paste steps between channels and patterns | P1 |  | VERIFIED | With the Channel Rack focused, Cmd+C/X copy/cut the selected channel's notes in the current pattern; Cmd+V replaces the selected channel's notes. Step patterns are re-pitched to the target channel's root key so they stay steps. | `limeshot-app tests/ui.rs::channel_rack_copies_steps_between_channels` |

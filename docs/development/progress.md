@@ -267,3 +267,8 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    Rack's header button or the channel menu's Graph editor opens the panel under the rack for the selected channel,
    aligned with its steps, with Velocity and Pan lanes. Tested in core, engine (note pan adds to channel pan) and UI.
    `ui_shot --graph`.
+6. **Channel filter groups (SEQ-012).** Observed live in FL 2026.1.1 (three new screenshots): the filter dropdown,
+   Group selected… (Opt+G) and its name field. Channels gained an optional `group` (saved only when set) and
+   `Command::SetChannelGroup`; audio-clip channels start in "Audio". The Channel Rack header has the All / group /
+   Unsorted dropdown, Alt+G and the channel menu name the selected channels' group (KB-093). Tested in core and UI.
+   This completes the session 7 expansion plan. VST3 hosting is postponed at the owner's request (2026-10-21).

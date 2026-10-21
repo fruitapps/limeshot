@@ -838,6 +838,40 @@ mod tests {
     }
 
     #[test]
+    fn channel_groups_are_set_and_listed() {
+        let (mut d, ch, _) = doc_with_channel();
+        assert!(d.project().channel_groups().is_empty());
+        d.execute(Command::SetChannelGroup {
+            channels: vec![ch],
+            group: Some("  Drums ".into()),
+        })
+        .unwrap();
+        assert_eq!(d.project().channel(ch).unwrap().group.as_deref(), Some("Drums"));
+        assert_eq!(d.project().channel_groups(), vec!["Drums".to_string()]);
+        // A blank name means Unsorted; the group disappears with its last channel.
+        d.execute(Command::SetChannelGroup {
+            channels: vec![ch],
+            group: Some(" ".into()),
+        })
+        .unwrap();
+        assert!(d.project().channel_groups().is_empty());
+        // Audio clips' channels start in the "Audio" group (FL Studio).
+        let c = d
+            .execute(Command::AddAudioClip {
+                sample: SampleRef { path: "a.wav".into() },
+                name: "a".into(),
+                track: 0,
+                start: 0,
+                length: 960,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        let ch = d.project().clip(ClipId(c)).unwrap().audio_channel().unwrap();
+        assert_eq!(d.project().channel(ch).unwrap().group.as_deref(), Some("Audio"));
+    }
+
+    #[test]
     fn fill_and_rotate_steps() {
         let (mut d, ch, pat) = doc_with_channel();
         let steps = |d: &Document| -> Vec<Tick> {

@@ -18,6 +18,8 @@ pub enum RenameTarget {
     PlaylistTrack(u32),
     MixerTrack(u16),
     Marker(limeshot_core::MarkerId),
+    /// Name the Channel Rack filter group for these channels (FL Studio's Group selected…).
+    ChannelGroup(Vec<ChannelId>),
     Project,
 }
 
@@ -99,6 +101,18 @@ impl Dialog {
             .unwrap_or_default();
         Dialog::Rename {
             target: RenameTarget::Marker(id),
+            text,
+        }
+    }
+
+    pub fn group_channels(app: &LimeShotApp, channels: Vec<ChannelId>) -> Self {
+        let text = channels
+            .first()
+            .and_then(|c| app.project().channel(*c))
+            .and_then(|c| c.group.clone())
+            .unwrap_or_default();
+        Dialog::Rename {
+            target: RenameTarget::ChannelGroup(channels),
             text,
         }
     }
@@ -467,14 +481,30 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
         }
         Dialog::Rename { target, text } => {
             let target = target.clone();
-            modal(ctx, "Rename", |ui| {
+            let title = if matches!(target, RenameTarget::ChannelGroup(_)) {
+                "Filter group name"
+            } else {
+                "Rename"
+            };
+            modal(ctx, title, |ui| {
                 let r = ui.add(egui::TextEdit::singleline(text).desired_width(300.0));
                 r.request_focus();
                 let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
                 ui.horizontal(|ui| {
                     if ui.button("OK").clicked() || enter {
                         let name = text.trim().to_string();
-                        if !name.is_empty() {
+                        if let RenameTarget::ChannelGroup(channels) = &target {
+                            // An empty name moves the channels back to Unsorted.
+                            let group = (!name.is_empty()).then(|| name.clone());
+                            app.exec(Command::SetChannelGroup {
+                                channels: channels.clone(),
+                                group: group.clone(),
+                            });
+                            app.ui.rack.filter = match group {
+                                Some(g) => crate::channel_rack::RackFilter::Group(g),
+                                None => crate::channel_rack::RackFilter::Unsorted,
+                            };
+                        } else if !name.is_empty() {
                             app.exec(match target {
                                 RenameTarget::Pattern(pattern) => Command::RenamePattern { pattern, name },
                                 RenameTarget::Automation(automation) => Command::RenameAutomation { automation, name },
@@ -483,6 +513,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },
                                 RenameTarget::Marker(marker) => Command::RenameMarker { marker, name },
                                 RenameTarget::Project => Command::SetTitle(name),
+                                RenameTarget::ChannelGroup(_) => return,
                             });
                         }
                         keep = false;

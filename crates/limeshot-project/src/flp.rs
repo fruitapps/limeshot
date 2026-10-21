@@ -567,6 +567,7 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
             solo: false,
             mixer_track: mixer as u16,
             root_key: 60,
+            group: None,
             extra: Extra::new(),
         });
         channel_ids.push(Some(id));

@@ -70,6 +70,7 @@ pub const EDITING: &[(&str, &str)] = &[
         "P / B / D / T / S / C / E / Z / Y",
         "Playlist tools: draw, paint, delete, mute, slip, slice, select, zoom, playback",
     ),
+    ("Alt+G", "Channel Rack: put the selected channels in a filter group"),
     ("Cmd+T", "Playlist: add a time marker at the song position"),
     ("Alt+T", "Playlist: add a time marker and name it"),
     (

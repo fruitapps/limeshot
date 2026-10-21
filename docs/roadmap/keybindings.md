@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **92** — IMPLEMENTED 63, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
+Tracked: **93** — IMPLEMENTED 64, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 
 ## Global
 
@@ -68,6 +68,7 @@ Tracked: **92** — IMPLEMENTED 63, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 | KB-042 | Solo channel | `Ctrl+click mute` | VERIFIED | `Cmd+click / right-click mute` | IMPLEMENTED | SEQ-003 | A mouse binding, listed for completeness. |
 | KB-077 | Delete selected channels (asks first) | `Alt+Del` | OBSERVED | `Alt+Delete` | IMPLEMENTED | SEQ-007 | Forward delete; Alt+Backspace does nothing in FL 2026.1.1. |
 | KB-078 | Add / remove a channel from the selection | `Ctrl+click / Shift+click / right-click selector LED` | OBSERVED | `Cmd+click / Shift+click / right-click selector LED` | IMPLEMENTED | SEQ-020 | A mouse binding, listed for completeness. A plain click selects only that channel. |
+| KB-093 | Group selected channels (display filter group) | `Opt+G` | OBSERVED | `Alt+G` | IMPLEMENTED | SEQ-012 | FL 2026.1.1 Channel Rack menu: Group selected… Opt+G asks for a filter group name (session 8). |
 
 ## Piano Roll
 

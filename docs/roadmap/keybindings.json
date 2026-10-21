@@ -1015,6 +1015,17 @@
       "status": "NOT_STARTED",
       "feature": "PL-016",
       "notes": "FL 2026.1.1 Time markers menu."
+    },
+    {
+      "id": "KB-093",
+      "context": "Channel Rack",
+      "action": "Group selected channels (display filter group)",
+      "fl_keys": "Opt+G",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+G",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-012",
+      "notes": "FL 2026.1.1 Channel Rack menu: Group selected… Opt+G asks for a filter group name (session 8)."
     }
   ]
 }

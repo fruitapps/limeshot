@@ -233,6 +233,9 @@ pub struct Channel {
     pub mixer_track: u16,
     /// The MIDI key that plays the sample unpitched and that new steps use (60 = C5).
     pub root_key: u8,
+    /// The Channel Rack filter group (FL Studio's display filter groups); `None` is "Unsorted".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -670,6 +673,14 @@ impl Project {
         self.channels.iter().find(|c| c.id == id)
     }
 
+    /// The Channel Rack filter groups in use, sorted.
+    pub fn channel_groups(&self) -> Vec<String> {
+        let mut g: Vec<String> = self.channels.iter().filter_map(|c| c.group.clone()).collect();
+        g.sort();
+        g.dedup();
+        g
+    }
+
     pub fn channel_mut(&mut self, id: ChannelId) -> Option<&mut Channel> {
         self.channels.iter_mut().find(|c| c.id == id)
     }
@@ -968,6 +979,7 @@ mod tests {
             solo: false,
             mixer_track: 999,
             root_key: 200,
+            group: None,
             extra: Extra::new(),
         });
         p.patterns[0].notes.push(Note {

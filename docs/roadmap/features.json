@@ -1069,26 +1069,36 @@
       "category": "Channel Rack",
       "name": "Channel filter groups",
       "description": "Show subsets of channels.",
-      "fl_reference": "Display filter groups, Alt+G.",
-      "limeshot_behavior": "Named channel groups with a filter selector.",
+      "fl_reference": "Display filter dropdown (All / groups / Unsorted); Group selected… Opt+G.",
+      "limeshot_behavior": "Channels have an optional filter group, saved with the project. The Channel Rack's dropdown shows All, each group, or Unsorted; Alt+G (or Group selected… in the channel menu) names the selected channels' group and shows it. Empty groups disappear. Audio clip channels start in an \"Audio\" group, as in FL Studio.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core (Channel::group, SetChannelGroup)",
+        "limeshot-ui::channel_rack",
+        "limeshot-ui::dialogs"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::channel_groups_are_set_and_listed",
+        "ui.rs channel_filter_groups_hide_other_channels"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "docs/research/evidence/screenshots/fl-rack-filter-groups.png",
+          "docs/research/evidence/screenshots/fl-rack-menu.png",
+          "docs/research/evidence/screenshots/fl-rack-group-name.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 8). The chosen filter is not saved with the project."
     },
     {
       "id": "SEQ-013",

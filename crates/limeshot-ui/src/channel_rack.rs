@@ -27,8 +27,38 @@ const ROW_H: f32 = 30.0;
 const STEP_W: f32 = 22.0;
 const LED_W: f32 = 8.0;
 
+/// Which channels the Channel Rack shows (FL Studio's display filter groups).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum RackFilter {
+    #[default]
+    All,
+    Group(String),
+    /// Channels without a group.
+    Unsorted,
+}
+
+impl RackFilter {
+    pub fn shows(&self, ch: &Channel) -> bool {
+        match self {
+            RackFilter::All => true,
+            RackFilter::Group(g) => ch.group.as_deref() == Some(g.as_str()),
+            RackFilter::Unsorted => ch.group.is_none(),
+        }
+    }
+
+    fn label(&self) -> &str {
+        match self {
+            RackFilter::All => "All",
+            RackFilter::Group(g) => g,
+            RackFilter::Unsorted => "Unsorted",
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct State {
+    /// The filter group shown.
+    pub filter: RackFilter,
     /// (channel, painting on/off) while a step drag is in progress.
     paint: Option<(ChannelId, bool)>,
     /// Steps already painted in the current drag.
@@ -76,10 +106,35 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let pat_name = pattern.name.clone();
     let pat_color = pattern.color;
 
+    let groups = app.project().channel_groups();
+    if let RackFilter::Group(g) = &app.ui.rack.filter
+        && !groups.contains(g)
+    {
+        // The group's last channel left it.
+        app.ui.rack.filter = RackFilter::All;
+    }
     egui::Frame::new()
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
+                let current = app.ui.rack.filter.clone();
+                egui::ComboBox::from_id_salt("rack_filter")
+                    .selected_text(current.label().to_string())
+                    .width(90.0)
+                    .show_ui(ui, |ui| {
+                        let mut choices = vec![RackFilter::All];
+                        choices.extend(groups.iter().cloned().map(RackFilter::Group));
+                        choices.push(RackFilter::Unsorted);
+                        for f in choices {
+                            let label = f.label().to_string();
+                            if ui.selectable_label(f == current, label).clicked() {
+                                app.ui.rack.filter = f;
+                            }
+                        }
+                    })
+                    .response
+                    .on_hover_text("Filter group: which channels the rack shows · Opt+G groups the selected channels");
+                ui.add_space(6.0);
                 let (r, _) = ui.allocate_exact_size(vec2(10.0, 10.0), Sense::hover());
                 ui.painter().rect_filled(r, CornerRadius::same(2), rgb(pat_color));
                 ui.label(RichText::new(pat_name).font(semibold(12.5)));
@@ -160,7 +215,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let sel = app.selected_channel();
     egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
         ui.add_space(2.0);
-        for ch in &channels {
+        let filter = app.ui.rack.filter.clone();
+        for ch in channels.iter().filter(|c| filter.shows(c)) {
             let row_top = ui.cursor().top();
             let selected = sel == Some(ch.id);
             if selected {
@@ -577,6 +633,14 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         ui.close();
     }
     ui.separator();
+    if ui
+        .add(egui::Button::new("Group selected…").shortcut_text("Opt+G"))
+        .clicked()
+    {
+        let sel = app.selected_channels();
+        app.dialog = Some(crate::dialogs::Dialog::group_channels(app, sel));
+        ui.close();
+    }
     if ui.button("Route to free mixer track").clicked() {
         route_to_free(app, &[ch.id]);
         ui.close();
@@ -857,6 +921,14 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::COMMAND, Key::L) {
         let sel = app.selected_channels();
         route_to_free(app, &sel);
+    }
+    // Group the selected channels under a filter group name (FL Studio: Opt+G).
+    if key(ctx, Modifiers::ALT, Key::G) {
+        let sel = app.selected_channels();
+        if !sel.is_empty() {
+            app.dialog = Some(crate::dialogs::Dialog::group_channels(app, sel));
+            return;
+        }
     }
     // Rotate the selected channels' steps by one, wrapping (FL Studio: Shift+Cmd+Left/Right).
     for (k, by) in [(Key::ArrowLeft, -1), (Key::ArrowRight, 1)] {

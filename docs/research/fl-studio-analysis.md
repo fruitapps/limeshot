@@ -85,6 +85,10 @@ headers keep the LED at the right.
   the channel's step row, one column per step, with lane tabs Note, Vel, Rel, Fine, Pan, X, Y, Shift, Rep. Vel shows
   a bar per lit step (default about 78 %); a fast drag across the panel draws a straight line through the steps it
   passes. Pan shows a short centre mark per lit step; the hint bar names the lane and the value under the pointer.
+- **OBSERVED live (session 8, `fl-rack-filter-groups.png`, `fl-rack-menu.png`, `fl-rack-group-name.png`):** the
+  filter dropdown listed All, Audio (the channel of an audio clip dragged into the Playlist) and Unsorted. The rack
+  menu's Group selected… (Opt+G) opens a small "Filter group name" field; naming it "Loops" moved the selected channel
+  there and the empty "Audio" group disappeared. "Loops" then showed only that channel, "Unsorted" the other five.
 - **LimeShot equivalent:** `ChannelRack` window. Rows carry mute/solo, pan knob, volume knob, mixer-target spinner, name button and step buttons. Steps are notes at `step × 240 ticks` with the channel's root key. Left-click toggles a step on, right-click toggles it off. A channel with non-step notes shows a mini preview (clicking it opens the Piano Roll). Pattern length is Auto or a fixed number of steps.
 
 ## 3. Piano Roll

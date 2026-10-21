@@ -182,6 +182,12 @@ pub enum Command {
         prop: NoteProp,
         values: Vec<(NoteId, f32)>,
     },
+    /// Put channels in a Channel Rack filter group (`None`: Unsorted). FL Studio's Group
+    /// selected… (Opt+G).
+    SetChannelGroup {
+        channels: Vec<ChannelId>,
+        group: Option<String>,
+    },
     /// Replace the channel's notes with a step every `every` steps over the pattern's length
     /// (FL Studio's Fill each 2/4/8 steps).
     FillSteps {
@@ -469,6 +475,7 @@ impl Command {
             GlueNotes { .. } => "Glue notes",
             ClearChannelNotes { .. } => "Clear channel",
             FillSteps { .. } => "Fill steps",
+            SetChannelGroup { .. } => "Group channels",
             SetNoteValues { prop, .. } => match prop {
                 NoteProp::Velocity => "Note velocity",
                 NoteProp::Pan => "Note pan",
@@ -590,6 +597,7 @@ impl Command {
                     solo: false,
                     mixer_track,
                     root_key: 60,
+                    group: None,
                     extra: Extra::new(),
                 });
                 return Ok(Created(Some(id)));
@@ -849,6 +857,12 @@ impl Command {
                     }
                 }
             }
+            SetChannelGroup { channels, group } => {
+                let group = group.map(|g| g.trim().to_string()).filter(|g| !g.is_empty());
+                for c in p.channels.iter_mut().filter(|c| channels.contains(&c.id)) {
+                    c.group = group.clone();
+                }
+            }
             FillSteps {
                 pattern: pid,
                 channel: cid,
@@ -1037,8 +1051,12 @@ impl Command {
                             one_shot: false,
                             ..SamplerParams::default()
                         });
-                        let id = Command::AddChannel { name, instrument }.apply(p)?;
-                        ChannelId(id.0.unwrap_or_default())
+                        let id = ChannelId(Command::AddChannel { name, instrument }.apply(p)?.0.unwrap_or_default());
+                        // FL Studio files the channels of audio clips under an "Audio" filter group.
+                        if let Some(c) = p.channel_mut(id) {
+                            c.group = Some("Audio".into());
+                        }
+                        id
                     }
                 };
                 return place_clip(p, ClipSource::Audio(channel), track, start, length, 0);

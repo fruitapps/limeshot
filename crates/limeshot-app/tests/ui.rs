@@ -2188,3 +2188,48 @@ fn graph_editor_draws_step_velocity_and_pan() {
     h.step();
     assert!(h.state().ui.rack.graph_rect.is_none());
 }
+
+#[test]
+fn channel_filter_groups_hide_other_channels() {
+    let mut h = harness(true);
+    let (kick, clap) = (h.state().project().channels[0].id, h.state().project().channels[1].id);
+    let shown = |h: &Harness<'static, LimeShotApp>| -> Vec<ChannelId> {
+        h.state().ui.rack.step_strips.iter().map(|s| s.0).collect()
+    };
+    assert_eq!(shown(&h).len(), 5);
+    // Opt+G with the kick selected asks for a group name; Enter files it and shows that group.
+    h.state_mut().select_channel(kick);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::G);
+    h.step();
+    h.step();
+    h.event(Event::Text("Drums".into()));
+    h.step();
+    h.key_press(Key::Enter);
+    h.step();
+    h.step();
+    assert_eq!(
+        h.state().project().channel(kick).expect("kick").group.as_deref(),
+        Some("Drums")
+    );
+    assert_eq!(
+        h.state().ui.rack.filter,
+        limeshot_ui::channel_rack::RackFilter::Group("Drums".into())
+    );
+    assert_eq!(shown(&h), vec![kick]);
+    // The dropdown switches to Unsorted (everything else), then back to All.
+    h.get_by_value("Drums").click();
+    h.step();
+    h.step();
+    h.get_by_label("Unsorted").click();
+    h.step();
+    h.step();
+    assert!(!shown(&h).contains(&kick) && shown(&h).contains(&clap));
+    h.get_by_value("Unsorted").click();
+    h.step();
+    h.step();
+    h.get_by_label("All").click();
+    h.step();
+    h.step();
+    assert_eq!(shown(&h).len(), 5);
+}
