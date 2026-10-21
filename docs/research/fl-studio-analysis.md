@@ -129,6 +129,11 @@ headers keep the LED at the right.
   shelf)", "EQ band 2 (peaking)", "EQ band 3 (high shelf)"; defaults 90 Hz, 1500 Hz and 8000 Hz, level 0.0 dB, width
   0.27 each; a gain slider dragged to the top reads +18.0 dB. Hovering the graph shows the frequency and "Tweak band
   N" for the nearest band. The manual: left-drag sets frequency and level, right-drag bandwidth and level.
+- **OBSERVED live (session 8, `fl-mixer-route-menu.png`, `fl-mixer-sidechain.png`):** right-clicking a strip's route
+  arrow (with another track selected) opens Route to this track / Route to this track only / Sidechain to this track /
+  Sidechain to this track only. "Sidechain to this track" adds a send whose level knob sits at zero, drawn as a thin
+  wire, and the source stays routed to Master. Per the manual, plugins with a sidechain input (Fruity Limiter) pick
+  such a link as their input.
 - **LimeShot equivalent:** Master plus 16 inserts by default (more can be added). Each strip has a name, a peak meter, a fader (dB), pan, mute and solo. Channels have a mixer-target number. Inserts route to Master. FX slots, sends and EQ are tracked (P1). A clip indicator appears on Master.
 
 ## 7. Browser

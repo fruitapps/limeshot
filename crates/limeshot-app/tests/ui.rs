@@ -1997,3 +1997,86 @@ fn mixer_eq_graph_and_reset_edit_the_track_eq() {
     h.step();
     assert_eq!(eq(&h)[0], l);
 }
+
+#[test]
+fn mixer_sidechain_route_menu_and_compressor_input() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 1;
+    for _ in 0..3 {
+        h.step();
+    }
+    let button = |h: &Harness<'static, LimeShotApp>, strip: u16| {
+        h.state()
+            .ui
+            .mixer
+            .route_buttons
+            .iter()
+            .find(|(s, _)| *s == strip)
+            .map(|(_, r)| r.center())
+            .expect("route button")
+    };
+    let routes = |h: &Harness<'static, LimeShotApp>, t: usize| {
+        let mut r: Vec<(u16, f32)> = h.state().project().mixer.tracks[t]
+            .routes
+            .iter()
+            .map(|r| (r.to, r.level))
+            .collect();
+        r.sort_by_key(|x| x.0);
+        r
+    };
+    // Right-click the bass strip's route button: FL Studio's menu. Sidechain keeps the master.
+    let p = button(&h, 5);
+    click(&mut h, p, PointerButton::Secondary);
+    h.get_by_label("Sidechain to this track").click();
+    h.step();
+    assert_eq!(routes(&h, 1), vec![(0, 1.0), (5, 0.0)]);
+    // "… only" drops the other routes, as one undo step.
+    let p = button(&h, 6);
+    click(&mut h, p, PointerButton::Secondary);
+    h.get_by_label("Route to this track only").click();
+    h.step();
+    assert_eq!(routes(&h, 1), vec![(6, 1.0)]);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(routes(&h, 1), vec![(0, 1.0), (5, 0.0)]);
+    // On the bass, a compressor picks the kick as its sidechain input.
+    let fx = h
+        .state_mut()
+        .exec(Command::AddEffect {
+            track: 5,
+            kind: EffectKind::Compressor,
+        })
+        .expect("effect");
+    h.state_mut().ui.mixer.selected = 5;
+    h.step();
+    h.step();
+    assert!(
+        h.query_by_label_contains("SC← Kick").is_some(),
+        "the input list shows the sidechain"
+    );
+    h.get_by_value("Off (own input)").click();
+    h.step();
+    h.step();
+    h.step();
+    // egui keeps a new popup's items disabled for its first frame.
+    let item = h.get_by_label("1. Kick").rect().center();
+    click(&mut h, item, PointerButton::Primary);
+    let param = |h: &Harness<'static, LimeShotApp>| {
+        h.state().project().mixer.tracks[5]
+            .effects
+            .iter()
+            .find(|e| e.id == fx)
+            .expect("fx")
+            .params[COMPRESSOR_SIDECHAIN]
+    };
+    assert_eq!(param(&h), 1.0);
+    // Playing the beat: the kick drives the bass compressor's gain reduction meter.
+    h.state_mut().toggle_play();
+    wait_for(&mut h, "gain reduction from the kick", |a| {
+        a.player.status().gain_reduction(5) > 1.0
+    });
+    h.state_mut().stop();
+}

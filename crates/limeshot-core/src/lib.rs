@@ -21,6 +21,6 @@ pub mod time;
 pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
 pub use command::{Command, CommandError, Created, ImportedChannel, NewNote};
 pub use document::Document;
-pub use effects::{EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
+pub use effects::{COMPRESSOR_SIDECHAIN, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;
 pub use time::{BarBeatTick, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};

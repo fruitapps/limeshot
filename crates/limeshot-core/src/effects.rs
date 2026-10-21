@@ -105,7 +105,21 @@ const COMPRESSOR: &[ParamSpec] = &[
     p("Attack", 0.1, 200.0, 10.0, "ms", true),
     p("Release", 10.0, 2000.0, 120.0, "ms", true),
     p("Makeup", 0.0, 24.0, 0.0, "dB", false),
+    // The mixer track keying the detector (0: own input); it must route to this track. The
+    // Mixer shows it as a choice of those tracks (FL Studio's sidechain input).
+    ParamSpec {
+        name: "Sidechain",
+        min: 0.0,
+        max: 127.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &[],
+    },
 ];
+
+/// Index of the compressor's sidechain parameter.
+pub const COMPRESSOR_SIDECHAIN: usize = 5;
 const LIMITER: &[ParamSpec] = &[
     p("Ceiling", -24.0, 0.0, -0.3, "dB", false),
     p("Release", 5.0, 1000.0, 80.0, "ms", true),

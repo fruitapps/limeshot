@@ -142,13 +142,24 @@ impl FxRack {
         }
     }
 
-    /// Run track `t`'s chain over its bus.
-    pub fn process(&mut self, t: usize, buf: &mut [f32]) {
+    /// Run track `t`'s chain over its bus. `sidechain(s)` gives mixer track `s`'s output for
+    /// effects keyed by it (`None` when it does not route to `t`). Returns the largest gain
+    /// reduction in dB of the chain's dynamics effects.
+    pub fn process<'a>(&mut self, t: usize, buf: &mut [f32], sidechain: &dyn Fn(usize) -> Option<&'a [f32]>) -> f32 {
+        let mut reduction = 0.0f32;
         if let Some(chain) = self.chains.get_mut(t) {
             for p in chain.iter_mut().filter(|p| p.enabled) {
-                p.fx.process(buf);
+                match p.fx.sidechain_source() {
+                    0 => p.fx.process(buf),
+                    s => match sidechain(s) {
+                        Some(key) => p.fx.process_sidechain(buf, key),
+                        None => p.fx.process(buf),
+                    },
+                }
+                reduction = reduction.max(p.fx.gain_reduction_db());
             }
         }
+        reduction
     }
 
     /// Set one parameter of effect `effect` on track `t` (automation). Does nothing when the

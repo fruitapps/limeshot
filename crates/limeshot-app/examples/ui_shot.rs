@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -65,6 +65,29 @@ fn main() {
         }
         app.doc.mark_saved();
         app.ui.mixer.selected = 1;
+        app.show_window(Win::Mixer);
+        app.ui.workspace.state_mut(Win::Mixer).maximized = true;
+    }
+    if args.iter().any(|a| a == "--sidechain") {
+        // The kick (insert 1) sidechains a compressor on the bass (insert 5).
+        app.exec(limeshot_core::Command::SetRoute {
+            from: 1,
+            to: 5,
+            level: Some(0.0),
+        });
+        if let Some(fx) = app.exec(limeshot_core::Command::AddEffect {
+            track: 5,
+            kind: limeshot_core::EffectKind::Compressor,
+        }) {
+            app.exec(limeshot_core::Command::SetEffectParam {
+                track: 5,
+                effect: fx,
+                index: limeshot_core::COMPRESSOR_SIDECHAIN,
+                value: 1.0,
+            });
+        }
+        app.doc.mark_saved();
+        app.ui.mixer.selected = 5;
         app.show_window(Win::Mixer);
         app.ui.workspace.state_mut(Win::Mixer).maximized = true;
     }

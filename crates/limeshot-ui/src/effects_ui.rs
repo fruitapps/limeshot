@@ -4,7 +4,7 @@ use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, semibold};
 use crate::widgets::{section, segmented, toggle_label};
 use egui::{CornerRadius, RichText, Stroke, Ui, vec2};
-use limeshot_core::{AutomationTarget, Command, EffectKind, EffectSlot, MAX_EFFECTS};
+use limeshot_core::{AutomationTarget, COMPRESSOR_SIDECHAIN, Command, EffectKind, EffectSlot, MAX_EFFECTS};
 
 pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
     let t = Theme::current();
@@ -99,6 +99,10 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             vec2(64.0, 20.0),
                             egui::Label::new(RichText::new(spec.name).color(t.text_dim)),
                         );
+                        if e.kind == EffectKind::Compressor && i == COMPRESSOR_SIDECHAIN {
+                            sidechain_choice(app, ui, track, e.id, cur.round() as u16);
+                            return;
+                        }
                         if !spec.labels.is_empty() {
                             if let Some(choice) = segmented(ui, spec.labels, cur.round() as usize, 22.0, spec.name) {
                                 app.exec(Command::SetEffectParam {
@@ -145,9 +149,96 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                         );
                     });
                 }
+                if e.kind == EffectKind::Compressor {
+                    reduction_meter(app, ui, track);
+                }
             });
         ui.add_space(4.0);
     }
+}
+
+/// The compressor's sidechain input: its own signal, or a track that routes here (FL Studio's
+/// "Sidechain to this track" makes such a route at level 0).
+fn sidechain_choice(app: &mut LimeShotApp, ui: &mut Ui, track: u16, effect: u32, cur: u16) {
+    let mixer = &app.project().mixer;
+    let name = |j: u16| {
+        mixer
+            .tracks
+            .get(usize::from(j))
+            .map(|x| x.name.clone())
+            .unwrap_or_default()
+    };
+    let sources: Vec<(u16, String)> = mixer
+        .tracks
+        .iter()
+        .enumerate()
+        .filter(|(_, x)| x.routes.iter().any(|r| r.to == track))
+        .filter_map(|(j, _)| u16::try_from(j).ok())
+        .map(|j| (j, format!("{j}. {}", name(j))))
+        .collect();
+    let text = match cur {
+        0 => "Off (own input)".to_string(),
+        j if sources.iter().any(|s| s.0 == j) => format!("{j}. {}", name(j)),
+        j => format!("{j}. {} (not routed here)", name(j)),
+    };
+    let mut pick = None;
+    egui::ComboBox::from_id_salt(("sidechain", track, effect))
+        .selected_text(text)
+        .width(ui.available_width() - 8.0)
+        .show_ui(ui, |ui| {
+            if ui.selectable_label(cur == 0, "Off (own input)").clicked() {
+                pick = Some(0);
+            }
+            for (j, label) in &sources {
+                if ui.selectable_label(cur == *j, label).clicked() {
+                    pick = Some(*j);
+                }
+            }
+            if sources.is_empty() {
+                ui.label(
+                    RichText::new("Route a track here first (right-click its route button: Sidechain to this track)")
+                        .small(),
+                );
+            }
+        })
+        .response
+        .on_hover_text("The track whose signal drives the compressor; it must route to this track");
+    if let Some(j) = pick
+        && j != cur
+    {
+        app.exec(Command::SetEffectParam {
+            track,
+            effect,
+            index: COMPRESSOR_SIDECHAIN,
+            value: f32::from(j),
+        });
+    }
+}
+
+/// Gain reduction of the track's compressors, as a bar growing from the right (0–24 dB).
+fn reduction_meter(app: &LimeShotApp, ui: &mut Ui, track: u16) {
+    let t = Theme::current();
+    let gr = app.player.status().gain_reduction(usize::from(track)).clamp(0.0, 24.0);
+    ui.horizontal(|ui| {
+        ui.add_sized(
+            vec2(64.0, 16.0),
+            egui::Label::new(RichText::new("Reduction").color(t.text_dim)),
+        );
+        let w = (ui.available_width() - 74.0).max(60.0);
+        let (r, _) = ui.allocate_exact_size(vec2(w, 8.0), egui::Sense::hover());
+        ui.painter().rect_filled(r, CornerRadius::same(2), t.sunken);
+        let fill = egui::Rect::from_min_max(egui::pos2(r.right() - r.width() * gr / 24.0, r.top()), r.max);
+        ui.painter().rect_filled(fill, CornerRadius::same(2), t.warning);
+        ui.label(
+            RichText::new(if gr < 0.05 {
+                "0.0 dB".to_string()
+            } else {
+                format!("-{gr:.1} dB")
+            })
+            .font(crate::theme::mono(10.0))
+            .color(t.text_dim),
+        );
+    });
 }
 
 fn format_value(v: f32, unit: &str) -> String {

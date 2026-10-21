@@ -79,6 +79,8 @@ pub struct Status {
     /// Callback time / buffer duration, in thousandths.
     load: AtomicU32,
     peaks: Vec<AtomicU32>,
+    /// Gain reduction per mixer track (dB, as f32 bits).
+    reductions: Vec<AtomicU32>,
     clipped: AtomicBool,
     callbacks: AtomicU64,
 }
@@ -92,6 +94,7 @@ impl Status {
             voices: AtomicU32::new(0),
             load: AtomicU32::new(0),
             peaks: (0..2 * METER_SLOTS).map(|_| AtomicU32::new(0)).collect(),
+            reductions: (0..METER_SLOTS).map(|_| AtomicU32::new(0)).collect(),
             clipped: AtomicBool::new(false),
             callbacks: AtomicU64::new(0),
         }
@@ -126,6 +129,13 @@ impl Status {
                 .map_or(0.0, |a| f32::from_bits(a.load(Ordering::Relaxed)))
         };
         (g(2 * i), g(2 * i + 1))
+    }
+
+    /// The most gain reduction (dB) of mixer track `i`'s compressors in the last callback.
+    pub fn gain_reduction(&self, i: usize) -> f32 {
+        self.reductions
+            .get(i)
+            .map_or(0.0, |a| f32::from_bits(a.load(Ordering::Relaxed)))
     }
 
     /// Whether the master clipped since the last call.
@@ -197,6 +207,7 @@ impl AudioState {
         self.drain();
         let mut done = 0;
         let mut peaks = [(0.0f32, 0.0f32); METER_SLOTS];
+        let mut reductions = [0.0f32; METER_SLOTS];
         while done < frames {
             let n = (frames - done).min(MAX_BLOCK);
             let buf = &mut self.buf[..2 * n];
@@ -206,6 +217,9 @@ impl AudioState {
                 peaks[i].0 = peaks[i].0.max(p.left);
                 peaks[i].1 = peaks[i].1.max(p.right);
             }
+            for (i, r) in self.renderer.gain_reductions().iter().enumerate().take(METER_SLOTS) {
+                reductions[i] = reductions[i].max(*r);
+            }
             done += n;
         }
         let s = &self.status;
@@ -214,6 +228,9 @@ impl AudioState {
             if let (Some(l), Some(r)) = (s.peaks.get(2 * i), s.peaks.get(2 * i + 1)) {
                 l.store(p.0.to_bits(), Ordering::Relaxed);
                 r.store(p.1.to_bits(), Ordering::Relaxed);
+            }
+            if let Some(g) = s.reductions.get(i) {
+                g.store(reductions[i].to_bits(), Ordering::Relaxed);
             }
         }
         if self.renderer.take_master_clipped() {

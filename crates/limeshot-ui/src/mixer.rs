@@ -352,11 +352,28 @@ fn route_button(app: &mut LimeShotApp, ui: &mut Ui, i: u16) {
     } else {
         format!("Route {from_name} to this track")
     };
-    if resp.on_hover_text(tip).clicked() {
+    let resp = resp.on_hover_text(tip);
+    if resp.clicked() {
         app.exec(Command::SetRoute {
             from: sel,
             to: i,
             level: if route.is_some() { None } else { Some(1.0) },
+        });
+    }
+    // FL Studio's menu on this button: route or sidechain, optionally dropping the other routes.
+    if !blocked {
+        resp.context_menu(|ui| {
+            for (label, level, only) in [
+                ("Route to this track", 1.0, false),
+                ("Route to this track only", 1.0, true),
+                ("Sidechain to this track", 0.0, false),
+                ("Sidechain to this track only", 0.0, true),
+            ] {
+                if ui.button(label).clicked() {
+                    route_menu(app, sel, i, level, only);
+                    ui.close();
+                }
+            }
         });
     }
     if let Some(route) = route {
@@ -373,6 +390,32 @@ fn route_button(app: &mut LimeShotApp, ui: &mut Ui, i: u16) {
         });
         app.exec_gesture(&k, cmd);
     }
+}
+
+/// Route `from` to `to` at `level` (0: sidechain only), removing `from`'s other routes when
+/// `only` (one undo step).
+pub fn route_menu(app: &mut LimeShotApp, from: u16, to: u16, level: f32, only: bool) {
+    let mut cmds: Vec<Command> = Vec::new();
+    if only {
+        let others: Vec<u16> = app
+            .project()
+            .mixer
+            .tracks
+            .get(usize::from(from))
+            .map(|t| t.routes.iter().map(|r| r.to).filter(|x| *x != to).collect())
+            .unwrap_or_default();
+        cmds.extend(others.into_iter().map(|x| Command::SetRoute {
+            from,
+            to: x,
+            level: None,
+        }));
+    }
+    cmds.push(Command::SetRoute {
+        from,
+        to,
+        level: Some(level),
+    });
+    app.exec(Command::Batch(cmds));
 }
 
 fn select(app: &mut LimeShotApp, i: u16) {
@@ -425,8 +468,36 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.add_space(8.0);
             section(ui, "Input");
             let routed = routed(app, i);
-            if routed.is_empty() {
+            // Mixer tracks sending here: audio sends, or sidechain-only links (level 0).
+            let incoming: Vec<(String, bool)> = app
+                .project()
+                .mixer
+                .tracks
+                .iter()
+                .filter_map(|x| {
+                    x.routes
+                        .iter()
+                        .find(|r| r.to == i)
+                        .map(|r| (x.name.clone(), r.level == 0.0))
+                })
+                // Every insert feeds the master by default: list only its sidechains.
+                .filter(|(_, sc)| i != 0 || *sc)
+                .collect();
+            if routed.is_empty() && incoming.is_empty() {
                 ui.label(RichText::new("No channels route here.").color(t.text_dim));
+            }
+            for (n, sidechain) in incoming {
+                let text = if sidechain {
+                    format!("SC← {n}")
+                } else {
+                    format!("← {n}")
+                };
+                ui.label(RichText::new(text).color(t.text_dim))
+                    .on_hover_text(if sidechain {
+                        "Sidechain only: a compressor here can follow it"
+                    } else {
+                        "Mixer track sending here"
+                    });
             }
             for (n, c) in routed {
                 ui.horizontal(|ui| {
@@ -451,10 +522,16 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     .map(|x| x.name.clone())
                     .unwrap_or_default();
                 ui.horizontal(|ui| {
+                    let (arrow, tip) = if route.level == 0.0 {
+                        ("SC→", "Sidechain only: plugins here can use it, no audio is mixed in")
+                    } else {
+                        ("→", "Send")
+                    };
                     ui.add_sized(
                         vec2(70.0, 20.0),
-                        egui::Label::new(RichText::new(format!("→ {name}")).color(t.text)),
-                    );
+                        egui::Label::new(RichText::new(format!("{arrow} {name}")).color(t.text)),
+                    )
+                    .on_hover_text(tip);
                     let mut db = limeshot_dsp::gain_to_db(route.level).max(-60.0);
                     ui.spacing_mut().slider_width = (ui.available_width() - 110.0).max(50.0);
                     let r = ui.add(egui::Slider::new(&mut db, -60.0..=6.0).fixed_decimals(1).suffix(" dB"));

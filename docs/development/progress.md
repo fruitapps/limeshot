@@ -247,3 +247,12 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    thread). The Mixer's track panel shows the response curve with a draggable handle per band (left-drag frequency
    and gain, right-drag width, as in FL), gain/frequency/width knobs and Reset. Tested in the DSP, core, engine and
    UI; `ui_shot --eq` shows it.
+3. **Sidechain and gain reduction (MIX-009).** Observed live in FL 2026.1.1: the route button's right-click menu and
+   what "Sidechain to this track" does (a send at level 0, two new screenshots). LimeShot's route buttons now have the
+   same four entries (the "only" variants are one undo step). `Effect` gained `process_sidechain`,
+   `sidechain_source` and `gain_reduction_db`; Lime Comp has a sixth parameter, Sidechain (the key track, which must
+   route to the compressor's track). The renderer hands a sidechained effect the key track's post-fader bus (the
+   bus is moved out and back, so nothing allocates) and publishes each track's gain reduction through `Status`. The
+   compressor card shows a Sidechain picker and a reduction meter; the track panel lists incoming sidechains.
+   Tested in the engine (the key ducks the synth by more than 10 dB, an unrouted key is ignored, the reduction is
+   reported block by block) and the UI (route menu, picker, live meter during playback). `ui_shot --sidechain`.

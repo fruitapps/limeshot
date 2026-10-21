@@ -21,6 +21,19 @@ pub trait Effect: Send {
     fn process(&mut self, buf: &mut [f32]);
     /// Clear internal state (delay lines, envelopes).
     fn reset(&mut self);
+    /// Process with an external sidechain signal (interleaved stereo, as long as `buf`).
+    /// Effects without a sidechain input ignore it.
+    fn process_sidechain(&mut self, buf: &mut [f32], _sidechain: &[f32]) {
+        self.process(buf);
+    }
+    /// The mixer track whose signal keys this effect; 0 means its own input.
+    fn sidechain_source(&self) -> usize {
+        0
+    }
+    /// The largest gain reduction in dB during the last processed block (dynamics only).
+    fn gain_reduction_db(&self) -> f32 {
+        0.0
+    }
 }
 
 fn get(params: &[f32], i: usize, fallback: f32) -> f32 {
@@ -619,6 +632,10 @@ pub struct Compressor {
     env: f32,
     /// Gain reduction of the last sample, in dB (for metering).
     pub reduction_db: f32,
+    /// The most gain reduction during the last block, in dB.
+    block_reduction: f32,
+    /// Mixer track keying the detector (0: the compressor's own input).
+    sidechain: usize,
 }
 
 impl Compressor {
@@ -632,24 +649,21 @@ impl Compressor {
             makeup: 1.0,
             env: 0.0,
             reduction_db: 0.0,
+            block_reduction: 0.0,
+            sidechain: 0,
         };
-        c.set_params(&[-18.0, 4.0, 10.0, 120.0, 0.0]);
+        c.set_params(&[-18.0, 4.0, 10.0, 120.0, 0.0, 0.0]);
         c
     }
-}
 
-impl Effect for Compressor {
-    fn set_params(&mut self, p: &[f32]) {
-        self.threshold = get(p, 0, -18.0).clamp(-80.0, 0.0);
-        self.ratio = get(p, 1, 4.0).clamp(1.0, 100.0);
-        self.attack = coeff(get(p, 2, 10.0).max(0.01) / 1000.0, self.sr);
-        self.release = coeff(get(p, 3, 120.0).max(1.0) / 1000.0, self.sr);
-        self.makeup = db_to_gain(get(p, 4, 0.0));
-    }
-
-    fn process(&mut self, buf: &mut [f32]) {
-        for f in buf.as_chunks_mut::<2>().0 {
-            let peak = f[0].abs().max(f[1].abs());
+    /// Compress `buf`, following `key` (the sidechain) when given, else `buf` itself.
+    fn run(&mut self, buf: &mut [f32], key: Option<&[f32]>) {
+        let mut most = 0.0f32;
+        for (n, f) in buf.as_chunks_mut::<2>().0.iter_mut().enumerate() {
+            let peak = match key {
+                Some(k) => k.get(2 * n..2 * n + 2).map_or(0.0, |s| s[0].abs().max(s[1].abs())),
+                None => f[0].abs().max(f[1].abs()),
+            };
             let k = if peak > self.env { self.attack } else { self.release };
             self.env = peak + (self.env - peak) * k;
             let level = crate::gain_to_db(self.env.max(1e-9));
@@ -660,15 +674,45 @@ impl Effect for Compressor {
                 0.0
             };
             self.reduction_db = reduce;
+            most = most.max(reduce);
             let g = db_to_gain(-reduce) * self.makeup;
             f[0] *= g;
             f[1] *= g;
         }
+        self.block_reduction = most;
+    }
+}
+
+impl Effect for Compressor {
+    fn set_params(&mut self, p: &[f32]) {
+        self.threshold = get(p, 0, -18.0).clamp(-80.0, 0.0);
+        self.ratio = get(p, 1, 4.0).clamp(1.0, 100.0);
+        self.attack = coeff(get(p, 2, 10.0).max(0.01) / 1000.0, self.sr);
+        self.release = coeff(get(p, 3, 120.0).max(1.0) / 1000.0, self.sr);
+        self.makeup = db_to_gain(get(p, 4, 0.0));
+        self.sidechain = get(p, 5, 0.0).round().clamp(0.0, 1023.0) as usize;
+    }
+
+    fn process(&mut self, buf: &mut [f32]) {
+        self.run(buf, None);
+    }
+
+    fn process_sidechain(&mut self, buf: &mut [f32], sidechain: &[f32]) {
+        self.run(buf, Some(sidechain));
+    }
+
+    fn sidechain_source(&self) -> usize {
+        self.sidechain
+    }
+
+    fn gain_reduction_db(&self) -> f32 {
+        self.block_reduction
     }
 
     fn reset(&mut self) {
         self.env = 0.0;
         self.reduction_db = 0.0;
+        self.block_reduction = 0.0;
     }
 }
 

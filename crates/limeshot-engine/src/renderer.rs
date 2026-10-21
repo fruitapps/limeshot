@@ -84,6 +84,8 @@ pub struct Renderer {
     fx: crate::fx::FxRack,
     /// Each mixer track's built-in EQ, after its insert effects.
     eqs: Vec<limeshot_dsp::effects::Eq3>,
+    /// Each mixer track's gain reduction in dB in the last block (its compressors).
+    reductions: Vec<f32>,
     /// Peak of the last block's output (for detecting when effect tails have died away).
     last_peak: f32,
     /// Start the audio clips that span the position on the next schedule (after play, locate or
@@ -123,6 +125,7 @@ impl Renderer {
             eqs: (0..limeshot_core::Mixer::MAX_TRACKS)
                 .map(|_| limeshot_dsp::effects::Eq3::new(sample_rate as f32))
                 .collect(),
+            reductions: vec![0.0; limeshot_core::Mixer::MAX_TRACKS],
             last_peak: 0.0,
             chase: true,
             chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
@@ -355,6 +358,11 @@ impl Renderer {
     }
 
     /// Peak levels of the last block, per mixer track (index 0 = master).
+    /// Each mixer track's gain reduction in dB during the last block (for metering).
+    pub fn gain_reductions(&self) -> &[f32] {
+        &self.reductions[..self.snapshot.mixer.len().min(self.reductions.len())]
+    }
+
     pub fn peaks(&self) -> &[Peak] {
         &self.peaks[..self.snapshot.mixer.len().min(self.peaks.len())]
     }
@@ -691,6 +699,31 @@ impl Renderer {
         self.fx.has_effects() && self.last_peak > 1e-4
     }
 
+    /// Track `i`'s insert effects, then its EQ, over its bus. A sidechained effect reads the
+    /// (post-fader) output of a track that routes to `i`; such a track was processed earlier.
+    fn track_fx(&mut self, i: usize, frames: usize, mixer: &[limeshot_sequencer::MixerTrackState]) {
+        // Taking the bus out (and putting it back) moves pointers only: no allocation.
+        let mut bus = std::mem::take(&mut self.buses[i]);
+        let n = (2 * frames).min(bus.len());
+        let buses = &self.buses;
+        let key = |s: usize| -> Option<&[f32]> {
+            let routes_here = mixer.get(s).is_some_and(|src| src.routes.iter().any(|r| r.0 == i));
+            if routes_here {
+                buses.get(s).and_then(|b| b.get(..n))
+            } else {
+                None
+            }
+        };
+        let reduction = self.fx.process(i, &mut bus[..n], &key);
+        if let Some(r) = self.reductions.get_mut(i) {
+            *r = reduction;
+        }
+        if let Some(eq) = self.eqs.get_mut(i) {
+            limeshot_dsp::effects::Effect::process(eq, &mut bus[..n]);
+        }
+        self.buses[i] = bus;
+    }
+
     fn mix(&mut self, tracks: usize, frames: usize, out: &mut [f32]) {
         // Inserts in routing order: effects, fader and pan in place, then add the result into
         // every destination (the master by default). Sources come before their destinations.
@@ -700,10 +733,7 @@ impl Renderer {
                 continue;
             }
             let Some(t) = snapshot.mixer.get(i) else { continue };
-            self.fx.process(i, &mut self.buses[i][..2 * frames]);
-            if let Some(eq) = self.eqs.get_mut(i) {
-                limeshot_dsp::effects::Effect::process(eq, &mut self.buses[i][..2 * frames]);
-            }
+            self.track_fx(i, frames, &snapshot.mixer);
             let (gain, pan) = self.track_mix.get(i).copied().unwrap_or((t.gain, t.pan));
             let (pl, pr) = pan_gains(pan);
             let (gl, gr) = if t.audible { (gain * pl, gain * pr) } else { (0.0, 0.0) };
@@ -734,11 +764,8 @@ impl Renderer {
                 }
             }
         }
+        self.track_fx(0, frames, &snapshot.mixer);
         let master = &mut self.buses[0];
-        self.fx.process(0, &mut master[..2 * frames]);
-        if let Some(eq) = self.eqs.first_mut() {
-            limeshot_dsp::effects::Effect::process(eq, &mut master[..2 * frames]);
-        }
         let t = &self.snapshot.mixer[0];
         let (gain, pan) = self.track_mix.first().copied().unwrap_or((t.gain, t.pan));
         let (pl, pr) = pan_gains(pan);

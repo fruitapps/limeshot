@@ -1293,3 +1293,115 @@ fn mixer_track_eq_shapes_the_track_and_the_master() {
             .is_err()
     );
 }
+
+#[test]
+fn sidechained_compressor_ducks_on_the_key_track() {
+    let mut f = fixture();
+    // A quiet sustained synth on insert 2, a full-scale click on insert 1 at beat 3.
+    f.doc
+        .execute(Command::AddNote {
+            pattern: f.pat,
+            note: NewNote {
+                channel: f.synth,
+                key: 69,
+                start: 0,
+                length: 4 * PPQ,
+                velocity: 0.1,
+            },
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 8,
+            on: true,
+        })
+        .unwrap();
+    let fx = f
+        .doc
+        .execute(Command::AddEffect {
+            track: 2,
+            kind: EffectKind::Compressor,
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    let set = |doc: &mut Document, index: usize, value: f32| {
+        doc.execute(Command::SetEffectParam {
+            track: 2,
+            effect: fx,
+            index,
+            value,
+        })
+        .unwrap();
+    };
+    // Threshold just above the synth (so it alone is not compressed), ratio 20, fast attack.
+    let window = |doc: &Document| {
+        let c = click();
+        let lookup = move |p: &str| (p == "click").then(|| c.clone());
+        let (a, _) = render(
+            Arc::new(compile(doc.project(), f.pat, &lookup)),
+            ExportRange::Pattern,
+            300,
+            SR,
+        );
+        // 20 ms right after the click (which is a single frame at 1 s), and a later reference.
+        let rms = |from: usize, to: usize| {
+            let s = &a[2 * from..2 * to];
+            (s.iter().map(|v| v * v).sum::<f32>() / s.len() as f32).sqrt()
+        };
+        (rms(48_010, 48_960), rms(40_000, 47_000))
+    };
+    let (_, alone) = window(&f.doc);
+    let threshold = limeshot_dsp::gain_to_db(alone * 2.0) + 3.0;
+    set(&mut f.doc, 0, threshold);
+    set(&mut f.doc, 1, 20.0);
+    set(&mut f.doc, 2, 0.1);
+    set(&mut f.doc, 3, 200.0);
+    let (after, before) = window(&f.doc);
+    assert!(
+        (after / before - 1.0).abs() < 0.1,
+        "own input: no ducking ({after} vs {before})"
+    );
+    // "Sidechain to this track": insert 1 also sends to insert 2 at level 0 (key only).
+    f.doc
+        .execute(Command::SetRoute {
+            from: 1,
+            to: 2,
+            level: Some(0.0),
+        })
+        .unwrap();
+    set(&mut f.doc, COMPRESSOR_SIDECHAIN, 1.0);
+    let (after, before) = window(&f.doc);
+    assert!(
+        limeshot_dsp::gain_to_db(after / before) < -10.0,
+        "the click ducks the synth: {after} vs {before}"
+    );
+    // A key track that does not route here is ignored.
+    set(&mut f.doc, COMPRESSOR_SIDECHAIN, 3.0);
+    let (after, before) = window(&f.doc);
+    assert!((after / before - 1.0).abs() < 0.1);
+    // The renderer reports the gain reduction for metering, block by block.
+    set(&mut f.doc, COMPRESSOR_SIDECHAIN, 1.0);
+    let c = click();
+    let lookup = move |p: &str| (p == "click").then(|| c.clone());
+    let snap = Arc::new(compile(f.doc.project(), f.pat, &lookup));
+    let mut r = Renderer::new(SR, snap.clone());
+    for (id, fx) in fx::build_all(&snap, SR) {
+        r.adopt_effect(id, fx);
+    }
+    r.rearrange();
+    r.play();
+    let mut buf = vec![0.0; 2 * 480];
+    let mut most = 0.0f32;
+    for b in 0..120 {
+        r.render(&mut buf);
+        let gr = r.gain_reductions()[2];
+        if b < 99 {
+            assert!(gr < 0.5, "block {b}: {gr}");
+        }
+        most = most.max(gr);
+    }
+    assert!(most > 10.0, "{most}");
+}
