@@ -45,6 +45,8 @@ pub enum Icon {
     ToolPlayback,
     /// FL Studio's graph editor: a few bars of different heights.
     Graph,
+    /// A push pin (keep a window on top).
+    Pin,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -180,6 +182,12 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             ));
             p.line_segment([at(2.0, -2.5), at(6.0, 2.5)], line);
             p.line_segment([at(2.0, 2.5), at(6.0, -2.5)], line);
+        }
+        Icon::Pin => {
+            // A round head, a collar and a needle, leaning right.
+            p.circle_filled(at(2.5, -3.5), 3.2 * u, c);
+            p.line_segment([at(-1.5, -2.0), at(4.0, 3.5)], Stroke::new(1.6 * u, c));
+            p.line_segment([at(1.0, 1.0), at(-5.5, 6.5)], line);
         }
         Icon::Graph => {
             for (x, h) in [(-5.0f32, 5.0f32), (-1.7, 9.0), (1.6, 3.5), (4.9, 7.0)] {

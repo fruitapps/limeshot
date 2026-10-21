@@ -6,8 +6,10 @@
 //! viewport; on backends without multi-window support it stays embedded). The Playlist starts
 //! maximised, as FL Studio opens it.
 //!
-//! The title bars are drawn here (flat, ArtCraft-style): title, then detach, maximise and close
-//! buttons. Dragging the title bar moves the window.
+//! The title bars are drawn here (flat, ArtCraft-style): title, then pin, detach, maximise and
+//! close buttons. Dragging the title bar moves the window; double-clicking it maximises or
+//! restores the window (FL Studio). A press anywhere in a window brings it to the front, the
+//! maximised Playlist included (FL Studio); a pinned window stays above the others.
 
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::{self, Icon};
@@ -116,6 +118,8 @@ pub struct WinState {
     pub open: bool,
     pub maximized: bool,
     pub detached: bool,
+    /// Kept above the other (unpinned) windows.
+    pub pinned: bool,
 }
 
 pub struct Workspace {
@@ -142,12 +146,11 @@ impl Default for Workspace {
         states[Win::Playlist.index()] = WinState {
             open: true,
             maximized: true,
-            detached: false,
+            ..WinState::default()
         };
         states[Win::ChannelRack.index()] = WinState {
             open: true,
-            maximized: false,
-            detached: false,
+            ..WinState::default()
         };
         Self {
             states,
@@ -223,12 +226,14 @@ struct TitleActions {
     close: bool,
     maximize: bool,
     detach: bool,
+    pin: bool,
 }
 
 /// A flat title bar with the window buttons; returns what was clicked.
 fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> TitleActions {
     let t = Theme::current();
-    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), TITLE_H), Sense::hover());
+    // Senses clicks for the double-click; drags still move the window.
+    let (r, title_resp) = ui.allocate_exact_size(vec2(ui.available_width(), TITLE_H), Sense::click());
     ui.painter().rect_filled(
         r,
         CornerRadius {
@@ -250,7 +255,7 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
     );
     let mut actions = TitleActions::default();
     let mut x = r.right() - 4.0;
-    let mut button = |ui: &mut Ui, icon: Icon, tip: &str| {
+    let mut button = |ui: &mut Ui, icon: Icon, tip: &str, on: bool| {
         x -= 22.0;
         let br = Rect::from_min_size(pos2(x, r.top() + 3.0), vec2(22.0, TITLE_H - 6.0));
         let resp = ui
@@ -264,17 +269,26 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
             ui.painter(),
             br.shrink(5.0),
             icon,
-            if resp.hovered() { t.text } else { t.text_dim },
+            if on {
+                t.accent
+            } else if resp.hovered() {
+                t.text
+            } else {
+                t.text_dim
+            },
         );
         resp.clicked()
     };
-    actions.close = button(ui, Icon::Close, "Close");
+    actions.close = button(ui, Icon::Close, "Close", false);
     if !detached {
         actions.maximize = button(
             ui,
             if state.maximized { Icon::Restore } else { Icon::Maximize },
             if state.maximized { "Restore" } else { "Maximise" },
+            false,
         );
+        // Double-clicking the title maximises or restores, like the button (FL Studio).
+        actions.maximize |= title_resp.double_clicked();
     }
     actions.detach = button(
         ui,
@@ -284,7 +298,20 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
         } else {
             "Detach into its own window"
         },
+        false,
     );
+    if !detached {
+        actions.pin = button(
+            ui,
+            Icon::Pin,
+            if state.pinned {
+                "Unpin (let other windows cover it)"
+            } else {
+                "Pin: keep this window on top"
+            },
+            state.pinned,
+        );
+    }
     actions
 }
 
@@ -324,11 +351,6 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             .constrain_to(area);
         if st.maximized {
             win = win.fixed_rect(area);
-            // A maximised Playlist is the backdrop the other windows float over (FL Studio);
-            // other maximised windows stay in the normal stacking order.
-            if w == Win::Playlist {
-                win = win.order(Order::Background);
-            }
         } else {
             let def = w.default_rect(area);
             win = win.default_rect(def);
@@ -360,8 +382,10 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             if !st.maximized {
                 app.ui.workspace.normal_rect[w.index()] = Some(r.response.rect);
             }
+            // A press anywhere in the window (not covered by another) brings it to the front.
             if r.response.contains_pointer() && ctx.input(|i| i.pointer.any_pressed()) {
                 app.ui.focus = w.focus();
+                ctx.move_to_top(r.response.layer_id);
             }
             if let Some(a) = r.inner {
                 apply(app, w, a);
@@ -372,6 +396,13 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             app.ui.focus = w.focus();
         }
     }
+    // Pinned windows stay above the others.
+    for w in Win::ALL {
+        let st = app.ui.workspace.state(w);
+        if st.open && st.pinned && !st.detached {
+            ctx.move_to_top(LayerId::new(Order::Middle, w.id()));
+        }
+    }
 }
 
 fn apply(app: &mut LimeShotApp, w: Win, a: TitleActions) {
@@ -379,6 +410,9 @@ fn apply(app: &mut LimeShotApp, w: Win, a: TitleActions) {
         app.ui.workspace.toggle_maximized(w);
     }
     let s = app.ui.workspace.state_mut(w);
+    if a.pin {
+        s.pinned = !s.pinned;
+    }
     if a.close {
         s.open = false;
     }

@@ -411,3 +411,7 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
 9. **Tool cursors (item 13).** The icon that followed the pointer is now the cursor itself: over the Piano Roll and
    Playlist grids the system cursor is hidden and the tool is drawn at the pointer with its point on the hotspot;
    edges, moving and menus keep the standard cursors.
+10. **Windows (items 14, 15).** A press anywhere in a window brings it to the front; the maximised Playlist is no
+    longer a fixed backdrop (in FL a click on it raised it over the Channel Rack). Double-clicking a title bar
+    maximises or restores the window, as in FL. A pin button keeps a window above the others (LimeShot's own; FL's
+    editor windows have none).

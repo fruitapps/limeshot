@@ -3260,3 +3260,77 @@ fn samples_preview_from_the_browser_panel_the_picker_and_channel_settings() {
     h.step();
     assert!(h.state().auditions.is_empty());
 }
+
+fn top_window(h: &Harness<'static, LimeShotApp>) -> Option<Win> {
+    let top = h.ctx.memory(|m| m.areas().top_layer_id(egui::Order::Middle))?;
+    Win::ALL.into_iter().find(|w| top.id == w.id())
+}
+
+fn window_rect(h: &Harness<'static, LimeShotApp>, w: Win) -> egui::Rect {
+    h.ctx.memory(|m| m.area_rect(w.id())).expect("window drawn")
+}
+
+/// Owner's list items 14 and 15 (observed in FL Studio 2026.1.1): clicking a window behind
+/// another brings it to the front — the maximised Playlist too; a pinned window stays on top;
+/// double-clicking a title bar maximises the window and double-clicking again restores it.
+#[test]
+fn windows_raise_on_click_pin_on_top_and_maximise_on_double_click() {
+    let mut h = harness(true);
+    h.state_mut().show_window(Win::Mixer);
+    h.step();
+    h.step();
+    assert_eq!(top_window(&h), Some(Win::Mixer));
+    // The rack's title bar is not covered by the Mixer: a click there raises the rack.
+    let rack = window_rect(&h, Win::ChannelRack);
+    click(
+        &mut h,
+        egui::pos2(rack.left() + 60.0, rack.top() + 6.0),
+        PointerButton::Primary,
+    );
+    h.step();
+    assert_eq!(top_window(&h), Some(Win::ChannelRack));
+    // So does a click in the body of the window behind.
+    let mixer = window_rect(&h, Win::Mixer);
+    click(
+        &mut h,
+        egui::pos2(mixer.right() - 30.0, mixer.bottom() - 30.0),
+        PointerButton::Primary,
+    );
+    h.step();
+    assert_eq!(top_window(&h), Some(Win::Mixer));
+    // The maximised Playlist comes to the front like any window.
+    let ws = h.state().ui.workspace.area;
+    click(
+        &mut h,
+        egui::pos2(ws.right() - 20.0, ws.top() + 60.0),
+        PointerButton::Primary,
+    );
+    h.step();
+    assert_eq!(top_window(&h), Some(Win::Playlist));
+
+    // A pinned window stays above the others.
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).pinned = true;
+    h.step();
+    h.state_mut().show_window(Win::ChannelRack);
+    h.step();
+    h.step();
+    let mixer = window_rect(&h, Win::Mixer);
+    let over = |h: &Harness<'static, LimeShotApp>, p: egui::Pos2| h.ctx.layer_id_at(p).map(|l| l.id);
+    assert_eq!(over(&h, mixer.center()), Some(Win::Mixer.id()), "pinned stays visible");
+
+    // Double-click the rack's title: maximised; again: restored to its old rectangle.
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).pinned = false;
+    h.state_mut().ui.workspace.close(Win::Mixer);
+    h.step();
+    let before = window_rect(&h, Win::ChannelRack);
+    double_click(&mut h, egui::pos2(before.left() + 80.0, before.top() + 12.0));
+    h.step();
+    assert!(h.state().ui.workspace.state(Win::ChannelRack).maximized);
+    let max = window_rect(&h, Win::ChannelRack);
+    double_click(&mut h, egui::pos2(max.left() + 80.0, max.top() + 12.0));
+    h.step();
+    h.step();
+    assert!(!h.state().ui.workspace.state(Win::ChannelRack).maximized);
+    let after = window_rect(&h, Win::ChannelRack);
+    assert!((after.min - before.min).length() < 1.0 && (after.size() - before.size()).length() < 1.0);
+}
