@@ -2,6 +2,7 @@
 
 use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{section, segmented, toggle_label};
 use egui::{CornerRadius, RichText, Stroke, Ui, vec2};
 use limeshot_core::{AutomationTarget, COMPRESSOR_SIDECHAIN, Command, EffectKind, EffectSlot, MAX_EFFECTS};
@@ -73,12 +74,12 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             .color(if e.enabled { t.text } else { t.text_dim }),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.small_button("×").on_hover_text("Remove").clicked() {
+                        if ui.small_button("×").hint("Remove").clicked() {
                             app.exec(Command::RemoveEffect { track, effect: e.id });
                         }
                         if ui
                             .add_enabled(pos + 1 < effects.len(), egui::Button::new("↓").small())
-                            .on_hover_text("Move down")
+                            .hint("Move down")
                             .clicked()
                         {
                             app.exec(Command::MoveEffect {
@@ -89,7 +90,7 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                         }
                         if ui
                             .add_enabled(pos > 0, egui::Button::new("↑").small())
-                            .on_hover_text("Move up")
+                            .hint("Move up")
                             .clicked()
                         {
                             app.exec(Command::MoveEffect {
@@ -209,7 +210,7 @@ fn sidechain_choice(app: &mut LimeShotApp, ui: &mut Ui, track: u16, effect: u32,
             }
         })
         .response
-        .on_hover_text("The track whose signal drives the compressor; it must route to this track");
+        .hint("The track whose signal drives the compressor; it must route to this track");
     if let Some(j) = pick
         && j != cur
     {

@@ -6401,9 +6401,9 @@
       "name": "Hint bar and tooltips",
       "description": "Discoverability.",
       "fl_reference": "Hint bar describes hovered controls.",
-      "limeshot_behavior": "Status bar shows hover hints; every control has a tooltip.",
+      "limeshot_behavior": "FL Studio's hint panel in the header, after the menus: its first line says what LimeShot is doing (playing or stopped and the mode, the last edit, exporting, scanning plugins, loading samples), its second what the control under the pointer does (every tooltip feeds it; the editors describe the position and the tool), with the shortcut right-aligned when the description ends with one; knob and fader values show there while dragged. Every control keeps its tooltip.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -6413,7 +6413,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::the_hint_panel_describes_the_control_under_the_pointer"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6422,7 +6424,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 18). FL 2026.1.1's hint panel (top left, observed live) shows the hovered control's name or value with its shortcut on the right (\"Graph editor   Cmd+K\", \"Channel panning: 2% right\") and the Playlist position and clip (\"9:12:05 for 1:00:00  Pattern 1\"). Differs: LimeShot's panel sits in the header row after the menus (FL's toolbar layout differs), and its first line is LimeShot's activity rather than FL's account name. Icon buttons now carry accessible labels."
     },
     {
       "id": "UI-005",

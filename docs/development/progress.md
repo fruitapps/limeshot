@@ -418,3 +418,8 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
 11. **Pattern selector (item 16).** The toolbar's − and + buttons are gone; the selector's list ends with Create
     new. (FL keeps a + button and makes new patterns with Find first empty… in the same menu.)
 12. **Playback tool (item 17).** The Piano Roll's notes under the held Playback line light up while they sound.
+13. **Hint panel (item 18).** FL's top-left hint panel: in LimeShot's header after the menus, a first line with what
+    LimeShot is doing (playing/stopped, mode, last edit, exporting, scanning, loading samples) and a second with
+    what the control under the pointer does, its shortcut on the right. Every tooltip feeds it (`widgets::Hint`),
+    the editors add their own descriptions, and knob and fader values show while dragged. The status bar no
+    longer carries hints. Icon buttons gained accessible labels.

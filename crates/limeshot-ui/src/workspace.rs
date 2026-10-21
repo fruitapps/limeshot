@@ -14,6 +14,7 @@
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, semibold};
+use crate::widgets::Hint as _;
 use egui::{
     Align2, Context, CornerRadius, Id, LayerId, Order, Rect, Sense, Stroke, Ui, ViewportBuilder, ViewportClass,
     ViewportId, pos2, vec2,
@@ -260,7 +261,7 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
         let br = Rect::from_min_size(pos2(x, r.top() + 3.0), vec2(22.0, TITLE_H - 6.0));
         let resp = ui
             .interact(br, ui.id().with(("title-btn", title, tip)), Sense::click())
-            .on_hover_text(tip);
+            .hint(tip);
         if resp.hovered() {
             ui.painter()
                 .rect_filled(br, CornerRadius::same(t.radius_sm), t.raised_hover);

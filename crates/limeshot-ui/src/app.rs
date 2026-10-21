@@ -52,7 +52,12 @@ pub struct UiState {
     pub song_loop: bool,
     pub metronome: bool,
     pub focus: Focus,
+    /// The editors' description of what is under the pointer (the hint panel's second line).
     pub hint: String,
+    /// The hint panel's rectangle in the toolbar, filled once everything else is drawn.
+    pub hint_rect: Option<egui::Rect>,
+    /// The description the hint panel showed in the last frame (for tests).
+    pub hint_shown: String,
     pub rack: channel_rack::State,
     pub piano: piano_roll::State,
     pub playlist: playlist::State,
@@ -77,6 +82,8 @@ impl UiState {
             metronome: false,
             focus: Focus::None,
             hint: String::new(),
+            hint_rect: None,
+            hint_shown: String::new(),
             rack: Default::default(),
             piano: Default::default(),
             playlist: Default::default(),
@@ -872,6 +879,8 @@ impl LimeShotApp {
             })
             .inner;
         crate::workspace::show(self, &ctx, area, window_body);
+        // Last, when every control has described itself.
+        toolbar::hint_panel(self, ui);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
     }

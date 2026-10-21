@@ -11,6 +11,7 @@
 //! * Parameter changes made here or in a plugin's own window are not undo steps; they mark the
 //!   project modified, and the plugin's state is read into the project when it is saved.
 
+use crate::widgets::Hint as _;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -554,7 +555,7 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui, instruments: bool) -> Option<Ent
                 let label = if v.is_empty() { "Unknown vendor" } else { v };
                 ui.menu_button(label, |ui| {
                     for e in entries.iter().filter(|e| e.vendor == v) {
-                        if ui.button(&e.name).on_hover_text(&e.path).clicked() {
+                        if ui.button(&e.name).hint(&e.path).clicked() {
                             pick = Some(e.clone());
                             ui.close();
                         }
@@ -576,7 +577,7 @@ pub fn scan_button(app: &mut LimeShotApp, ui: &mut Ui) {
     }
     let r = ui
         .button("Find plugins…")
-        .on_hover_text("Scan the standard VST3 folders (each plugin is checked in a separate process)");
+        .hint("Scan the standard VST3 folders (each plugin is checked in a separate process)");
     if r.clicked() {
         match std::env::current_exe() {
             Ok(exe) => {

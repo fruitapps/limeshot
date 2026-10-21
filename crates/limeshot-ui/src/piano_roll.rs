@@ -19,6 +19,7 @@
 use crate::app::LimeShotApp;
 use crate::icons::Icon;
 use crate::theme::{Theme, mix, mono, rgb};
+use crate::widgets::Hint as _;
 use crate::widgets::icon_button;
 use egui::{
     Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
@@ -346,7 +347,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
                 if ui
                     .small_button("Quantize")
-                    .on_hover_text("Snap the selected notes (or all of this channel's) to the grid (Alt+Q)")
+                    .hint("Snap the selected notes (or all of this channel's) to the grid (Alt+Q)")
                     .clicked()
                 {
                     quantize(app, pid, cid);
@@ -358,7 +359,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                     if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
                         app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(12.0);
                     }
-                    if ui.small_button("↕").on_hover_text("Taller keys").clicked() {
+                    if ui.small_button("↕").hint("Taller keys").clicked() {
                         app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 {
                             9.0
                         } else {
@@ -648,7 +649,7 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
         app.set_mode(limeshot_engine::PlayMode::Pattern);
         app.locate(tick);
     }
-    resp.on_hover_text("Click to move the playhead (Pattern mode)");
+    resp.hint("Click to move the playhead (Pattern mode)");
 }
 
 fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid: ChannelId) {

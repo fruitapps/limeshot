@@ -5,28 +5,38 @@ use crate::app::LimeShotApp;
 use crate::dialogs::Dialog;
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, mono, prop, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{icon_button, meter, readout, segmented, transport_button, unavailable_button, vrule};
 use crate::workspace::Win;
-use egui::{Align2, ComboBox, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, vec2};
+use egui::{Align2, ComboBox, CornerRadius, DragValue, Rect, RichText, Sense, Stroke, Ui, vec2};
 use limeshot_core::{BarBeatTick, Command, Snap, Tempo, TimeSignature, Timeline};
 use limeshot_engine::PlayMode;
 
 pub const HEIGHT: f32 = 50.0;
+const HINT_W: f32 = 380.0;
 const B: f32 = 28.0;
 
-/// Top header: logo, menus and the project name.
+/// Top header: logo, menus, the hint panel and the project name.
 pub fn header(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.max_rect();
     ui.painter()
         .line_segment([full.left_bottom(), full.right_bottom()], Stroke::new(1.0, t.border));
-    ui.horizontal_centered(|ui| {
-        let (r, _) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
-        icons::logo(ui.painter(), r.center(), 8.0);
-        ui.label(RichText::new("LimeShot").font(semibold(12.5)));
-        ui.add_space(8.0);
-        crate::menus::menu_bar(app, ui);
-    });
+    let menus_end = ui
+        .horizontal_centered(|ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
+            icons::logo(ui.painter(), r.center(), 8.0);
+            ui.label(RichText::new("LimeShot").font(semibold(12.5)));
+            ui.add_space(8.0);
+            crate::menus::menu_bar(app, ui)
+        })
+        .inner;
+    // FL Studio's hint panel (its top left), after the menus; filled by `hint_panel` once
+    // everything else has been drawn. The project name keeps 200 px on the right.
+    let left = menus_end + 16.0;
+    let w = HINT_W.min(full.right() - 200.0 - left);
+    app.ui.hint_rect =
+        (w > 80.0).then(|| Rect::from_min_size(egui::pos2(left, full.top() + 2.0), vec2(w, full.height() - 4.0)));
     let name = app
         .path
         .as_ref()
@@ -35,8 +45,8 @@ pub fn header(app: &mut LimeShotApp, ui: &mut Ui) {
         .unwrap_or_else(|| app.project().title.clone());
     let modified = if app.doc.is_modified() { "  •  edited" } else { "" };
     ui.painter().text(
-        full.center(),
-        Align2::CENTER_CENTER,
+        full.right_center() - vec2(4.0, 0.0),
+        Align2::RIGHT_CENTER,
         format!("{name}{modified}"),
         prop(12.0),
         t.text_dim,
@@ -111,7 +121,7 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
                 .speed(0.2)
                 .fixed_decimals(3),
         )
-        .on_hover_text("Tempo in BPM: drag or type (10–522)");
+        .hint("Tempo in BPM: drag or type (10–522)");
     let cmd = crate::widgets::user_changed(&r).then(|| Command::SetTempo(Tempo::from_bpm(bpm)));
     app.exec_gesture(&r, cmd);
     ui.label(RichText::new("BPM").font(semibold(9.5)).color(t.text_dim));
@@ -120,11 +130,11 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let (mut n, mut d) = (sig.numerator, sig.denominator);
     let a = ui
         .add_sized(vec2(26.0, B), DragValue::new(&mut n).range(1..=32))
-        .on_hover_text("Beats per bar");
+        .hint("Beats per bar");
     ui.label(RichText::new("/").color(t.text_dim));
     let b = ui
         .add_sized(vec2(26.0, B), DragValue::new(&mut d).range(1..=32))
-        .on_hover_text("Beat unit (power of two)");
+        .hint("Beat unit (power of two)");
     if crate::widgets::user_changed(&a) || crate::widgets::user_changed(&b) {
         sig = TimeSignature::new(n, d);
         app.exec(Command::SetTimeSignature(sig));
@@ -177,11 +187,7 @@ fn pattern_selector(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
             }
             ui.separator();
-            if ui
-                .button("Create new")
-                .on_hover_text("A new, empty pattern (F4)")
-                .clicked()
-            {
+            if ui.button("Create new").hint("A new, empty pattern (F4)").clicked() {
                 crate::menus::add_pattern(app);
                 ui.close();
             }
@@ -200,7 +206,7 @@ fn snap_and_options(app: &mut LimeShotApp, ui: &mut Ui) {
             }
         })
         .response
-        .on_hover_text("Snap: grid for the Piano Roll and Playlist (hold Alt to bypass)");
+        .hint("Snap: grid for the Piano Roll and Playlist (hold Alt to bypass)");
     if icon_button(ui, Icon::Metronome, app.ui.metronome, B, "Metronome (Cmd+M)").clicked() {
         let m = !app.ui.metronome;
         app.set_metronome(m);
@@ -319,13 +325,106 @@ fn output(app: &mut LimeShotApp, ui: &mut Ui) {
         semibold(8.0),
         t.text_dim,
     );
-    resp.on_hover_text("Audio load: time spent rendering per buffer");
+    resp.hint("Audio load: time spent rendering per buffer");
     let (l, r) = app.player.status().peak(0);
     if app.player.status().take_clipped() {
         app.clip_until = Some(std::time::Instant::now() + std::time::Duration::from_secs(2));
     }
     let clipped = app.clip_until.is_some_and(|u| u > std::time::Instant::now());
-    meter(ui, vec2(12.0, B + 6.0), l, r, clipped).on_hover_text("Master output");
+    meter(ui, vec2(12.0, B + 6.0), l, r, clipped).hint("Master output");
+}
+
+/// What LimeShot is doing, for the hint panel's first line.
+pub fn activity(app: &LimeShotApp) -> String {
+    if let Some(job) = &app.export_job {
+        return format!(
+            "Exporting {}…",
+            job.path.file_name().map(|n| n.to_string_lossy()).unwrap_or_default()
+        );
+    }
+    if app.plugins.is_scanning() {
+        return "Scanning plugins…".into();
+    }
+    let loading = app.samples.loading();
+    if loading > 0 {
+        return format!("Loading {loading} sample{}…", if loading == 1 { "" } else { "s" });
+    }
+    let mode = if app.ui.mode == PlayMode::Song {
+        "Song"
+    } else {
+        "Pattern"
+    };
+    if app.is_playing() {
+        return format!("Playing · {mode}");
+    }
+    match app.doc.undo_label() {
+        Some(label) => format!("Stopped · {mode} · last edit: {label}"),
+        None => format!("Stopped · {mode}"),
+    }
+}
+
+/// FL Studio's hint panel (top left): what LimeShot is doing, and below it what the control
+/// under the pointer does, with its shortcut on the right when the description ends with one.
+pub fn hint_panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    let Some(r) = app.ui.hint_rect else { return };
+    let t = Theme::current();
+    let hover = crate::widgets::take_hover_hint(ui.ctx());
+    let text = if app.ui.hint.is_empty() {
+        hover.unwrap_or_default()
+    } else {
+        app.ui.hint.clone()
+    };
+    let (text, key) = split_shortcut(&text);
+    let painter = ui.painter_at(r);
+    painter.rect(
+        r,
+        CornerRadius::same(t.radius_sm),
+        t.sunken,
+        Stroke::new(1.0, t.border),
+        egui::StrokeKind::Inside,
+    );
+    let inner = r.shrink2(vec2(8.0, 1.0));
+    let top = Rect::from_min_max(inner.min, egui::pos2(inner.right(), inner.center().y));
+    painter.with_clip_rect(top).text(
+        top.left_center(),
+        Align2::LEFT_CENTER,
+        activity(app),
+        prop(9.5),
+        t.text_faint,
+    );
+    let key_w = key.as_ref().map_or(0.0, |k| {
+        painter
+            .text(
+                egui::pos2(inner.right(), inner.bottom() - 1.0),
+                Align2::RIGHT_BOTTOM,
+                k,
+                mono(9.5),
+                t.text_dim,
+            )
+            .width()
+            + 8.0
+    });
+    let line = Rect::from_min_max(
+        egui::pos2(inner.left(), inner.center().y),
+        egui::pos2(inner.right() - key_w, inner.bottom()),
+    );
+    app.ui.hint_shown = text.clone();
+    painter
+        .with_clip_rect(line)
+        .text(line.left_center(), Align2::LEFT_CENTER, text, prop(11.0), t.text);
+}
+
+/// Split "Zoom in (Cmd+wheel)" into the text and its shortcut.
+fn split_shortcut(text: &str) -> (String, Option<String>) {
+    if let Some(open) = text.rfind(" (")
+        && text.ends_with(')')
+    {
+        let key = &text[open + 2..text.len() - 1];
+        if key.len() <= 16 && !key.contains(' ') {
+            return (text[..open].to_string(), Some(key.to_string()));
+        }
+    }
+    (text.to_string(), None)
 }
 
 pub fn status_bar(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -334,12 +433,6 @@ pub fn status_bar(app: &mut LimeShotApp, ui: &mut Ui) {
     ui.painter()
         .line_segment([full.left_top(), full.right_top()], Stroke::new(1.0, t.border));
     ui.horizontal_centered(|ui| {
-        let hint = if app.ui.hint.is_empty() {
-            "Ready".to_string()
-        } else {
-            app.ui.hint.clone()
-        };
-        ui.label(RichText::new(hint).font(prop(11.5)).color(t.text_dim));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             let out = match app.player.output_description() {
                 Ok(name) => {
@@ -354,7 +447,7 @@ pub fn status_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             };
             if ui
                 .add(egui::Label::new(out.font(prop(11.0))).sense(Sense::click()))
-                .on_hover_text("Audio settings")
+                .hint("Audio settings")
                 .clicked()
             {
                 app.dialog = Some(Dialog::audio(app));

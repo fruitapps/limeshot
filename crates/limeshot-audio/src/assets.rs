@@ -126,6 +126,14 @@ impl SampleCache {
         self.entries.get(&self.resolve(stored))
     }
 
+    /// How many samples are still being decoded.
+    pub fn loading(&self) -> usize {
+        self.entries
+            .values()
+            .filter(|s| matches!(s, SampleStatus::Loading))
+            .count()
+    }
+
     pub fn status_of_path(&self, path: &Path) -> Option<&SampleStatus> {
         self.entries.get(path)
     }

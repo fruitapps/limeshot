@@ -8,6 +8,7 @@
 use crate::app::LimeShotApp;
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{icon_button, panel_header};
 use egui::{CollapsingHeader, CornerRadius, Rect, RichText, Sense, Stroke, TextEdit, Ui, pos2, vec2};
 use limeshot_audio::Msg;
@@ -278,7 +279,7 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
         )
         .show(ui, |ui| preview_panel(app, ui));
     panel_header(ui, "Browser", |ui| {
-        if ui.small_button("⟳").on_hover_text("Re-read folders").clicked() {
+        if ui.small_button("⟳").hint("Re-read folders").clicked() {
             app.ui.browser.refresh();
         }
         if icon_button(ui, Icon::Plus, false, 22.0, "Add a folder to the Browser").clicked()

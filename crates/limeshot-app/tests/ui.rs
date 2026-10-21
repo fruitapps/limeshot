@@ -3362,3 +3362,35 @@ fn the_pattern_selector_creates_new_patterns_from_its_list() {
     assert_eq!(h.state().project().patterns.len(), n + 1);
     assert_eq!(h.state().current_pattern(), h.state().project().patterns[n].id);
 }
+
+/// Owner's list item 18: FL Studio's hint panel (top left) says what LimeShot is doing and what
+/// the control under the pointer does, with its shortcut.
+#[test]
+fn the_hint_panel_describes_the_control_under_the_pointer() {
+    let mut h = harness(true);
+    let r = h.state().ui.hint_rect.expect("hint panel in the header");
+    assert!(r.width() > 200.0 && r.top() < 30.0, "{r:?}");
+    assert_eq!(limeshot_ui::toolbar::activity(h.state()), "Stopped · Pattern");
+    // A toolbar button: its description, with the shortcut split off.
+    let play = h.get_by_label("Play / pause (Space)").rect().center();
+    h.event(Event::PointerMoved(play));
+    h.step();
+    h.step();
+    assert_eq!(h.state().ui.hint_shown, "Play / pause");
+    // An editor's own description: the Playlist's position and tool help.
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    h.event(Event::PointerMoved(g.pos(10, 12)));
+    h.step();
+    h.step();
+    assert!(
+        h.state().ui.hint_shown.starts_with("1:01:"),
+        "{}",
+        h.state().ui.hint_shown
+    );
+    // While playing the panel says so.
+    h.state_mut().toggle_play();
+    wait_for(&mut h, "playback", |a| a.is_playing());
+    assert!(limeshot_ui::toolbar::activity(h.state()).starts_with("Playing"));
+}

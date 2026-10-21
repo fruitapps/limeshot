@@ -12,6 +12,34 @@ use crate::theme::{Theme, mix, mono, semibold};
 use egui::{Align2, Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use std::f32::consts::PI;
 
+const HOVER_HINT: &str = "limeshot-hover-hint";
+
+/// Tooltips that also feed the hint panel (FL Studio's hint bar describes the control under
+/// the pointer): `resp.hint(text)` in place of `resp.hint(text)`.
+pub trait Hint {
+    fn hint(self, text: impl Into<String>) -> Self;
+}
+
+impl Hint for Response {
+    fn hint(self, text: impl Into<String>) -> Self {
+        let text = text.into();
+        if self.hovered() {
+            set_hover_hint(&self.ctx, &text);
+        }
+        self.on_hover_text(text)
+    }
+}
+
+/// Describe the control under the pointer in the hint panel.
+pub fn set_hover_hint(ctx: &egui::Context, text: &str) {
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new(HOVER_HINT), text.to_string()));
+}
+
+/// The hover description set this frame, taken (so it does not outlive the hover).
+pub fn take_hover_hint(ctx: &egui::Context) -> Option<String> {
+    ctx.data_mut(|d| d.remove_temp::<String>(egui::Id::new(HOVER_HINT)))
+}
+
 /// A flat icon button: transparent at rest, filled on hover; `active` shows the accent.
 pub fn icon_button(ui: &mut Ui, icon: Icon, active: bool, size: f32, tip: &str) -> Response {
     let t = Theme::current();
@@ -32,7 +60,8 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, active: bool, size: f32, tip: &str) 
         mix(t.text_dim, t.text, 0.4)
     };
     icons::paint(ui.painter(), r.shrink(size * 0.22), icon, fg);
-    resp.on_hover_text(tip)
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
+    resp.hint(tip)
 }
 
 /// A larger, filled transport button (play/stop): the primary actions of the app.
@@ -49,7 +78,8 @@ pub fn transport_button(ui: &mut Ui, icon: Icon, active: bool, size: f32, tip: &
     ui.painter().rect_filled(r, CornerRadius::same(t.radius), fill);
     let fg = if active { t.text_on_accent } else { t.text };
     icons::paint(ui.painter(), r.shrink(size * 0.26), icon, fg);
-    resp.on_hover_text(tip)
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
+    resp.hint(tip)
 }
 
 /// A dimmed icon for features that are not implemented yet; it explains why on hover and does
@@ -58,7 +88,7 @@ pub fn unavailable_button(ui: &mut Ui, icon: Icon, size: f32, tip: &str) -> Resp
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
     icons::paint(ui.painter(), r.shrink(size * 0.24), icon, t.text_faint);
-    resp.on_hover_text(format!("{tip} (not implemented yet)"))
+    resp.hint(format!("{tip} (not implemented yet)"))
 }
 
 /// A small toggle with a text label, e.g. M/S buttons.
@@ -76,7 +106,7 @@ pub fn toggle_label(ui: &mut Ui, on: bool, text: &str, on_color: Color32, size: 
     let fg = if on { t.text_on_accent } else { t.text_dim };
     ui.painter()
         .text(r.center(), Align2::CENTER_CENTER, text, semibold(10.0), fg);
-    resp.on_hover_text(tip)
+    resp.hint(tip)
 }
 
 /// A segmented control (pill group). Returns the newly chosen index when one is clicked.
@@ -100,9 +130,7 @@ pub fn segmented(ui: &mut Ui, labels: &[&str], selected: usize, height: f32, tip
     let mut chosen = None;
     for (i, (l, w)) in labels.iter().zip(&widths).enumerate() {
         let rr = Rect::from_min_size(pos2(x, r.top() + 2.0), vec2(*w, height - 4.0));
-        let resp = ui
-            .interact(rr, ui.id().with(("seg", tip, i)), Sense::click())
-            .on_hover_text(tip);
+        let resp = ui.interact(rr, ui.id().with(("seg", tip, i)), Sense::click()).hint(tip);
         let on = i == selected;
         if on {
             ui.painter().rect_filled(rr, CornerRadius::same(t.radius_sm), t.accent);
@@ -196,9 +224,11 @@ pub fn knob(
     );
     let text = tip(*v);
     resp = if resp.dragged() {
+        // The value while dragging, in the hint panel too (FL Studio).
+        set_hover_hint(&resp.ctx, &text);
         resp.on_hover_text_at_pointer(text)
     } else {
-        resp.on_hover_text(text)
+        resp.hint(text)
     };
     resp
 }
@@ -256,9 +286,11 @@ pub fn fader(ui: &mut Ui, v: &mut f32, max: f32, default: f32, size: egui::Vec2,
         format!("{tip}: −∞ dB")
     };
     resp = if resp.dragged() {
+        // The value while dragging, in the hint panel too (FL Studio).
+        set_hover_hint(&resp.ctx, &label);
         resp.on_hover_text_at_pointer(label)
     } else {
-        resp.on_hover_text(label)
+        resp.hint(label)
     };
     resp
 }
@@ -359,7 +391,7 @@ pub fn tab_strip(ui: &mut Ui, tabs: &[(&str, &str)], active: usize, extra: impl 
         let tr = Rect::from_min_size(pos2(x, r.top()), vec2(w, r.height()));
         let resp = ui
             .interact(tr, ui.id().with(("tab", i, *label)), Sense::click())
-            .on_hover_text(*tip);
+            .hint(*tip);
         let on = i == active;
         let fg = if on {
             t.text
@@ -425,7 +457,7 @@ pub fn readout(ui: &mut Ui, size: egui::Vec2, main: &str, caption: &str, tip: &s
     // Painted text is invisible to screen readers; expose the value as the button's label.
     let label = format!("{main} {caption}");
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), &label));
-    resp.on_hover_text(tip)
+    resp.hint(tip)
 }
 
 /// A thin vertical rule between toolbar groups.

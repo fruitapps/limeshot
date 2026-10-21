@@ -20,6 +20,7 @@
 use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
 use crate::theme::{Theme, mix, rgb, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{knob, toggle_label};
 use crate::workspace::Win;
 use egui::{Align2, Context, CornerRadius, DragValue, Key, Modifiers, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
@@ -136,7 +137,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         }
                     })
                     .response
-                    .on_hover_text("Filter group: which channels the rack shows · Opt+G groups the selected channels");
+                    .hint("Filter group: which channels the rack shows · Opt+G groups the selected channels");
                 ui.add_space(6.0);
                 let (r, _) = ui.allocate_exact_size(vec2(10.0, 10.0), Sense::hover());
                 ui.painter().rect_filled(r, CornerRadius::same(2), rgb(pat_color));
@@ -146,7 +147,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 let mut auto = length_steps.is_none();
                 if ui
                     .checkbox(&mut auto, "Auto")
-                    .on_hover_text("Length follows the notes, in whole bars")
+                    .hint("Length follows the notes, in whole bars")
                     .changed()
                 {
                     app.exec(Command::SetPatternLength {
@@ -284,7 +285,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                             .range(0..=tracks.saturating_sub(1) as u16)
                             .custom_formatter(|v, _| if v == 0.0 { "M".into() } else { format!("{v:.0}") }),
                     )
-                    .on_hover_text("Mixer track (M = Master). Drag or type.");
+                    .hint("Mixer track (M = Master). Drag or type.");
                 let cmd = crate::widgets::user_changed(&r).then_some(Command::SetChannelMixerTrack {
                     channel: ch.id,
                     track: mt,
@@ -561,7 +562,7 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
             ""
         }
     );
-    let resp = resp.on_hover_text(hover);
+    let resp = resp.hint(hover);
     // FL Studio: right-clicking a channel button selects that channel only; the menu acts on it.
     if resp.secondary_clicked() {
         app.select_channel(ch.id);
@@ -934,7 +935,7 @@ fn note_preview(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId
         app.select_channel(ch.id);
         app.show_window(Win::PianoRoll);
     }
-    resp.on_hover_text("Piano Roll notes — click to edit");
+    resp.hint("Piano Roll notes — click to edit");
 }
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {

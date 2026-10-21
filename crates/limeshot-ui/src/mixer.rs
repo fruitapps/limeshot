@@ -7,6 +7,7 @@
 
 use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, mono, rgb, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{fader, knob, meter, panel_header, reset_on_double_click as reset, section, toggle_label};
 use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::{AutomationTarget, Command, EqBand};
@@ -127,7 +128,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
                 if ui
                     .add_sized(vec2(28.0, 28.0), egui::Button::new("+"))
-                    .on_hover_text("Add a mixer track")
+                    .hint("Add a mixer track")
                     .clicked()
                 {
                     app.exec(Command::AddMixerTrack);
@@ -209,7 +210,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
                 )
                 .sense(Sense::click()),
             )
-            .on_hover_text(if routed.is_empty() {
+            .hint(if routed.is_empty() {
                 format!("{} — click: select · double-click: rename", track.name)
             } else {
                 format!(
@@ -266,7 +267,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         );
     }
     if fx_resp
-        .on_hover_text("Insert effects — click to edit them in the panel on the right")
+        .hint("Insert effects — click to edit them in the panel on the right")
         .clicked()
     {
         select(app, i);
@@ -404,7 +405,7 @@ fn route_button(app: &mut LimeShotApp, ui: &mut Ui, i: u16) {
     } else {
         format!("Route {from_name} to this track")
     };
-    let resp = resp.on_hover_text(tip);
+    let resp = resp.hint(tip);
     if resp.clicked() {
         app.exec(Command::SetRoute {
             from: sel,
@@ -548,7 +549,7 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             if !name_editor(app, ui, i, true, ui.available_width(), semibold(15.0)) {
                 let name = ui
                     .add(egui::Label::new(RichText::new(&track.name).font(semibold(15.0))).sense(Sense::click()))
-                    .on_hover_text("Click to rename");
+                    .hint("Click to rename");
                 app.ui.mixer.panel_name = Some(name.rect);
                 if name.clicked() {
                     app.ui.mixer.start_rename(i, &track.name, true);
@@ -609,12 +610,11 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 } else {
                     format!("← {n}")
                 };
-                ui.label(RichText::new(text).color(t.text_dim))
-                    .on_hover_text(if sidechain {
-                        "Sidechain only: a compressor here can follow it"
-                    } else {
-                        "Mixer track sending here"
-                    });
+                ui.label(RichText::new(text).color(t.text_dim)).hint(if sidechain {
+                    "Sidechain only: a compressor here can follow it"
+                } else {
+                    "Mixer track sending here"
+                });
             }
             for (n, c) in routed {
                 ui.horizontal(|ui| {
@@ -648,7 +648,7 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         vec2(70.0, 20.0),
                         egui::Label::new(RichText::new(format!("{arrow} {name}")).color(t.text)),
                     )
-                    .on_hover_text(tip);
+                    .hint(tip);
                     let mut db = limeshot_dsp::gain_to_db(route.level).max(-60.0);
                     ui.spacing_mut().slider_width = (ui.available_width() - 110.0).max(50.0);
                     let r = reset(
@@ -663,7 +663,7 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         level: Some(level),
                     });
                     app.exec_gesture(&r, cmd);
-                    if ui.small_button("×").on_hover_text("Remove route").clicked() {
+                    if ui.small_button("×").hint("Remove route").clicked() {
                         app.exec(Command::SetRoute {
                             from: i,
                             to: route.to,
@@ -737,7 +737,7 @@ fn eq_section(app: &mut LimeShotApp, ui: &mut Ui, i: u16, eq: &[EqBand; 3]) {
             let flat = *eq == EqBand::DEFAULTS;
             if ui
                 .add_enabled(!flat, egui::Button::new("Reset").small())
-                .on_hover_text("All bands back to 0 dB and their default frequency and width")
+                .hint("All bands back to 0 dB and their default frequency and width")
                 .clicked()
             {
                 let cmds = (0..3u8)

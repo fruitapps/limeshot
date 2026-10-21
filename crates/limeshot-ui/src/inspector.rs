@@ -4,6 +4,7 @@
 use crate::app::LimeShotApp;
 use crate::browser;
 use crate::theme::{Theme, mono, rgb, semibold};
+use crate::widgets::Hint as _;
 use crate::widgets::{reset_on_double_click as reset, section, segmented};
 use egui::{Align2, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::*;
@@ -23,7 +24,7 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.painter().rect_filled(r, CornerRadius::same(3), rgb(ch.color));
                 let name = ui
                     .add(egui::Label::new(RichText::new(&ch.name).font(semibold(15.0))).sense(Sense::click()))
-                    .on_hover_text("Click to rename");
+                    .hint("Click to rename");
                 if name.clicked() {
                     app.dialog = Some(crate::dialogs::Dialog::rename_channel(app, ch.id));
                 }
@@ -265,7 +266,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
         track(r, c);
         let r = ui
             .checkbox(&mut q.one_shot, "One-shot")
-            .on_hover_text("Play the whole sample, ignoring note length");
+            .hint("Play the whole sample, ignoring note length");
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
@@ -313,7 +314,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
                 &mut q.detune_cents,
                 d.detune_cents,
             )
-            .on_hover_text("A second, detuned oscillator; 0 turns it off"),
+            .hint("A second, detuned oscillator; 0 turns it off"),
         )
     });
     row(ui, "Gain", |ui| {
@@ -402,7 +403,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
                 &mut q.cutoff_hz,
                 d.cutoff_hz,
             )
-            .on_hover_text("Low-pass cutoff (12 dB/oct); fully right leaves the filter open"),
+            .hint("Low-pass cutoff (12 dB/oct); fully right leaves the filter open"),
         )
     });
     row(ui, "Resonance", |ui| {
@@ -425,7 +426,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
                 &mut q.filter_env,
                 d.filter_env,
             )
-            .on_hover_text("How far each note opens the cutoff at its start"),
+            .hint("How far each note opens the cutoff at its start"),
         )
     });
     row(ui, "Env decay", |ui| {

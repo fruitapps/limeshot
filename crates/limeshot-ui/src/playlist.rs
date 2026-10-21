@@ -22,6 +22,7 @@ use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
 use crate::piano_roll::{TimeAxis, Tool, draw_ruler, draw_time_grid};
 use crate::theme::{Theme, mix, mono, rgb};
+use crate::widgets::Hint as _;
 use crate::widgets::{icon_button, panel_header};
 use egui::{
     Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
@@ -270,11 +271,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
             app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x / 1.25).max(3.0);
         }
-        if ui
-            .small_button("+ Track")
-            .on_hover_text("Add a playlist track")
-            .clicked()
-        {
+        if ui.small_button("+ Track").hint("Add a playlist track").clicked() {
             app.exec(Command::AddPlaylistTrack);
         }
         ui.label(RichText::new(format!("{bars} bars")).font(mono(10.5)).color(t.text_dim));
@@ -323,9 +320,9 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
         ui.add_space(8.0);
         ui.spacing_mut().item_spacing.x = 2.0;
         for (tab, icon, tip) in [
-            (PickerTab::Patterns, Icon::PianoRoll, "Patterns"),
-            (PickerTab::Audio, Icon::Wave, "Audio clips"),
-            (PickerTab::Automation, Icon::Automation, "Automation clips"),
+            (PickerTab::Patterns, Icon::PianoRoll, "Show the patterns"),
+            (PickerTab::Audio, Icon::Wave, "Show the audio clips"),
+            (PickerTab::Automation, Icon::Automation, "Show the automation clips"),
         ] {
             let resp = icon_button(ui, icon, app.ui.playlist.picker_tab == tab, 22.0, tip);
             app.ui.playlist.picker_tab_rects.push((tab, resp.rect));
@@ -501,7 +498,7 @@ fn picker_row(app: &mut LimeShotApp, ui: &mut Ui, source: ClipSource, name: &str
     if resp.hovered() {
         app.hint(format!("{name} — {tip}"));
     }
-    resp.on_hover_text(tip).context_menu(|ui| match source {
+    resp.hint(tip).context_menu(|ui| match source {
         ClipSource::Pattern(id) => {
             if ui.button("Rename…").clicked() {
                 app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, id));
@@ -530,7 +527,7 @@ fn picker_row(app: &mut LimeShotApp, ui: &mut Ui, source: ClipSource, name: &str
             }
             if ui
                 .button("Delete")
-                .on_hover_text("Delete the channel and its audio clips")
+                .hint("Delete the channel and its audio clips")
                 .clicked()
             {
                 app.exec(Command::RemoveChannel(ch));
@@ -1351,7 +1348,7 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
                 muted: !muted,
             });
         }
-        led_resp.on_hover_text("Mute track");
+        led_resp.hint("Mute track");
         let name_resp = ui.interact(
             Rect::from_min_max(r.min, pos2(led.left() - 2.0, r.max.y)).intersect(area),
             ui.id().with(("pl_name", tr)),
@@ -1360,7 +1357,7 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
         if name_resp.double_clicked() {
             app.dialog = Some(crate::dialogs::Dialog::rename_track(app, tr));
         }
-        name_resp.on_hover_text("Double-click to rename");
+        name_resp.hint("Double-click to rename");
     }
 }
 
@@ -2097,7 +2094,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                     ClipSource::Pattern(pid) => {
                         if ui
                             .add_enabled(users > 1, egui::Button::new("Make unique"))
-                            .on_hover_text("Give this clip its own copy of the pattern")
+                            .hint("Give this clip its own copy of the pattern")
                             .clicked()
                         {
                             if let Some(p) = app.exec(Command::MakeClipUnique(id)) {
@@ -2126,7 +2123,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                     ClipSource::Automation(aid) => {
                         if ui
                             .add_enabled(users > 1, egui::Button::new("Make unique"))
-                            .on_hover_text("Give this clip its own copy of the automation")
+                            .hint("Give this clip its own copy of the automation")
                             .clicked()
                         {
                             app.exec(Command::MakeClipUnique(id));
@@ -2152,7 +2149,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                         }
                         if ui
                             .button(RichText::new("Delete automation").color(Theme::current().danger))
-                            .on_hover_text("Delete the automation and all its clips")
+                            .hint("Delete the automation and all its clips")
                             .clicked()
                         {
                             app.exec(Command::RemoveAutomation(aid));
