@@ -408,3 +408,6 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
    preview panel (the selected sample's waveform, the preview's position, rate and length; click to replay).
    Previews start from the app's frame logic, so the picker's audio clips play when clicked with the Browser
    hidden, and pressing the waveform in a sampler's Channel Settings plays the channel.
+9. **Tool cursors (item 13).** The icon that followed the pointer is now the cursor itself: over the Piano Roll and
+   Playlist grids the system cursor is hidden and the tool is drawn at the pointer with its point on the hotspot;
+   edges, moving and menus keep the standard cursors.

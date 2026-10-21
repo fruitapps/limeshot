@@ -745,14 +745,44 @@ fn hit(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, bo
     hit_part(view, notes, cid, p).map(|(n, part)| (n, part == Part::RightEdge))
 }
 
-/// The tool's icon next to the pointer over an editor grid, as FL Studio shows each tool as its
-/// mouse cursor (egui's system cursors have no pencil, eraser or speaker).
-pub fn paint_tool_cursor(ctx: &Context, tool: Tool, at: Pos2) {
-    let t = Theme::current();
+/// Over an editor grid each tool is the mouse cursor, as in FL Studio: the system cursor is
+/// hidden and the tool is drawn at the pointer (a light shape with a dark outline), its tip on
+/// the pointer (the pencil's and brush's point, the knife's cut, the magnifier's lens) or
+/// centred on it. With `special`, a state that needs a standard cursor (resize an edge, move a
+/// note or clip, open a menu), that cursor is shown instead. Returns whether the tool was drawn.
+pub fn tool_cursor(ctx: &Context, tool: Tool, at: Pos2, special: Option<egui::CursorIcon>) -> bool {
+    if let Some(icon) = special {
+        ctx.set_cursor_icon(icon);
+        return false;
+    }
+    ctx.set_cursor_icon(egui::CursorIcon::None);
+    let size = 22.0;
+    let u = size / 16.0;
+    // The hotspot in icon units (see `icons::paint`; its centre is 0, 0).
+    let hot = match tool {
+        Tool::Draw => vec2(-5.5, 5.5),
+        Tool::Paint => vec2(-6.0, 5.5),
+        Tool::Slice => vec2(0.3, 7.0),
+        Tool::Zoom => vec2(-1.0, -1.0),
+        _ => Vec2::ZERO,
+    } * u;
+    let r = Rect::from_center_size(at - hot, vec2(size, size));
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("tool-cursor")));
-    let r = Rect::from_min_size(at + vec2(11.0, 11.0), vec2(14.0, 14.0));
-    painter.rect_filled(r.expand(2.0), CornerRadius::same(3), t.header.gamma_multiply(0.9));
-    crate::icons::paint(&painter, r, tool.icon(), t.accent);
+    let outline = Color32::from_black_alpha(230);
+    for d in [
+        vec2(-1.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, -1.0),
+        vec2(0.0, 1.0),
+        vec2(-1.0, -1.0),
+        vec2(1.0, 1.0),
+        vec2(-1.0, 1.0),
+        vec2(1.0, -1.0),
+    ] {
+        crate::icons::paint(&painter, r.translate(d), tool.icon(), outline);
+    }
+    crate::icons::paint(&painter, r, tool.icon(), Color32::WHITE);
+    true
 }
 
 /// The Playback tool's line: faint while hovering (what a press would play), bright while held.
@@ -822,17 +852,16 @@ fn grid_input(
 
     // Cursor feedback.
     if let Some(p) = resp.hover_pos() {
-        match (app.ui.piano.tool, hit_part(view, notes, cid, p)) {
+        let special = match (app.ui.piano.tool, hit_part(view, notes, cid, p)) {
             (Tool::Draw | Tool::Paint, Some((_, Part::LeftEdge | Part::RightEdge))) => {
-                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal)
+                Some(egui::CursorIcon::ResizeHorizontal)
             }
-            (Tool::Draw | Tool::Paint | Tool::Select, Some(_)) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
-            (Tool::Slice, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair),
-            (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
-            _ => {}
+            (Tool::Draw | Tool::Paint | Tool::Select, Some(_)) => Some(egui::CursorIcon::Grab),
+            _ => None,
+        };
+        if tool_cursor(ui.ctx(), app.ui.piano.tool, p, special) {
+            app.ui.piano.cursor = Some(app.ui.piano.tool);
         }
-        paint_tool_cursor(ui.ctx(), app.ui.piano.tool, p);
-        app.ui.piano.cursor = Some(app.ui.piano.tool);
         let k = view.key_at(p.y).clamp(0, 127) as u8;
         let tk = view.tick_at(p.x).max(0) as u64;
         let help = match app.ui.piano.tool {

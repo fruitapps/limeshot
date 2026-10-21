@@ -2723,10 +2723,17 @@ fn editor_tools_show_their_cursor() {
         h.event(Event::PointerMoved(p));
         h.step();
         assert_eq!(h.state().ui.piano.cursor, Some(tool));
+        // Owner's list item 13: the tool replaces the system cursor.
+        assert_eq!(
+            h.output().platform_output.cursor_icon,
+            egui::CursorIcon::None,
+            "{tool:?}"
+        );
     }
     h.event(Event::PointerMoved(egui::pos2(2.0, 2.0)));
     h.step();
     assert_eq!(h.state().ui.piano.cursor, None, "not outside the grid");
+    assert_ne!(h.output().platform_output.cursor_icon, egui::CursorIcon::None);
     let mut h = playlist_harness();
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     for tool in Tool::PLAYLIST {

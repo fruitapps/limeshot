@@ -1454,21 +1454,25 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     let tool = app.ui.playlist.tool;
     app.ui.playlist.cursor = None;
     if let Some(p) = resp.hover_pos() {
-        match (tool, hit(view, clips, p).map(|h| h.1)) {
+        let auto_icon = (app.ui.playlist.drag.is_none())
+            .then(|| automation_hit(app, view, clips, p))
+            .flatten()
+            .map(|(_, _, h)| match h {
+                AutoHit::Point(_) => egui::CursorIcon::Move,
+                AutoHit::Tension(_) => egui::CursorIcon::ResizeVertical,
+                AutoHit::Curve(..) => egui::CursorIcon::Crosshair,
+            });
+        let special = auto_icon.or(match (tool, hit(view, clips, p).map(|h| h.1)) {
             (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge)) => {
-                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal)
+                Some(egui::CursorIcon::ResizeHorizontal)
             }
-            (_, Some(Part::Menu)) => ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand),
-            (Tool::Draw | Tool::Paint | Tool::Select, Some(Part::Body)) => {
-                ui.ctx().set_cursor_icon(egui::CursorIcon::Grab)
-            }
-            (Tool::Slip, Some(_)) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeColumn),
-            (Tool::Slice, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair),
-            (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
-            _ => {}
+            (_, Some(Part::Menu)) => Some(egui::CursorIcon::PointingHand),
+            (Tool::Draw | Tool::Paint | Tool::Select, Some(Part::Body)) => Some(egui::CursorIcon::Grab),
+            _ => None,
+        });
+        if crate::piano_roll::tool_cursor(ui.ctx(), tool, p, special) {
+            app.ui.playlist.cursor = Some(tool);
         }
-        crate::piano_roll::paint_tool_cursor(ui.ctx(), tool, p);
-        app.ui.playlist.cursor = Some(tool);
         let tk = view.tick_at(p.x).max(0) as u64;
         let help = match tool {
             Tool::Draw => {
@@ -1483,15 +1487,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary));
     // Automation curves take presses on their points, tension handles and line first.
     let auto = pointer.and_then(|p| automation_hit(app, view, clips, p).map(|h| (p, h)));
-    if let Some((_, (_, a, h))) = &auto
+    if let Some((_, (_, a, _))) = &auto
         && resp.hovered()
         && app.ui.playlist.drag.is_none()
     {
-        ui.ctx().set_cursor_icon(match h {
-            AutoHit::Point(_) => egui::CursorIcon::Move,
-            AutoHit::Tension(_) => egui::CursorIcon::ResizeVertical,
-            AutoHit::Curve(..) => egui::CursorIcon::Crosshair,
-        });
         let name = app.project().automation(*a).map(|a| a.name.clone()).unwrap_or_default();
         app.hint(format!(
             "{name} — drag a point · drag ○ between points: curve · left/right-click the line: add a point · right-click a point: delete"

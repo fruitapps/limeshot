@@ -1666,7 +1666,7 @@
           "docs/research/evidence/screenshots/fl-piano-tools-menu.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 7): Paint lays end-to-end notes of the last length, all selected (fl-piano-paint.png); Slice cuts at the line and selects the right piece (fl-piano-slice.png). Playback is press-to-play, not scrubbing. Not observed live: the Mute, Delete, Zoom and Playback tools' details (taken from the manual). The Stamp tool is PR-027. Session 9: at the owner's request Playback scrubs instead of FL's press-to-play, and each tool shows its icon as the cursor."
+      "notes": "Observed live in FL 2026.1.1 (session 7): Paint lays end-to-end notes of the last length, all selected (fl-piano-paint.png); Slice cuts at the line and selects the right piece (fl-piano-slice.png). Playback is press-to-play, not scrubbing. Not observed live: the Mute, Delete, Zoom and Playback tools' details (taken from the manual). The Stamp tool is PR-027. Session 9: at the owner's request Playback scrubs instead of FL's press-to-play, and each tool shows its icon as the cursor. Session 11 (owner's list item 13): the tools are real cursors — over the grid the system cursor is hidden and the tool is drawn at the pointer (white with a dark outline), its point on the hotspot (pencil, brush, knife, magnifier) or centred; edges, moving and menus keep the standard resize/grab/hand cursors. Differs from FL: the shapes are LimeShot's own icons, not FL's cursor bitmaps."
     },
     {
       "id": "PR-013",
@@ -2608,7 +2608,7 @@
           "docs/research/evidence/screenshots/fl-playlist-slice.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), zero-cross snapping for audio slices, Right-Shift shortcuts. Session 9: the Playlist's Playback tool scrubs the pattern clips' notes under its line (audio clips are not scrubbed), and each tool shows its icon as the cursor."
+      "notes": "Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), zero-cross snapping for audio slices, Right-Shift shortcuts. Session 9: the Playlist's Playback tool scrubs the pattern clips' notes under its line (audio clips are not scrubbed), and each tool shows its icon as the cursor. Session 11 (owner's list item 13): the tools are real cursors — over the grid the system cursor is hidden and the tool is drawn at the pointer (white with a dark outline), its point on the hotspot (pencil, brush, knife, magnifier) or centred; edges, moving and menus keep the standard resize/grab/hand cursors. Differs from FL: the shapes are LimeShot's own icons, not FL's cursor bitmaps."
     },
     {
       "id": "PL-018",
