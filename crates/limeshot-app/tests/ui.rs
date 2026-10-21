@@ -3086,3 +3086,47 @@ fn a_sample_dragged_over_the_playlist_shows_where_it_lands() {
     let c = last_clip(&h);
     assert_eq!((c.track, c.start), (tr, 4 * bar));
 }
+
+/// Owner's list item 5: Vital's and Serum's Channel Settings could not be narrowed. A row wider
+/// than the window (there: a slider row with a long value such as "1.95312ms") grew the window
+/// every frame until it filled the workspace. Here a channel name with no break points does the
+/// same; the window keeps its size and can be narrowed and widened.
+#[test]
+fn a_wide_row_does_not_stop_a_window_from_being_resized() {
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").id;
+    h.state_mut().exec(Command::RenameChannel {
+        channel: ch,
+        name: "W".repeat(200),
+    });
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..6 {
+        h.step();
+    }
+    let rect = |h: &Harness<'static, LimeShotApp>| {
+        h.ctx
+            .memory(|m| m.area_rect(Win::ChannelSettings.id()))
+            .expect("settings drawn")
+    };
+    let ws = h.state().ui.workspace.area;
+    let before = rect(&h);
+    assert!(
+        before.width() < ws.width() * 0.6,
+        "did not grow to the content: {before:?}"
+    );
+    // Narrower from the right edge, then wider again.
+    let edge = before.right_center() - vec2(2.0, 0.0);
+    drag(&mut h, edge, edge - vec2(80.0, 0.0));
+    h.step();
+    let narrow = rect(&h);
+    assert!(narrow.width() < before.width() - 60.0, "narrowed: {narrow:?}");
+    let edge = narrow.right_center() - vec2(2.0, 0.0);
+    drag(&mut h, edge, edge + vec2(120.0, 0.0));
+    h.step();
+    assert!(rect(&h).width() > narrow.width() + 100.0, "widened: {:?}", rect(&h));
+    // A plugin channel has no Sampler/LimeSynth switch (owner's list item 6).
+    assert!(h.query_by_label("LimeSynth").is_none());
+}

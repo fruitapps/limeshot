@@ -345,7 +345,15 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
         }
         let resp = win.show(ctx, |ui| {
             let actions = title_bar(ui, &title, st, false);
-            body(app, ui, w);
+            // The body gets exactly the window's area: a row wider than that is clipped instead
+            // of growing the window. (egui windows grow to their widest content, and a row whose
+            // width follows the window — a slider row with a long value — grew it every frame
+            // until it filled the workspace and could no longer be narrowed.)
+            let area = ui.available_rect_before_wrap();
+            let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(area).layout(*ui.layout()));
+            inner.set_clip_rect(area.intersect(ui.clip_rect()));
+            body(app, &mut inner, w);
+            ui.advance_cursor_after_rect(area);
             actions
         });
         if let Some(r) = resp {

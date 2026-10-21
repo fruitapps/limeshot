@@ -63,12 +63,16 @@ fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
 fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let t = Theme::current();
     ui.horizontal(|ui| {
+        // The Sampler/LimeSynth switch is for the built-in instruments; a plugin channel keeps its
+        // plugin (owner's list item 6).
         let kind = match ch.instrument {
-            Instrument::Sampler(_) => 0,
-            Instrument::Synth(_) => 1,
-            Instrument::Plugin(_) | Instrument::Unsupported(_) => 2,
+            Instrument::Sampler(_) => Some(0),
+            Instrument::Synth(_) => Some(1),
+            Instrument::Plugin(_) | Instrument::Unsupported(_) => None,
         };
-        if let Some(kind) = segmented(ui, &["Sampler", "LimeSynth"], kind, 24.0, "Instrument type") {
+        if let Some(kind) = kind
+            && let Some(kind) = segmented(ui, &["Sampler", "LimeSynth"], kind, 24.0, "Instrument type")
+        {
             let inst = if kind == 0 {
                 Instrument::Sampler(SamplerParams::default())
             } else {

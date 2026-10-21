@@ -387,3 +387,9 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
    compound gestures, so placing and dragging a clip, or duplicating and moving, is one undo step. A sample dragged
    over the grid shows a ghost clip (FL labels the pointer and highlights the target cell instead).
 3. **1/3-step snap (item 7)**, as in FL's snap menu.
+4. **Plugin channel settings (items 5, 6).** Vital's and Serum's Channel Settings were stuck at the workspace width:
+   a parameter value wider than the space its row reserved ("1.95312ms") overflowed the row, egui grew the window
+   to fit, the slider grew with the window, and so on until the window filled the workspace. Every workspace window
+   now lays its body out in exactly its own area (overwide rows are clipped, the window stays resizable), and the
+   parameter rows reserve the value's measured width. Checked live with Vital. Plugin channels no longer show the
+   Sampler/LimeSynth switch.

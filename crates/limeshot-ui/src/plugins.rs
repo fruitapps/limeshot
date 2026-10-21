@@ -695,7 +695,14 @@ fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                 egui::Label::new(RichText::new(title).color(t.text_dim)).truncate(),
             );
             let mut v = *value;
-            ui.spacing_mut().slider_width = (ui.available_width() - 84.0).max(60.0);
+            // Leave room for the value as the plugin writes it ("1.95312ms"), so the row never
+            // needs more than the window's width.
+            let text_w = ui
+                .painter()
+                .layout_no_wrap(text.clone(), egui::TextStyle::Body.resolve(ui.style()), t.text)
+                .size()
+                .x;
+            ui.spacing_mut().slider_width = (ui.available_width() - text_w.max(40.0) - 24.0).max(40.0);
             let text = text.clone();
             let r = crate::widgets::reset_on_double_click(
                 ui.add(egui::Slider::new(&mut v, 0.0..=1.0).custom_formatter(move |_, _| text.clone())),
