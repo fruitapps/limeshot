@@ -117,3 +117,34 @@ fn installed_fl_projects_all_import() {
     }
     assert!(n > 0);
 }
+
+/// A project saved by FL Studio 26.1.1 (see `fixtures/flp/fl26/README.md`).
+#[test]
+fn fl26_saved_steps_project() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/flp/fl26");
+    let (p, r) = flp::import_file(&dir.join("lime-steps.flp"), None).expect("import");
+    assert_eq!(r.version.as_deref().map(|v| v.starts_with("26.1")), Some(true));
+    assert_eq!(p.tempo, Tempo::from_bpm(130.0), "tempo after the 3-byte event 172");
+    let names: Vec<&str> = p.channels.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["808 Kick", "808 Clap", "808 HiHat", "808 Snare", "808 Astronomic"]
+    );
+    let inserts: Vec<u16> = p.channels.iter().map(|c| c.mixer_track).collect();
+    assert_eq!(inserts, [1, 2, 3, 4, 5], "event 104");
+    let steps = |i: usize| -> Vec<Tick> {
+        p.patterns[0]
+            .notes_for(p.channels[i].id)
+            .map(|n| n.start / STEP_TICKS)
+            .collect()
+    };
+    assert_eq!(steps(0), [0, 4, 8, 12]);
+    assert_eq!(steps(1), [4, 12]);
+    assert_eq!(steps(2), [0, 2, 4, 6, 8, 10, 12, 14]);
+    assert!(
+        p.patterns[0]
+            .notes
+            .iter()
+            .all(|n| (n.velocity - 100.0 / 128.0).abs() < 1e-6)
+    );
+}

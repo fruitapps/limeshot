@@ -39,12 +39,17 @@ pub mod id {
     pub const TIME_SIG_NUM: u8 = 17;
     pub const TIME_SIG_DEN: u8 = 18;
     pub const CHANNEL_TYPE: u8 = 21;
+    /// The channel's mixer insert up to FL 20.
     pub const CHANNEL_MIXER_TRACK: u8 = 22;
+    /// The channel's mixer insert from FL 21 (OBSERVED in FL 25 and 26 files).
+    pub const CHANNEL_MIXER_TRACK_NEW: u8 = 104;
     pub const NEW_CHANNEL: u8 = 64;
     pub const NEW_PATTERN: u8 = 65;
     pub const NEW_ARRANGEMENT: u8 = 99;
     pub const CHANNEL_COLOR: u8 = 128;
     pub const TEMPO: u8 = 156;
+    /// See `read_events`.
+    pub const THREE_BYTE: u8 = 172;
     pub const PATTERN_NAME: u8 = 193;
     pub const TITLE: u8 = 194;
     pub const SAMPLE_PATH: u8 = 196;
@@ -144,6 +149,13 @@ pub fn read_events(data: &[u8]) -> Result<(Header, Vec<(u8, Value<'_>)>), FlpErr
         let id = body[i];
         i += 1;
         let v = match id {
+            // OBSERVED: in FL 25 and later, event 172 (near the start of the file) carries three
+            // bytes, not the four its id range implies; reading four desynchronises the stream.
+            id::THREE_BYTE => {
+                let Some(d) = body.get(i..i + 3) else { break };
+                i += 3;
+                Value::Data(d)
+            }
             0..=63 => {
                 let Some(&b) = body.get(i) else { break };
                 i += 1;
@@ -199,6 +211,8 @@ pub struct FlpChannel {
     pub mixer_track: Option<u32>,
     /// Packed as `0x00BBGGRR`.
     pub color: Option<u32>,
+    /// `mixer_track` came from the newer event, which takes precedence.
+    pub mixer_new: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -398,7 +412,11 @@ pub fn parse(data: &[u8]) -> Result<FlpFile, FlpError> {
                     id::CHANNEL_TYPE => c.kind = v.int().unwrap_or(0) as u8,
                     id::CHANNEL_NAME if c.name.is_empty() => c.name = v.data().map(text).unwrap_or_default(),
                     id::SAMPLE_PATH => c.sample = v.data().map(text).filter(|s| !s.is_empty()),
-                    id::CHANNEL_MIXER_TRACK => c.mixer_track = v.int(),
+                    id::CHANNEL_MIXER_TRACK if !c.mixer_new => c.mixer_track = v.int(),
+                    id::CHANNEL_MIXER_TRACK_NEW => {
+                        c.mixer_track = v.int();
+                        c.mixer_new = true;
+                    }
                     id::CHANNEL_COLOR => c.color = v.int(),
                     id::CHANNEL_LEVELS => {
                         if let Some(d) = v.data() {
