@@ -325,3 +325,29 @@ covered by a headless UI test unless noted.
 All 16 issues are fixed. Not done: a live FL Studio check for Alt+wheel vertical zoom (FL could not be brought to
 the front over the Claude window, and live input was stopped when focus moved back to it), and a real-input pass
 in the live LimeShot window for the new gestures (the headless tests drive them with synthetic egui events).
+
+## 2026-10-21 — Session 10: VST3 hosting
+
+CI still shows every run as "pending" with no jobs (Mandatory 1 stays blocked on the org's Actions settings), so
+work moved to Mandatory 3, VST3 hosting.
+
+1. **The host crate (`limeshot-plugins`, decision D32).** The VST 3.8 SDK is MIT-licensed, and the `vst3` crate ships
+   bindings generated from its headers (no SDK download). `Vst3Module` loads a bundle (CFBundle on macOS, the
+   `Contents/<arch>-win|linux` binary elsewhere, entry and exit functions called), shares a module between
+   instances and lists its audio classes from `IPluginFactory2`. `Vst3Instance::new` initialises the component and
+   its controller (single-object or separate, connected through `IConnectionPoint`; the host context creates
+   messages and attribute lists), negotiates stereo main buses with auxiliary buses off, and splits the plugin into
+   `Vst3Instance` (parameters, display text, editor edits, latency, state as one blob) and `Vst3Processor`, whose
+   `process` uses preallocated buses, a fixed event list and fixed parameter queues fed from a ring. The processor
+   implements `Effect` and the new `limeshot_dsp::Instrument` trait (notes at frame offsets plus a transport).
+2. **Tests without installed plugins.** `limeshot_plugins::testing` compiles two small VST3 plugins into the crate
+   (Lime Test Gain with a separate controller, Lime Test Tone as one object), and `tests/host.rs` runs them
+   through the full path: class listing, in-place processing at several block sizes, parameter changes, the
+   `Effect` trait, state into a new instance, and notes starting and stopping at their sample offsets.
+3. **Installed plugins.** `examples/vst3_probe` loads one bundle on the main thread and processes 40 blocks. Run
+   once per bundle in its own process, it loaded all 36 VST3 bundles on the dev Mac (40 classes, including Serum 2,
+   Vital, Surge XT, M1, Analog Lab V, Guitar Rig 7 and Waves through WaveShell) with no crash or timeout. In the
+   test harness (off the main thread) SINE Player trapped, so plugins are created on the main thread.
+
+Next: plugin instruments on Channel Rack channels and plugins in mixer inserts (model, engine, `.lime` state), a
+plugin database filled by a child-process scan, then editor windows (PLG-006).

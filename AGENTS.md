@@ -39,6 +39,7 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
 | `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
 | `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread |
+| `limeshot-plugins` | VST3 hosting (`vst3` bindings): `Vst3Module` (bundle loading, classes), `scan`, `Vst3Instance` (control thread: params, state) + `Vst3Processor` (audio thread), built-in `testing` plugins, `examples/vst3_probe`. The only crate allowed `unsafe` (D32) |
 | `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
 | `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot` example, MVP and UI tests |
 
@@ -48,7 +49,7 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 * Colors come from `theme::Theme::current()`; icons are painter code in `icons.rs`. No image or font assets beyond
   egui's defaults. Every bundled asset gets a row in `ATTRIBUTION.md`.
 * No panics in production code: crate roots deny `unwrap/expect/panic/todo/unimplemented` (allowed in tests). Use
-  typed errors (`thiserror`). Treat file input as hostile (`Project::sanitize`). `unsafe` is forbidden workspace-wide.
+  typed errors (`thiserror`). Treat file input as hostile (`Project::sanitize`). `unsafe` is forbidden workspace-wide, except in `limeshot-plugins` (FFI; every block has a `SAFETY:` comment).
 * Visible controls must work. Unimplemented features are shown disabled ("not implemented yet") or left out.
 * Match the surrounding style; keep comments for the *why*.
 

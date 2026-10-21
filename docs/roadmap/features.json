@@ -5000,19 +5000,26 @@
       "name": "VST3 hosting",
       "description": "VST3 hosting.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
+      "limeshot_behavior": "`limeshot-plugins` (the only crate allowed `unsafe`, decision D32) loads VST3 bundles through the `vst3` bindings (VST 3.8, MIT), creates instruments and effects, negotiates stereo buses, and processes 32-bit audio, note events and parameter changes without allocating on the audio thread. Not yet wired into the Channel Rack, mixer inserts or the engine.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PLG-004"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-plugins"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-plugins/tests/host.rs::an_effect_processes_in_place_at_any_block_size",
+        "crates/limeshot-plugins/tests/host.rs::an_instrument_plays_notes_at_their_offsets",
+        "crates/limeshot-plugins/tests/host.rs::the_effect_trait_runs_the_plugin",
+        "crates/limeshot-plugins/tests/host.rs::the_factory_lists_its_instrument_and_effect"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5021,7 +5028,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
+      "notes": "Manual verification (session 10, 2026-10-21): `examples/vst3_probe`, run once per bundle in its own process on the main thread, loaded all 36 VST3 bundles installed on the dev Mac (40 classes: Serum 2, Vital, Surge XT, M1, Analog Lab V, Guitar Rig 7, Waves via WaveShell and others), processed 40 blocks, read parameters, state and latency, with no crash or timeout. Creating plugins off the main thread trapped in SINE Player, so instances are created on the main thread (D32)."
     },
     {
       "id": "PLG-003",
@@ -5058,17 +5065,22 @@
       "name": "Plugin scanning",
       "description": "Plugin scanning.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
+      "limeshot_behavior": "`scan::default_dirs` lists the platform's standard VST3 folders, `scan::find_bundles` finds `.vst3` bundles (not descending into them), and `scan_bundle` lists each bundle's instruments and effects (name, vendor, version, sub-categories, class id). Not yet: running each bundle in a child process from the app, and a saved plugin database.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-plugins"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-plugins/src/scan.rs::tests::finds_bundles_but_not_inside_them",
+        "crates/limeshot-plugins/tests/host.rs::the_factory_lists_its_instrument_and_effect"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5085,19 +5097,23 @@
       "name": "Plugin state persistence",
       "description": "Plugin state persistence.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
+      "limeshot_behavior": "`Vst3Instance::state` saves the processor's and the controller's state as one blob and `set_state` restores both. Not yet stored in the `.lime` file.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PLG-004"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-plugins"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-plugins/tests/host.rs::state_round_trips_into_a_new_instance"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5201,14 +5217,16 @@
       "name": "Plugin latency reporting",
       "description": "Plugin latency reporting.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
+      "limeshot_behavior": "`Vst3Instance::latency_samples` reports the plugin's latency (for example 1080 samples for Elephant on the dev Mac). Delay compensation does not use it yet.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PLG-004"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-plugins"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."

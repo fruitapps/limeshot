@@ -34,6 +34,8 @@ pub trait Effect: Send {
     fn gain_reduction_db(&self) -> f32 {
         0.0
     }
+    /// The transport for the next `process` call (tempo-synced plugins read it).
+    fn set_transport(&mut self, _transport: &crate::Transport) {}
 }
 
 fn get(params: &[f32], i: usize, fallback: f32) -> f32 {

@@ -61,7 +61,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
-* No plugin hosting.
+* VST3 plugins can be loaded and processed by `limeshot-plugins`, but not yet added to a project: no plugin
+  instruments in the Channel Rack, no plugins in mixer inserts, no plugin editors, no CLAP or Audio Units.
 * Window positions, sizes and detached/maximised states are not remembered between sessions.
 * Accessibility: custom-painted editors expose no accessibility labels.
 

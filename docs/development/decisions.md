@@ -148,3 +148,15 @@ before the user can recover it. A session only removes copies it owns.
 **Why:** FL Studio's shortcuts and settings are a large, user-facing surface. `keybindings.json` and `settings.json`
 record each one against LimeShot, and `scripts/inventories.py` (run by `features.py check` in CI) fails when a binding
 LimeShot claims is missing from the shortcuts help or a claimed setting is not a real field.
+
+### D32. VST3 hosting through the `vst3` bindings, in the one crate allowed `unsafe`
+**Why:** the owner made VST3 hosting mandatory (2026-10-21). Steinberg moved the VST 3 SDK to the MIT licence with
+version 3.8 (2025), and the `vst3` crate (coupler-rs, MIT OR Apache-2.0) ships bindings generated from the 3.8 headers,
+so LimeShot links no SDK code and needs no SDK download to build. The bindings are raw COM, so `limeshot-plugins` is
+the only crate exempt from the workspace's `unsafe_code = "forbid"`; it uses `unsafe_op_in_unsafe_fn = "deny"` and a
+`SAFETY:` comment on every block, and exports only safe types. A plugin is split into a control-thread half
+(`Vst3Instance`: parameters, state, latency) and an audio-thread half (`Vst3Processor`: preallocated buses, event
+and parameter lists, so `process` neither allocates nor locks); both share one teardown core. Tests host small
+plugins compiled into the crate (`testing`), so CI needs no installed plugins. Plugins are created on the main thread:
+several frameworks (SINE Player observed) trap when created elsewhere. Loading a module runs third-party code that can
+crash LimeShot, so scanning runs each bundle in a child process (PLG-010 covers isolating processing as well).

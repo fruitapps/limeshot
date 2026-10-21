@@ -11,10 +11,12 @@
 pub mod effects;
 pub mod envelope;
 pub mod filter;
+pub mod instrument;
 pub mod osc;
 pub mod sample;
 
 pub use envelope::{Adsr, Envelope};
+pub use instrument::{Instrument, NoteEvent, NoteEventKind, Transport};
 pub use osc::Oscillator;
 pub use sample::{BitDepth, SampleData, SampleError, load_wav, write_wav};
 

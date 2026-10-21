@@ -8,7 +8,10 @@
 2. **Done (session 9):** the 16 issues from the owner's hands-on test (2026-10-21) are fixed and tested
    (`progress.md`, Session 9). Left open: a live FL check of Alt+wheel vertical zoom and a real-input pass over the
    new gestures in the live app.
-3. **VST support** (required by the project owner, 2026-10-21; next, now that item 2 is done). Host VST3 plugins as instruments (Channel Rack) and
+3. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
+   (loading, scanning, instancing, processing, state, latency; tested with built-in plugins and all 36 bundles
+   installed on the dev Mac). Next: plugin channels and insert slots in the model and engine, state in `.lime`,
+   a child-process scan into a plugin database, the plugin pickers, then editor windows. Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in

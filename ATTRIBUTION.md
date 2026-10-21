@@ -18,3 +18,7 @@ No FL Studio, Image-Line, or ArtCraft artwork, samples, presets, fonts or code a
 `cargo metadata` (2026-10-20): all Rust dependencies are permissive (MIT, Apache-2.0, BSD, ISC, Zlib, BSL-1.0, Unicode, Unlicense)
 or offer a permissive alternative, except two unmodified MPL-2.0 crates (`option-ext`, via `directories`; `colored`, test tooling),
 whose file-level copyleft does not extend to LimeShot's code.
+
+VST3 hosting (2026-10-21) adds `vst3` 0.3 and `com-scrape-types` (MIT OR Apache-2.0; bindings generated from the VST 3.8 SDK
+headers, which Steinberg publishes under the MIT licence) and `libloading` (ISC). No SDK source is included. "VST" is a
+trademark of Steinberg Media Technologies GmbH.

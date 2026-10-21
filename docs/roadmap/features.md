@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 93, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 9, VERIFIED 123, DEFERRED 2
+- By status: NOT_STARTED 89, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 9, VERIFIED 123, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -24,7 +24,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Automation | 13 | 3 | 0 | 0 | 10 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
 | Browser | 10 | 5 | 1 | 0 | 4 |
-| Plugins | 10 | 0 | 0 | 0 | 10 |
+| Plugins | 10 | 0 | 0 | 4 | 6 |
 | Export | 13 | 5 | 0 | 0 | 8 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
@@ -263,14 +263,14 @@ automated tests or recorded manual verification. Everything else is not done.
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
 | PLG-001 | CLAP hosting | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-002 | VST3 hosting | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-002 | VST3 hosting | P1 |  | IN_PROGRESS | `limeshot-plugins` (the only crate allowed `unsafe`, decision D32) loads VST3 bundles through the `vst3` bindings (VST 3.8, MIT), creates instruments and effects, negotiates stereo buses, and processes 32-bit audio, note events and parameter changes without allocating on the audio thread. Not yet wired into the Channel Rack, mixer inserts or the engine.<br>*Manual verification (session 10, 2026-10-21): `examples/vst3_probe`, run once per bundle in its own process on the main thread, loaded all 36 VST3 bundles installed on the dev Mac (40 classes: Serum 2, Vital, Surge XT, M1, Analog Lab V, Guitar Rig 7, Waves via WaveShell and others), processed 40 blocks, read parameters, state and latency, with no crash or timeout. Creating plugins off the main thread trapped in SINE Player, so instances are created on the main thread (D32).* | `crates/limeshot-plugins/tests/host.rs::an_effect_processes_in_place_at_any_block_size`<br>`crates/limeshot-plugins/tests/host.rs::an_instrument_plays_notes_at_their_offsets`<br>`crates/limeshot-plugins/tests/host.rs::the_effect_trait_runs_the_plugin`<br>`crates/limeshot-plugins/tests/host.rs::the_factory_lists_its_instrument_and_effect` |
 | PLG-003 | Audio Unit hosting (macOS) | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-004 | Plugin scanning | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
-| PLG-005 | Plugin state persistence | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-004 | Plugin scanning | P1 |  | IN_PROGRESS | `scan::default_dirs` lists the platform's standard VST3 folders, `scan::find_bundles` finds `.vst3` bundles (not descending into them), and `scan_bundle` lists each bundle's instruments and effects (name, vendor, version, sub-categories, class id). Not yet: running each bundle in a child process from the app, and a saved plugin database.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | `crates/limeshot-plugins/src/scan.rs::tests::finds_bundles_but_not_inside_them`<br>`crates/limeshot-plugins/tests/host.rs::the_factory_lists_its_instrument_and_effect` |
+| PLG-005 | Plugin state persistence | P1 |  | IN_PROGRESS | `Vst3Instance::state` saves the processor's and the controller's state as one blob and `set_state` restores both. Not yet stored in the `.lime` file.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | `crates/limeshot-plugins/tests/host.rs::state_round_trips_into_a_new_instance` |
 | PLG-006 | Plugin editor windows | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-007 | Plugin parameter automation | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-008 | Plugin preset management | P3 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-009 | Plugin latency reporting | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-009 | Plugin latency reporting | P1 |  | IN_PROGRESS | `Vst3Instance::latency_samples` reports the plugin's latency (for example 1080 samples for Elephant on the dev Mac). Delay compensation does not use it yet.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-010 | Plugin crash isolation | P3 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
 
 ## Export
