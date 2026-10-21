@@ -495,7 +495,8 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             Stroke::new(1.0, t.grid_step),
         );
     }
-    draw_time_grid(&painter, &view, grid, sig, Snap::Bar);
+    // The grid follows the snap, as in the Piano Roll (it was fixed to bars).
+    draw_time_grid(&painter, &view, grid, sig, app.ui.snap);
     let song_end = app.project().playlist.song_length(sig);
     let xe = view.x(song_end);
     if song_end > 0 && xe > grid.left() && xe < grid.right() {
@@ -1894,6 +1895,10 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
         return;
     }
     let st = &mut app.ui.playlist;
+    let (lo, hi) = TRACK_H;
+    if crate::piano_roll::wheel_zoom_y(ui, grid, &mut st.track_h, &mut st.scroll.y, lo, hi) {
+        return;
+    }
     if crate::piano_roll::wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 3.0, 400.0) {
         return;
     }
@@ -1908,6 +1913,9 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
         st.scroll.y -= delta.y;
     }
 }
+
+/// The Playlist's track height range (vertical zoom).
+pub const TRACK_H: (f32, f32) = (20.0, 160.0);
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;

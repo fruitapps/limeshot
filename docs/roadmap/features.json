@@ -1298,7 +1298,8 @@
       ],
       "tests": [
         "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes",
-        "limeshot-core document::tests::notes_move_resize_and_duplicate"
+        "limeshot-core document::tests::notes_move_resize_and_duplicate",
+        "limeshot-app tests/ui.rs::piano_roll_right_edge_resizes_both_ways"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1307,7 +1308,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png)."
+      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png). Session 9: dragging a note's edge past its other end stops at one snap step (it collapsed to one tick and the drag then lost track of the note)."
     },
     {
       "id": "PR-002",
@@ -1361,7 +1362,8 @@
       ],
       "tests": [
         "limeshot-core time::tests::snapping",
-        "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes"
+        "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes",
+        "limeshot-app tests/ui.rs::the_grid_follows_the_snap"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1370,7 +1372,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: the grid draws the snap's finer lines once they are 5 px apart (quarter steps at the default zoom); the Playlist's grid follows the snap too (it was fixed to bars)."
     },
     {
       "id": "PR-004",
@@ -1423,7 +1425,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll",
+        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1432,7 +1435,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1."
+      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1. Session 9: Opt+wheel / Opt+pinch zooms the key height around the pointer."
     },
     {
       "id": "PR-006",
@@ -2278,7 +2281,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position",
-        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows"
+        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows",
+        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2287,7 +2291,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist)."
+      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height."
     },
     {
       "id": "PL-009",

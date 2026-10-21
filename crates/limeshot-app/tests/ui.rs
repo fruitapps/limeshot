@@ -2491,3 +2491,125 @@ fn rack_and_mixer_windows_keep_their_content_visible() {
         assert!(b.bottom() <= mixer.bottom(), "route button {b:?} below {mixer:?}");
     }
 }
+
+/// Owner's hands-on test: dragging a note's right edge snapped it to its smallest size.
+#[test]
+fn piano_roll_right_edge_resizes_both_ways() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: vec![NewNote {
+            channel: lead,
+            key: 72,
+            start: 0,
+            length: 4 * STEP_TICKS,
+            velocity: 0.8,
+        }],
+    });
+    h.step();
+    h.step();
+    let g = piano_geometry(&h);
+    let len = |h: &Harness<'static, LimeShotApp>| pattern_notes(h, pat, lead)[0].length;
+    let edge = g.pos(4 * STEP_TICKS, 72) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(7 * STEP_TICKS, 72));
+    assert_eq!(len(&h), 7 * STEP_TICKS, "longer");
+    let edge = g.pos(7 * STEP_TICKS, 72) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(2 * STEP_TICKS, 72));
+    assert_eq!(len(&h), 2 * STEP_TICKS, "shorter");
+    let edge = g.pos(2 * STEP_TICKS, 72) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(5 * STEP_TICKS, 72));
+    assert_eq!(len(&h), 5 * STEP_TICKS, "longer again");
+    // Past the note's start it stops at one snap step instead of a one-tick sliver, and the
+    // same drag can bring it back.
+    let edge = g.pos(5 * STEP_TICKS, 72) - vec2(2.0, 0.0);
+    h.event(Event::PointerMoved(edge));
+    h.step();
+    press(&mut h, edge, PointerButton::Primary, true);
+    for x in [g.pos(2 * STEP_TICKS, 72), g.pos(0, 72) - vec2(80.0, 0.0)] {
+        h.event(Event::PointerMoved(x));
+        h.step();
+    }
+    assert_eq!(len(&h), STEP_TICKS, "at least one step");
+    let back = g.pos(3 * STEP_TICKS, 72);
+    h.event(Event::PointerMoved(back));
+    h.step();
+    press(&mut h, back, PointerButton::Primary, false);
+    assert_eq!(len(&h), 3 * STEP_TICKS, "follows the pointer back");
+    assert_eq!(pattern_notes(&h, pat, lead)[0].start, 0);
+}
+
+/// Send a wheel turn over `p` with `mods` held, and let egui's smooth scrolling run out.
+fn wheel_at(h: &mut Harness<'static, LimeShotApp>, p: Pos2, dy: f32, mods: Modifiers) {
+    h.event(Event::PointerMoved(p));
+    h.event(Event::ModifiersChanged(mods));
+    h.event(Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Point,
+        delta: vec2(0.0, dy),
+        modifiers: mods,
+        phase: egui::TouchPhase::Move,
+    });
+    for _ in 0..20 {
+        h.step();
+    }
+    h.event(Event::ModifiersChanged(Modifiers::NONE));
+    h.step();
+}
+
+/// Owner's hands-on test: there was no vertical zoom. Opt+wheel (or Opt+pinch) zooms the key
+/// height in the Piano Roll and the track height in the Playlist, as Alt+wheel does in FL Studio.
+#[test]
+fn alt_wheel_zooms_vertically() {
+    let (mut h, _, _) = melody_piano_roll();
+    let p = piano_geometry(&h).grid.center();
+    let (kh, sy, zx) = (
+        h.state().ui.piano.key_h,
+        h.state().ui.piano.scroll.y,
+        h.state().ui.piano.zoom_x,
+    );
+    wheel_at(&mut h, p, 60.0, Modifiers::ALT);
+    assert!(h.state().ui.piano.key_h > kh, "taller keys");
+    assert_eq!(h.state().ui.piano.zoom_x, zx, "time zoom unchanged");
+    assert_ne!(h.state().ui.piano.scroll.y, sy, "zoomed around the pointer");
+    wheel_at(&mut h, p, -400.0, Modifiers::ALT);
+    assert_eq!(
+        h.state().ui.piano.key_h,
+        limeshot_ui::piano_roll::KEY_H.0,
+        "down to the smallest"
+    );
+    // A pinch with Opt held zooms vertically too.
+    h.event(Event::ModifiersChanged(Modifiers::ALT));
+    h.event(Event::Zoom(1.5));
+    h.step();
+    h.event(Event::ModifiersChanged(Modifiers::NONE));
+    h.step();
+    assert!(h.state().ui.piano.key_h > limeshot_ui::piano_roll::KEY_H.0);
+    assert_eq!(h.state().ui.piano.zoom_x, zx);
+
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let th = h.state().ui.playlist.track_h;
+    wheel_at(&mut h, g.grid.center(), 60.0, Modifiers::ALT);
+    assert!(h.state().ui.playlist.track_h > th, "taller tracks");
+    wheel_at(&mut h, g.grid.center(), -60.0, Modifiers::ALT);
+    wheel_at(&mut h, g.grid.center(), -60.0, Modifiers::ALT);
+    assert!(h.state().ui.playlist.track_h < th, "shorter tracks");
+}
+
+/// Owner's question: does the Snap change the grid? It did in the Piano Roll (once the lines
+/// are 6 px apart); the Playlist's grid was fixed to bars and now follows the snap too.
+#[test]
+fn the_grid_follows_the_snap() {
+    use limeshot_ui::piano_roll::grid_step;
+    let sig = TimeSignature::default();
+    let ppt = 96.0 / PPQ as f32; // the Piano Roll's default zoom: 24 px per step
+    assert_eq!(grid_step(ppt, sig, Snap::Step), STEP_TICKS);
+    assert_eq!(grid_step(ppt, sig, Snap::HalfStep), STEP_TICKS / 2);
+    assert_eq!(grid_step(ppt, sig, Snap::QuarterStep), STEP_TICKS / 4);
+    // Coarser snaps keep the zoom's lines; too-dense lines are left out.
+    assert_eq!(grid_step(ppt, sig, Snap::Bar), STEP_TICKS);
+    assert_eq!(grid_step(ppt / 8.0, sig, Snap::QuarterStep), sig.ticks_per_bar());
+    // At a zoom that shows beats (30 px per beat), a step snap adds the step lines.
+    let pl = 30.0 / PPQ as f32;
+    assert_eq!(grid_step(pl, sig, Snap::Beat), sig.ticks_per_beat());
+    assert_eq!(grid_step(pl, sig, Snap::Step), STEP_TICKS);
+}

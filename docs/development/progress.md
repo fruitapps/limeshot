@@ -296,3 +296,14 @@ covered by a headless UI test unless noted.
    already was). The Channel Rack reports the size its content needs, so its window never hides steps or shows
    fewer than five channels; the Mixer's minimum is the master and two strips next to a track panel kept at its
    full width (its EQ knobs were cut off when the panel shrank to 45 % of a narrow window), and a whole strip high.
+2. **Piano Roll and Playlist editing (issues 3, 13, 14).** Note resizing: dragging a note's right edge past its
+   start let the core clamp the note to one tick, while the drag kept a running total of what it had applied, so
+   the note collapsed to a sliver and then no longer followed the pointer. The drag now clamps the change itself:
+   no note gets shorter than one snap step (or its own length, if shorter) and the left edge cannot pass the start
+   of the timeline. **Snap and grid (issue 13, confirmed and fixed):** the Piano Roll's grid did follow the snap,
+   but only once the lines were more than 6 px apart, and quarter steps are exactly 6 px at the default zoom, so
+   1/4-step snap showed no finer lines; the threshold is now 5 px. The Playlist's grid ignored the snap (fixed to
+   bars) and now follows it too (`piano_roll::grid_step`, shared). Vertical zoom (issue 14) did not exist: Opt+wheel
+   and Opt+pinch now zoom the Piano Roll's key height and the Playlist's track height around the pointer (FL
+   Studio's Alt+wheel, KB-094, from FL knowledge: a live check was not possible this session because FL could not
+   be brought to the front).

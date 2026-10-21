@@ -61,6 +61,11 @@ pub const EDITING: &[(&str, &str)] = &[
         "Channel Rack: rotate the selected channels' steps · Piano Roll: rotate notes by the snap",
     ),
     ("← / →", "Piano Roll / Playlist: scroll"),
+    ("Cmd+wheel / pinch", "Piano Roll / Playlist: zoom time"),
+    (
+        "Opt+wheel / Opt+pinch",
+        "Piano Roll / Playlist: zoom vertically (key / track height)",
+    ),
     ("Shift+I", "Piano Roll / Playlist: invert the selection"),
     (
         "P / B / D / T / C / E / Z / Y",

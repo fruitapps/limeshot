@@ -46,6 +46,11 @@ enum Drag {
         anchor_end: Tick,
         grab_tick: i64,
         applied: i64,
+        /// The shortest dragged note's length and the earliest start when the drag began: the
+        /// change is clamped so no note gets shorter than a snap step (or its own length) and
+        /// none starts before zero. Without it the core clamped the notes to one tick and the
+        /// drag's running total drifted away from them (owner's hands-on test).
+        shortest: Tick,
     },
     /// Dragging a note's left edge: the start moves, the end stays.
     ResizeStart {
@@ -53,6 +58,8 @@ enum Drag {
         anchor_start: Tick,
         grab_tick: i64,
         applied: i64,
+        shortest: Tick,
+        earliest: Tick,
     },
     Select {
         from: Pos2,
@@ -235,6 +242,12 @@ impl View {
             pos2(self.x(n.end()).max(self.x(n.start) + 3.0), self.y(n.key) + self.key_h),
         )
     }
+}
+
+/// The shortest a note may get while resizing: one snap step, or the shortest note's own length
+/// when that is already shorter (one tick without snapping).
+fn min_note_len(snap: Snap, sig: TimeSignature, shortest: Tick) -> Tick {
+    snap.ticks(sig).unwrap_or(1).min(shortest).max(1)
 }
 
 /// Where a tick/key is on screen in the last drawn Piano Roll (for tests and tools).
@@ -518,18 +531,7 @@ pub fn draw_time_grid(painter: &egui::Painter, view: &impl TimeAxis, area: Rect,
     let t = Theme::current();
     let beat = sig.ticks_per_beat();
     let bar = sig.ticks_per_bar();
-    let px_per_beat = view.ppt() * beat as f32;
-    let step = if px_per_beat > 48.0 {
-        STEP_TICKS
-    } else if px_per_beat > 12.0 {
-        beat
-    } else {
-        bar
-    };
-    let step = match snap.ticks(sig) {
-        Some(s) if s < step && s as f32 * view.ppt() > 6.0 => s,
-        _ => step,
-    };
+    let step = grid_step(view.ppt(), sig, snap);
     let first = (view.tick_at_x(area.left()).max(0) as u64) / step * step;
     let mut tk = first;
     while view.x_of(tk) <= area.right() {
@@ -545,6 +547,26 @@ pub fn draw_time_grid(painter: &egui::Painter, view: &impl TimeAxis, area: Rect,
             painter.line_segment([pos2(x, area.top()), pos2(x, area.bottom())], Stroke::new(1.0, c));
         }
         tk += step;
+    }
+}
+
+/// The spacing of the vertical grid lines at `ppt` pixels per tick: steps, beats or bars by the
+/// zoom, and the snap's finer lines (half and quarter steps) once they are at least 5 px apart,
+/// so changing the snap shows the grid it snaps to.
+pub fn grid_step(ppt: f32, sig: TimeSignature, snap: Snap) -> Tick {
+    let beat = sig.ticks_per_beat();
+    let px_per_beat = ppt * beat as f32;
+    let step = if px_per_beat > 48.0 {
+        STEP_TICKS
+    } else if px_per_beat > 12.0 {
+        beat
+    } else {
+        sig.ticks_per_bar()
+    };
+    match snap.ticks(sig) {
+        // 5 px: quarter steps at the default zoom are 6 px apart.
+        Some(s) if s < step && s as f32 * ppt >= 5.0 => s,
+        _ => step,
     }
 }
 
@@ -852,6 +874,9 @@ fn grid_input(
                     let ids = st.selection.clone();
                     st.last_len = n.length;
                     st.last_vel = n.velocity;
+                    let dragged = || notes.iter().filter(|m| ids.contains(&m.id));
+                    let shortest = dragged().map(|m| m.length).min().unwrap_or(n.length);
+                    let earliest = dragged().map(|m| m.start).min().unwrap_or(n.start);
                     app.doc.begin_gesture();
                     if part == Part::LeftEdge {
                         app.ui.piano.drag = Some(Drag::ResizeStart {
@@ -859,6 +884,8 @@ fn grid_input(
                             anchor_start: n.start,
                             grab_tick: view.tick_at(p.x),
                             applied: 0,
+                            shortest,
+                            earliest,
                         });
                     } else if part == Part::RightEdge {
                         app.ui.piano.drag = Some(Drag::Resize {
@@ -866,6 +893,7 @@ fn grid_input(
                             anchor_end: n.end(),
                             grab_tick: view.tick_at(p.x),
                             applied: 0,
+                            shortest,
                         });
                     } else {
                         app.ui.piano.drag = Some(Drag::Move {
@@ -970,11 +998,13 @@ fn grid_input(
                 anchor_end,
                 grab_tick,
                 applied,
+                shortest,
             }) => {
                 let raw = view.tick_at(p.x) - *grab_tick;
                 let target = (*anchor_end as i64 + raw).max(1) as u64;
                 let snapped = snap.round(target, sig).max(1);
-                let d = snapped as i64 - *anchor_end as i64;
+                let min_len = min_note_len(snap, sig, *shortest);
+                let d = (snapped as i64 - *anchor_end as i64).max(min_len as i64 - *shortest as i64);
                 if d != *applied {
                     app.exec(Command::ResizeNotes {
                         pattern: pid,
@@ -1018,10 +1048,14 @@ fn grid_input(
                 anchor_start,
                 grab_tick,
                 applied,
+                shortest,
+                earliest,
             }) => {
                 let raw = view.tick_at(p.x) - *grab_tick;
                 let target = (*anchor_start as i64 + raw).max(0) as u64;
-                let d = snap.round(target, sig) as i64 - *anchor_start as i64;
+                let min_len = min_note_len(snap, sig, *shortest);
+                let d = (snap.round(target, sig) as i64 - *anchor_start as i64)
+                    .clamp(-(*earliest as i64), *shortest as i64 - min_len as i64);
                 if d != *applied {
                     app.exec(Command::ResizeNotesStart {
                         pattern: pid,
@@ -1243,8 +1277,9 @@ fn velocity_lane(
 /// Cmd+wheel (or a pinch) zooms horizontally around the pointer. egui reports these as a zoom
 /// delta, not as scrolling. Returns whether it zoomed.
 pub fn wheel_zoom(ui: &Ui, grid: Rect, zoom_x: &mut f32, scroll_x: &mut f32, min: f32, max: f32) -> bool {
-    let factor = ui.input(|i| i.zoom_delta());
-    if factor == 1.0 {
+    let (factor, alt) = ui.input(|i| (i.zoom_delta(), i.modifiers.alt));
+    // Opt+pinch zooms vertically instead (`wheel_zoom_y`).
+    if factor == 1.0 || alt {
         return false;
     }
     let anchor = ui
@@ -1257,12 +1292,43 @@ pub fn wheel_zoom(ui: &Ui, grid: Rect, zoom_x: &mut f32, scroll_x: &mut f32, min
     true
 }
 
+/// Alt+wheel (Opt+two-finger scroll or Opt+pinch on a trackpad) zooms vertically around the
+/// pointer: key height in the Piano Roll, track height in the Playlist (FL Studio's Alt+wheel).
+/// Returns whether it zoomed.
+pub fn wheel_zoom_y(ui: &Ui, grid: Rect, row_h: &mut f32, scroll_y: &mut f32, min: f32, max: f32) -> bool {
+    let (alt, zoom, wheel) = ui.input(|i| {
+        let d = i.smooth_scroll_delta;
+        (i.modifiers.alt, i.zoom_delta(), d.y + d.x)
+    });
+    if !alt {
+        return false;
+    }
+    let factor = if zoom != 1.0 { zoom } else { (wheel / 200.0).exp() };
+    if factor == 1.0 {
+        return false;
+    }
+    let anchor = ui
+        .input(|i| i.pointer.hover_pos())
+        .map(|p| p.y - grid.top())
+        .unwrap_or(0.0);
+    let old = *row_h;
+    *row_h = (*row_h * factor).clamp(min, max);
+    *scroll_y = ((*scroll_y + anchor) * *row_h / old - anchor).max(0.0);
+    true
+}
+
+/// The Piano Roll's key height range (vertical zoom).
+pub const KEY_H: (f32, f32) = (6.0, 40.0);
+
 fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     let hovered = ui.rect_contains_pointer(full);
     if !hovered {
         return;
     }
     let st = &mut app.ui.piano;
+    if wheel_zoom_y(ui, grid, &mut st.key_h, &mut st.scroll.y, KEY_H.0, KEY_H.1) {
+        return;
+    }
     if wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 12.0, 800.0) {
         return;
     }

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **93** — IMPLEMENTED 64, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
+Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 
 ## Global
 
@@ -137,3 +137,9 @@ Tracked: **93** — IMPLEMENTED 64, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 |---|---|---|---|---|---|---|---|
 | KB-075 | Fine adjustment while dragging | `Ctrl / Alt+drag` | VERIFIED | `Shift+drag` | DIFFERENT | UI-004 |  |
 | KB-076 | Reset to default | `Right-click › Reset` | OBSERVED | `Double-click` | DIFFERENT | UI-010 | Observed in FL's control menu (session 4). |
+
+## Piano Roll / Playlist
+
+| ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|
+| KB-094 | Zoom vertically | `Alt+Mouse wheel` | INFERRED | `Opt+wheel / Opt+pinch` | IMPLEMENTED | PR-005 | Session 9 (owner's hands-on test: no vertical zoom). Not checked live in FL this session; test alt_wheel_zooms_vertically. |

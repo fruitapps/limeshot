@@ -1026,6 +1026,17 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-012",
       "notes": "FL 2026.1.1 Channel Rack menu: Group selected… Opt+G asks for a filter group name (session 8)."
+    },
+    {
+      "id": "KB-094",
+      "context": "Piano Roll / Playlist",
+      "action": "Zoom vertically",
+      "fl_keys": "Alt+Mouse wheel",
+      "confidence": "INFERRED",
+      "limeshot_keys": "Opt+wheel / Opt+pinch",
+      "status": "IMPLEMENTED",
+      "feature": "PR-005",
+      "notes": "Session 9 (owner's hands-on test: no vertical zoom). Not checked live in FL this session; test alt_wheel_zooms_vertically."
     }
   ]
 }
