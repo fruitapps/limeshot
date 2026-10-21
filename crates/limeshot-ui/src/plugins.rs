@@ -239,6 +239,10 @@ pub struct PluginHost {
     generation: Option<u64>,
     /// The parameter filter typed into each plugin's panel.
     filters: HashMap<Target, String>,
+    /// Open plugin windows; an editor is dropped (and closed) before its plugin.
+    pub(crate) windows: HashMap<Target, crate::plugin_window::Wrapper>,
+    /// Where and on which tab each closed window was, for when it opens again.
+    pub(crate) window_memory: HashMap<Target, crate::plugin_window::Memory>,
     /// Processors returned from an export thread, dropped here on the main thread.
     returned: Option<(
         Sender<limeshot_plugins::Vst3Processor>,
@@ -372,6 +376,8 @@ impl PluginHost {
         if self.generation != Some(generation) {
             // A different project: the audio thread retires every processor (ClearEffects).
             self.generation = Some(generation);
+            self.windows.clear();
+            self.window_memory.clear();
             self.live.clear();
             self.errors.clear();
         }
@@ -381,6 +387,9 @@ impl PluginHost {
                 .iter()
                 .any(|(w, p)| w == t && l.key == (p.path.clone(), p.class_id.clone()))
         });
+        // A window whose plugin went (or was replaced) closes.
+        let live = &self.live;
+        self.windows.retain(|t, _| live.contains_key(t));
         self.errors.retain(|t, (k, _)| {
             wanted
                 .iter()
@@ -428,6 +437,7 @@ impl PluginHost {
         let mut changed = false;
         for l in self.live.values_mut() {
             changed |= !l.instance.take_editor_edits().is_empty();
+            changed |= l.instance.take_restart();
         }
         changed
     }
@@ -605,6 +615,40 @@ pub fn add_channel(app: &mut LimeShotApp, e: &Entry) {
     }
 }
 
+/// Where a plugin channel or insert's plugin runs, for windows: "Vital (Master)".
+pub(crate) fn place_name(project: &Project, target: Target) -> Option<(String, String)> {
+    let track_name = |t: usize| {
+        project.mixer.tracks.get(t).map(|tr| {
+            if tr.name.is_empty() {
+                if t == 0 {
+                    "Master".to_string()
+                } else {
+                    format!("Insert {t}")
+                }
+            } else {
+                tr.name.clone()
+            }
+        })
+    };
+    match target {
+        Target::Channel(c) => {
+            let ch = project.channel(c)?;
+            Some((ch.name.clone(), track_name(ch.mixer_track as usize)?))
+        }
+        Target::Effect { track, effect } => {
+            let e = project
+                .mixer
+                .tracks
+                .get(track as usize)?
+                .effects
+                .iter()
+                .find(|e| e.id == effect)?;
+            let name = e.plugin.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+            Some((name, track_name(track as usize)?))
+        }
+    }
+}
+
 /// Channel Settings of a plugin channel.
 pub fn channel_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &PluginRef) {
     header(app, ui, Target::Channel(cid), p);
@@ -633,8 +677,13 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             ui.label(RichText::new(&p.vendor).color(t.text_dim));
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.add_enabled(false, egui::Button::new("Editor").small())
-                .on_disabled_hover_text("Plugin windows are not implemented yet");
+            let loaded = app.plugins.is_loaded(target);
+            let r = ui
+                .add_enabled(loaded, egui::Button::new("Editor").small())
+                .hint("Open the plugin's window (its own editor)");
+            if r.clicked() {
+                app.plugins.open_window(target, Some(crate::plugin_window::Tab::Editor));
+            }
         });
     });
     match (app.plugins.instance(target), app.plugins.error(target)) {
@@ -657,7 +706,7 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
 }
 
 /// The plugin's parameters as sliders, filtered by name.
-fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
+pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     let t = Theme::current();
     let Some(inst) = app.plugins.instance(target) else {
         return;

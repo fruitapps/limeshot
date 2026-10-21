@@ -131,3 +131,57 @@ fn an_instrument_plays_notes_at_their_offsets() {
         assert!(buf.chunks(2).all(|f| f[0] == f[1]));
     }
 }
+
+#[test]
+fn an_editor_opens_takes_edits_and_resizes_itself() {
+    let (mut inst, mut proc) = gain(64);
+    let mut editor = inst.create_editor().expect("Lime Test Gain has an editor");
+    let (w, h) = testing::EDITOR_SIZE;
+    assert_eq!(
+        editor.size(),
+        limeshot_plugins::EditorSize {
+            width: w as u32,
+            height: h as u32
+        }
+    );
+    assert!(editor.can_resize());
+    assert!(!editor.is_attached());
+    editor.attach_headless().unwrap();
+    assert!(editor.is_attached());
+
+    // An edit in the editor reaches the controller, the host and, at the next block, the audio.
+    assert!(editor.key_down('-'));
+    assert_eq!(inst.param(0), 0.5);
+    assert_eq!(inst.take_editor_edits(), [(0, 0.5)]);
+    assert!(inst.take_editor_edits().is_empty());
+    let mut buf = vec![1.0f32; 2 * 64];
+    proc.process(&mut buf, &[], &Transport::default());
+    assert!(buf.iter().all(|&s| s == 0.5));
+
+    // The editor asks for another size; the host takes it and tells the view.
+    assert_eq!(editor.take_resized(), None);
+    assert!(editor.key_down('r'));
+    let (w, h) = testing::EDITOR_RESIZED;
+    let resized = limeshot_plugins::EditorSize {
+        width: w as u32,
+        height: h as u32,
+    };
+    assert_eq!(editor.take_resized(), Some(resized));
+    assert_eq!(editor.take_resized(), None);
+    assert_eq!(editor.size(), resized);
+
+    editor.detach();
+    assert!(!editor.is_attached());
+    // The editor keeps the plugin alive; dropping the instance first is fine.
+    drop(inst);
+    editor.attach_headless().unwrap();
+    drop(editor);
+}
+
+#[test]
+fn a_plugin_without_an_editor_has_none() {
+    let m = testing::module().unwrap();
+    let (inst, _proc) = Vst3Instance::new(&m, &testing::tone_class(), SR, 64).unwrap();
+    assert!(inst.create_editor().is_none());
+    assert!(limeshot_plugins::NativeWindow::find("no window has this title").is_none());
+}

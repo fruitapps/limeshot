@@ -39,8 +39,8 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
 | `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
 | `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread |
-| `limeshot-plugins` | VST3 hosting (`vst3` bindings): `Vst3Module` (bundle loading, classes), `scan`, `Vst3Instance` (control thread: params, state) + `Vst3Processor` (audio thread), built-in `testing` plugins, `examples/vst3_probe`. The only crate allowed `unsafe` (D32) |
-| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
+| `limeshot-plugins` | VST3 hosting (`vst3` bindings): `Vst3Module` (bundle loading, classes), `scan`, `Vst3Instance` (control thread: params, state) + `Vst3Processor` (audio thread), `Vst3Editor` (the plugin's own view in a host window), built-in `testing` plugins, `examples/vst3_probe`. The only crate allowed `unsafe` (D32) |
+| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `plugins` + `plugin_window` (plugin database, running plugins, plugin windows), `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
 | `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot` example, MVP and UI tests |
 
 ## Coding conventions
@@ -80,8 +80,8 @@ features as records.
 ## Immediate next tasks
 See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
 Actions settings), the rest of the session 7 plan (Playlist slip/slice, Mixer EQ + sidechain, Channel Rack depth),
-then **VST3 plugin hosting** (session 10: hosting, plugin channels and inserts, scanning and state are in; plugin
-windows, parameter automation and delay compensation are next).
+then **VST3 plugin hosting** (session 10: hosting, plugin channels and inserts, scanning and state are in; session 12:
+plugin windows on macOS; parameter automation, delay compensation and plugin windows on Windows/Linux are next).
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

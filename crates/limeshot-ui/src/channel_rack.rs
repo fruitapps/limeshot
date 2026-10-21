@@ -539,7 +539,12 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         crate::theme::prop(12.0),
         if missing { t.danger } else { t.text },
     );
-    if resp.clicked() {
+    let plugin = crate::plugins::Target::Channel(ch.id);
+    if resp.clicked() && matches!(ch.instrument, Instrument::Plugin(_)) && app.plugins.is_loaded(plugin) {
+        // FL Studio: a plugin channel's button toggles the plugin's window.
+        app.select_channel(ch.id);
+        crate::plugin_window::toggle(app, plugin);
+    } else if resp.clicked() {
         // FL Studio: clicking a channel button toggles its Channel Settings window.
         let same = app.selected_channel() == Some(ch.id);
         app.select_channel(ch.id);
@@ -553,9 +558,14 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         browser::assign_sample(app, ch.id, &p.0);
     }
     let hover = format!(
-        "{} ({}) — click: Channel Settings · right-click: menu{}",
+        "{} ({}) — click: {} · right-click: menu{}",
         ch.name,
         ch.instrument.kind_label(),
+        if matches!(ch.instrument, Instrument::Plugin(_)) {
+            "plugin window"
+        } else {
+            "Channel Settings"
+        },
         if missing {
             " · sample or instrument missing"
         } else {
@@ -664,7 +674,13 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     }
     if ui.button("Channel Settings").clicked() {
         app.select_channel(ch.id);
-        app.show_window(Win::ChannelSettings);
+        let plugin = crate::plugins::Target::Channel(ch.id);
+        if app.plugins.is_loaded(plugin) {
+            app.plugins
+                .open_window(plugin, Some(crate::plugin_window::Tab::Settings));
+        } else {
+            app.show_window(Win::ChannelSettings);
+        }
         ui.close();
     }
     if ui.button("Rename…").clicked() {

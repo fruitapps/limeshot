@@ -10,13 +10,15 @@
    new gestures in the live app.
 3. **Done (session 11):** the owner's 19-item list (Playlist audio clips in the picker, Shift+drag, remembered clip
    length, drop ghost, plugin settings width, audition note-offs, graph overlay, Stop/Play silence, Browser preview,
-   tool cursors, window raising/pinning, hint panel, detents, 1/3-step snap; `progress.md`, Session 11). Plugin
-   windows (PLG-006) are next once the owner says so.
+   tool cursors, window raising/pinning, hint panel, detents, 1/3-step snap; `progress.md`, Session 11).
 4. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
    (loading, scanning, instancing, processing, state, latency; tested with built-in plugins and all 36 bundles
    installed on the dev Mac), plugin channels and plugin inserts in the model, engine and UI, a child-process scan
-   into a plugin database, and state in `.lime`. Next: plugin windows (PLG-006), plugin parameter automation
-   (PLG-007), delay compensation (PLG-009), crash isolation while playing (PLG-010), a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
+   into a plugin database, and state in `.lime`. Session 12 added plugin windows (PLG-006: the plugin's own editor
+   and a Settings tab, macOS; checked live with Vital, Serum 2, Surge XT and OTT). Next: plugin windows on Windows
+   (`HWND`) and Linux (`X11EmbedWindowID` + `IRunLoop`) once CI runs there, then FL's wrapper extras worth having
+   (presets ◀ ▶ and a presets menu, the keyboard-focus toggle, remembering window positions in the project), plugin
+   parameter automation (PLG-007), delay compensation (PLG-009), crash isolation while playing (PLG-010), a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in

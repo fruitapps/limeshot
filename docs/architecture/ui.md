@@ -124,6 +124,11 @@ Manual test procedure for what automation does not cover: see `docs/development/
 
 ## Known UI gaps
 
+**Plugin windows** (`plugin_window.rs`, D33) are separate: one egui viewport per open plugin channel or insert, with a
+Plugin / Settings tab row; on the Plugin tab `limeshot-plugins` places the plugin's native view in the window below
+the tabs and resizes the window when the plugin resizes itself. Their state lives in `PluginHost` next to the running
+instance, so a plugin that goes away closes its window.
+
 Window positions and the detached state are not saved with the project or settings; the Piano Roll has FL's tool strip
 (`piano_roll::Tool`, keys P B D T C E Z Y) but the Playlist has the Draw tool only; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
 custom-painted editors expose no accessibility labels.

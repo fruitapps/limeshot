@@ -1,6 +1,5 @@
 //! A VST3 plugin instance, split into its control-thread and audio-thread halves.
 
-use std::ffi::c_void;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -10,7 +9,7 @@ use vst3::{ComPtr, ComWrapper};
 
 use crate::host::{ComponentHandler, EventList, HostApp, MemoryStream, ParamChanges};
 use crate::util::from_wstr;
-use crate::{PluginError, Vst3Module};
+use crate::{PluginError, Vst3Editor, Vst3Module};
 pub use limeshot_dsp::{NoteEvent, NoteEventKind, Transport};
 
 /// Parameter changes queued from the control thread per block, and changed parameters per block.
@@ -413,6 +412,12 @@ impl Vst3Instance {
         edits
     }
 
+    /// Whether the plugin reported changed parameter values or settings (`restartComponent`)
+    /// since the last call, as plugins do after loading one of their own presets.
+    pub fn take_restart(&mut self) -> bool {
+        self.core.handler.restart_flags.swap(0, Ordering::Relaxed) != 0
+    }
+
     /// The plugin's latency in samples, for delay compensation.
     pub fn latency_samples(&self) -> u32 {
         // SAFETY: a plain query on the live processor.
@@ -473,15 +478,15 @@ impl Vst3Instance {
         Ok(())
     }
 
-    /// The editor, if the plugin has one (for PLG-006). Kept crate-internal until LimeShot can
-    /// parent native views.
-    #[allow(dead_code)]
-    pub(crate) fn controller_ptr(&self) -> *mut c_void {
-        self.core
-            .controller
-            .as_ref()
-            .map(|c| c.as_ptr() as *mut c_void)
-            .unwrap_or(std::ptr::null_mut())
+    /// The plugin's own editor, if it has one for this platform. Main thread only.
+    pub fn create_editor(&self) -> Option<Vst3Editor> {
+        let c = self.core.controller.as_ref()?;
+        // SAFETY: `createView` on the live controller; the returned view carries one reference,
+        // which the `ComPtr` takes over. The editor keeps the plugin alive through `core`.
+        unsafe {
+            let view = ComPtr::from_raw(c.createView(ViewType::kEditor))?;
+            Vst3Editor::new(view, self.core.clone(), self.core._module.is_builtin())
+        }
     }
 }
 

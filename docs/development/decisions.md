@@ -160,3 +160,16 @@ and parameter lists, so `process` neither allocates nor locks); both share one t
 plugins compiled into the crate (`testing`), so CI needs no installed plugins. Plugins are created on the main thread:
 several frameworks (SINE Player observed) trap when created elsewhere. Loading a module runs third-party code that can
 crash LimeShot, so scanning runs each bundle in a child process (PLG-010 covers isolating processing as well).
+
+### D33. Plugin editors in egui viewports, with the plugin's view as a child view
+**Why:** FL Studio's plugin windows (observed live, `fl-studio-analysis.md` §17) are one OS window per plugin with
+the host's tabs above the plugin's own view. LimeShot makes each window an egui immediate viewport (so the tabs and
+the Settings page are ordinary egui, sharing the app's state) and puts the plugin's `IPlugView` into a plain
+`NSView` added to that window's content view, below the tab row. eframe does not hand out the native handles of
+secondary viewports, so `limeshot-plugins` finds the `NSWindow` by its title (LimeShot makes plugin window titles
+unique); the FFI stays in that crate (`editor.rs`, objc2). `IPlugFrame::resizeView` resizes the container and the
+window at once, as plugins expect; LimeShot then sends the matching size as a viewport command, because eframe applies
+builder changes of immediate viewports only together with a command. The alternative, a separate borderless child
+window like FL's, needs its own key-window handling and was not needed: AppKit composites the plugin's layer-backed
+view above egui's surface. Windows (`HWND`) and Linux (`X11EmbedWindowID`, `IRunLoop`) need only the platform
+module; until then the Plugin tab lists the parameters.

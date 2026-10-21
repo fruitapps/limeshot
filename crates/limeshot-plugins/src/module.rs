@@ -70,6 +70,11 @@ impl Vst3Module {
         })
     }
 
+    /// Whether this is a factory compiled into the program (the built-in test plugins).
+    pub(crate) fn is_builtin(&self) -> bool {
+        self._lib.is_none()
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }

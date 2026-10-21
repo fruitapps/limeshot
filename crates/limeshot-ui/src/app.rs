@@ -879,6 +879,7 @@ impl LimeShotApp {
             })
             .inner;
         crate::workspace::show(self, &ctx, area, window_body);
+        crate::plugin_window::show_all(self, &ctx);
         // Last, when every control has described itself.
         toolbar::hint_panel(self, ui);
         dialogs::show(self, &ctx);

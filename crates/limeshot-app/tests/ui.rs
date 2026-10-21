@@ -3484,3 +3484,111 @@ fn dials_and_sliders_catch_at_their_default() {
     );
     assert!(h.state().0 > 0.52, "and lets go further on: {}", h.state().0);
 }
+
+#[test]
+fn a_plugin_channel_button_toggles_the_plugin_window_with_its_tabs() {
+    use limeshot_ui::plugin_window::{self, Tab};
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").id;
+    let target = Target::Channel(ch);
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(!h.state().plugins.is_window_open(target));
+
+    // FL Studio: the channel button opens the plugin's window (not Channel Settings).
+    let button = h.state().ui.rack.step_pos(ch, 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Primary);
+    assert!(h.state().plugins.is_window_open(target));
+    assert!(!h.state().is_window_open(Win::ChannelSettings));
+    for _ in 0..3 {
+        h.step();
+    }
+    let w = h.state().plugins.window(target).expect("window");
+    assert_eq!(w.tab, Tab::Editor);
+    assert!(!w.has_editor(), "Lime Test Tone has no editor");
+    assert!(
+        h.query_by_label_contains("no editor of its own").is_some(),
+        "the Plugin tab lists the parameters instead"
+    );
+    assert!(h.query_by_label("Level").is_some());
+
+    // The Settings tab is the channel's Channel Settings.
+    h.get_by_label("Settings").click();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert_eq!(h.state().plugins.window(target).map(|w| w.tab), Some(Tab::Settings));
+    assert!(h.query_by_label("Root").is_some(), "Channel Settings: root key");
+
+    // Closed and opened again, it comes back on the tab it was on.
+    plugin_window::toggle(h.state_mut(), target);
+    h.step();
+    assert!(!h.state().plugins.is_window_open(target));
+    plugin_window::toggle(h.state_mut(), target);
+    h.step();
+    assert_eq!(h.state().plugins.window(target).map(|w| w.tab), Some(Tab::Settings));
+
+    // A plugin changed while its window was open marks the project modified on close, even if the
+    // plugin did not report it.
+    h.state_mut().doc.mark_saved();
+    h.state_mut().plugins.set_param(target, 0, 0.125);
+    assert!(!h.state().doc.is_modified());
+    plugin_window::close(h.state_mut(), target);
+    assert!(h.state().doc.is_modified());
+
+    // Deleting the channel closes its window.
+    h.state_mut().plugins.open_window(target, None);
+    h.step();
+    h.state_mut().exec(Command::RemoveChannel(ch));
+    h.step();
+    assert!(!h.state().plugins.is_window_open(target));
+}
+
+#[test]
+fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
+    use limeshot_ui::plugin_window::Tab;
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(true);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 1;
+    for _ in 0..3 {
+        h.step();
+    }
+    menu_path(&mut h, &["+ Add effect", "Plugins", "LimeShot", "Lime Test Gain"]);
+    let fx = h.state().project().mixer.tracks[1].effects.clone();
+    let slot = fx.len();
+    let target = Target::Effect {
+        track: 1,
+        effect: fx[slot - 1].id,
+    };
+    h.step();
+    // The card's Editor button opens the window.
+    h.get_by_label("Editor").click();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(h.state().plugins.is_window_open(target));
+    limeshot_ui::plugin_window::toggle(h.state_mut(), target);
+    h.step();
+    // FL Studio: a click on the slot opens the plugin's window; a second click closes it.
+    h.get_by_label(&format!("{slot}. Lime Test Gain")).click();
+    for _ in 0..3 {
+        h.step();
+    }
+    let w = h.state().plugins.window(target).expect("window");
+    assert_eq!(w.tab, Tab::Editor);
+    assert!(w.has_editor(), "Lime Test Gain has an editor");
+    assert!(!w.shows_native_editor(), "no native window in the headless harness");
+    assert!(h.query_by_label_contains("cannot be shown here").is_some());
+    h.get_by_label(&format!("{slot}. Lime Test Gain")).click();
+    h.step();
+    assert!(!h.state().plugins.is_window_open(target));
+}

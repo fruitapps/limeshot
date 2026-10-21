@@ -2,10 +2,11 @@
 //! anywhere without installed plugins:
 //!
 //! * **Lime Test Gain** (effect): stereo in and out, one parameter (linear gain, 0–1), with a
-//!   separate controller class, as most commercial plugins have.
+//!   separate controller class, as most commercial plugins have, and a minimal editor.
 //! * **Lime Test Tone** (instrument): a sine for the last held key, one parameter (level), with
-//!   processor and controller in one object.
+//!   processor and controller in one object, and no editor.
 
+use std::cell::Cell;
 use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -301,11 +302,12 @@ macro_rules! one_param_controller {
                 self.value().set(value);
                 kResultOk
             }
-            unsafe fn setComponentHandler(&self, _handler: *mut IComponentHandler) -> tresult {
+            unsafe fn setComponentHandler(&self, handler: *mut IComponentHandler) -> tresult {
+                self.set_handler(handler);
                 kResultOk
             }
             unsafe fn createView(&self, _name: *const c_char) -> *mut IPlugView {
-                std::ptr::null_mut()
+                self.create_view()
             }
         }
     };
@@ -409,7 +411,9 @@ component!(Gain, Some(GAIN_CTRL_CID), true, false);
 stereo_processor!(Gain);
 
 struct GainController {
-    gain: Value,
+    gain: Arc<Value>,
+    /// The host's handler (owned by the host, which clears it before it goes).
+    handler: Cell<*mut IComponentHandler>,
 }
 
 impl Class for GainController {
@@ -419,6 +423,132 @@ impl Class for GainController {
 impl GainController {
     fn value(&self) -> &Value {
         &self.gain
+    }
+
+    fn set_handler(&self, handler: *mut IComponentHandler) {
+        self.handler.set(handler);
+    }
+
+    fn create_view(&self) -> *mut IPlugView {
+        ComWrapper::new(TestView {
+            gain: self.gain.clone(),
+            handler: self.handler.get(),
+            frame: Cell::new(std::ptr::null_mut()),
+            size: Cell::new((EDITOR_SIZE.0, EDITOR_SIZE.1)),
+            attached: Cell::new(false),
+        })
+        .to_com_ptr::<IPlugView>()
+        .map(|p| p.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+    }
+}
+
+/// The size Lime Test Gain's editor opens at.
+pub const EDITOR_SIZE: (i32, i32) = (320, 200);
+/// The size it asks for when it gets the key `r`.
+pub const EDITOR_RESIZED: (i32, i32) = (400, 260);
+
+/// Lime Test Gain's editor. It draws nothing (and never touches its parent, so it can be attached
+/// without a window); keys stand in for the mouse: `-` sets the gain to 0.5 as a user's edit
+/// would, `r` asks the host for [`EDITOR_RESIZED`].
+struct TestView {
+    gain: Arc<Value>,
+    handler: *mut IComponentHandler,
+    frame: Cell<*mut IPlugFrame>,
+    size: Cell<(i32, i32)>,
+    attached: Cell<bool>,
+}
+
+impl Class for TestView {
+    type Interfaces = (IPlugView,);
+}
+
+impl IPlugViewTrait for TestView {
+    unsafe fn isPlatformTypeSupported(&self, _type: FIDString) -> tresult {
+        kResultTrue
+    }
+    unsafe fn attached(&self, _parent: *mut c_void, _type: FIDString) -> tresult {
+        if self.attached.replace(true) {
+            return kResultFalse;
+        }
+        kResultOk
+    }
+    unsafe fn removed(&self) -> tresult {
+        self.attached.set(false);
+        kResultOk
+    }
+    unsafe fn onWheel(&self, _distance: f32) -> tresult {
+        kResultFalse
+    }
+    unsafe fn onKeyDown(&self, key: char16, _code: int16, _mods: int16) -> tresult {
+        // SAFETY: the host's handler and frame outlive the view (the host's contract).
+        unsafe {
+            match char::from_u32(u32::from(key)) {
+                Some('-') => {
+                    self.gain.set(0.5);
+                    if let Some(h) = ComRef::from_raw(self.handler) {
+                        h.beginEdit(0);
+                        h.performEdit(0, 0.5);
+                        h.endEdit(0);
+                    }
+                    kResultTrue
+                }
+                Some('r') => {
+                    let mut r = ViewRect {
+                        left: 0,
+                        top: 0,
+                        right: EDITOR_RESIZED.0,
+                        bottom: EDITOR_RESIZED.1,
+                    };
+                    if let Some(f) = ComRef::from_raw(self.frame.get()) {
+                        f.resizeView(std::ptr::null_mut(), &mut r);
+                    }
+                    kResultTrue
+                }
+                _ => kResultFalse,
+            }
+        }
+    }
+    unsafe fn onKeyUp(&self, _key: char16, _code: int16, _mods: int16) -> tresult {
+        kResultFalse
+    }
+    unsafe fn getSize(&self, size: *mut ViewRect) -> tresult {
+        if size.is_null() {
+            return kInvalidArgument;
+        }
+        let (w, h) = self.size.get();
+        // SAFETY: checked non-null.
+        unsafe {
+            *size = ViewRect {
+                left: 0,
+                top: 0,
+                right: w,
+                bottom: h,
+            }
+        };
+        kResultOk
+    }
+    unsafe fn onSize(&self, size: *mut ViewRect) -> tresult {
+        if size.is_null() {
+            return kInvalidArgument;
+        }
+        // SAFETY: checked non-null.
+        let r = unsafe { &*size };
+        self.size.set((r.right - r.left, r.bottom - r.top));
+        kResultOk
+    }
+    unsafe fn onFocus(&self, _state: TBool) -> tresult {
+        kResultOk
+    }
+    unsafe fn setFrame(&self, frame: *mut IPlugFrame) -> tresult {
+        self.frame.set(frame);
+        kResultOk
+    }
+    unsafe fn canResize(&self) -> tresult {
+        kResultTrue
+    }
+    unsafe fn checkSizeConstraint(&self, _rect: *mut ViewRect) -> tresult {
+        kResultOk
     }
 }
 
@@ -445,6 +575,13 @@ impl Class for Tone {
 impl Tone {
     fn value(&self) -> &Value {
         &self.level
+    }
+
+    fn set_handler(&self, _handler: *mut IComponentHandler) {}
+
+    /// Lime Test Tone has no editor.
+    fn create_view(&self) -> *mut IPlugView {
+        std::ptr::null_mut()
     }
 
     /// # Safety
@@ -617,7 +754,11 @@ impl IPluginFactoryTrait for Factory {
         let unknown = if cid == GAIN_CID {
             ComWrapper::new(Gain { gain: Value::new(1.0) }).to_com_ptr::<FUnknown>()
         } else if cid == GAIN_CTRL_CID {
-            ComWrapper::new(GainController { gain: Value::new(1.0) }).to_com_ptr::<FUnknown>()
+            ComWrapper::new(GainController {
+                gain: Arc::new(Value::new(1.0)),
+                handler: Cell::new(std::ptr::null_mut()),
+            })
+            .to_com_ptr::<FUnknown>()
         } else if cid == TONE_CID {
             ComWrapper::new(Tone {
                 level: Value::new(0.5),

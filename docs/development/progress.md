@@ -433,3 +433,43 @@ which wait for the owner's go-ahead. Verification: `cargo test --workspace` pass
 width (item 5), the Browser's preview panel (item 11) and the tool cursor (item 13) in the running app; the other
 items are covered by headless UI tests and engine tests, not by a live pass with real plugins (Serum's stuck
 notes, item 8, were reproduced and fixed in an engine test, not re-checked with Serum itself).
+
+## 2026-10-21 — Session 12: plugin windows
+
+The owner asked for plugin windows (PLG-006), checking first how FL Studio's plugin windows integrate with its own
+channel settings.
+
+1. **FL observed live** (FL Studio 2026.1.1, synthetic input; `fl-studio-analysis.md` §17, `fl-plugin-window-*.png`).
+   FL had no plugins scanned, so its Plugin Manager scanned the standard folders first (FL's own database; the
+   install is untouched). One floating window per plugin, titled "Vital (Master)" / "Surge XT Effects (Insert 1)",
+   with the plugin's view in a child window. The gear shows a page strip: Plugin editor, Plugin options (FL's wrapper
+   settings) and, for channels, Miscellaneous functions (the channel settings shared by every generator), plus
+   ON/PAN/VOL/PITCH/TRACK knobs (effects: ON/MIX LEVEL). The window takes each page's size and follows the plugin's
+   own resizing (it has no resize handle); a click on the channel button or the insert slot toggles it; it reopens
+   at the same place, size and page. Title bar: ▸ menu (presets, parameters, CPU, colour, channel state), keyboard
+   focus toggle, Presets ◀ ▶, captionize, close.
+2. **Editor hosting** (`limeshot-plugins/src/editor.rs`, D33). `Vst3Instance::create_editor` asks the controller for
+   its `IPlugView` and gives it the host's `IPlugFrame`; `Vst3Editor::attach` puts a container `NSView` (objc2) in
+   a window found with `NativeWindow::find`, below the host's tabs, and `resizeView` resizes container and window at
+   once before `onSize`. The editor keeps its plugin alive, and is detached (`removed`, container out of the window)
+   before the window goes. `Vst3Instance::take_restart` reports `restartComponent`. Windows and Linux compile with a
+   stub platform module. Lime Test Gain gained a minimal editor (keys stand in for the mouse: an edit, a resize
+   request), so `tests/host.rs` covers create, attach, edits, resizing, detach and drop without a window.
+3. **Plugin windows** (`limeshot-ui/src/plugin_window.rs`). One egui viewport per open plugin, titled like FL's;
+   Plugin tab (the native editor) and Settings tab (Channel Settings for a channel, the insert card for an effect).
+   The window is the editor's size plus the tabs on the Plugin tab and resizable on Settings; it remembers position,
+   tab and Settings size for the session, floats above the main window and hides while LimeShot is in the
+   background. The channel button of a plugin channel and the insert's name now toggle the window; the Editor
+   buttons work. Editor edits mark the project modified (performEdit, restartComponent, and a state comparison when
+   the window closes). Plugins without an editor get the parameter list on the Plugin tab. Headless UI tests drive
+   the channel button, the tabs, reopening, the slot and the Editor button.
+4. **Live check** (release build with a temporary HOME): Vital, Serum 2 and Surge XT channels and an OTT insert, as
+   listed in PLG-006's notes (tab switching and resizing, Vital's own resize corner, a knob edit marking the project
+   modified, close/reopen, toggling, quitting with a window open). Surge XT reading its Documents folder made macOS
+   show a privacy prompt for the dev `.app` wrapper; it was not answered, and the build was run from the shell
+   instead.
+
+Differences from FL: two tabs instead of three pages (no wrapper options page), no title-bar presets, menu,
+keyboard toggle or captionize, no ON/PAN/VOL strip, positions not saved in the project. Verification:
+`cargo test --workspace` passes; Clippy (`-D warnings`, also for `x86_64-pc-windows-msvc`), `cargo fmt --check` and
+`scripts/features.py check` are clean.

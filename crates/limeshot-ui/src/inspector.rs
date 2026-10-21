@@ -11,8 +11,17 @@ use limeshot_core::*;
 
 /// Body of the Channel Settings window for the selected channel.
 pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
+    page(app, ui, app.selected_channel());
+}
+
+/// The Channel Settings of channel `cid` (also the Settings tab of a plugin channel's window).
+pub fn channel_page(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId) {
+    page(app, ui, Some(cid));
+}
+
+fn page(app: &mut LimeShotApp, ui: &mut Ui, cid: Option<ChannelId>) {
     let t = Theme::current();
-    let Some(ch) = app.selected_channel().and_then(|c| app.project().channel(c).cloned()) else {
+    let Some(ch) = cid.and_then(|c| app.project().channel(c).cloned()) else {
         ui.add_space(16.0);
         ui.vertical_centered(|ui| ui.label(RichText::new("Add a channel to edit its sound.").color(t.text_dim)));
         return;

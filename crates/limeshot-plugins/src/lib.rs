@@ -10,6 +10,8 @@
 //! * [`Vst3Instance::new`] creates a plugin and splits it into the control-thread side
 //!   ([`Vst3Instance`]: parameters, state) and the audio-thread side ([`Vst3Processor`]: audio and
 //!   notes), which implements [`limeshot_dsp::effects::Effect`].
+//! * [`Vst3Instance::create_editor`] opens the plugin's own editor ([`Vst3Editor`]) for a window
+//!   of the host's ([`NativeWindow`]).
 //! * [`testing`] holds small plugins of LimeShot's own for tests that must not depend on what is
 //!   installed.
 //!
@@ -27,6 +29,7 @@
 #![allow(clippy::unnecessary_cast)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+mod editor;
 mod host;
 mod instance;
 mod module;
@@ -34,6 +37,7 @@ pub mod scan;
 pub mod testing;
 mod util;
 
+pub use editor::{EditorSize, NativeWindow, Vst3Editor};
 pub use instance::{NoteEvent, NoteEventKind, ParamInfo, Transport, Vst3Instance, Vst3Processor};
 pub use module::Vst3Module;
 

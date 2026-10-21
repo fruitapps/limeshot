@@ -68,11 +68,22 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                         });
                     }
                     let name = e.name();
-                    ui.label(
-                        RichText::new(format!("{}. {name}", pos + 1))
-                            .font(semibold(12.0))
-                            .color(if e.enabled { t.text } else { t.text_dim }),
+                    let label = ui.add(
+                        egui::Label::new(
+                            RichText::new(format!("{}. {name}", pos + 1))
+                                .font(semibold(12.0))
+                                .color(if e.enabled { t.text } else { t.text_dim }),
+                        )
+                        .sense(egui::Sense::click()),
                     );
+                    // FL Studio: a click on a plugin slot opens (or closes) the plugin's window.
+                    let target = crate::plugins::Target::Effect { track, effect: e.id };
+                    if e.kind == EffectKind::Plugin && app.plugins.is_loaded(target) {
+                        let label = label.hint("Click to open or close the plugin's window");
+                        if label.clicked() {
+                            crate::plugin_window::toggle(app, target);
+                        }
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.small_button("×").hint("Remove").clicked() {
                             app.exec(Command::RemoveEffect { track, effect: e.id });
