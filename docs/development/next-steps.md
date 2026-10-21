@@ -18,4 +18,7 @@
 8. **Piano Roll tools:** paint/slice/select tool palette (PR-012), scale highlighting (PR-013), quantize dialog.
 9. **Detachable panels** (UI-007) so the Channel Rack and Piano Roll can be seen together.
 10. **Packaging** (PF-006).
+    Also: `.flp` import follow-ups (APP-022, `docs/research/flp-format.md`): automation clip curves into LimeShot
+    automation clips, FL's mixer effects that have a LimeShot equivalent, further arrangements, and test files made
+    in an older FL version.
 11. **Plugin hosting** (PLG-*): CLAP first, in an isolated crate.

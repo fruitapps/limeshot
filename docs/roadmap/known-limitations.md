@@ -41,7 +41,12 @@ Current as of 2026-10-20 (session 5). Everything here is either not implemented 
 * No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
   (`docs/roadmap/keybindings.json`); settings are spread over menus and dialogs (`docs/roadmap/settings.json`).
 * One autosave slot per user: two LimeShot instances share it.
-* `.flp` files cannot be imported.
+* `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
+  pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer
+  effects and routing, automation clip curves, layers, markers and further arrangements are dropped (the toast says
+  how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
+  without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
+  LimeShot cannot write `.flp`.
 * No plugin hosting.
 * Window positions, sizes and detached/maximised states are not remembered between sessions.
 * Accessibility: custom-painted editors expose no accessibility labels.

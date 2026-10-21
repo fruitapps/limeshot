@@ -1,7 +1,7 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-20 (session 4).
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-21 (session 6).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
@@ -10,11 +10,11 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **236**
 - MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 102, RESEARCHED 2, IN_PROGRESS 10, IMPLEMENTED 34, VERIFIED 86, DEFERRED 2
+- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 34, VERIFIED 87, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 25 | 12 | 4 | 2 | 7 |
+| Application | 25 | 13 | 4 | 2 | 6 |
 | Channel Rack | 19 | 11 | 2 | 0 | 6 |
 | Piano Roll | 26 | 7 | 8 | 0 | 11 |
 | Playlist | 28 | 12 | 5 | 2 | 9 |
@@ -56,7 +56,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-019 | Project bundle (zip with samples) | P2 |  | NOT_STARTED | Export project + samples as a single archive. | — |
 | APP-020 | MIDI settings | P1 |  | NOT_STARTED | Device list, enable inputs, controller type. | — |
 | APP-021 | Plugin manager | P2 |  | NOT_STARTED | Scan folders for CLAP/VST3/AU. | — |
-| APP-022 | Import FL Studio projects (.flp) | P3 |  | RESEARCHED | Read a documented subset of .flp. Needs an independently documented format description.<br>*Clean-room: only from public/independent format documentation; no decompilation.* | — |
+| APP-022 | Import FL Studio projects (.flp) | P3 |  | VERIFIED | File › Open (and `limeshot song.flp`, `limeshot-cli import-flp in.flp [out.lime]`) reads an .flp as a new unsaved project titled after the file; Save asks where to write the .lime. Converted: tempo, time signature, title, channels (samplers with their sample, `%FLStudioFactoryData%` resolved; plugin generators become LimeSynth), volume, pan, mixer insert, patterns with names and notes (key, position, length, velocity; steps), and the first arrangement's pattern and audio clips with track, offset and mute. A toast reports what was left out (plugin channels, automation clips, unknown items). Format notes: docs/research/flp-format.md.<br>*Clean-room: from the bytes of project files (FL's shipped templates/demos read-only and files saved by FL 26.1.1 for the tests); no decompilation. Not converted: plugin states, mixer effects and routing, automation curves, layers, further arrangements. Only FL 26.1.1 was used to make test files; older versions are covered by the shipped demos importing without errors.* | `limeshot-project tests/flp.rs::fl26_saved_steps_project`<br>`limeshot-project tests/flp.rs::fl26_saved_notes_project`<br>`limeshot-project tests/flp.rs::fl26_saved_arrangement_project`<br>`limeshot-project tests/flp.rs::installed_fl_projects_all_import`<br>`limeshot-project tests/flp.rs::fixture_files_match_their_definitions`<br>`limeshot-project src/flp.rs::tests::hostile_bytes_never_panic`<br>`limeshot-app tests/ui.rs::opening_an_flp_imports_it_as_an_unsaved_project` |
 | APP-023 | Welcome window | P3 |  | NOT_STARTED | Planned (offline parts only: templates, recent files, demo song). | — |
 | APP-024 | Autosave interval setting | P2 |  | VERIFIED | Options › Autosave: off, 1, 2, 5 (default) or 10 minutes; stored in the settings. | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
 | APP-025 | Settings window | P2 |  | IN_PROGRESS | Audio settings have a dialog; UI scale, autosave and browser folders are set from menus and the Browser. A single window with pages is planned; settings.json tracks every setting. | — |

@@ -17,6 +17,8 @@ cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
 cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth]
 cargo run -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid      # or import-midi in.mid out.lime
+cargo run -p limeshot-app --bin limeshot-cli -- import-flp song.flp out/song.lime    # FL Studio project → .lime
+cargo run -p limeshot-project --example make_flp_fixtures                           # regenerate synthetic .flp fixtures
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
@@ -32,7 +34,7 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 | Crate | Role |
 |---|---|
 | `limeshot-core` | time (960 PPQ ticks, exact `Timeline`), `Project` model, `Command` enum, `Document` (undo/redo, gestures) |
-| `limeshot-project` | `.lime` I/O: versioned envelope, `migrate`, unknown-field preservation, atomic save, relative sample paths |
+| `limeshot-project` | `.lime` I/O: versioned envelope, `migrate`, unknown-field preservation, atomic save, relative sample paths; `midi` (SMF), `flp` (FL Studio import, format notes in `docs/research/flp-format.md`) |
 | `limeshot-dsp` | oscillators (PolyBLEP), ADSR, pan law, dB, WAV read/write |
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
 | `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
@@ -65,13 +67,15 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-20, session 5)
+## Current state (2026-10-21, session 6)
 * Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
   yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done. Session 5 added audio
-  clips, automation clips, MIDI file import/export, the LimeSynth filter/LFO and autosave/recovery.
+  clips, automation clips, MIDI file import/export, the LimeSynth filter/LFO and autosave/recovery. Session 6 added
+  FL Studio `.flp` import (File › Open, command line, CLI), tested on projects saved by FL 26.1.1 and on all 164
+  projects FL ships.
 * UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
   decision D24). **FL Studio is the source for UI/UX; ArtCraft only for the broad visual style.**
-* 236 features tracked: 86 verified, 34 implemented, 10 in progress, 102 not started, 2 researched, 2 deferred.
+* 236 features tracked: 87 verified, 34 implemented, 10 in progress, 102 not started, 1 researched, 2 deferred.
   76 FL shortcuts and 27 FL settings tracked in their own inventories.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 

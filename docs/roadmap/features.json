@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-20 (session 4)",
+  "updated": "2026-10-21 (session 6)",
   "features": [
     {
       "id": "APP-001",
@@ -658,26 +658,38 @@
       "name": "Import FL Studio projects (.flp)",
       "description": "Interoperability with existing projects.",
       "fl_reference": ".flp is the native format.",
-      "limeshot_behavior": "Read a documented subset of .flp. Needs an independently documented format description.",
+      "limeshot_behavior": "File › Open (and `limeshot song.flp`, `limeshot-cli import-flp in.flp [out.lime]`) reads an .flp as a new unsaved project titled after the file; Save asks where to write the .lime. Converted: tempo, time signature, title, channels (samplers with their sample, `%FLStudioFactoryData%` resolved; plugin generators become LimeSynth), volume, pan, mixer insert, patterns with names and notes (key, position, length, velocity; steps), and the first arrangement's pattern and audio clips with track, offset and mute. A toast reports what was left out (plugin channels, automation clips, unknown items). Format notes: docs/research/flp-format.md.",
       "priority": "P3",
-      "status": "RESEARCHED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-project tests/flp.rs::fl26_saved_steps_project",
+        "limeshot-project tests/flp.rs::fl26_saved_notes_project",
+        "limeshot-project tests/flp.rs::fl26_saved_arrangement_project",
+        "limeshot-project tests/flp.rs::installed_fl_projects_all_import",
+        "limeshot-project tests/flp.rs::fixture_files_match_their_definitions",
+        "limeshot-project src/flp.rs::tests::hostile_bytes_never_panic",
+        "limeshot-app tests/ui.rs::opening_an_flp_imports_it_as_an_unsaved_project"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/menu_file.htm",
-          "docs/research/rea-findings.md"
+          "docs/research/flp-format.md",
+          "crates/limeshot-project/tests/fixtures/flp/fl26/README.md"
         ]
       },
-      "notes": "Clean-room: only from public/independent format documentation; no decompilation."
+      "notes": "Clean-room: from the bytes of project files (FL's shipped templates/demos read-only and files saved by FL 26.1.1 for the tests); no decompilation. Not converted: plugin states, mixer effects and routing, automation curves, layers, further arrangements. Only FL 26.1.1 was used to make test files; older versions are covered by the shipped demos importing without errors."
     },
     {
       "id": "SEQ-001",

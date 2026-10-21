@@ -143,3 +143,32 @@ Verification: `cargo test --workspace` (123 tests) passes; Clippy (`-D warnings`
 
 Not verified: Windows/Linux (CI results still unread), exported MIDI in a third-party program, automation editing by a
 person (the curve area is small at the default track height).
+
+## 2026-10-21 — Session 6: FL Studio project import
+
+Done (each a commit, pushed to `origin/main`):
+1. **`.flp` import** (APP-022, now VERIFIED): `limeshot-project::flp` reads the event stream and converts tempo, time
+   signature, channels, samples, levels, inserts, patterns, notes and the first arrangement's pattern and audio clips.
+   File › Open accepts `.flp` and opens it as a new unsaved project (Save asks for the `.lime`), as does
+   `limeshot song.flp`; the toast shows the import report. CLI: `limeshot-cli import-flp in.flp [out.lime]`.
+2. **Test files saved by FL Studio 26.1.1** (`crates/limeshot-project/tests/fixtures/flp/fl26/`, how each was made is
+   in its README): drum steps, piano-roll notes with lengths and velocities on a 3x Osc channel plus a named pattern,
+   and an arrangement with pattern, audio, automation and muted clips at 128 BPM in 3/4. Plus six synthetic files
+   from `make_flp_fixtures` and an import of all 164 projects FL ships.
+3. **Findings from the FL-saved files** (all in `docs/research/flp-format.md`): playlist item records are 80 bytes in
+   FL 24–25 and 88 in FL 26 — the earlier "240 bytes" was a multiple of 80 by chance, so e.g. `NewStuff.flp` lost two
+   thirds of its clips; mute is bit 0x2000 of the word at offset 18 (the code had guessed 0x1000); FL shows key 60 as
+   C5 and velocity as a percentage of 128; FL 26 writes pattern names after the channel list under a second event 65;
+   changing the time signature rewrites pattern clip lengths to whole bars.
+
+Driving FL Studio for fixtures (synthetic CoreGraphics input): FL ignores quick clicks inside its editors — hold the
+button ~0.3 s (mouse move, wait, down, wait, up). The native menu bar does not stay open; use FL's own menus in the
+window. FL crashed once (its own access violation) when a sample was dragged from the browser before its preview had
+loaded; clicking the sample first and waiting a few seconds avoided it. Save often while building a fixture. The
+welcome dialog's close button at first-start sometimes does nothing until FL finishes loading the template.
+
+Verification: `cargo test --workspace` (136 tests) passes; Clippy (`-D warnings`), `cargo fmt --check` and
+`scripts/features.py check` are clean.
+
+Not verified: `.flp` files from FL versions other than 26.1.1 with known content (older ones only import without
+errors); opening an `.flp` through the real file dialog by a person (the headless test calls the same `open_path`).
