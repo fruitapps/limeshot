@@ -272,3 +272,27 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    `Command::SetChannelGroup`; audio-clip channels start in "Audio". The Channel Rack header has the All / group /
    Unsorted dropdown, Alt+G and the channel menu name the selected channels' group (KB-093). Tested in core and UI.
    This completes the session 7 expansion plan. VST3 hosting is postponed at the owner's request (2026-10-21).
+
+## 2026-10-21 — Session 9: fixes from the owner's hands-on test
+
+The owner tested session 8's build by hand and listed 16 issues (`next-steps.md`, Mandatory 2). Each is fixed and
+covered by a headless UI test unless noted.
+
+1. **Windows and the Mixer (issues 1, 4–9, 11, 12).** Restoring a maximised window kept the maximised size: egui
+   stores a window's size, and `fixed_rect` while maximised overwrote it. The workspace now remembers each window's
+   floating rectangle and puts it back for one frame on restore (unconstrained that frame, or egui clamps it with
+   the old size). Mixer names are typed in place (double-click a strip's name, click the track panel's; the old
+   name starts selected; Enter or clicking elsewhere keeps it, Esc cancels) instead of the rename popup. The track
+   panel's Output menu lists each target with the route button's four entries (route / sidechain, "only"
+   variants). The send knob used 0–1 linear gain while sends go to +6 dB (2.0), so 0 dB sat at the end and higher
+   levels overshot the arc; it now shares the faders' cube-root travel (0 dB at about 80 %). The strips' scroll bar
+   is a thin bar in its own gutter (the theme's scroll bars no longer use egui's bright foreground colour).
+   Double-click: LimeShot's knobs and faders already reset, but egui's sliders only sense drags, so their response
+   never reports a double-click; `widgets::reset_on_double_click` now resets the Mixer track panel's volume, pan and
+   send sliders, the effect cards and every Channel Settings slider to their defaults. **Insert default (issue 9):**
+   the −1.9 dB was `MixerTrack::new`'s 0.8 linear gain, a confusion with FL Studio's fader *position* (0 dB sits at
+   about 80 % of an FL fader, which goes to +5.6 dB). FL Studio, Ableton Live, Logic and Reaper all start a new
+   mixer track at 0 dB, so new inserts are now 0 dB (and that is the fader's double-click default, where its tick
+   already was). The Channel Rack reports the size its content needs, so its window never hides steps or shows
+   fewer than five channels; the Mixer's minimum is the master and two strips next to a track panel kept at its
+   full width (its EQ knobs were cut off when the panel shrank to 45 % of a narrow window), and a whole strip high.

@@ -103,7 +103,9 @@ impl Win {
     pub fn min_size(self) -> egui::Vec2 {
         match self {
             Win::ChannelSettings => vec2(300.0, 260.0),
-            Win::Mixer => vec2(420.0, 300.0),
+            // The master and two strips next to the full-width track panel (its EQ knobs), and
+            // a whole strip from its name down to the route button.
+            Win::Mixer => vec2(560.0, 372.0),
             _ => vec2(360.0, 200.0),
         }
     }
@@ -124,6 +126,13 @@ pub struct Workspace {
     pub reset_layout: bool,
     /// Bring this window to the front on the next frame.
     raise: Option<Win>,
+    /// Each window's last floating (not maximised) rectangle, to restore after maximising.
+    normal_rect: [Option<Rect>; 5],
+    /// Put the window back at `normal_rect` on the next frame (it was just restored).
+    restore: [bool; 5],
+    /// The size each window's content needs, reported by its body (Channel Rack: every step
+    /// and five channels), on top of `Win::min_size`.
+    content_min: [Option<egui::Vec2>; 5],
 }
 
 impl Default for Workspace {
@@ -145,6 +154,9 @@ impl Default for Workspace {
             area: Rect::NOTHING,
             reset_layout: true,
             raise: Some(Win::ChannelRack),
+            normal_rect: [None; 5],
+            restore: [false; 5],
+            content_min: [None; 5],
         }
     }
 }
@@ -179,6 +191,30 @@ impl Workspace {
 
     pub fn close(&mut self, w: Win) {
         self.state_mut(w).open = false;
+    }
+
+    /// A window body reports the size its content needs; the window is never smaller.
+    pub fn set_content_min(&mut self, w: Win, size: egui::Vec2) {
+        self.content_min[w.index()] = Some(size);
+    }
+
+    /// The smallest size of `w`'s window: its own minimum, what its content needs, at most the
+    /// workspace.
+    pub fn min_size(&self, w: Win) -> egui::Vec2 {
+        let min = self.content_min[w.index()].map_or(w.min_size(), |c| c.max(w.min_size()));
+        if self.area.is_positive() {
+            min.min(self.area.size())
+        } else {
+            min
+        }
+    }
+
+    /// The maximise/restore button: restoring puts the window back where it was before.
+    pub fn toggle_maximized(&mut self, w: Win) {
+        let s = self.state_mut(w);
+        s.maximized = !s.maximized;
+        let restored = !s.maximized;
+        self.restore[w.index()] = restored;
     }
 }
 
@@ -284,7 +320,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             .frame(frame)
             .resizable(!st.maximized)
             .movable(!st.maximized)
-            .min_size(w.min_size())
+            .min_size(app.ui.workspace.min_size(w))
             .constrain_to(area);
         if st.maximized {
             win = win.fixed_rect(area);
@@ -299,6 +335,13 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             if reset {
                 win = win.current_pos(def.min);
             }
+            // Restoring after maximise: egui kept the maximised size, so set the old rectangle
+            // for one frame (a window that started maximised goes to its default place).
+            if std::mem::take(&mut app.ui.workspace.restore[w.index()]) {
+                let back = app.ui.workspace.normal_rect[w.index()].unwrap_or(def);
+                // Not constrained this frame: egui would clamp with the maximised size.
+                win = win.fixed_rect(back.intersect(area)).constrain(false);
+            }
         }
         let resp = win.show(ctx, |ui| {
             let actions = title_bar(ui, &title, st, false);
@@ -306,6 +349,9 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             actions
         });
         if let Some(r) = resp {
+            if !st.maximized {
+                app.ui.workspace.normal_rect[w.index()] = Some(r.response.rect);
+            }
             if r.response.contains_pointer() && ctx.input(|i| i.pointer.any_pressed()) {
                 app.ui.focus = w.focus();
             }
@@ -321,12 +367,12 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
 }
 
 fn apply(app: &mut LimeShotApp, w: Win, a: TitleActions) {
+    if a.maximize {
+        app.ui.workspace.toggle_maximized(w);
+    }
     let s = app.ui.workspace.state_mut(w);
     if a.close {
         s.open = false;
-    }
-    if a.maximize {
-        s.maximized = !s.maximized;
     }
     if a.detach {
         s.detached = !s.detached;

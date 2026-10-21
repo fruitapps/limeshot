@@ -117,20 +117,15 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                         let mut v = cur;
                         ui.spacing_mut().slider_width = (ui.available_width() - 74.0).max(60.0);
                         let unit = spec.unit;
-                        let r = ui.add(
-                            egui::Slider::new(&mut v, spec.min..=spec.max)
-                                .logarithmic(spec.log)
-                                .custom_formatter(move |x, _| format_value(x as f32, unit)),
+                        let r = crate::widgets::reset_on_double_click(
+                            ui.add(
+                                egui::Slider::new(&mut v, spec.min..=spec.max)
+                                    .logarithmic(spec.log)
+                                    .custom_formatter(move |x, _| format_value(x as f32, unit)),
+                            ),
+                            &mut v,
+                            spec.default,
                         );
-                        if r.double_clicked() {
-                            app.exec(Command::SetEffectParam {
-                                track,
-                                effect: e.id,
-                                index: i,
-                                value: spec.default,
-                            });
-                            return;
-                        }
                         let cmd = crate::widgets::user_changed(&r).then_some(Command::SetEffectParam {
                             track,
                             effect: e.id,

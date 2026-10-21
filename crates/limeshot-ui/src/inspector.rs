@@ -4,7 +4,7 @@
 use crate::app::LimeShotApp;
 use crate::browser;
 use crate::theme::{Theme, mono, rgb, semibold};
-use crate::widgets::{section, segmented};
+use crate::widgets::{reset_on_double_click as reset, section, segmented};
 use egui::{Align2, CornerRadius, DragValue, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::*;
 
@@ -181,6 +181,8 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
         }
     }
     let mut q = p.clone();
+    // Double-click resets a slider to the instrument's default.
+    let d = SamplerParams::default();
     let mut changed: Option<egui::Response> = None;
     let mut track = |r: egui::Response, c: bool| {
         if c || r.drag_started() || r.drag_stopped() {
@@ -190,35 +192,54 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
     ui.add_space(4.0);
     section(ui, "Playback");
     row(ui, "Gain", |ui| {
-        let r = ui.add(egui::Slider::new(&mut q.gain_db, -24.0..=12.0).suffix(" dB"));
+        let r = reset(
+            ui.add(egui::Slider::new(&mut q.gain_db, -24.0..=12.0).suffix(" dB")),
+            &mut q.gain_db,
+            d.gain_db,
+        );
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Pitch", |ui| {
-        let r = ui.add(
-            egui::Slider::new(&mut q.pitch, -24.0..=24.0)
-                .suffix(" st")
-                .step_by(0.01),
+        let r = reset(
+            ui.add(
+                egui::Slider::new(&mut q.pitch, -24.0..=24.0)
+                    .suffix(" st")
+                    .step_by(0.01),
+            ),
+            &mut q.pitch,
+            d.pitch,
         );
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Start", |ui| {
-        let r =
-            ui.add(egui::Slider::new(&mut q.start, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
+        let r = reset(
+            ui.add(egui::Slider::new(&mut q.start, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0))),
+            &mut q.start,
+            d.start,
+        );
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "End", |ui| {
-        let r = ui.add(egui::Slider::new(&mut q.end, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)));
+        let r = reset(
+            ui.add(egui::Slider::new(&mut q.end, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0))),
+            &mut q.end,
+            d.end,
+        );
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
     row(ui, "Release", |ui| {
-        let r = ui.add(
-            egui::Slider::new(&mut q.release_ms, 0.0..=2000.0)
-                .logarithmic(true)
-                .suffix(" ms"),
+        let r = reset(
+            ui.add(
+                egui::Slider::new(&mut q.release_ms, 0.0..=2000.0)
+                    .logarithmic(true)
+                    .suffix(" ms"),
+            ),
+            &mut q.release_ms,
+            d.release_ms,
         );
         let c = crate::widgets::user_changed(&r);
         track(r, c);
@@ -244,6 +265,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
 
 fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthParams) {
     let mut q = p.clone();
+    let d = SynthParams::default();
     let mut waveform_changed = false;
     let mut changed: Option<egui::Response> = None;
     let mut track = |r: egui::Response| {
@@ -263,50 +285,70 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
         }
     });
     row(ui, "Octave", |ui| {
-        track(ui.add(egui::Slider::new(&mut q.octave, -3..=3)))
+        track(reset(
+            ui.add(egui::Slider::new(&mut q.octave, -3..=3)),
+            &mut q.octave,
+            d.octave,
+        ))
     });
     row(ui, "Detune", |ui| {
         track(
-            ui.add(egui::Slider::new(&mut q.detune_cents, -50.0..=50.0).suffix(" ct"))
-                .on_hover_text("A second, detuned oscillator; 0 turns it off"),
+            reset(
+                ui.add(egui::Slider::new(&mut q.detune_cents, -50.0..=50.0).suffix(" ct")),
+                &mut q.detune_cents,
+                d.detune_cents,
+            )
+            .on_hover_text("A second, detuned oscillator; 0 turns it off"),
         )
     });
     row(ui, "Gain", |ui| {
-        track(ui.add(egui::Slider::new(&mut q.gain_db, -36.0..=12.0).suffix(" dB")))
+        track(reset(
+            ui.add(egui::Slider::new(&mut q.gain_db, -36.0..=12.0).suffix(" dB")),
+            &mut q.gain_db,
+            d.gain_db,
+        ))
     });
     ui.add_space(4.0);
     section(ui, "Envelope");
     row(ui, "Attack", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.attack_ms, 0.0..=2000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),
-        )
+            &mut q.attack_ms,
+            d.attack_ms,
+        ))
     });
     row(ui, "Decay", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.decay_ms, 0.0..=4000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),
-        )
+            &mut q.decay_ms,
+            d.decay_ms,
+        ))
     });
     row(ui, "Sustain", |ui| {
-        track(
+        track(reset(
             ui.add(egui::Slider::new(&mut q.sustain, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0))),
-        )
+            &mut q.sustain,
+            d.sustain,
+        ))
     });
     row(ui, "Release", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.release_ms, 0.0..=4000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),
-        )
+            &mut q.release_ms,
+            d.release_ms,
+        ))
     });
     // ADSR picture.
     let t = Theme::current();
@@ -328,76 +370,94 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     section(ui, "Filter");
     row(ui, "Cutoff", |ui| {
         track(
-            ui.add(
-                egui::Slider::new(&mut q.cutoff_hz, 20.0..=20_000.0)
-                    .logarithmic(true)
-                    .custom_formatter(|v, _| {
-                        if v >= 19_999.0 {
-                            "Open".into()
-                        } else if v >= 1000.0 {
-                            format!("{:.1} kHz", v / 1000.0)
-                        } else {
-                            format!("{v:.0} Hz")
-                        }
-                    }),
+            reset(
+                ui.add(
+                    egui::Slider::new(&mut q.cutoff_hz, 20.0..=20_000.0)
+                        .logarithmic(true)
+                        .custom_formatter(|v, _| {
+                            if v >= 19_999.0 {
+                                "Open".into()
+                            } else if v >= 1000.0 {
+                                format!("{:.1} kHz", v / 1000.0)
+                            } else {
+                                format!("{v:.0} Hz")
+                            }
+                        }),
+                ),
+                &mut q.cutoff_hz,
+                d.cutoff_hz,
             )
             .on_hover_text("Low-pass cutoff (12 dB/oct); fully right leaves the filter open"),
         )
     });
     row(ui, "Resonance", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.resonance, 0.0..=0.95).custom_formatter(|v, _| format!("{:.0}%", v * 100.0)),
             ),
-        )
+            &mut q.resonance,
+            d.resonance,
+        ))
     });
     row(ui, "Envelope", |ui| {
         track(
-            ui.add(
-                egui::Slider::new(&mut q.filter_env, 0.0..=8.0)
-                    .fixed_decimals(1)
-                    .suffix(" oct"),
+            reset(
+                ui.add(
+                    egui::Slider::new(&mut q.filter_env, 0.0..=8.0)
+                        .fixed_decimals(1)
+                        .suffix(" oct"),
+                ),
+                &mut q.filter_env,
+                d.filter_env,
             )
             .on_hover_text("How far each note opens the cutoff at its start"),
         )
     });
     row(ui, "Env decay", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.filter_decay_ms, 1.0..=4000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),
-        )
+            &mut q.filter_decay_ms,
+            d.filter_decay_ms,
+        ))
     });
     ui.add_space(4.0);
     section(ui, "LFO");
     row(ui, "Rate", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.lfo_rate_hz, 0.05..=20.0)
                     .logarithmic(true)
                     .suffix(" Hz"),
             ),
-        )
+            &mut q.lfo_rate_hz,
+            d.lfo_rate_hz,
+        ))
     });
     row(ui, "Vibrato", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.vibrato_cents, 0.0..=100.0)
                     .fixed_decimals(0)
                     .suffix(" ct"),
             ),
-        )
+            &mut q.vibrato_cents,
+            d.vibrato_cents,
+        ))
     });
     row(ui, "To cutoff", |ui| {
-        track(
+        track(reset(
             ui.add(
                 egui::Slider::new(&mut q.lfo_cutoff, 0.0..=4.0)
                     .fixed_decimals(1)
                     .suffix(" oct"),
             ),
-        )
+            &mut q.lfo_cutoff,
+            d.lfo_cutoff,
+        ))
     });
     if waveform_changed {
         app.exec(Command::SetInstrument {

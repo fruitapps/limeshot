@@ -155,6 +155,7 @@ impl Theme {
             s.spacing.button_padding = egui::vec2(8.0, 3.0);
             s.spacing.interact_size.y = 22.0;
             s.spacing.slider_rail_height = 3.0;
+            s.spacing.scroll = scroll_style();
             s.spacing.window_margin = egui::Margin::same(10);
             s.spacing.menu_margin = egui::Margin::same(6);
             s.text_styles.insert(egui::TextStyle::Body, prop(12.5));
@@ -231,4 +232,37 @@ pub fn prop(size: f32) -> FontId {
 
 pub fn semibold(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("semibold".into()))
+}
+
+/// Scroll bars: thin floating bars in the widget fills (raised, hover, accent) instead of egui's
+/// bright foreground-coloured bar.
+pub fn scroll_style() -> egui::style::ScrollStyle {
+    egui::style::ScrollStyle {
+        bar_width: 8.0,
+        floating_width: 4.0,
+        foreground_color: false,
+        dormant_background_opacity: 0.0,
+        active_background_opacity: 0.0,
+        interact_background_opacity: 0.5,
+        dormant_handle_opacity: 0.0,
+        active_handle_opacity: 0.8,
+        interact_handle_opacity: 1.0,
+        ..egui::style::ScrollStyle::floating()
+    }
+}
+
+/// A solid thin bar with its own gutter, for content that must not be covered (Mixer strips).
+pub fn gutter_scroll_style() -> egui::style::ScrollStyle {
+    egui::style::ScrollStyle {
+        bar_width: 6.0,
+        bar_inner_margin: 3.0,
+        foreground_color: false,
+        dormant_background_opacity: 0.6,
+        active_background_opacity: 0.8,
+        interact_background_opacity: 1.0,
+        dormant_handle_opacity: 0.7,
+        active_handle_opacity: 0.9,
+        interact_handle_opacity: 1.0,
+        ..egui::style::ScrollStyle::solid()
+    }
 }

@@ -507,7 +507,8 @@ impl MixerTrack {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            volume: 0.8,
+            // 0 dB, FL Studio's insert default.
+            volume: 1.0,
             pan: 0.0,
             muted: false,
             solo: false,
@@ -740,7 +741,7 @@ impl Project {
         let tracks = self.mixer.tracks.len();
         let mut max_id = 0;
         for t in &mut self.mixer.tracks {
-            t.volume = finite(t.volume, 0.8).clamp(0.0, 2.0);
+            t.volume = finite(t.volume, 1.0).clamp(0.0, 2.0);
             t.pan = finite(t.pan, 0.0).clamp(-1.0, 1.0);
             for (i, b) in t.eq.iter_mut().enumerate() {
                 *b = b.sanitized(i);

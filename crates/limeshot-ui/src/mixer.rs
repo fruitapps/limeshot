@@ -7,11 +7,13 @@
 
 use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, mono, rgb, semibold};
-use crate::widgets::{fader, knob, meter, panel_header, section, toggle_label};
+use crate::widgets::{fader, knob, meter, panel_header, reset_on_double_click as reset, section, toggle_label};
 use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use limeshot_core::{AutomationTarget, Command, EqBand};
 
 const STRIP_W: f32 = 68.0;
+/// The track panel's width.
+const SIDE_W: f32 = 300.0;
 
 #[derive(Default)]
 pub struct State {
@@ -22,11 +24,59 @@ pub struct State {
     pub eq_graph: Option<Rect>,
     /// The EQ band being dragged in the graph.
     eq_drag: Option<usize>,
+    /// A track name being typed in place (strip or track panel).
+    pub rename: Option<Rename>,
+    /// Strip name labels drawn in the last frame: (strip, rectangle).
+    pub name_rects: Vec<(u16, Rect)>,
+    /// The track panel's name label drawn in the last frame.
+    pub panel_name: Option<Rect>,
+    /// Send-level knobs drawn in the last frame: (strip, rectangle).
+    pub send_knobs: Vec<(u16, Rect)>,
+}
+
+/// An inline rename of a mixer track's name.
+pub struct Rename {
+    pub track: u16,
+    pub text: String,
+    /// Edited in the track panel (else in the strip).
+    pub in_panel: bool,
+    /// Give the text field the keyboard focus on its first frame.
+    focus: bool,
+}
+
+impl State {
+    /// Start typing a new name for `track` where its name sits.
+    pub fn start_rename(&mut self, track: u16, name: &str, in_panel: bool) {
+        self.rename = Some(Rename {
+            track,
+            text: name.to_string(),
+            in_panel,
+            focus: true,
+        });
+    }
+}
+
+/// Send levels and insert faders share this travel: linear gain up to +6 dB, shaped so 0 dB
+/// sits at about 80 % (as FL Studio's faders and send knobs).
+pub const MAX_GAIN: f32 = 2.0;
+
+/// Gain → knob position 0–1 (the fader's cube-root curve).
+pub fn gain_pos(g: f32) -> f32 {
+    (g / MAX_GAIN).max(0.0).cbrt().min(1.0)
+}
+
+fn pos_gain(p: f32) -> f32 {
+    p.clamp(0.0, 1.0).powi(3) * MAX_GAIN
 }
 
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.mixer.route_buttons.clear();
+    app.ui.mixer.name_rects.clear();
+    app.ui.mixer.send_knobs.clear();
     let n = app.project().mixer.tracks.len();
+    if app.ui.mixer.rename.as_ref().is_some_and(|r| usize::from(r.track) >= n) {
+        app.ui.mixer.rename = None;
+    }
     if app.meter_hold.len() != n {
         app.meter_hold = vec![(0.0, 0.0); n];
     }
@@ -45,7 +95,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     // The children below don't advance this cursor; without claiming the space the window frame
     // shrinks to the title bar and the windows behind show through the Mixer's body.
     ui.advance_cursor_after_rect(full);
-    let side_w = 300.0f32.min(full.width() * 0.45);
+    // The track panel keeps its full width (its EQ knobs need it); the window's minimum size
+    // leaves room for it next to the master and two strips.
+    let side_w = SIDE_W.min(full.width() - STRIP_W);
     let strips_rect = Rect::from_min_max(full.min, pos2(full.right() - side_w, full.bottom()));
     let side_rect = Rect::from_min_max(pos2(full.right() - side_w + 1.0, full.top()), full.max);
     let t = Theme::current();
@@ -57,6 +109,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     track_panel(app, &mut side_ui);
     let mut strips_ui = ui.new_child(egui::UiBuilder::new().id_salt("mixer-strips").max_rect(strips_rect));
     let ui = &mut strips_ui;
+    // A thin bar in its own gutter under the strips, so it never covers their colour bars.
+    ui.spacing_mut().scroll = crate::theme::gutter_scroll_style();
     egui::ScrollArea::horizontal()
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -145,29 +199,33 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
             .font(mono(10.0))
             .color(t.text_faint),
     );
-    let name = ui
-        .add(
-            egui::Label::new(
-                RichText::new(elide(&track.name, 8))
-                    .font(semibold(11.0))
-                    .color(if audible { t.text } else { t.text_dim }),
+    if !name_editor(app, ui, i, false, STRIP_W - 12.0, semibold(11.0)) {
+        let name = ui
+            .add(
+                egui::Label::new(
+                    RichText::new(elide(&track.name, 8))
+                        .font(semibold(11.0))
+                        .color(if audible { t.text } else { t.text_dim }),
+                )
+                .sense(Sense::click()),
             )
-            .sense(Sense::click()),
-        )
-        .on_hover_text(if routed.is_empty() {
-            format!("{} — click: select · double-click: rename", track.name)
-        } else {
-            format!(
-                "{} — channels: {} — click: select · double-click: rename",
-                track.name,
-                routed.iter().map(|r| r.0.as_str()).collect::<Vec<_>>().join(", ")
-            )
-        });
-    if name.clicked() {
-        select(app, i);
-    }
-    if name.double_clicked() {
-        app.dialog = Some(crate::dialogs::Dialog::rename_mixer(app, i));
+            .on_hover_text(if routed.is_empty() {
+                format!("{} — click: select · double-click: rename", track.name)
+            } else {
+                format!(
+                    "{} — channels: {} — click: select · double-click: rename",
+                    track.name,
+                    routed.iter().map(|r| r.0.as_str()).collect::<Vec<_>>().join(", ")
+                )
+            });
+        app.ui.mixer.name_rects.push((i, name.rect));
+        if name.clicked() {
+            select(app, i);
+        }
+        if name.double_clicked() {
+            select(app, i);
+            app.ui.mixer.start_rename(i, &track.name, false);
+        }
     }
     // Insert slots (names only; edit them in the track panel on the right).
     let labels = crate::effects_ui::strip_labels(&track.effects);
@@ -232,14 +290,8 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         let clipped = i == 0 && app.clip_until.is_some_and(|u| u > std::time::Instant::now());
         meter(ui, vec2(12.0, fader_h), l, r, clipped);
         let mut v = track.volume;
-        let r = fader(
-            ui,
-            &mut v,
-            2.0,
-            if i == 0 { 1.0 } else { 0.8 },
-            vec2(24.0, fader_h),
-            "Volume",
-        );
+        // Every track defaults to 0 dB, as in FL Studio's Mixer.
+        let r = fader(ui, &mut v, MAX_GAIN, 1.0, vec2(24.0, fader_h), "Volume");
         let cmd = r.changed().then_some(Command::SetMixerVolume { track: i, volume: v });
         app.exec_gesture(&r, cmd);
         crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
@@ -362,33 +414,44 @@ fn route_button(app: &mut LimeShotApp, ui: &mut Ui, i: u16) {
     }
     // FL Studio's menu on this button: route or sidechain, optionally dropping the other routes.
     if !blocked {
-        resp.context_menu(|ui| {
-            for (label, level, only) in [
-                ("Route to this track", 1.0, false),
-                ("Route to this track only", 1.0, true),
-                ("Sidechain to this track", 0.0, false),
-                ("Sidechain to this track only", 0.0, true),
-            ] {
-                if ui.button(label).clicked() {
-                    route_menu(app, sel, i, level, only);
-                    ui.close();
-                }
-            }
-        });
+        resp.context_menu(|ui| route_menu_items(app, ui, sel, i));
     }
     if let Some(route) = route {
-        let mut level = route.level;
+        // Sends go up to +6 dB like the faders, with the same travel (0 dB at about 80 %).
+        let mut pos = gain_pos(route.level);
         let mut kui = ui
             .new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(r.min + vec2(28.0, 0.0), vec2(26.0, 22.0))));
-        let k = knob(&mut kui, &mut level, 0.0, 1.0, 1.0, 22.0, false, |v| {
-            format!("Send level {:+.1} dB", limeshot_dsp::gain_to_db(v))
+        let k = knob(&mut kui, &mut pos, 0.0, 1.0, gain_pos(1.0), 22.0, false, |v| {
+            let db = limeshot_dsp::gain_to_db(pos_gain(v));
+            if db.is_finite() {
+                format!("Send level {db:+.1} dB")
+            } else {
+                "Send level −∞ dB (sidechain only)".into()
+            }
         });
-        let cmd = k.changed().then_some(Command::SetRoute {
+        app.ui.mixer.send_knobs.push((i, k.rect));
+        let cmd = k.changed().then(|| Command::SetRoute {
             from: sel,
             to: i,
-            level: Some(level),
+            level: Some(pos_gain(pos)),
         });
         app.exec_gesture(&k, cmd);
+    }
+}
+
+/// FL Studio's four routing entries (the strip route button's menu, and the track panel's
+/// Output menu per target).
+fn route_menu_items(app: &mut LimeShotApp, ui: &mut Ui, from: u16, to: u16) {
+    for (label, level, only) in [
+        ("Route to this track", 1.0, false),
+        ("Route to this track only", 1.0, true),
+        ("Sidechain to this track", 0.0, false),
+        ("Sidechain to this track only", 0.0, true),
+    ] {
+        if ui.button(label).clicked() {
+            route_menu(app, from, to, level, only);
+            ui.close();
+        }
     }
 }
 
@@ -418,6 +481,49 @@ pub fn route_menu(app: &mut LimeShotApp, from: u16, to: u16, level: f32, only: b
     app.exec(Command::Batch(cmds));
 }
 
+/// The inline name field (the owner asked for typing in place; FL Studio opens a small
+/// popup). Enter or clicking elsewhere keeps the name, Esc cancels. Returns whether it drew.
+fn name_editor(app: &mut LimeShotApp, ui: &mut Ui, i: u16, in_panel: bool, width: f32, font: egui::FontId) -> bool {
+    let Some(r) = app
+        .ui
+        .mixer
+        .rename
+        .as_mut()
+        .filter(|r| r.track == i && r.in_panel == in_panel)
+    else {
+        return false;
+    };
+    let id = ui.id().with(("mixer-rename", i, in_panel));
+    let resp = ui.add(
+        egui::TextEdit::singleline(&mut r.text)
+            .id(id)
+            .font(font)
+            .desired_width(width)
+            .margin(vec2(2.0, 1.0)),
+    );
+    if std::mem::take(&mut r.focus) {
+        // Start with the whole name selected, so typing replaces it.
+        resp.request_focus();
+        let mut state = egui::text_edit::TextEditState::load(ui.ctx(), id).unwrap_or_default();
+        let all = egui::text::CCursorRange::two(
+            egui::text::CCursor::new(0),
+            egui::text::CCursor::new(r.text.chars().count()),
+        );
+        state.cursor.set_char_range(Some(all));
+        state.store(ui.ctx(), id);
+    }
+    if resp.lost_focus() {
+        let cancel = ui.input(|x| x.key_pressed(egui::Key::Escape));
+        let name = r.text.trim().to_string();
+        app.ui.mixer.rename = None;
+        let old = app.project().mixer.tracks.get(usize::from(i)).map(|t| t.name.clone());
+        if !cancel && !name.is_empty() && old.as_deref() != Some(name.as_str()) {
+            app.exec(Command::RenameMixerTrack { track: i, name });
+        }
+    }
+    true
+}
+
 fn select(app: &mut LimeShotApp, i: u16) {
     app.ui.mixer.selected = i;
 }
@@ -439,20 +545,27 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
     });
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::new().inner_margin(egui::Margin::same(12)).show(ui, |ui| {
-            let name = ui
-                .add(egui::Label::new(RichText::new(&track.name).font(semibold(15.0))).sense(Sense::click()))
-                .on_hover_text("Click to rename");
-            if name.clicked() {
-                app.dialog = Some(crate::dialogs::Dialog::rename_mixer(app, i));
+            if !name_editor(app, ui, i, true, ui.available_width(), semibold(15.0)) {
+                let name = ui
+                    .add(egui::Label::new(RichText::new(&track.name).font(semibold(15.0))).sense(Sense::click()))
+                    .on_hover_text("Click to rename");
+                app.ui.mixer.panel_name = Some(name.rect);
+                if name.clicked() {
+                    app.ui.mixer.start_rename(i, &track.name, true);
+                }
             }
             ui.add_space(8.0);
             section(ui, "Level");
             let mut db = limeshot_dsp::gain_to_db(track.volume).max(-60.0);
-            let r = ui.add(
-                egui::Slider::new(&mut db, -60.0..=6.0)
-                    .suffix(" dB")
-                    .fixed_decimals(1)
-                    .text("Volume"),
+            let r = reset(
+                ui.add(
+                    egui::Slider::new(&mut db, -60.0..=6.0)
+                        .suffix(" dB")
+                        .fixed_decimals(1)
+                        .text("Volume"),
+                ),
+                &mut db,
+                0.0,
             );
             let cmd = crate::widgets::user_changed(&r).then(|| Command::SetMixerVolume {
                 track: i,
@@ -461,7 +574,11 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             app.exec_gesture(&r, cmd);
             crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
             let mut pan = track.pan;
-            let r = ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan"));
+            let r = reset(
+                ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan")),
+                &mut pan,
+                0.0,
+            );
             let cmd = crate::widgets::user_changed(&r).then_some(Command::SetMixerPan { track: i, pan });
             app.exec_gesture(&r, cmd);
             crate::automation_ui::menu(app, &r, AutomationTarget::MixerPan(i));
@@ -534,7 +651,11 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     .on_hover_text(tip);
                     let mut db = limeshot_dsp::gain_to_db(route.level).max(-60.0);
                     ui.spacing_mut().slider_width = (ui.available_width() - 110.0).max(50.0);
-                    let r = ui.add(egui::Slider::new(&mut db, -60.0..=6.0).fixed_decimals(1).suffix(" dB"));
+                    let r = reset(
+                        ui.add(egui::Slider::new(&mut db, -60.0..=6.0).fixed_decimals(1).suffix(" dB")),
+                        &mut db,
+                        0.0,
+                    );
                     let level = if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) };
                     let cmd = crate::widgets::user_changed(&r).then_some(Command::SetRoute {
                         from: i,
@@ -552,6 +673,8 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 });
             }
             if i != 0 {
+                // Each target has the route button's four entries: route or sidechain, and
+                // the "only" variants that drop this track's other routes.
                 ui.menu_button("+ Route to…", |ui| {
                     let targets: Vec<(u16, String, bool)> = app
                         .project()
@@ -560,22 +683,19 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         .iter()
                         .enumerate()
                         .filter_map(|(j, x)| u16::try_from(j).ok().map(|j| (j, x.name.clone())))
-                        .filter(|(j, _)| *j != i && !track.routes.iter().any(|r| r.to == *j))
-                        .map(|(j, n)| (j, n, !app.project().mixer.would_cycle(i, j)))
+                        .filter(|(j, _)| *j != i)
+                        .map(|(j, n)| {
+                            let routed = track.routes.iter().any(|r| r.to == j);
+                            (j, n, routed || !app.project().mixer.would_cycle(i, j))
+                        })
                         .collect();
                     for (j, n, ok) in targets {
-                        if ui
-                            .add_enabled(ok, egui::Button::new(n))
-                            .on_disabled_hover_text("Would create a feedback loop")
-                            .clicked()
-                        {
-                            app.exec(Command::SetRoute {
-                                from: i,
-                                to: j,
-                                level: Some(1.0),
-                            });
-                            ui.close();
-                        }
+                        let label = if j == 0 { n } else { format!("{j}  {n}") };
+                        ui.add_enabled_ui(ok, |ui| {
+                            ui.menu_button(label, |ui| route_menu_items(app, ui, i, j))
+                                .response
+                                .on_disabled_hover_text("Would create a feedback loop");
+                        });
                     }
                 });
             }

@@ -105,6 +105,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let length_steps = pattern.length_steps;
     let pat_name = pattern.name.clone();
     let pat_color = pattern.color;
+    let body_top = ui.max_rect().top();
 
     let groups = app.project().channel_groups();
     if let RackFilter::Group(g) = &app.ui.rack.filter
@@ -213,7 +214,10 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let any_solo = channels.iter().any(|c| c.solo);
     let tracks = app.project().mixer.tracks.len();
     let sel = app.selected_channel();
+    let rows_top = ui.cursor().top();
+    let mut content_w = None;
     egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
+        let content_left = ui.max_rect().left();
         ui.add_space(2.0);
         let filter = app.ui.rack.filter.clone();
         for ch in channels.iter().filter(|c| filter.shows(c)) {
@@ -293,11 +297,17 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
             });
         }
+        content_w = app.ui.rack.step_strips.first().map(|s| s.1.right() - content_left);
         app.ui.rack.graph_rect = None;
         if let (Some(prop), Some(ch)) = (app.ui.rack.graph, sel.and_then(|c| channels.iter().find(|x| x.id == c))) {
             graph_editor(app, ui, ch, pid, prop);
         }
     });
+    // The window always shows every step and at least five channels (owner's hands-on test).
+    let row_pitch = ROW_H + ui.spacing().item_spacing.y;
+    let w = content_w.map_or(Win::ChannelRack.min_size().x, |w| w + 18.0);
+    let h = crate::workspace::TITLE_H + (rows_top - body_top) + 2.0 + 5.0 * row_pitch + 10.0;
+    app.ui.workspace.set_content_min(Win::ChannelRack, vec2(w, h));
     // Dropping a sample anywhere else in the rack makes a new channel.
     let rack_rect = ui.min_rect();
     let drop = ui.interact(rack_rect, ui.id().with("drop"), Sense::hover());

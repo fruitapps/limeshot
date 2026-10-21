@@ -518,6 +518,46 @@ fn floating_window_frames_cover_their_body() {
     }
 }
 
+/// The owner's hands-on test: restoring a maximised window kept it at the workspace's size.
+#[test]
+fn restoring_a_maximised_window_brings_back_its_old_size() {
+    let mut h = harness(true);
+    let before = h
+        .ctx
+        .memory(|m| m.area_rect(Win::ChannelRack.id()))
+        .expect("rack drawn");
+    // The title bar's buttons from the right: close, maximise, detach (22 px each).
+    let maximise = egui::pos2(before.right() - 4.0 - 33.0, before.top() + 14.0);
+    click(&mut h, maximise, PointerButton::Primary);
+    assert!(h.state().ui.workspace.state(Win::ChannelRack).maximized);
+    let max = h
+        .ctx
+        .memory(|m| m.area_rect(Win::ChannelRack.id()))
+        .expect("rack drawn");
+    assert!(max.width() > before.width() + 100.0, "maximised: {max:?}");
+    let restore = egui::pos2(max.right() - 4.0 - 33.0, max.top() + 14.0);
+    click(&mut h, restore, PointerButton::Primary);
+    h.step();
+    assert!(!h.state().ui.workspace.state(Win::ChannelRack).maximized);
+    let after = h
+        .ctx
+        .memory(|m| m.area_rect(Win::ChannelRack.id()))
+        .expect("rack drawn");
+    assert!(
+        (after.min - before.min).length() < 1.0 && (after.size() - before.size()).length() < 1.0,
+        "restored to {after:?}, was {before:?}"
+    );
+    // Still resizable afterwards (not stuck at a fixed size).
+    let edge = after.right_bottom() - vec2(2.0, 2.0);
+    drag(&mut h, edge, edge + vec2(60.0, 40.0));
+    h.step();
+    let resized = h
+        .ctx
+        .memory(|m| m.area_rect(Win::ChannelRack.id()))
+        .expect("rack drawn");
+    assert!(resized.width() > after.width() + 30.0, "resized to {resized:?}");
+}
+
 #[test]
 fn samples_become_audio_clips_that_trim_from_the_left_edge() {
     let mut h = harness(true);
@@ -2232,4 +2272,222 @@ fn channel_filter_groups_hide_other_channels() {
     h.step();
     h.step();
     assert_eq!(shown(&h).len(), 5);
+}
+
+/// The demo with a maximised Mixer and insert `sel` selected.
+fn mixer_harness(sel: u16) -> Harness<'static, LimeShotApp> {
+    let mut h = harness(true);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = sel;
+    h.step();
+    h.step();
+    h
+}
+
+/// Owner's hands-on test: Mixer names are typed where they sit, not in a rename popup.
+#[test]
+fn mixer_names_are_typed_in_place() {
+    let mut h = mixer_harness(1);
+    let name = |h: &Harness<'static, LimeShotApp>, i: usize| h.state().project().mixer.tracks[i].name.clone();
+    let r = h
+        .state()
+        .ui
+        .mixer
+        .name_rects
+        .iter()
+        .find(|x| x.0 == 2)
+        .expect("strip name")
+        .1;
+    double_click(&mut h, r.center());
+    assert!(h.state().dialog.is_none(), "no rename popup");
+    assert_eq!(h.state().ui.mixer.selected, 2);
+    // The old name is selected: typing replaces it, Enter keeps it.
+    h.event(Event::Text("Snare".into()));
+    h.step();
+    h.key_press(Key::Enter);
+    h.step();
+    h.step();
+    assert_eq!(name(&h, 2), "Snare");
+    assert!(h.state().ui.mixer.rename.is_none());
+    // The track panel's name: click, type, Esc cancels.
+    let r = h.state().ui.mixer.panel_name.expect("panel name");
+    click(&mut h, r.center(), PointerButton::Primary);
+    h.step();
+    assert!(h.state().ui.mixer.rename.as_ref().is_some_and(|r| r.in_panel));
+    h.event(Event::Text("Nope".into()));
+    h.step();
+    h.key_press(Key::Escape);
+    h.step();
+    h.step();
+    assert_eq!(name(&h, 2), "Snare");
+    assert!(h.state().ui.mixer.rename.is_none());
+}
+
+/// Owner's hands-on test: the track panel's Output offers sidechain and "only" routing too.
+#[test]
+fn mixer_output_menu_has_route_and_sidechain_entries() {
+    let mut h = mixer_harness(1);
+    let routes = |h: &Harness<'static, LimeShotApp>| {
+        let mut r: Vec<(u16, f32)> = h.state().project().mixer.tracks[1]
+            .routes
+            .iter()
+            .map(|r| (r.to, r.level))
+            .collect();
+        r.sort_by_key(|x| x.0);
+        r
+    };
+    assert_eq!(routes(&h), vec![(0, 1.0)]);
+    h.get_by_label("+ Route to…").click();
+    h.step();
+    h.step();
+    h.get_by_label("5  Bass ⏵").hover();
+    h.step();
+    h.step();
+    h.step();
+    h.get_by_label("Sidechain to this track only").click();
+    h.step();
+    assert_eq!(routes(&h), vec![(5, 0.0)]);
+}
+
+/// Owner's hands-on test: the send knob was at its end at 0 dB and went past it above.
+#[test]
+fn send_knob_covers_the_send_range() {
+    use limeshot_ui::mixer::gain_pos;
+    assert!((gain_pos(1.0) - 0.7937).abs() < 1e-3, "0 dB at about 80 %");
+    assert_eq!(gain_pos(2.0), 1.0);
+    assert_eq!(gain_pos(4.0), 1.0);
+    let mut h = mixer_harness(1);
+    h.state_mut().exec(Command::SetRoute {
+        from: 1,
+        to: 6,
+        level: Some(1.0),
+    });
+    h.step();
+    h.step();
+    let level = |h: &Harness<'static, LimeShotApp>| {
+        h.state().project().mixer.tracks[1]
+            .routes
+            .iter()
+            .find(|r| r.to == 6)
+            .map(|r| r.level)
+    };
+    let k = h
+        .state()
+        .ui
+        .mixer
+        .send_knobs
+        .iter()
+        .find(|x| x.0 == 6)
+        .expect("send knob")
+        .1;
+    drag(&mut h, k.center(), k.center() - vec2(0.0, 400.0));
+    let up = level(&h).expect("routed");
+    assert!((up - 2.0).abs() < 1e-3, "dragged to +6 dB: {up}");
+    double_click(&mut h, k.center());
+    assert_eq!(level(&h), Some(1.0), "double-click resets to 0 dB");
+}
+
+/// Owner's hands-on test: double-click resets every slider and knob, and inserts default to 0 dB.
+#[test]
+fn double_click_resets_sliders_and_knobs() {
+    assert_eq!(MixerTrack::new("x").volume, 1.0, "FL Studio's insert default is 0 dB");
+    let mut h = mixer_harness(1);
+    // Track panel volume slider.
+    h.state_mut().exec(Command::SetMixerVolume { track: 1, volume: 0.3 });
+    h.step();
+    let r = h
+        .get_all_by_label("Volume")
+        .map(|n| n.rect())
+        .max_by(|a, b| a.width().total_cmp(&b.width()))
+        .expect("volume slider");
+    double_click(&mut h, egui::pos2(r.left() + 20.0, r.center().y));
+    assert_eq!(h.state().project().mixer.tracks[1].volume, 1.0);
+    // An effect card's slider.
+    let fx = h
+        .state_mut()
+        .exec(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Delay,
+        })
+        .expect("effect");
+    h.state_mut().exec(Command::SetEffectParam {
+        track: 1,
+        effect: fx,
+        index: 0,
+        value: 0.9,
+    });
+    h.step();
+    h.step();
+    let spec = EffectKind::Delay.params()[0];
+    let label = h.get_by_label(spec.name).rect();
+    double_click(&mut h, egui::pos2(label.right() + 30.0, label.center().y));
+    let v = h.state().project().mixer.tracks[1].effects[0].params[0];
+    assert!(
+        (v - spec.default).abs() < 1e-4,
+        "{} back to {}: {v}",
+        spec.name,
+        spec.default
+    );
+    // Channel Settings: a LimeSynth slider goes back to the synth's default.
+    let lead = h.state().project().channels[3].id;
+    let mut synth = match &h.state().project().channels[3].instrument {
+        Instrument::Synth(p) => p.clone(),
+        _ => panic!("the demo's lead is a synth"),
+    };
+    synth.attack_ms = 900.0;
+    h.state_mut().exec(Command::SetInstrument {
+        channel: lead,
+        instrument: Instrument::Synth(synth),
+    });
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = false;
+    h.state_mut().ui.workspace.close(Win::Mixer);
+    h.state_mut().select_channel(lead);
+    h.state_mut().show_window(Win::ChannelSettings);
+    h.step();
+    h.step();
+    let label = h.get_by_label("Attack").rect();
+    double_click(&mut h, egui::pos2(label.right() + 30.0, label.center().y));
+    let attack = match &h.state().project().channels[3].instrument {
+        Instrument::Synth(p) => p.attack_ms,
+        _ => 0.0,
+    };
+    assert_eq!(attack, SynthParams::default().attack_ms);
+}
+
+/// Owner's hands-on test: shrinking the Channel Rack hid steps and channels, shrinking the Mixer
+/// hid part of the track panel's EQ.
+#[test]
+fn rack_and_mixer_windows_keep_their_content_visible() {
+    let mut h = harness(true);
+    let shrink = |h: &mut Harness<'static, LimeShotApp>, w: Win| {
+        let r = h.ctx.memory(|m| m.area_rect(w.id())).expect("window drawn");
+        let corner = r.right_bottom() - vec2(2.0, 2.0);
+        drag(h, corner, r.left_top() + vec2(40.0, 40.0));
+        h.step();
+        h.step();
+        h.ctx.memory(|m| m.area_rect(w.id())).expect("window drawn")
+    };
+    let rack = shrink(&mut h, Win::ChannelRack);
+    let strips = h.state().ui.rack.step_strips.clone();
+    assert_eq!(strips.len(), 5, "the demo's five channels");
+    for (_, s, _) in &strips {
+        assert!(rack.contains_rect(*s), "{s:?} outside the rack {rack:?}");
+    }
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.mixer.selected = 1;
+    h.state_mut().show_window(Win::Mixer);
+    h.step();
+    h.step();
+    let mixer = shrink(&mut h, Win::Mixer);
+    assert!(mixer.width() >= Win::Mixer.min_size().x - 1.0, "{mixer:?}");
+    let g = h.state().ui.mixer.eq_graph;
+    // The EQ sits at the bottom of the panel's scroll area; its width always fits.
+    if let Some(g) = g {
+        assert!(g.right() <= mixer.right(), "EQ {g:?} cut off in {mixer:?}");
+    }
+    let routes = h.state().ui.mixer.route_buttons.clone();
+    for (_, b) in routes.iter().filter(|(_, b)| b.left() < mixer.right() - 300.0) {
+        assert!(b.bottom() <= mixer.bottom(), "route button {b:?} below {mixer:?}");
+    }
 }

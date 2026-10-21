@@ -438,6 +438,19 @@ pub fn vrule(ui: &mut Ui, height: f32) {
     );
 }
 
+/// Double-click resets a standard egui slider to `default` (as the custom knobs and faders do).
+/// egui's sliders only sense drags, so their response never reports a double-click itself.
+pub fn reset_on_double_click<T: Copy + PartialEq>(mut r: Response, v: &mut T, default: T) -> Response {
+    let double = r
+        .ctx
+        .input(|i| i.pointer.button_double_clicked(egui::PointerButton::Primary));
+    if double && r.hovered() && *v != default {
+        *v = default;
+        r.mark_changed();
+    }
+    r
+}
+
 /// Whether a standard egui widget's `changed()` came from the user. egui sliders can report a
 /// change on their own (rounding to the displayed decimals), which must not edit the project.
 pub fn user_changed(r: &Response) -> bool {

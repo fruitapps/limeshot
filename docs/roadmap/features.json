@@ -2837,7 +2837,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master"
+        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
+        "limeshot-app tests/ui.rs::double_click_resets_sliders_and_knobs"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2846,7 +2847,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: inserts default to 0 dB (FL Studio's insert default; it was 0.8 linear = −1.9 dB), so the fader's 0 dB tick is its default; double-click resets every fader, knob and slider."
     },
     {
       "id": "MIX-003",
@@ -2953,7 +2954,7 @@
       "fl_reference": "F2 rename, add tracks.",
       "limeshot_behavior": "Double-click name to rename; + adds a track.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -2964,7 +2965,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::mixer_names_are_typed_in_place"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2972,7 +2975,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels."
     },
     {
       "id": "MIX-007",
@@ -3038,7 +3041,8 @@
         "limeshot-core document::tests::routing_refuses_feedback_and_orders_tracks",
         "limeshot-core document::tests::sanitize_breaks_routing_loops_from_files",
         "limeshot-engine tests/audio.rs::mixer_routes_through_buses",
-        "limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track"
+        "limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track",
+        "limeshot-app tests/ui.rs::send_knob_covers_the_send_range"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3047,7 +3051,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency)."
+      "notes": "Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency). Session 9: the route button's send knob covers the whole send range (to +6 dB, 0 dB at about 80 %, as the faders)."
     },
     {
       "id": "MIX-009",
@@ -3075,7 +3079,8 @@
       ],
       "tests": [
         "limeshot-engine audio.rs sidechained_compressor_ducks_on_the_key_track",
-        "ui.rs mixer_sidechain_route_menu_and_compressor_input"
+        "ui.rs mixer_sidechain_route_menu_and_compressor_input",
+        "limeshot-app tests/ui.rs::mixer_output_menu_has_route_and_sidechain_entries"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3086,7 +3091,7 @@
           "docs/research/evidence/screenshots/fl-mixer-sidechain.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8). Only Lime Comp takes a sidechain (FL: Fruity Limiter, Vocodex …); the meter shows the track's largest compressor reduction; the Sidechain choice is not automatable."
+      "notes": "Observed live in FL 2026.1.1 (session 8). Only Lime Comp takes a sidechain (FL: Fruity Limiter, Vocodex …); the meter shows the track's largest compressor reduction; the Sidechain choice is not automatable. Session 9: the track panel's Output menu offers the same four entries per target."
     },
     {
       "id": "MIX-010",
@@ -6278,7 +6283,9 @@
       ],
       "tests": [
         "limeshot-app tests/ui.rs::f_keys_toggle_windows",
-        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking"
+        "limeshot-app tests/ui.rs::renders_every_panel_without_panicking",
+        "limeshot-app tests/ui.rs::restoring_a_maximised_window_brings_back_its_old_size",
+        "limeshot-app tests/ui.rs::rack_and_mixer_windows_keep_their_content_visible"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6288,7 +6295,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: restoring a maximised window brings back its old rectangle (egui kept the maximised size); the Channel Rack never shrinks below every step and five channels, the Mixer below the master, two strips and the full-width track panel."
     },
     {
       "id": "UI-003",
