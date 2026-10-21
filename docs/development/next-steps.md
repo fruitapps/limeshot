@@ -5,18 +5,22 @@
 1. **Run CI on all platforms.** `.github/workflows/ci.yml` is on `fruitapps/limeshot`, but every run stays "pending"
    with no jobs (session 7): an org admin must check the org's Actions and billing settings. Then push, fix what
    Windows and Linux report, and update PF-002…PF-005 in `features.json`. `gh` is installed and logged in.
-2. **Finish the session 7 expansion plan**, one FL feature area per commit (observe in FL first):
-   Playlist slip and slice for clips (PL-017, with the Playlist tool strip, KB-064), then the Mixer's built-in 3-band
-   EQ (MIX-010) and compressor sidechain with a gain-reduction meter (MIX-009), then Channel Rack depth: fill/rotate
-   (SEQ-014, FL's channel menu has Fill each 2/4/8 steps and Rotate left/right Shift+Cmd+Left/Right), the graph
-   editor (SEQ-011) and channel filter groups (SEQ-012).
-3. **VST support** (required by the project owner, 2026-10-21). Host VST3 plugins as instruments (Channel Rack) and
+2. **Fix the issues found in the owner's hands-on test (2026-10-21).** Window restore after maximise, Playback tool
+   scrubbing, Piano Roll note resizing, inline Mixer names, route/sidechain options in the track panel's Output, the
+   Mixer scroll bar, send dial range, double-click reset everywhere, the insert fader default, pattern colours,
+   minimum window sizes (Channel Rack, Mixer), snap-dependent grid lines, vertical zoom in the Playlist and Piano Roll,
+   tool cursors, and a once-per-second CPU readout. (The session 7 expansion plan is done: PL-017, MIX-009/010,
+   SEQ-011/012/014.)
+3. **VST support** (required by the project owner, 2026-10-21; postponed until item 2 is done). Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in
    `decisions.md`. Keep the real-time rules (no allocation or locks in the audio callback) and plan crash isolation
    (PLG-010). Check the VST3 SDK's current licence against LimeShot's MIT/Apache licence before adding it, and test with
    a freely redistributable plugin. CLAP (PLG-001) and AU (PLG-003) can share the same host layer afterwards.
+   **Lime Native VSTs** (owner, 2026-10-21): once hosting works, turn LimeSynth, the Sampler and every built-in effect
+   (Lime EQ, Filter, Delay, Room, Comp, Limiter, Utility) into simple VST3 plugins built from the same DSP code, so
+   they run in other hosts too and LimeShot can load them like any other plugin.
 
 ## Then
 
