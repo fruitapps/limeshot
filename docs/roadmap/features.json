@@ -2532,25 +2532,37 @@
       "name": "Slip, slice clips",
       "description": "Advanced clip editing.",
       "fl_reference": "Slip (S) and Slice (C) tools.",
-      "limeshot_behavior": "Slip content inside clip; slice clip at a time.",
+      "limeshot_behavior": "FL Studio's Playlist tool strip (Draw P, Paint B, Delete D, Mute T, Slip S, Slice C, Select E, Zoom Z, Playback Y). Slip drags a clip's content inside it (offset snapped, never before the source start, may run past its end into silence); Slice cuts the clips a vertical drag crosses at the snapped line, the right pieces continuing the source and selected. Each gesture is one undo step.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core::command (SlipClip, SliceClips)",
+        "limeshot-ui::playlist"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::slip_and_slice_clips",
+        "ui.rs playlist_tool_keys_and_strip",
+        "ui.rs playlist_slip_tool_moves_content_inside_the_clip",
+        "ui.rs playlist_slice_tool_cuts_the_clips_it_crosses",
+        "ui.rs playlist_paint_mute_delete_select_zoom_and_playback_tools"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm",
+          "docs/research/evidence/screenshots/fl-playlist-tools.png",
+          "docs/research/evidence/screenshots/fl-playlist-slip.png",
+          "docs/research/evidence/screenshots/fl-playlist-slice.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), zero-cross snapping for audio slices, Right-Shift shortcuts."
     },
     {
       "id": "PL-018",

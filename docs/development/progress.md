@@ -224,3 +224,18 @@ here is not an org admin, so the org's Actions and billing settings could not be
    sizes 1…1024), and time markers in the model (`Playlist::markers`, `AddMarker`/`RemoveMarker`/`RenameMarker`/
    `MoveMarker`) with Cmd+T / Alt+T and click-to-jump, drag-to-move and right-click menus on the ruler. PL-016 is
    VERIFIED; special marker kinds and Place loop are recorded as missing. `ui_shot --markers` shows them.
+
+## 2026-10-21 — Session 8: the rest of the session 7 plan, then VST3
+
+CI first: the newest run on `fruitapps/limeshot` is still "pending" with no jobs, and older ones were cancelled with
+no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings (owner action needed).
+
+1. **Playlist tools, slip and slice (PL-017, KB-064).** Observed live in FL 2026.1.1 (three new screenshots): the
+   tool strip (Draw, Paint, Delete, Mute, Slip, Slice, Select, Zoom, Playback), Slip moving the content under a
+   shortened clip (snapped, silence past the sample end, stopping at the sample start), and Slice cutting a clip in
+   two at the snapped line with the content running on across the cut. LimeShot's Playlist now has the same tool
+   strip on the left of its header, FL's single-key shortcuts, and the shared `piano_roll::Tool` (new `Slip`
+   variant, `Tool::PLAYLIST`, a painted slip icon). New commands `SlipClip` and `SliceClips`; a paint stroke, a
+   mute drag and a slip drag are each one undo step (new merge keys for clip placing and muting). PL-017 is VERIFIED
+   by a core test and four UI tests; `ui_shot --audio --tools` shows a sliced and a slipped audio clip. Missing:
+   Shift+S ripple edit, diagonal and Shift+click slicing, zero-cross snapping.

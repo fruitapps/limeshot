@@ -10,14 +10,14 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 99, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 116, DEFERRED 2
+- By status: NOT_STARTED 98, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 117, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 16 | 1 | 2 | 6 |
 | Channel Rack | 20 | 14 | 0 | 0 | 6 |
 | Piano Roll | 27 | 18 | 0 | 0 | 9 |
-| Playlist | 28 | 17 | 1 | 2 | 8 |
+| Playlist | 28 | 18 | 1 | 2 | 7 |
 | Mixer | 16 | 8 | 1 | 1 | 6 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
@@ -138,7 +138,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-014 | Audio clips | P1 |  | VERIFIED | Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.<br>*No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008.* | `limeshot-engine tests/audio.rs::audio_clips_play_their_sample_window_sample_accurately`<br>`limeshot-engine tests/audio.rs::playback_starting_inside_an_audio_clip_starts_the_audio_part_way`<br>`limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it`<br>`limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel`<br>`limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge` |
 | PL-015 | Automation clips | P1 |  | VERIFIED | Automation clips on the Playlist with a filled curve, points and tension handles; move, resize either edge (trims the curve window), copy/paste and duplicate like other clips. | `limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist` |
 | PL-016 | Markers and loop region / time selection | P1 |  | VERIFIED | Cmd+drag on the ruler: time selection (snapped; Alt: free), shaded on the ruler and the arrangement; Song playback starts at it and loops it, even with song loop off; Cmd+click or Cmd+D clears it. Markers: Cmd+T adds one at the song position, Alt+T adds one and asks its name; flags in the ruler's lower half — click jumps, drag moves (one undo step), right-click renames or deletes; markers are saved with the project.<br>*Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker "Auto"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project.* | `crates/limeshot-app/tests/ui.rs::playlist_time_selection_loops_song_playback`<br>`crates/limeshot-app/tests/ui.rs::playlist_markers_add_jump_move_and_delete`<br>`limeshot-engine tests/audio.rs::song_loops_the_time_selection_at_any_block_size`<br>`limeshot-core document::tests::markers_are_added_sorted_renamed_moved_and_removed` |
-| PL-017 | Slip, slice clips | P2 |  | NOT_STARTED | Slip content inside clip; slice clip at a time. | — |
+| PL-017 | Slip, slice clips | P2 |  | VERIFIED | FL Studio's Playlist tool strip (Draw P, Paint B, Delete D, Mute T, Slip S, Slice C, Select E, Zoom Z, Playback Y). Slip drags a clip's content inside it (offset snapped, never before the source start, may run past its end into silence); Slice cuts the clips a vertical drag crosses at the snapped line, the right pieces continuing the source and selected. Each gesture is one undo step.<br>*Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), zero-cross snapping for audio slices, Right-Shift shortcuts.* | `limeshot-core document::tests::slip_and_slice_clips`<br>`ui.rs playlist_tool_keys_and_strip`<br>`ui.rs playlist_slip_tool_moves_content_inside_the_clip`<br>`ui.rs playlist_slice_tool_cuts_the_clips_it_crosses`<br>`ui.rs playlist_paint_mute_delete_select_zoom_and_playback_tools` |
 | PL-018 | Track grouping | P2 |  | NOT_STARTED | Collapsible track groups. | — |
 | PL-019 | Performance mode | P3 |  | NOT_STARTED | Clip launch grid. | — |
 | PL-020 | Arrangements | P2 |  | NOT_STARTED | Several playlists sharing channels/mixer. | — |

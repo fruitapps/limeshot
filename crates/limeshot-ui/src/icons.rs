@@ -38,6 +38,7 @@ pub enum Icon {
     ToolPaint,
     ToolDelete,
     ToolMute,
+    ToolSlip,
     ToolSlice,
     ToolSelect,
     ToolZoom,
@@ -177,6 +178,12 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             ));
             p.line_segment([at(2.0, -2.5), at(6.0, 2.5)], line);
             p.line_segment([at(2.0, 2.5), at(6.0, -2.5)], line);
+        }
+        Icon::ToolSlip => {
+            // Two arrowheads pointing apart around a bar (FL Studio's slip icon).
+            tri(p, [at(-6.5, 0.0), at(-2.0, -4.5), at(-2.0, 4.5)], c);
+            tri(p, [at(6.5, 0.0), at(2.0, -4.5), at(2.0, 4.5)], c);
+            p.line_segment([at(0.0, -4.0), at(0.0, 4.0)], Stroke::new(1.2 * u, c));
         }
         Icon::ToolSlice => {
             // Knife: a handle, a wide blade and a dashed cut line below it.

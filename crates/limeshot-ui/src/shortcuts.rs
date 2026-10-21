@@ -62,6 +62,10 @@ pub const EDITING: &[(&str, &str)] = &[
         "P / B / D / T / C / E / Z / Y",
         "Piano Roll tools: draw, paint, delete, mute, slice, select, zoom, playback",
     ),
+    (
+        "P / B / D / T / S / C / E / Z / Y",
+        "Playlist tools: draw, paint, delete, mute, slip, slice, select, zoom, playback",
+    ),
     ("Cmd+T", "Playlist: add a time marker at the song position"),
     ("Alt+T", "Playlist: add a time marker and name it"),
     (

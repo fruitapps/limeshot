@@ -838,6 +838,57 @@ mod tests {
     }
 
     #[test]
+    fn slip_and_slice_clips() {
+        let (mut d, _, pat) = doc_with_channel();
+        let add = |d: &mut Document, track: u32, start: Tick| {
+            ClipId(
+                d.execute(Command::AddClip {
+                    pattern: pat,
+                    track,
+                    start,
+                    length: Some(3840),
+                })
+                .unwrap()
+                .0
+                .unwrap(),
+            )
+        };
+        let a = add(&mut d, 0, 0);
+        let b = add(&mut d, 1, 1920);
+        let span = |d: &Document, id: ClipId| {
+            let c = d.project().clip(id).unwrap();
+            (c.track, c.start, c.length, c.offset)
+        };
+        // Slip moves only the content.
+        d.execute(Command::SlipClip { clip: a, offset: 480 }).unwrap();
+        assert_eq!(span(&d, a), (0, 0, 3840, 480));
+        // Slicing at 2880 cuts both clips; `b` starts 1920 later, so its piece starts deeper in.
+        let right = ClipId(
+            d.execute(Command::SliceClips {
+                clips: vec![a, b],
+                at: 2880,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        assert_eq!(span(&d, a), (0, 0, 2880, 480));
+        assert_eq!(span(&d, b), (1, 1920, 960, 0));
+        assert_eq!(span(&d, right), (1, 2880, 2880, 960));
+        let pieces: Vec<_> = d.project().playlist.clips.iter().map(|c| span(&d, c.id)).collect();
+        assert!(pieces.contains(&(0, 2880, 960, 3360)), "{pieces:?}");
+        // A cut at a clip's edge does nothing.
+        assert_eq!(
+            d.execute(Command::SliceClips { clips: vec![a], at: 0 }).unwrap().0,
+            None
+        );
+        // The no-op cut left no undo step: one undo restores the uncut clips.
+        assert!(d.undo());
+        assert_eq!(d.project().playlist.clips.len(), 2);
+        assert_eq!(span(&d, a), (0, 0, 3840, 480));
+    }
+
+    #[test]
     fn sanitize_drops_audio_clips_without_a_channel() {
         let mut p = Project::new();
         p.playlist.clips.push(Clip {

@@ -6,10 +6,15 @@
 //! the Piano Roll, an audio clip its channel settings; the ▾ marker on a clip opens its menu.
 //! Alt disables snapping. Click the ruler to move the song position. Samples dragged in from the
 //! Browser become audio clips (FL Studio).
+//!
+//! Other tools (FL Studio's Playlist tool strip and keys, observed in FL Studio 2026.1.1): Paint (B)
+//! lays clips end to end, Delete (D) and Mute (T) act on clips clicked or dragged over, Slip (S)
+//! slides a clip's content inside it, Slice (C) cuts the clips a vertical drag crosses, Select (E),
+//! Zoom (Z) and Playback (Y).
 
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
-use crate::piano_roll::{TimeAxis, draw_ruler, draw_time_grid};
+use crate::piano_roll::{TimeAxis, Tool, draw_ruler, draw_time_grid};
 use crate::theme::{Theme, mix, mono, rgb};
 use crate::widgets::{icon_button, panel_header, section};
 use egui::{
@@ -58,9 +63,39 @@ enum Drag {
         from: Pos2,
     },
     Erase,
+    /// Paint tool: the next clip on `track` goes at `next`.
+    Paint {
+        source: ClipSource,
+        track: u32,
+        next: Tick,
+        len: Tick,
+        offset: Tick,
+    },
+    /// Mute tool: clips crossed get `muted`.
+    Mute {
+        muted: bool,
+        done: Vec<ClipId>,
+    },
+    /// Slip tool: the clip's content follows the pointer.
+    Slip {
+        id: ClipId,
+        anchor: Tick,
+        offset: Tick,
+        grab_tick: i64,
+    },
+    Slice {
+        from: Pos2,
+    },
+    Zoom {
+        from: Pos2,
+    },
+    Playback,
 }
 
 pub struct State {
+    pub tool: Tool,
+    /// Screen rectangles of the tool strip's buttons in the last frame.
+    pub tool_rects: Vec<(Tool, Rect)>,
     /// Pixels per beat.
     pub zoom_x: f32,
     pub track_h: f32,
@@ -86,6 +121,8 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
+            tool: Tool::Draw,
+            tool_rects: Vec::new(),
             zoom_x: 24.0,
             track_h: 44.0,
             scroll: Vec2::ZERO,
@@ -167,6 +204,21 @@ impl Geometry {
 
 const PICKER_W: f32 = 150.0;
 
+/// The Playlist's wording of the tools' tooltips.
+fn tool_tip(tool: Tool) -> &'static str {
+    match tool {
+        Tool::Draw => "Draw (P): place, move and resize clips",
+        Tool::Paint => "Paint (B): drag to lay clips end to end",
+        Tool::Delete => "Delete (D): click or drag over clips to delete them",
+        Tool::Mute => "Mute (T): click or drag over clips to mute / unmute them",
+        Tool::Slip => "Slip (S): drag a clip's content left or right inside the clip",
+        Tool::Slice => "Slice (C): drag down across clips to cut them",
+        Tool::Select => "Select (E): click or drag to select, drag a selected clip to move",
+        Tool::Zoom => "Zoom (Z): drag a range to zoom in, right-click to zoom out",
+        Tool::Playback => "Playback (Y): hold to play the song from the pointer",
+    }
+}
+
 /// Body of the Playlist window (FL Studio opens it maximised): a tool strip, the pattern picker
 /// on the left, and the arrangement.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -188,6 +240,18 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             app.exec(Command::AddPlaylistTrack);
         }
         ui.label(RichText::new(format!("{bars} bars")).font(mono(10.5)).color(t.text_dim));
+        // The tool strip on the left, as in FL Studio.
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+            ui.spacing_mut().item_spacing.x = 2.0;
+            app.ui.playlist.tool_rects.clear();
+            for tool in Tool::PLAYLIST {
+                let resp = icon_button(ui, tool.icon(), app.ui.playlist.tool == tool, 22.0, tool_tip(tool));
+                app.ui.playlist.tool_rects.push((tool, resp.rect));
+                if resp.clicked() {
+                    app.ui.playlist.tool = tool;
+                }
+            }
+        });
     });
     let area = ui.available_rect_before_wrap();
     // Claim the space the child UIs below fill, so a floating Playlist's frame covers it.
@@ -542,13 +606,23 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             );
         }
     }
-    if let (Some(Drag::Select { from }), Some(p)) = (&app.ui.playlist.drag, ui.input(|i| i.pointer.hover_pos())) {
+    if let (Some(Drag::Select { from } | Drag::Zoom { from }), Some(p)) =
+        (&app.ui.playlist.drag, ui.input(|i| i.pointer.hover_pos()))
+    {
         painter.rect(
             Rect::from_two_pos(*from, p),
             0.0,
             t.selection,
             Stroke::new(1.0, t.accent),
             egui::StrokeKind::Inside,
+        );
+    }
+    // The Slice tool's cut line.
+    if let (Some(Drag::Slice { from }), Some(p)) = (&app.ui.playlist.drag, ui.input(|i| i.pointer.hover_pos())) {
+        let x = view.x(app.ui.snap.round(view.tick_at(from.x).max(0) as u64, sig));
+        painter.line_segment(
+            [pos2(x, from.y.min(p.y) - 4.0), pos2(x, from.y.max(p.y) + 4.0)],
+            Stroke::new(1.5, t.accent),
         );
     }
     // The time selection, shaded over the arrangement.
@@ -1101,18 +1175,29 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     let sig = app.project().time_signature;
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
     let snap = if mods.alt { Snap::None } else { app.ui.snap };
+    let tool = app.ui.playlist.tool;
     if let Some(p) = resp.hover_pos() {
-        match hit(view, clips, p).map(|h| h.1) {
-            Some(Part::LeftEdge | Part::RightEdge) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal),
-            Some(Part::Menu) => ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand),
-            Some(Part::Body) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
-            None => {}
+        match (tool, hit(view, clips, p).map(|h| h.1)) {
+            (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge)) => {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal)
+            }
+            (_, Some(Part::Menu)) => ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand),
+            (Tool::Draw | Tool::Paint | Tool::Select, Some(Part::Body)) => {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::Grab)
+            }
+            (Tool::Slip, Some(_)) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeColumn),
+            (Tool::Slice, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair),
+            (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
+            _ => {}
         }
         let tk = view.tick_at(p.x).max(0) as u64;
-        app.hint(format!(
-            "{} — left: place/move/resize (either edge) · right: delete · double-click: edit · ▾: clip menu · Cmd+drag: select · drop samples here",
-            BarBeatTick::from_ticks(tk, sig)
-        ));
+        let help = match tool {
+            Tool::Draw => {
+                "left: place/move/resize (either edge) · right: delete · double-click: edit · ▾: clip menu · Cmd+drag: select · drop samples here"
+            }
+            tool => tool_tip(tool),
+        };
+        app.hint(format!("{} — {help}", BarBeatTick::from_ticks(tk, sig)));
     }
     let primary = resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Primary));
     let secondary =
@@ -1205,6 +1290,85 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         primary = false;
         secondary = false;
     }
+    if primary
+        && let Some(p) = pointer
+        && !mods.command
+        && !matches!(tool, Tool::Draw | Tool::Paint)
+        && !matches!(hit(view, clips, p), Some((_, Part::Menu)))
+    {
+        primary = false;
+        let tick = view.tick_at(p.x).max(0) as u64;
+        match tool {
+            Tool::Delete => {
+                app.doc.begin_gesture();
+                app.ui.playlist.drag = Some(Drag::Erase);
+            }
+            Tool::Mute => {
+                if let Some((c, _)) = hit(view, clips, p) {
+                    app.doc.begin_gesture();
+                    app.ui.playlist.drag = Some(Drag::Mute {
+                        muted: !c.muted,
+                        done: Vec::new(),
+                    });
+                }
+            }
+            Tool::Slip => {
+                if let Some((c, _)) = hit(view, clips, p) {
+                    app.ui.playlist.selection = vec![c.id];
+                    app.doc.begin_gesture();
+                    app.ui.playlist.drag = Some(Drag::Slip {
+                        id: c.id,
+                        anchor: c.start,
+                        offset: c.offset,
+                        grab_tick: view.tick_at(p.x),
+                    });
+                }
+            }
+            Tool::Slice => app.ui.playlist.drag = Some(Drag::Slice { from: p }),
+            Tool::Select => match hit(view, clips, p) {
+                Some((c, _)) => {
+                    let st = &mut app.ui.playlist;
+                    if mods.shift {
+                        if let Some(i) = st.selection.iter().position(|x| *x == c.id) {
+                            st.selection.remove(i);
+                        } else {
+                            st.selection.push(c.id);
+                        }
+                    } else {
+                        if !st.selection.contains(&c.id) {
+                            st.selection = vec![c.id];
+                        }
+                        let ids = st.selection.clone();
+                        app.doc.begin_gesture();
+                        app.ui.playlist.drag = Some(Drag::Move {
+                            ids,
+                            anchor_start: c.start,
+                            grab_tick: view.tick_at(p.x),
+                            grab_track: view.track_at(p.y),
+                            applied_dt: 0,
+                            applied_dtrack: 0,
+                        });
+                    }
+                }
+                None => {
+                    if !mods.shift {
+                        app.ui.playlist.selection.clear();
+                    }
+                    app.ui.playlist.drag = Some(Drag::Select { from: p });
+                }
+            },
+            Tool::Zoom => app.ui.playlist.drag = Some(Drag::Zoom { from: p }),
+            Tool::Playback => {
+                app.set_mode(PlayMode::Song);
+                app.locate(tick);
+                if !app.is_playing() {
+                    app.toggle_play();
+                }
+                app.ui.playlist.drag = Some(Drag::Playback);
+            }
+            Tool::Draw | Tool::Paint => {}
+        }
+    }
     if primary && let Some(p) = pointer {
         let st = &mut app.ui.playlist;
         if mods.command {
@@ -1279,13 +1443,24 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                         if let Some(id) = app.exec(cmd) {
                             let id = ClipId(id);
                             app.ui.playlist.selection = vec![id];
-                            app.ui.playlist.drag = Some(Drag::Move {
-                                ids: vec![id],
-                                anchor_start: start,
-                                grab_tick: view.tick_at(p.x),
-                                grab_track: track,
-                                applied_dt: 0,
-                                applied_dtrack: 0,
+                            let placed = app.project().clip(id).cloned();
+                            app.ui.playlist.drag = Some(match placed {
+                                // Paint: keep laying clips of this length end to end while dragging.
+                                Some(c) if tool == Tool::Paint => Drag::Paint {
+                                    source: c.source,
+                                    track: c.track,
+                                    next: c.end(),
+                                    len: c.length,
+                                    offset: c.offset,
+                                },
+                                _ => Drag::Move {
+                                    ids: vec![id],
+                                    anchor_start: start,
+                                    grab_tick: view.tick_at(p.x),
+                                    grab_track: track,
+                                    applied_dt: 0,
+                                    applied_dtrack: 0,
+                                },
                             });
                         }
                     }
@@ -1293,7 +1468,13 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
         }
     }
-    if secondary {
+    if secondary && tool == Tool::Zoom {
+        let anchor = pointer.map_or(0.0, |p| p.x - grid.left());
+        let st = &mut app.ui.playlist;
+        let old = st.zoom_x;
+        st.zoom_x = (st.zoom_x / 2.0).max(3.0);
+        st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
+    } else if secondary {
         app.doc.begin_gesture();
         app.ui.playlist.drag = Some(Drag::Erase);
     }
@@ -1409,9 +1590,94 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     }
                 }
             }
-            None => {}
+            Some(Drag::Paint {
+                source,
+                track,
+                next,
+                len,
+                offset,
+            }) => {
+                let tick = view.tick_at(p.x).max(0) as u64;
+                while tick >= *next {
+                    let cmd = Command::PlaceClip {
+                        source: *source,
+                        track: *track,
+                        start: *next,
+                        length: *len,
+                        offset: *offset,
+                    };
+                    if let Some(id) = app.exec(cmd) {
+                        app.ui.playlist.selection.push(ClipId(id));
+                    }
+                    *next += *len;
+                }
+            }
+            Some(Drag::Mute { muted, done }) => {
+                let current = app.project().playlist.clips.clone();
+                if let Some((c, _)) = hit(view, &current, p)
+                    && !done.contains(&c.id)
+                {
+                    done.push(c.id);
+                    if c.muted != *muted {
+                        app.exec(Command::SetClipMuted {
+                            clip: c.id,
+                            muted: *muted,
+                        });
+                    }
+                }
+            }
+            Some(Drag::Slip {
+                id,
+                anchor,
+                offset,
+                grab_tick,
+            }) => {
+                // The content moves by the snapped pointer travel; it cannot start before the
+                // source does, but may run past its end (silence, as in FL Studio).
+                let target = (*anchor as i64 + view.tick_at(p.x) - *grab_tick).max(0) as u64;
+                let d = snap.round(target, sig) as i64 - *anchor as i64;
+                let new = (*offset as i64 - d).max(0) as u64;
+                if app.project().clip(*id).is_some_and(|c| c.offset != new) {
+                    app.exec(Command::SlipClip { clip: *id, offset: new });
+                }
+            }
+            Some(Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback) | None => {}
         }
         app.ui.playlist.drag = drag;
+    }
+    // Slice and Zoom act when the button is released.
+    if !ui.input(|i| i.pointer.any_down())
+        && let Some(p) = pointer
+    {
+        match app.ui.playlist.drag.clone() {
+            Some(Drag::Slice { from }) => {
+                app.ui.playlist.drag = None;
+                slice_at(app, view, from, p, snap, sig);
+            }
+            Some(Drag::Zoom { from }) => {
+                app.ui.playlist.drag = None;
+                let (t0, t1) = (
+                    view.tick_at(from.x.min(p.x)).max(0),
+                    view.tick_at(from.x.max(p.x)).max(0),
+                );
+                let st = &mut app.ui.playlist;
+                if (p.x - from.x).abs() > 4.0 && t1 > t0 {
+                    // Fit the dragged range to the grid width.
+                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32).clamp(3.0, 400.0);
+                    st.scroll.x = t0 as f32 * st.zoom_x / PPQ as f32;
+                } else {
+                    let anchor = p.x - grid.left();
+                    let old = st.zoom_x;
+                    st.zoom_x = (st.zoom_x * 2.0).min(400.0);
+                    st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
+                }
+            }
+            Some(Drag::Playback) => {
+                app.ui.playlist.drag = None;
+                app.stop();
+            }
+            _ => {}
+        }
     }
     if app.ui.playlist.drag.is_some() && !ui.input(|i| i.pointer.any_down()) {
         if !matches!(app.ui.playlist.drag, Some(Drag::Select { .. })) {
@@ -1431,6 +1697,37 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             ClipSource::Automation(_) => {}
         }
     }
+}
+
+/// The Slice tool: cut the clips on the tracks the drag from `from` to `to` crosses, at `from`'s
+/// snapped time. The right-hand pieces end up selected.
+fn slice_at(app: &mut LimeShotApp, view: &View, from: Pos2, to: Pos2, snap: Snap, sig: TimeSignature) {
+    let at = snap.round(view.tick_at(from.x).max(0) as u64, sig);
+    let (t0, t1) = {
+        let (a, b) = (view.track_at(from.y), view.track_at(to.y));
+        (a.min(b), a.max(b))
+    };
+    let crossed: Vec<ClipId> = app
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| (t0..=t1).contains(&(c.track as i32)) && c.start < at && at < c.end())
+        .map(|c| c.id)
+        .collect();
+    if crossed.is_empty() {
+        return;
+    }
+    let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
+    app.exec(Command::SliceClips { clips: crossed, at });
+    app.ui.playlist.selection = app
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .map(|c| c.id)
+        .filter(|id| !before.contains(id))
+        .collect();
 }
 
 fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
@@ -1707,6 +2004,11 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     }
     if key(ctx, Modifiers::NONE, Key::Home) {
         app.locate(0);
+    }
+    for tool in Tool::PLAYLIST {
+        if key(ctx, Modifiers::NONE, tool.key()) {
+            app.ui.playlist.tool = tool;
+        }
     }
     if key(ctx, Modifiers::SHIFT, Key::I) {
         // Invert selection (FL Studio's Playlist Select menu: Shift+I).

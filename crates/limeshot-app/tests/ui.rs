@@ -1739,3 +1739,210 @@ fn playlist_markers_add_jump_move_and_delete() {
     h.step();
     assert!(h.state().project().playlist.markers.is_empty());
 }
+
+/// An empty project in the Playlist, with `n` one-bar clips of the first pattern on track 0
+/// from bar 2 on (two bars apart).
+fn playlist_tools_harness(n: u64) -> (Harness<'static, LimeShotApp>, Vec<ClipId>) {
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    let pat = h.state().project().patterns[0].id;
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let ids = (0..n)
+        .map(|i| {
+            ClipId(
+                h.state_mut()
+                    .exec(Command::AddClip {
+                        pattern: pat,
+                        track: 0,
+                        start: bar + 2 * i * bar,
+                        length: Some(bar),
+                    })
+                    .expect("clip"),
+            )
+        })
+        .collect();
+    for _ in 0..3 {
+        h.step();
+    }
+    (h, ids)
+}
+
+fn clip(h: &Harness<'static, LimeShotApp>, id: ClipId) -> Clip {
+    h.state().project().clip(id).expect("clip").clone()
+}
+
+#[test]
+fn playlist_tool_keys_and_strip() {
+    let (mut h, _) = playlist_tools_harness(0);
+    use limeshot_ui::piano_roll::Tool;
+    for (k, tool) in [
+        (Key::B, Tool::Paint),
+        (Key::D, Tool::Delete),
+        (Key::T, Tool::Mute),
+        (Key::S, Tool::Slip),
+        (Key::C, Tool::Slice),
+        (Key::E, Tool::Select),
+        (Key::Z, Tool::Zoom),
+        (Key::Y, Tool::Playback),
+        (Key::P, Tool::Draw),
+    ] {
+        h.key_press(k);
+        h.step();
+        assert_eq!(h.state().ui.playlist.tool, tool, "{k:?}");
+    }
+    assert_eq!(h.state().ui.piano.tool, Tool::Draw, "the Piano Roll keeps its own tool");
+    // The strip's buttons select the tools too.
+    for tool in [Tool::Slip, Tool::Slice, Tool::Draw] {
+        let r = h
+            .state()
+            .ui
+            .playlist
+            .tool_rects
+            .iter()
+            .find(|x| x.0 == tool)
+            .expect("button")
+            .1;
+        click(&mut h, r.center(), PointerButton::Primary);
+        assert_eq!(h.state().ui.playlist.tool, tool);
+    }
+}
+
+#[test]
+fn playlist_slip_tool_moves_content_inside_the_clip() {
+    let (mut h, ids) = playlist_tools_harness(1);
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let c = clip(&h, ids[0]);
+    h.state_mut().ui.playlist.tool = limeshot_ui::piano_roll::Tool::Slip;
+    let history = h.state().doc.history().len();
+    // Dragging left by a beat shows later content: the offset grows, the clip stays put.
+    let mid = c.start + c.length / 2;
+    drag(&mut h, g.pos(mid, 0), g.pos(mid - PPQ, 0));
+    h.step();
+    let s = clip(&h, ids[0]);
+    assert_eq!((s.start, s.length, s.offset), (c.start, c.length, PPQ));
+    assert_eq!(h.state().doc.history().len(), history + 1, "one undo step");
+    // Dragging right past the source start stops at offset 0.
+    drag(&mut h, g.pos(mid, 0), g.pos(mid + 2 * PPQ, 0));
+    h.step();
+    let s = clip(&h, ids[0]);
+    assert_eq!((s.start, s.length, s.offset), (c.start, c.length, 0));
+}
+
+#[test]
+fn playlist_slice_tool_cuts_the_clips_it_crosses() {
+    let (mut h, ids) = playlist_tools_harness(1);
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let pat = h.state().project().patterns[0].id;
+    let below = ClipId(
+        h.state_mut()
+            .exec(Command::AddClip {
+                pattern: pat,
+                track: 1,
+                start: bar,
+                length: Some(bar),
+            })
+            .expect("clip"),
+    );
+    let other = ClipId(
+        h.state_mut()
+            .exec(Command::AddClip {
+                pattern: pat,
+                track: 3,
+                start: bar,
+                length: Some(bar),
+            })
+            .expect("clip"),
+    );
+    h.step();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    h.state_mut().ui.playlist.tool = limeshot_ui::piano_roll::Tool::Slice;
+    // A vertical drag at beat 2 of the clips, from track 0 down to track 1 (not track 3).
+    let at = bar + PPQ;
+    drag(&mut h, g.pos(at + 10, 0), g.pos(at + 10, 1));
+    h.step();
+    for id in [ids[0], below] {
+        let c = clip(&h, id);
+        assert_eq!((c.start, c.length, c.offset), (bar, PPQ, 0));
+    }
+    assert_eq!(clip(&h, other).length, bar, "track 3 was not crossed");
+    let sel = h.state().ui.playlist.selection.clone();
+    assert_eq!(sel.len(), 2, "the right pieces are selected");
+    for id in sel {
+        let c = clip(&h, id);
+        assert_eq!((c.start, c.length, c.offset), (at, bar - PPQ, PPQ));
+    }
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(h.state().project().playlist.clips.len(), 3, "one undo step");
+}
+
+#[test]
+fn playlist_paint_mute_delete_select_zoom_and_playback_tools() {
+    use limeshot_ui::piano_roll::Tool;
+    let (mut h, ids) = playlist_tools_harness(2);
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    // Paint: a drag along track 2 lays one-bar clips end to end, as one undo step.
+    h.state_mut().ui.playlist.tool = Tool::Paint;
+    drag(&mut h, g.pos(10, 2), g.pos(3 * bar + 20, 2));
+    h.step();
+    let mut painted: Vec<(Tick, Tick)> = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| c.track == 2)
+        .map(|c| (c.start, c.length))
+        .collect();
+    painted.sort();
+    assert_eq!(painted, (0..4).map(|i| (i * bar, bar)).collect::<Vec<_>>());
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(h.state().project().playlist.clips.len(), 2);
+    // Mute: a click toggles a clip, a drag mutes every clip it crosses.
+    h.state_mut().ui.playlist.tool = Tool::Mute;
+    let (a, b) = (clip(&h, ids[0]), clip(&h, ids[1]));
+    click(&mut h, g.pos(a.start + bar / 2, 0), PointerButton::Primary);
+    assert!(clip(&h, a.id).muted);
+    click(&mut h, g.pos(a.start + bar / 2, 0), PointerButton::Primary);
+    assert!(!clip(&h, a.id).muted);
+    drag(&mut h, g.pos(a.start + bar / 2, 0), g.pos(b.start + bar / 2, 0));
+    h.step();
+    assert!(clip(&h, a.id).muted && clip(&h, b.id).muted);
+    // Select: a plain drag selects; a drag on a selected clip moves the selection.
+    h.state_mut().ui.playlist.tool = Tool::Select;
+    drag(&mut h, g.pos(10, 0), g.pos(b.end() + 10, 1));
+    let mut sel = h.state().ui.playlist.selection.clone();
+    sel.sort();
+    assert_eq!(sel, ids);
+    drag(&mut h, g.pos(a.start + bar / 2, 0), g.pos(a.start + bar / 2, 1));
+    h.step();
+    assert_eq!((clip(&h, a.id).track, clip(&h, b.id).track), (1, 1));
+    // Delete: a click deletes the clip under the pointer.
+    h.state_mut().ui.playlist.tool = Tool::Delete;
+    click(&mut h, g.pos(a.start + bar / 2, 1), PointerButton::Primary);
+    assert!(h.state().project().clip(a.id).is_none());
+    // Playback: holding the button plays the song from the pointer; releasing stops.
+    h.state_mut().ui.playlist.tool = Tool::Playback;
+    let p = g.pos(2 * bar, 5);
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Song);
+    wait_for(&mut h, "playback", |a| a.is_playing());
+    press(&mut h, p, PointerButton::Primary, false);
+    wait_for(&mut h, "the stop", |a| !a.is_playing());
+    // Zoom: dragging over a bar fits it to the grid; right-click zooms out.
+    h.state_mut().ui.playlist.tool = Tool::Zoom;
+    drag(&mut h, g.pos(bar, 4), g.pos(2 * bar, 4));
+    h.step();
+    let zoom = h.state().ui.playlist.zoom_x;
+    let fitted = g.grid.width() / (bar as f32 / PPQ as f32);
+    assert!((zoom - fitted).abs() < fitted * 0.1, "{zoom} vs {fitted}");
+    let g2 = h.state().ui.playlist.geometry.expect("playlist drawn");
+    click(&mut h, g2.grid.center(), PointerButton::Secondary);
+    assert!(h.state().ui.playlist.zoom_x < zoom * 0.6);
+    assert!(h.state().project().clip(b.id).is_some(), "zooming does not delete");
+}

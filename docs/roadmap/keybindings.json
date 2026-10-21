@@ -703,10 +703,10 @@
       "action": "Draw / paint / delete / mute / slip / slice / select / zoom / playback tools",
       "fl_keys": "P / B / D / T / S / C / E / Z / Y",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "P / B / D / T / S / C / E / Z / Y",
+      "status": "IMPLEMENTED",
       "feature": "PL-017",
-      "notes": ""
+      "notes": "Session 8: the tool strip and keys observed live in FL Studio 2026.1.1 (fl-playlist-tools.png); test playlist_tool_keys_and_strip."
     },
     {
       "id": "KB-065",

@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -81,6 +81,29 @@ fn main() {
         limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Hat Open.wav"), 5, 2 * bar + bar / 2);
         app.ui.workspace.close(Win::ChannelRack);
         app.ui.playlist.zoom_x = 90.0;
+        app.doc.mark_saved();
+    }
+    if args.iter().any(|a| a == "--tools") {
+        // With --audio: the first audio clip sliced in two, the second slipped, the Slip tool on.
+        let audio: Vec<limeshot_core::Clip> = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .filter(|c| c.audio_channel().is_some())
+            .cloned()
+            .collect();
+        if let [a, b, ..] = audio.as_slice() {
+            app.exec(limeshot_core::Command::SliceClips {
+                clips: vec![a.id],
+                at: a.start + a.length / 2,
+            });
+            app.exec(limeshot_core::Command::SlipClip {
+                clip: b.id,
+                offset: b.length / 4,
+            });
+        }
+        app.ui.playlist.tool = limeshot_ui::piano_roll::Tool::Slip;
         app.doc.mark_saved();
     }
     if args.iter().any(|a| a == "--automation")

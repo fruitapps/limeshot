@@ -110,6 +110,12 @@ headers keep the LED at the right.
   song position, drawn as a flag under the ruler), Add two…, Add one every, Add jump to next bar, Add time signature
   change… Shift+Opt+T, Add key marker, Place loop Shift+T, Delete, Change to marker loop. Plain Up/Down scroll the
   Playlist one track.
+- **OBSERVED live (session 8, `fl-playlist-tools.png`, `fl-playlist-slip.png`, `fl-playlist-slice.png`):** the
+  Playlist tool strip reads Draw, Paint, Delete, Mute, Slip, Slice, Select, Zoom, Playback. Slip on a clip that shows
+  its whole sample changes nothing; after shortening the clip, a Slip drag moves the content under the fixed clip by
+  the snapped distance, slipping past the sample end leaves silence, and slipping back stops at the sample start.
+  A vertical Slice drag cuts the clip in two at the snapped line; both pieces keep their names and the content runs on
+  across the cut. The manual adds Shift+S ripple edit, Shift diagonal slicing and Shift+click slicing without a drag.
 - **LimeShot equivalent:** Playlist window with tracks, pattern clips that reference patterns by `PatternId` (linked by default), "Make unique", draw/move/resize/delete/duplicate, a bar/beat ruler, a playhead, click-to-seek on the ruler, horizontal zoom and scroll, and snap to bar/beat/step. Song mode drives the engine from these clips. A pattern clip in LimeShot plays its pattern **once**, truncated to the clip length (documented choice).
 
 ## 5. Pattern management

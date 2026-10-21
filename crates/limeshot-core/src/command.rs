@@ -265,6 +265,18 @@ pub enum Command {
         clip: ClipId,
         start: Tick,
     },
+    /// Slide a clip's content under it (FL Studio's Slip tool): the clip keeps its place and
+    /// length, only where in the source it starts changes.
+    SlipClip {
+        clip: ClipId,
+        offset: Tick,
+    },
+    /// Cut the listed clips at `at` (FL Studio's Slice tool). The right pieces continue the
+    /// source where the left ones stop; returns the id of the last new piece.
+    SliceClips {
+        clips: Vec<ClipId>,
+        at: Tick,
+    },
     DuplicateClips(Vec<ClipId>),
     /// Give the clip its own copy of its pattern.
     MakeClipUnique(ClipId),
@@ -445,6 +457,8 @@ impl Command {
             RemoveClips(_) => "Delete clips",
             MoveClips { .. } => "Move clips",
             ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
+            SlipClip { .. } => "Slip clip",
+            SliceClips { .. } => "Slice clips",
             DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
@@ -500,9 +514,13 @@ impl Command {
             AddNote { pattern, note } => format!("addn{}:{}", pattern.0, note.channel.0),
             SetNotesMuted { pattern, muted, .. } => format!("mute{}:{muted}", pattern.0),
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
+            // A Playlist paint stroke or mute drag is one undo step too.
+            AddClip { track, .. } | PlaceClip { track, .. } => format!("addc{track}"),
+            SetClipMuted { muted, .. } => format!("cmute{muted}"),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
             ResizeClipStart { clip, .. } => format!("rss{}", clip.0),
+            SlipClip { clip, .. } => format!("slip{}", clip.0),
             SetAutomationPoints { automation, .. } => format!("autopts{}", automation.0),
             SetStep {
                 pattern, channel, on, ..
@@ -1003,6 +1021,32 @@ impl Command {
                 c.offset = (c.offset + start).saturating_sub(c.start);
                 c.length = end - start;
                 c.start = start;
+            }
+            SlipClip { clip, offset } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.offset = offset,
+            SliceClips { clips, at } => {
+                let cut: Vec<Clip> = p
+                    .playlist
+                    .clips
+                    .iter()
+                    .filter(|c| clips.contains(&c.id) && c.start < at && at < c.end())
+                    .cloned()
+                    .collect();
+                let mut last = None;
+                for c in cut {
+                    let id = ClipId(p.alloc_id());
+                    last = Some(id.0);
+                    if let Some(left) = p.clip_mut(c.id) {
+                        left.length = at - c.start;
+                    }
+                    p.playlist.clips.push(Clip {
+                        id,
+                        start: at,
+                        length: c.end() - at,
+                        offset: c.offset + (at - c.start),
+                        ..c
+                    });
+                }
+                return Ok(Created(last));
             }
             DuplicateClips(ids) => {
                 let sel: Vec<Clip> = p

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **92** — IMPLEMENTED 60, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
+Tracked: **92** — IMPLEMENTED 61, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 24
 
 ## Global
 
@@ -106,7 +106,7 @@ Tracked: **92** — IMPLEMENTED 60, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
 
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
-| KB-064 | Draw / paint / delete / mute / slip / slice / select / zoom / playback tools | `P / B / D / T / S / C / E / Z / Y` | VERIFIED | — | NOT_STARTED | PL-017 |  |
+| KB-064 | Draw / paint / delete / mute / slip / slice / select / zoom / playback tools | `P / B / D / T / S / C / E / Z / Y` | VERIFIED | `P / B / D / T / S / C / E / Z / Y` | IMPLEMENTED | PL-017 | Session 8: the tool strip and keys observed live in FL Studio 2026.1.1 (fl-playlist-tools.png); test playlist_tool_keys_and_strip. |
 | KB-065 | Select all | `Ctrl+A` | OBSERVED | `Cmd+A` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-066 | Duplicate selection | `Ctrl+B` | VERIFIED | `Cmd+B` | IMPLEMENTED | PL-005 |  |
 | KB-067 | Delete selection | `Delete` | OBSERVED | `Delete / Backspace` | IMPLEMENTED | PL-004 | FL 2026.1.1 Playlist Edit menu (Del). |

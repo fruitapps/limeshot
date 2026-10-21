@@ -78,7 +78,8 @@ enum Drag {
     Playback,
 }
 
-/// The Piano Roll's tools (FL Studio's tool strip, with its single-key shortcuts).
+/// The editors' tools (FL Studio's tool strips, with their single-key shortcuts). The Piano
+/// Roll has all but Slip; the Playlist has all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tool {
     #[default]
@@ -86,6 +87,7 @@ pub enum Tool {
     Paint,
     Delete,
     Mute,
+    Slip,
     Slice,
     Select,
     Zoom,
@@ -104,12 +106,26 @@ impl Tool {
         Tool::Playback,
     ];
 
+    /// The Playlist's tool strip.
+    pub const PLAYLIST: [Tool; 9] = [
+        Tool::Draw,
+        Tool::Paint,
+        Tool::Delete,
+        Tool::Mute,
+        Tool::Slip,
+        Tool::Slice,
+        Tool::Select,
+        Tool::Zoom,
+        Tool::Playback,
+    ];
+
     pub fn key(self) -> Key {
         match self {
             Tool::Draw => Key::P,
             Tool::Paint => Key::B,
             Tool::Delete => Key::D,
             Tool::Mute => Key::T,
+            Tool::Slip => Key::S,
             Tool::Slice => Key::C,
             Tool::Select => Key::E,
             Tool::Zoom => Key::Z,
@@ -117,12 +133,13 @@ impl Tool {
         }
     }
 
-    fn icon(self) -> Icon {
+    pub(crate) fn icon(self) -> Icon {
         match self {
             Tool::Draw => Icon::ToolDraw,
             Tool::Paint => Icon::ToolPaint,
             Tool::Delete => Icon::ToolDelete,
             Tool::Mute => Icon::ToolMute,
+            Tool::Slip => Icon::ToolSlip,
             Tool::Slice => Icon::ToolSlice,
             Tool::Select => Icon::ToolSelect,
             Tool::Zoom => Icon::ToolZoom,
@@ -130,12 +147,13 @@ impl Tool {
         }
     }
 
-    fn tip(self) -> &'static str {
+    pub(crate) fn tip(self) -> &'static str {
         match self {
             Tool::Draw => "Draw (P): add, move and resize notes",
             Tool::Paint => "Paint (B): drag to lay notes end to end",
             Tool::Delete => "Delete (D): click or drag over notes to delete them",
             Tool::Mute => "Mute (T): click or drag over notes to mute / unmute them",
+            Tool::Slip => "Slip (S): drag a clip's content left or right inside the clip",
             Tool::Slice => "Slice (C): drag across notes to cut them",
             Tool::Select => "Select (E): drag to select",
             Tool::Zoom => "Zoom (Z): drag a range to zoom in, right-click to zoom out",
@@ -805,7 +823,7 @@ fn grid_input(
                 }
                 app.ui.piano.drag = Some(Drag::Playback);
             }
-            Tool::Draw | Tool::Paint => {}
+            Tool::Draw | Tool::Paint | Tool::Slip => {}
         }
     } else if primary_pressed && let Some(p) = pointer {
         let st = &mut app.ui.piano;
