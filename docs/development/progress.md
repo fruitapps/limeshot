@@ -417,3 +417,4 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
     editor windows have none).
 11. **Pattern selector (item 16).** The toolbar's − and + buttons are gone; the selector's list ends with Create
     new. (FL keeps a + button and makes new patterns with Find first empty… in the same menu.)
+12. **Playback tool (item 17).** The Piano Roll's notes under the held Playback line light up while they sound.

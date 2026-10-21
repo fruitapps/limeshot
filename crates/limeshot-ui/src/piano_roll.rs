@@ -186,6 +186,8 @@ pub struct State {
     pub geometry: Option<Geometry>,
     /// The tool whose cursor was drawn over the grid in the last frame (for tests).
     pub cursor: Option<Tool>,
+    /// The notes the Playback tool is sounding, lit up on the grid.
+    pub sounding: Vec<NoteId>,
 }
 
 impl Default for State {
@@ -205,6 +207,7 @@ impl Default for State {
             scrolled_once: false,
             geometry: None,
             cursor: None,
+            sounding: Vec::new(),
         }
     }
 }
@@ -1184,7 +1187,8 @@ fn grid_input(
         app.ui.piano.drag = drag;
     }
     // The Playback tool: a line at the pointer shows what a press plays; while held, the notes
-    // under it sound (FL Studio scrubs instead of playing on from the pointer).
+    // under it sound and light up (FL Studio scrubs instead of playing on from the pointer).
+    app.ui.piano.sounding.clear();
     if tool == Tool::Playback
         && let Some(p) = resp.hover_pos().or(pointer.filter(|_| app.ui.piano.drag.is_some()))
     {
@@ -1192,11 +1196,19 @@ fn grid_input(
         playback_line(ui, grid, p.x, held);
         if held {
             let tick = view.tick_at(p.x).max(0) as u64;
-            let want: Vec<(ChannelId, u8, f32)> = notes
+            let under: Vec<&Note> = notes
                 .iter()
                 .filter(|n| n.channel == cid && !n.muted && n.start <= tick && tick < n.end())
-                .map(|n| (cid, n.key, n.velocity))
                 .collect();
+            let t = Theme::current();
+            let painter = ui.painter_at(grid);
+            for n in &under {
+                let r = view.note_rect(n);
+                painter.rect_filled(r, CornerRadius::same(2), Color32::WHITE.gamma_multiply(0.45));
+                painter.rect_stroke(r, 2.0, Stroke::new(1.5, t.playhead), egui::StrokeKind::Outside);
+            }
+            app.ui.piano.sounding = under.iter().map(|n| n.id).collect();
+            let want: Vec<(ChannelId, u8, f32)> = under.iter().map(|n| (cid, n.key, n.velocity)).collect();
             scrub(app, &want);
         }
     }
@@ -1229,6 +1241,7 @@ fn grid_input(
             }
             Some(Drag::Playback) => {
                 app.ui.piano.drag = None;
+                app.ui.piano.sounding.clear();
                 scrub(app, &[]);
             }
             _ => {}

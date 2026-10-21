@@ -2679,6 +2679,8 @@ fn playback_tool_scrubs_what_is_under_the_line() {
     assert_eq!(h.state().ui.piano.cursor, Some(Tool::Playback), "the tool's cursor");
     press(&mut h, at(&a), PointerButton::Primary, true);
     assert_eq!(h.state().ui.scrub, vec![(lead, a.key)]);
+    // Owner's list item 17: the sounding notes light up.
+    assert_eq!(h.state().ui.piano.sounding, vec![a.id]);
     h.event(Event::PointerMoved(at(&b)));
     h.step();
     assert_eq!(
@@ -2686,8 +2688,10 @@ fn playback_tool_scrubs_what_is_under_the_line() {
         vec![(lead, b.key)],
         "the line moved on to the next note"
     );
+    assert_eq!(h.state().ui.piano.sounding, vec![b.id]);
     press(&mut h, at(&b), PointerButton::Primary, false);
     assert!(h.state().ui.scrub.is_empty(), "releasing stops the notes");
+    assert!(h.state().ui.piano.sounding.is_empty());
     assert!(!h.state().is_playing(), "the transport never started");
     assert!(!h.state().doc.is_modified());
 
