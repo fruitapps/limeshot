@@ -180,7 +180,8 @@ headers keep the LED at the right.
 
 ## 12. Keyboard shortcuts
 See `basics_shortcuts.htm` (VERIFIED). Every FL shortcut is tracked against LimeShot in
-`docs/roadmap/keybindings.json` (76 so far; INFERRED entries still need checking), settings in `settings.json`.
+`docs/roadmap/keybindings.json` (118 so far; INFERRED entries still need checking), settings in `settings.json`, main
+menu items in `menus.json` (§18).
 
 ## 13. Project lifecycle
 - **VERIFIED:** `.flp` project files (Info.plist document type), templates (`Data/Templates/*`), Save (Ctrl+S), Save As, "Save new version" (Ctrl+N), Export WAV (Ctrl+R), Export MP3 (Ctrl+Shift+R), Export MIDI, recent files Alt+0..9.
@@ -235,3 +236,33 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
 - **LimeShot equivalent (PLG-006):** see `features.json`. Each plugin channel and plugin insert has one wrapper window
   (its own OS window): a title bar row with Editor and Settings tabs (channels: the LimeShot Channel Settings page;
   effects: the parameter list), then the plugin's native view on the Editor tab.
+
+## 18. Main menu bar (session 13, outside-in pass)
+- **OBSERVED live (2026-10-22, `fl-menu-*.png`; Accessibility dump of the mirrored macOS menu bar in
+  `evidence/menus/fl-native-menubar-dump.txt`, made with `evidence/menus/menudump.swift`):** every item of FILE, EDIT,
+  ADD, PATTERNS, VIEW, OPTIONS, TOOLS and HELP, with submenus, is recorded in `docs/roadmap/menus.json` (generated
+  view: `menus.md`). Dialogs those items open are not documented yet (next inward pass).
+- **Menu structure:** FL draws its own menus (upper-case labels left of the transport) and mirrors the same tree into
+  the native macOS menu bar (File, Edit, Add, Patterns, View, Options, Tools, Help after the FL Studio app menu).
+  In-window menus use grey **section headers** (View: Windows, Layout, Browser, News and notifications; Options: System,
+  Project, Info, MIDI, Switches, 3rd party services; Tools: FL Cloud, Clipboard, Score logger, Audio logger, Last
+  tweaked parameters, Macros; Help: Registration, Support, Shop, Internet links; File › Export: Audio, Video, Project).
+  Long menus become columns (Add: three columns; Tools: Macros in a second column). Toggles show a dark check when on
+  and a faint check when off; radio groups show a dot. Shortcuts are right-aligned in italics. The native mirror loses
+  the headers and the enabled state (File › Save to new project folder… is disabled in-window, enabled in the mirror)
+  and adds macOS's own Edit items (AutoFill, Dictation, Emoji).
+- **File:** the first item names the default template, "New (Basic with limiter)". New from template shows templates as
+  cards (title, description, icon) in six categories that match `Contents/Resources/FL/Data/Templates/<category>`.
+  Recent projects are listed inline under a header with Opt+1…Opt+9. Cmd+N is Save new version, not New.
+- **Edit:** only four items. The first is a single Undo/Redo slot naming the last action: after painting a clip it read
+  "Undo playlist fill paint clip" (Cmd+Z); after undoing, "Redo playlist fill paint clip" (Cmd+Opt+Z). Cut/Copy/Paste
+  act on the focused editor; Paste is disabled while the clipboard is empty.
+- **Add:** generators grouped by category (Controller, Drum, MIDI, Misc, Patcher, Sampler, Synth classic, Synth special,
+  Visual), a Categories/Simple/Tree view switch, and an Other column (Effect › …, Plugin picker F8, plugin database and
+  preset browsing, fast rescan, Manage plugins, Automation for last tweaked parameter, Pattern).
+- **Patterns:** a column listing the patterns sits left of the commands. Group selected…/Rename group…/Ungroup selected…
+  appear in the native mirror but not in-window with a single pattern.
+- **Tools › Last tweaked / Next to last tweaked:** the same menu as a control's right-click, headed by the parameter
+  name ("No parameter" before anything was tweaked).
+- **Confidence:** OBSERVED. **LimeShot equivalent:** `crates/limeshot-ui/src/menus.rs`; the per-item comparison is
+  `menus.md` (APP-026 tracks the menu bar as a whole).

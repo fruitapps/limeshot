@@ -1,0 +1,5106 @@
+{
+  "schema": 1,
+  "reference": "FL Studio 2026 (26.1.1.5313), macOS",
+  "source": "Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png.",
+  "notes": "One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.",
+  "menus": [
+    {
+      "id": "MENU-001",
+      "menu": "File",
+      "path": [
+        "File",
+        "New (Basic with limiter)"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › New",
+      "status": "DIFFERENT",
+      "feature": "APP-001",
+      "notes": "FL names the default template in the label. LimeShot's New is an empty 140 BPM project and has Cmd+N; FL's Cmd+N is Save new version."
+    },
+    {
+      "id": "MENU-002",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Each template is a card with a title, a one-line description and an icon."
+    },
+    {
+      "id": "MENU-003",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Advanced"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Advanced; full list in lists.templates.Advanced."
+    },
+    {
+      "id": "MENU-004",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Minimal"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Minimal; full list in lists.templates.Minimal."
+    },
+    {
+      "id": "MENU-005",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Other"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Other; full list in lists.templates.Other."
+    },
+    {
+      "id": "MENU-006",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Performance"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Performance; full list in lists.templates.Performance."
+    },
+    {
+      "id": "MENU-007",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Power User"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Power User; full list in lists.templates.Power User."
+    },
+    {
+      "id": "MENU-008",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Utility"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Bundled templates in Data/Templates/Utility; full list in lists.templates.Utility."
+    },
+    {
+      "id": "MENU-009",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Empty"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Shown as a card below the categories."
+    },
+    {
+      "id": "MENU-010",
+      "menu": "File",
+      "path": [
+        "File",
+        "New from template",
+        "Change default template..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": "Picks which template New and the File menu's first item use."
+    },
+    {
+      "id": "MENU-011",
+      "menu": "File",
+      "path": [
+        "File",
+        "Open..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Cmd+O",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Open…",
+      "status": "IMPLEMENTED",
+      "feature": "APP-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-012",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+S",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Save",
+      "status": "IMPLEMENTED",
+      "feature": "APP-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-013",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save as..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+Cmd+S",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Save as…",
+      "status": "IMPLEMENTED",
+      "feature": "APP-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-014",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save new version"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+N",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-018",
+      "notes": "Saves name_2.flp, name_3.flp … next to the project."
+    },
+    {
+      "id": "MENU-015",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save and back up to FL Cloud"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-016",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save to new project folder..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-028",
+      "notes": "Disabled in a project that was never saved."
+    },
+    {
+      "id": "MENU-017",
+      "menu": "File",
+      "path": [
+        "File",
+        "Save as template..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-018",
+      "menu": "File",
+      "path": [
+        "File",
+        "Delete unused files and save project"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-029",
+      "notes": "Disabled in a project that was never saved; also in Tools › Macros."
+    },
+    {
+      "id": "MENU-019",
+      "menu": "File",
+      "path": [
+        "File",
+        "Import"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Import MIDI file…",
+      "status": "DIFFERENT",
+      "feature": "PR-020",
+      "notes": "LimeShot has a flat item instead of the submenu."
+    },
+    {
+      "id": "MENU-020",
+      "menu": "File",
+      "path": [
+        "File",
+        "Import",
+        "MIDI file..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Import MIDI file…",
+      "status": "DIFFERENT",
+      "feature": "PR-020",
+      "notes": ""
+    },
+    {
+      "id": "MENU-021",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Export WAV…",
+      "status": "DIFFERENT",
+      "feature": "EXP-001",
+      "notes": "LimeShot has flat File items (Export WAV…, Export MIDI file (pattern/song)…) instead of the submenu."
+    },
+    {
+      "id": "MENU-022",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Wave file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "Cmd+R",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Export WAV…",
+      "status": "DIFFERENT",
+      "feature": "EXP-001",
+      "notes": "Same key; LimeShot's label says WAV."
+    },
+    {
+      "id": "MENU-023",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "MP3 file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "Shift+Cmd+R",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-024",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "OGG file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-025",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "FLAC file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-026",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "MIDI file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "Shift+Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Export MIDI file (song)…",
+      "status": "DIFFERENT",
+      "feature": "EXP-012",
+      "notes": "LimeShot has separate pattern and song items and no shortcut."
+    },
+    {
+      "id": "MENU-027",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "M4A file..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-006",
+      "notes": "AAC in an MP4 container."
+    },
+    {
+      "id": "MENU-028",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Last exported format(s)..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-029",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Master..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "Opt+Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL Cloud mastering (cloud icon)."
+    },
+    {
+      "id": "MENU-030",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Upload..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Upload to Image-Line's distribution service."
+    },
+    {
+      "id": "MENU-031",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist tracks"
+      ],
+      "section": "Audio",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-032",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist tracks",
+        "From song start..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-033",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist tracks",
+        "From track start..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-034",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist tracks",
+        "Time selection..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": "Enabled when the Playlist has a time selection."
+    },
+    {
+      "id": "MENU-035",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist track groups"
+      ],
+      "section": "Audio",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-036",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist track groups",
+        "From song start..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-037",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist track groups",
+        "From track start..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-038",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "All playlist track groups",
+        "Time selection..."
+      ],
+      "section": "Audio",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-039",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Video file..."
+      ],
+      "section": "Video",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-040",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Zipped loop package..."
+      ],
+      "section": "Project",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-019",
+      "notes": "Project plus every sample it uses, zipped."
+    },
+    {
+      "id": "MENU-041",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Project bones..."
+      ],
+      "section": "Project",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-017",
+      "notes": "A copy of the project without audio data."
+    },
+    {
+      "id": "MENU-042",
+      "menu": "File",
+      "path": [
+        "File",
+        "Export",
+        "Project data files..."
+      ],
+      "section": "Project",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-017",
+      "notes": "Copies the project's samples into its folder."
+    },
+    {
+      "id": "MENU-043",
+      "menu": "File",
+      "path": [
+        "File",
+        "<recent project>"
+      ],
+      "section": "Recent projects",
+      "kind": "list",
+      "fl_keys": "Opt+1 … Opt+9",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Open recent",
+      "status": "DIFFERENT",
+      "feature": "APP-010",
+      "notes": "FL lists recent projects inline under a 'Recent projects' header with Opt+number keys; LimeShot uses a submenu without keys."
+    },
+    {
+      "id": "MENU-044",
+      "menu": "File",
+      "path": [
+        "File",
+        "Revert to last backup"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-027",
+      "notes": "Opens the newest autosave/backup of this project."
+    },
+    {
+      "id": "MENU-045",
+      "menu": "File",
+      "path": [
+        "File",
+        "Exit"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Q",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Quit",
+      "status": "DIFFERENT",
+      "feature": "APP-014",
+      "notes": "LimeShot says Quit (macOS wording)."
+    },
+    {
+      "id": "MENU-046",
+      "menu": "Edit",
+      "path": [
+        "Edit",
+        "Undo <last action>"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Z",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Undo",
+      "status": "DIFFERENT",
+      "feature": "APP-005",
+      "notes": "One slot that names the last action ('Undo playlist fill paint clip') and turns into 'Redo <action>' (Cmd+Opt+Z) after an undo. LimeShot shows separate Undo and Redo items (Redo is Cmd+Shift+Z)."
+    },
+    {
+      "id": "MENU-047",
+      "menu": "Edit",
+      "path": [
+        "Edit",
+        "Cut"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+X",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-019",
+      "notes": "Acts on the focused editor (Playlist clips, Piano Roll notes, Channel Rack steps). LimeShot has the keys in each editor but no menu item."
+    },
+    {
+      "id": "MENU-048",
+      "menu": "Edit",
+      "path": [
+        "Edit",
+        "Copy"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-019",
+      "notes": "As Cut."
+    },
+    {
+      "id": "MENU-049",
+      "menu": "Edit",
+      "path": [
+        "Edit",
+        "Paste"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+V",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-019",
+      "notes": "Disabled while the clipboard is empty."
+    },
+    {
+      "id": "MENU-050",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "More plugins..."
+      ],
+      "section": "Channel",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › + › Find plugins…",
+      "status": "DIFFERENT",
+      "feature": "BR-008",
+      "notes": "Opens the plugin manager/list of all installed generators."
+    },
+    {
+      "id": "MENU-051",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Controller generators>"
+      ],
+      "section": "Controller",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Controller']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-052",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Drum generators>"
+      ],
+      "section": "Drum",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Drum']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-053",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<MIDI generators>"
+      ],
+      "section": "MIDI",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['MIDI']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-054",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Misc generators>"
+      ],
+      "section": "Misc",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Misc']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-055",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Patcher generators>"
+      ],
+      "section": "Patcher",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Patcher']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-056",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Sampler generators>"
+      ],
+      "section": "Sampler",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Sampler']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-057",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Synth classic generators>"
+      ],
+      "section": "Synth classic",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Synth classic']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-058",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Synth special generators>"
+      ],
+      "section": "Synth special",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Synth special']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-059",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "<Visual generators>"
+      ],
+      "section": "Visual",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Sampler channel / LimeSynth channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL's installed generators of this category; full list in lists.generators['Visual']. Picking one adds a channel."
+    },
+    {
+      "id": "MENU-060",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Categories"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": "List view mode for the generator and effect lists."
+    },
+    {
+      "id": "MENU-061",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Simple"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-062",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Tree"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-063",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Effect"
+      ],
+      "section": "Other",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › insert slot menu",
+      "status": "DIFFERENT",
+      "feature": "MIX-007",
+      "notes": "Adds an effect to the selected mixer track's next free slot. Groups in lists.effects."
+    },
+    {
+      "id": "MENU-064",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Effect",
+        "More plugins..."
+      ],
+      "section": "Other",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-065",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Effect",
+        "Plugin database"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "Shift+F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": "Opens the Browser at the plugin database."
+    },
+    {
+      "id": "MENU-066",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Effect",
+        "<effects by category>"
+      ],
+      "section": "Other",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › insert slot menu",
+      "status": "DIFFERENT",
+      "feature": "FX-001",
+      "notes": "Same view-mode radio (Categories / Simple / Tree) at the end."
+    },
+    {
+      "id": "MENU-067",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Plugin picker"
+      ],
+      "section": "Other",
+      "kind": "toggle",
+      "fl_keys": "F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-068",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Browse plugin database"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-069",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Browse all installed plugins"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-070",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Browse presets"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PLG-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-071",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Refresh plugin list (fast scan)"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "plugin menus › Find plugins…",
+      "status": "DIFFERENT",
+      "feature": "PLG-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-072",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Manage plugins"
+      ],
+      "section": "Other",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-073",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Manage FL Cloud plugins..."
+      ],
+      "section": "Other",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-074",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Automation for last tweaked parameter"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": "Disabled until a control was tweaked. LimeShot creates automation from a control's context menu."
+    },
+    {
+      "id": "MENU-075",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Pattern"
+      ],
+      "section": "Other",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Pattern",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-076",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Playlist track"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Playlist track",
+      "status": "LIMESHOT_ONLY",
+      "feature": "PL-012",
+      "notes": "Not in FL's Add menu."
+    },
+    {
+      "id": "MENU-077",
+      "menu": "Add",
+      "path": [
+        "Add",
+        "Mixer track"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Mixer track",
+      "status": "LIMESHOT_ONLY",
+      "feature": "MIX-006",
+      "notes": "Not in FL's Add menu."
+    },
+    {
+      "id": "MENU-078",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "<pattern list>"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › pattern list",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-018",
+      "notes": "FL shows the patterns in a column left of the commands; clicking one makes it current."
+    },
+    {
+      "id": "MENU-079",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Find first empty..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+F4",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Selects the first empty pattern and asks for a name."
+    },
+    {
+      "id": "MENU-080",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Find next empty..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "F4",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › New pattern",
+      "status": "DIFFERENT",
+      "feature": "SEQ-021",
+      "notes": "FL asks for a name; LimeShot's F4 adds a pattern without asking."
+    },
+    {
+      "id": "MENU-081",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Find next empty (no naming)"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+F4",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-082",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Select in playlist"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-083",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Rename and color..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "F2",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › Rename pattern…",
+      "status": "DIFFERENT",
+      "feature": "SEQ-018",
+      "notes": "LimeShot has rename and Color as separate items."
+    },
+    {
+      "id": "MENU-084",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Change color..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › Color",
+      "status": "DIFFERENT",
+      "feature": "SEQ-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-085",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Random color"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-086",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Open in project browser"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+P",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-087",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Group selected..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-022",
+      "notes": "In the native macOS menu mirror; hidden in-window with one pattern."
+    },
+    {
+      "id": "MENU-088",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Rename group..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-022",
+      "notes": "As Group selected."
+    },
+    {
+      "id": "MENU-089",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Ungroup selected..."
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-022",
+      "notes": "As Group selected."
+    },
+    {
+      "id": "MENU-090",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Set time signature..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-091",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Transpose..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-092",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Insert one"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Ins",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-093",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Clone"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › Clone pattern",
+      "status": "DIFFERENT",
+      "feature": "SEQ-018",
+      "notes": "LimeShot has no key."
+    },
+    {
+      "id": "MENU-094",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Delete"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Del",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Patterns › Delete pattern",
+      "status": "DIFFERENT",
+      "feature": "SEQ-018",
+      "notes": "LimeShot has no key."
+    },
+    {
+      "id": "MENU-095",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Move up"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Up",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-096",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Move down"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Down",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-097",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Split by channel"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-098",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Quick render as audio clip"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-099",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Render as audio clip..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-100",
+      "menu": "Patterns",
+      "path": [
+        "Patterns",
+        "Render and replace..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-101",
+      "menu": "View",
+      "path": [
+        "View",
+        "Playlist"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "F5",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Playlist",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-102",
+      "menu": "View",
+      "path": [
+        "View",
+        "Piano roll"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "F7",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Piano Roll",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-103",
+      "menu": "View",
+      "path": [
+        "View",
+        "Channel rack"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "F6",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Channel Rack",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-104",
+      "menu": "View",
+      "path": [
+        "View",
+        "Mixer"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "F9",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Mixer",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-105",
+      "menu": "View",
+      "path": [
+        "View",
+        "Browser"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "Opt+F8",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Browser",
+      "status": "IMPLEMENTED",
+      "feature": "UI-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-106",
+      "menu": "View",
+      "path": [
+        "View",
+        "Project picker"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "Cmd+F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": "A floating picker of the project's patterns, clips and channels."
+    },
+    {
+      "id": "MENU-107",
+      "menu": "View",
+      "path": [
+        "View",
+        "Plugin picker"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-108",
+      "menu": "View",
+      "path": [
+        "View",
+        "Tempo tapper"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "Cmd+F5",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-109",
+      "menu": "View",
+      "path": [
+        "View",
+        "Touch controller"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "Opt+F7",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-110",
+      "menu": "View",
+      "path": [
+        "View",
+        "Script output"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-111",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars"
+      ],
+      "section": "Windows",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-112",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Edit"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": "Section 'Toolbars': toolbar edit mode."
+    },
+    {
+      "id": "MENU-113",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Separators"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-114",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Flat buttons"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-115",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Show FL Cloud status in the hint bar"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-116",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Show detected MIDI chords near the hint bar"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-117",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Hint bar"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-118",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "Hide"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "Cmd+F11",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-119",
+      "menu": "View",
+      "path": [
+        "View",
+        "Toolbars",
+        "<factory presets>"
+      ],
+      "section": "Windows",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "Default (macOS) selected",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": "Section 'Factory Presets'; full list in lists.toolbar_presets."
+    },
+    {
+      "id": "MENU-120",
+      "menu": "View",
+      "path": [
+        "View",
+        "Tests"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line's internal test window."
+    },
+    {
+      "id": "MENU-121",
+      "menu": "View",
+      "path": [
+        "View",
+        "Plugin performance monitor"
+      ],
+      "section": "Windows",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PLG-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-122",
+      "menu": "View",
+      "path": [
+        "View",
+        "Welcome to FL Studio"
+      ],
+      "section": "Windows",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-123",
+      "menu": "View",
+      "path": [
+        "View",
+        "Close all windows"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "F12",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-124",
+      "menu": "View",
+      "path": [
+        "View",
+        "Close all plugin windows"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Opt+F12",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-125",
+      "menu": "View",
+      "path": [
+        "View",
+        "Close all unfocused windows"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Cmd+F12",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-126",
+      "menu": "View",
+      "path": [
+        "View",
+        "Align all channel editors"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Shift+F12",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-127",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows"
+      ],
+      "section": "Layout",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Arrange windows",
+      "status": "DIFFERENT",
+      "feature": "UI-002",
+      "notes": "LimeShot has one item that resets the layout (FL's Realign key)."
+    },
+    {
+      "id": "MENU-128",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Realign"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+H",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Arrange windows",
+      "status": "DIFFERENT",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-129",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Into workspace"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Docks detached windows back into the main window."
+    },
+    {
+      "id": "MENU-130",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Desktop (default)"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Section 'Layouts'."
+    },
+    {
+      "id": "MENU-131",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Desktop (alternate)"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Section 'Layouts'."
+    },
+    {
+      "id": "MENU-132",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Tablet (default)"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Section 'Layouts'."
+    },
+    {
+      "id": "MENU-133",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Tablet (alternate)"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Section 'Layouts'."
+    },
+    {
+      "id": "MENU-134",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Custom"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "Enabled once a custom layout is saved."
+    },
+    {
+      "id": "MENU-135",
+      "menu": "View",
+      "path": [
+        "View",
+        "Arrange windows",
+        "Save custom layout"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-136",
+      "menu": "View",
+      "path": [
+        "View",
+        "Background"
+      ],
+      "section": "Layout",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-137",
+      "menu": "View",
+      "path": [
+        "View",
+        "Background",
+        "Set image wallpaper..."
+      ],
+      "section": "Layout",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-138",
+      "menu": "View",
+      "path": [
+        "View",
+        "Background",
+        "Set dynamic wallpaper"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-139",
+      "menu": "View",
+      "path": [
+        "View",
+        "Background",
+        "Set background color..."
+      ],
+      "section": "Layout",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-140",
+      "menu": "View",
+      "path": [
+        "View",
+        "Undo history"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › History",
+      "status": "DIFFERENT",
+      "feature": "APP-006",
+      "notes": "FL shows the history in the Browser; LimeShot lists it in an Edit submenu."
+    },
+    {
+      "id": "MENU-141",
+      "menu": "View",
+      "path": [
+        "View",
+        "Patterns"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": "Browser opens at the project's patterns."
+    },
+    {
+      "id": "MENU-142",
+      "menu": "View",
+      "path": [
+        "View",
+        "Generators in use"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-143",
+      "menu": "View",
+      "path": [
+        "View",
+        "Effects in use"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-144",
+      "menu": "View",
+      "path": [
+        "View",
+        "Remote control"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-145",
+      "menu": "View",
+      "path": [
+        "View",
+        "Plugin database"
+      ],
+      "section": "Browser",
+      "kind": "action",
+      "fl_keys": "Shift+F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-146",
+      "menu": "View",
+      "path": [
+        "View",
+        "Downloads"
+      ],
+      "section": "News and notifications",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-147",
+      "menu": "View",
+      "path": [
+        "View",
+        "News"
+      ],
+      "section": "News and notifications",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-148",
+      "menu": "View",
+      "path": [
+        "View",
+        "Notifications"
+      ],
+      "section": "News and notifications",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-149",
+      "menu": "View",
+      "path": [
+        "View",
+        "Channel Settings"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Channel Settings",
+      "status": "LIMESHOT_ONLY",
+      "feature": "UI-009",
+      "notes": "FL opens a channel's settings from the Channel Rack only."
+    },
+    {
+      "id": "MENU-150",
+      "menu": "View",
+      "path": [
+        "View",
+        "Zoom in"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+=",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Zoom in",
+      "status": "LIMESHOT_ONLY",
+      "feature": "UI-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-151",
+      "menu": "View",
+      "path": [
+        "View",
+        "Zoom out"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+-",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Zoom out",
+      "status": "LIMESHOT_ONLY",
+      "feature": "UI-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-152",
+      "menu": "View",
+      "path": [
+        "View",
+        "Actual size"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+0",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "View › Actual size",
+      "status": "LIMESHOT_ONLY",
+      "feature": "UI-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-153",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "MIDI settings"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "F10",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-020",
+      "notes": ""
+    },
+    {
+      "id": "MENU-154",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Audio settings"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Options › Audio settings…",
+      "status": "IMPLEMENTED",
+      "feature": "APP-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-155",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "General settings"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-025",
+      "notes": ""
+    },
+    {
+      "id": "MENU-156",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "File settings"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-025",
+      "notes": ""
+    },
+    {
+      "id": "MENU-157",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Theme settings"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-158",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Manage plugins"
+      ],
+      "section": "System",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-021",
+      "notes": ""
+    },
+    {
+      "id": "MENU-159",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Project general settings"
+      ],
+      "section": "Project",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-030",
+      "notes": ""
+    },
+    {
+      "id": "MENU-160",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Project info"
+      ],
+      "section": "Project",
+      "kind": "dialog",
+      "fl_keys": "F11",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-017",
+      "notes": ""
+    },
+    {
+      "id": "MENU-161",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Debugging log"
+      ],
+      "section": "Info",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-031",
+      "notes": ""
+    },
+    {
+      "id": "MENU-162",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Account settings"
+      ],
+      "section": "Info",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-163",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Enable MIDI remote control"
+      ],
+      "section": "MIDI",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-164",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Enable MIDI output"
+      ],
+      "section": "MIDI",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-165",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Enable MIDI master sync"
+      ],
+      "section": "MIDI",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-166",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Typing keyboard to piano"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+T",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-167",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Metronome"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Options › Metronome",
+      "status": "IMPLEMENTED",
+      "feature": "TR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-168",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Recording precount"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+P",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-169",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Start on input"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+I",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-170",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Blend recorded notes"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+B",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-171",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Step edit"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+E",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-172",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Loop record"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-173",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Auto scrolling"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-174",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Enable groups"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Shift+Opt+G",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-175",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Multilink to controllers"
+      ],
+      "section": "Switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+J",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-176",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Manage accounts..."
+      ],
+      "section": "3rd party services",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-177",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Loop song"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Options › Loop song",
+      "status": "LIMESHOT_ONLY",
+      "feature": "TR-009",
+      "notes": "FL has this on the toolbar/transport, not in Options."
+    },
+    {
+      "id": "MENU-178",
+      "menu": "Options",
+      "path": [
+        "Options",
+        "Autosave"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Options › Autosave",
+      "status": "LIMESHOT_ONLY",
+      "feature": "APP-024",
+      "notes": "FL sets the autosave interval in File settings."
+    },
+    {
+      "id": "MENU-179",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Browser find..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Cmd+F",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Browser › search field",
+      "status": "DIFFERENT",
+      "feature": "BR-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-180",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "One-click audio recording"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-181",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "One-click audio recording",
+        "Into Edison audio editor/recorder"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Edison is an FL plugin."
+    },
+    {
+      "id": "MENU-182",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "One-click audio recording",
+        "Into playlist as an audio clip"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-183",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Remix a song..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-030",
+      "notes": "Stem separation into vocals, instruments, bass and drums."
+    },
+    {
+      "id": "MENU-184",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Riff machine..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-029",
+      "notes": ""
+    },
+    {
+      "id": "MENU-185",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Chord progression tool..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-028",
+      "notes": ""
+    },
+    {
+      "id": "MENU-186",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Control creator"
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-017",
+      "notes": ""
+    },
+    {
+      "id": "MENU-187",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Sounds"
+      ],
+      "section": "FL Cloud",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-188",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Mastering..."
+      ],
+      "section": "FL Cloud",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-189",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Distribution..."
+      ],
+      "section": "FL Cloud",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-190",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Manage cloud plugins..."
+      ],
+      "section": "FL Cloud",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-191",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "My account..."
+      ],
+      "section": "FL Cloud",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line cloud service."
+    },
+    {
+      "id": "MENU-192",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Save audio clipboard to browser"
+      ],
+      "section": "Clipboard",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-011",
+      "notes": "Disabled while the clipboard holds no audio."
+    },
+    {
+      "id": "MENU-193",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Save MIDI clipboard to browser"
+      ],
+      "section": "Clipboard",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-011",
+      "notes": "Disabled while the clipboard holds no notes."
+    },
+    {
+      "id": "MENU-194",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern"
+      ],
+      "section": "Score logger",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-195",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern",
+        "Last 2 minutes"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-196",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern",
+        "Last 5 minutes"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-197",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern",
+        "Last 10 minutes"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-198",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern",
+        "Last 20 minutes"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-199",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump score log to selected pattern",
+        "Last 30 minutes"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-200",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Clear log"
+      ],
+      "section": "Score logger",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-201",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Enabled"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "The section header shows the logger's memory use."
+    },
+    {
+      "id": "MENU-202",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-203",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "1 minute"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Maximum length'."
+    },
+    {
+      "id": "MENU-204",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "2 minutes"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Maximum length'."
+    },
+    {
+      "id": "MENU-205",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "5 minutes"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Maximum length'."
+    },
+    {
+      "id": "MENU-206",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "10 minutes"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Maximum length'."
+    },
+    {
+      "id": "MENU-207",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "Pre effects"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Recording position'."
+    },
+    {
+      "id": "MENU-208",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Settings",
+        "Post effects, pre fader"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": "Section 'Recording position'."
+    },
+    {
+      "id": "MENU-209",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Dump to audio editor"
+      ],
+      "section": "Audio logger (memory used: 22MB)",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-210",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "control › context menu",
+      "status": "DIFFERENT",
+      "feature": "UI-010",
+      "notes": "The same menu a control's right-click opens; first line names the parameter ('No parameter' when none). LimeShot has the menu on controls only."
+    },
+    {
+      "id": "MENU-211",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Edit events"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-212",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Edit events in new window"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-213",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Edit events in piano roll"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-214",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Init song with this position"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-011",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-215",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Delete initial value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-011",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-216",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Create automation clip"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-217",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Edit automation clip..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-218",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Link to controller..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-219",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Override global link..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-220",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Copy value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-221",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Paste value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-222",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Type in value..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-223",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Set..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-224",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Last tweaked",
+        "Override volatile link..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-225",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "control › context menu",
+      "status": "DIFFERENT",
+      "feature": "UI-010",
+      "notes": "The same menu a control's right-click opens; first line names the parameter ('No parameter' when none). LimeShot has the menu on controls only."
+    },
+    {
+      "id": "MENU-226",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Edit events"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-227",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Edit events in new window"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-228",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Edit events in piano roll"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-005",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-229",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Init song with this position"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-011",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-230",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Delete initial value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-011",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-231",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Create automation clip"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-232",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Edit automation clip..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-233",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Link to controller..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-234",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Override global link..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-235",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Copy value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-236",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Paste value"
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-237",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Type in value..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-238",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Set..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-010",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-239",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Next to last tweaked",
+        "Override volatile link..."
+      ],
+      "section": "Last tweaked parameters",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+    },
+    {
+      "id": "MENU-240",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Stop sound"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "Cmd+H",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "shortcut Cmd+H",
+      "status": "DIFFERENT",
+      "feature": "TR-010",
+      "notes": "LimeShot has the key and no menu item."
+    },
+    {
+      "id": "MENU-241",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Cancel recording"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-242",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Prepare for performance mode"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-243",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Prepare for MIDI export"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-012",
+      "notes": "Converts the project into one MIDI channel per instrument before export."
+    },
+    {
+      "id": "MENU-244",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Select unused channels"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-245",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Purge unused audio clips"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-246",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch smart disable for all plugins"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-247",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Lock all playlist tracks to content"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-248",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Unlock all playlist tracks from content"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-249",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Reset empty playlist tracks"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-250",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch all audio clip channels to"
+      ],
+      "section": "Macros",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": "Time-stretch mode; options in lists.stretch_modes."
+    },
+    {
+      "id": "MENU-251",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch selected audio clip channels to"
+      ],
+      "section": "Macros",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": "Time-stretch mode; options in lists.stretch_modes."
+    },
+    {
+      "id": "MENU-252",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Remove all Edison instances"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Edison is an FL plugin."
+    },
+    {
+      "id": "MENU-253",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Delete unused files and save project"
+      ],
+      "section": "Macros",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-029",
+      "notes": ""
+    },
+    {
+      "id": "MENU-254",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch all plugin editors to"
+      ],
+      "section": "Macros",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-255",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch all plugin editors to",
+        "Attached"
+      ],
+      "section": "Macros",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-256",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Switch all plugin editors to",
+        "Detached"
+      ],
+      "section": "Macros",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-257",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Set keyboard focus for all plugins to"
+      ],
+      "section": "Macros",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-258",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Set keyboard focus for all plugins to",
+        "Enabled"
+      ],
+      "section": "Macros",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-259",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Set keyboard focus for all plugins to",
+        "Disabled"
+      ],
+      "section": "Macros",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-260",
+      "menu": "Tools",
+      "path": [
+        "Tools",
+        "Change declicking for selected channels to"
+      ],
+      "section": "Macros",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": "Options in lists.declicking."
+    },
+    {
+      "id": "MENU-261",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Help index"
+      ],
+      "section": "",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-262",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Gopher (chat assistant)"
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+F1",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line's online assistant."
+    },
+    {
+      "id": "MENU-263",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Tutorials"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-264",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Tutorials",
+        "Loop starter tutorial"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-265",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Tutorials",
+        "Step sequencer tutorial"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-266",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Unlock FL Studio"
+      ],
+      "section": "Registration",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-267",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "My account"
+      ],
+      "section": "Registration",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-268",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Diagnostics"
+      ],
+      "section": "Support",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-031",
+      "notes": ""
+    },
+    {
+      "id": "MENU-269",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "What's new"
+      ],
+      "section": "Support",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-270",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Buy FL Studio and upgrades"
+      ],
+      "section": "Shop",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-271",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "FL Studio homepage"
+      ],
+      "section": "Internet links",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line web page. LimeShot's counterpart would link the project's repository and docs."
+    },
+    {
+      "id": "MENU-272",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "FL Studio Mobile"
+      ],
+      "section": "Internet links",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line web page. LimeShot's counterpart would link the project's repository and docs."
+    },
+    {
+      "id": "MENU-273",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "FL Studio tutorials"
+      ],
+      "section": "Internet links",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line web page. LimeShot's counterpart would link the project's repository and docs."
+    },
+    {
+      "id": "MENU-274",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Support - Forum"
+      ],
+      "section": "Internet links",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line web page. LimeShot's counterpart would link the project's repository and docs."
+    },
+    {
+      "id": "MENU-275",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Support - Knowledgebase"
+      ],
+      "section": "Internet links",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line web page. LimeShot's counterpart would link the project's repository and docs."
+    },
+    {
+      "id": "MENU-276",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "About..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Help › About LimeShot",
+      "status": "DIFFERENT",
+      "feature": "APP-032",
+      "notes": ""
+    },
+    {
+      "id": "MENU-277",
+      "menu": "Help",
+      "path": [
+        "Help",
+        "Keyboard shortcuts"
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Help › Keyboard shortcuts",
+      "status": "LIMESHOT_ONLY",
+      "feature": "APP-013",
+      "notes": "FL has no shortcut list in Help; LimeShot opens it with F1 (FL's F1 is context help)."
+    }
+  ],
+  "lists": {
+    "templates": {
+      "Advanced": [
+        "Electronic/Breakbeat",
+        "Electronic/Chillout-Ambient",
+        "Electronic/Chillout",
+        "Electronic/Drum & Bass",
+        "Electronic/Dubstep",
+        "Electronic/EDM-House",
+        "Electronic/Electro",
+        "Electronic/HipHop-Trap",
+        "Electronic/Trap",
+        "Instrumental/Funk",
+        "Instrumental/Jazz",
+        "Instrumental/Metal",
+        "Instrumental/Rock"
+      ],
+      "Minimal": [
+        "Basic with limiter",
+        "Basic",
+        "Delay and reverb",
+        "Empty with 4 sends",
+        "Empty"
+      ],
+      "Other": [
+        "All MIDI CC",
+        "Blocks",
+        "Patch bank",
+        "Video chopping"
+      ],
+      "Performance": [
+        "4x4",
+        "8x8",
+        "Touchscreen"
+      ],
+      "Power User": [
+        "Cheese's recording setup"
+      ],
+      "Utility": [
+        "Create a chord progression",
+        "Drum mix",
+        "Launch loop starter",
+        "Record Audio",
+        "Remix a song",
+        "SFX transitions",
+        "Surround mix",
+        "Vocoder"
+      ]
+    },
+    "generators": {
+      "Controller": [
+        "Fruity Envelope Controller",
+        "Fruity Keyboard Controller"
+      ],
+      "Drum": [
+        "BassDrum",
+        "Drumaxx",
+        "Drumpad",
+        "FPC",
+        "Fruit Kick",
+        "Fruity DrumSynth Live",
+        "Fruity Slicer",
+        "Fruity Slicer 2",
+        "Ogun",
+        "Slicex"
+      ],
+      "MIDI": [
+        "MIDI Out"
+      ],
+      "Misc": [
+        "Audio Clip",
+        "Automation Clip",
+        "BooBass",
+        "FL Keys",
+        "FL Studio Mobile",
+        "FL Studio Mobile Rack",
+        "Fruity Voltage Controller",
+        "Layer",
+        "SoundFont Player"
+      ],
+      "Patcher": [
+        "Patcher",
+        "VFX Color Mapper",
+        "VFX Envelope",
+        "VFX Key Mapper",
+        "VFX Keyboard Splitter",
+        "VFX Level Scaler",
+        "VFX Script",
+        "VFX Sequencer"
+      ],
+      "Sampler": [
+        "DirectWave",
+        "Fruity Granulizer",
+        "Sampler",
+        "Wave Traveller"
+      ],
+      "Synth classic": [
+        "3x Osc",
+        "FLEX",
+        "Fruity DX10",
+        "GMS",
+        "Harmless",
+        "Kepler",
+        "Kepler Exo",
+        "MiniSynth",
+        "PoiZone",
+        "Sawer",
+        "SimSynth",
+        "Sytrus",
+        "Toxic Biohazard",
+        "Transistor Bass"
+      ],
+      "Synth special": [
+        "Autogun",
+        "BeepMap",
+        "Harmor",
+        "Morphine",
+        "Ogun",
+        "Plucked!",
+        "Sakura"
+      ],
+      "Visual": [
+        "Fruity Dance",
+        "Fruity Video Player"
+      ]
+    },
+    "effects": {
+      "Controller": [
+        "Control Surface",
+        "Fruity Formula Controller",
+        "Fruity Peak Controller",
+        "Fruity X-Y Controller",
+        "Fruity X-Y-Z Controller"
+      ],
+      "Delay reverb": [
+        "Fruity Convolver",
+        "Fruity Delay 2",
+        "Fruity Delay 3",
+        "Fruity Delay Bank",
+        "Fruity Reeverb 2",
+        "LuxeVerb",
+        "Multiband Delay"
+      ],
+      "Distortion": [
+        "Distructor",
+        "Fruity Blood Overdrive",
+        "Fruity Fast Dist",
+        "Fruity Soft Clipper",
+        "Fruity Squeeze",
+        "Fruity WaveShaper",
+        "Hardcore"
+      ],
+      "Dynamics": [
+        "Emphasis",
+        "Emphasizer",
+        "Fruity Compressor",
+        "Fruity Limiter",
+        "Fruity Multiband Compressor",
+        "Fruity Soft Clipper",
+        "Maximus",
+        "Soundgoodizer",
+        "Transient Processor"
+      ],
+      "Filter": [
+        "EQUO",
+        "Frequency Splitter",
+        "Fruity Filter",
+        "Fruity Love Philter",
+        "Fruity Parametric EQ",
+        "Fruity Parametric EQ 2"
+      ],
+      "Flanger": [
+        "Fruity Chorus",
+        "Fruity Flanger",
+        "Fruity Flangus",
+        "Fruity Phaser",
+        "Hyper Chorus",
+        "Vintage Chorus",
+        "Vintage Phaser"
+      ],
+      "Gain": [
+        "Fruity Balance",
+        "Fruity PanOMatic",
+        "Fruity Send",
+        "Fruity Stereo Enhancer",
+        "Fruity Stereo Shaper",
+        "Spreader"
+      ],
+      "Misc": [
+        "Edison",
+        "Effector",
+        "FL Studio Mobile Rack FX",
+        "Frequency Shifter",
+        "Fruity Scratcher",
+        "Fruity Vocoder",
+        "Gross Beat",
+        "Low Lifter",
+        "Newtime",
+        "Newtone",
+        "Pitch Shifter",
+        "Pitcher",
+        "Transmitter",
+        "Transporter",
+        "Vocodex"
+      ],
+      "Patcher": [
+        "Patcher",
+        "VFX Color Mapper",
+        "VFX Envelope",
+        "VFX Key Mapper",
+        "VFX Keyboard Splitter",
+        "VFX Level Scaler",
+        "VFX Script",
+        "VFX Sequencer"
+      ],
+      "Visual": [
+        "Fruity Big Clock",
+        "Fruity dB Meter",
+        "Fruity HTML NoteBook",
+        "Fruity NoteBook",
+        "Fruity NoteBook 2",
+        "Fruity Spectroman",
+        "Tuner",
+        "Wave Candy",
+        "ZGameEditor Visualizer"
+      ]
+    },
+    "limeshot_equivalents": {
+      "Sampler": "Sampler channel",
+      "Audio Clip": "audio clip channel (SEQ-019)",
+      "Automation Clip": "automation clip (PL-015)",
+      "3x Osc": "LimeSynth channel",
+      "Fruity Parametric EQ 2": "Lime EQ",
+      "Fruity Filter": "Lime Filter",
+      "Fruity Delay 3": "Lime Delay",
+      "Fruity Reeverb 2": "Lime Room",
+      "Fruity Compressor": "Lime Comp",
+      "Fruity Limiter": "Lime Limiter",
+      "Fruity Balance": "Lime Utility"
+    },
+    "toolbar_presets": [
+      "Compact",
+      "Default (hint above menu)",
+      "Default (macOS)",
+      "Default",
+      "FL Studio 12",
+      "FL Studio 24 (macOS)",
+      "FL Studio 24 (Windows)",
+      "FL Studio 25 (macOS)",
+      "FL Studio 25 (Windows)",
+      "Single line centered",
+      "Single line"
+    ],
+    "stretch_modes": {
+      "Realtime": [
+        "Resample",
+        "Stretch",
+        "Stretch Pro"
+      ],
+      "Elastique": [
+        "e3 generic",
+        "e3 mono"
+      ],
+      "Special": [
+        "Slice stretch",
+        "Slice map",
+        "Auto"
+      ],
+      "Legacy": [
+        "e2 generic",
+        "e2 transient",
+        "e2 mono",
+        "e2 speech"
+      ]
+    },
+    "declicking": [
+      "Out only (no bleeding)",
+      "Transient (no bleeding)",
+      "Transient (bleeding)",
+      "Generic (bleeding)",
+      "Smooth (bleeding)",
+      "Crossfade (bleeding)"
+    ]
+  }
+}

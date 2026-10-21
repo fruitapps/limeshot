@@ -61,7 +61,8 @@ Preallocate in constructors. Add a test with several block sizes for any schedul
 
 ## Feature tracking
 `docs/roadmap/features.json` is canonical; regenerate `features.md` with `scripts/features.py generate`.
-FL Studio's shortcuts and settings are tracked in `docs/roadmap/keybindings.json` and `settings.json` (same command).
+FL Studio's shortcuts, settings and main menu items are tracked in `docs/roadmap/keybindings.json`, `settings.json` and
+`menus.json` (same command; a menu label LimeShot claims must exist in the UI code).
 When adding or changing a shortcut, update `shortcuts.rs`'s help tables and `keybindings.json` together; the check
 fails if a binding LimeShot claims is not in the help list, or a claimed setting is not a real field.
 IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verification) listed in `tests`. Update the status,
@@ -78,7 +79,8 @@ features as records.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 
 ## Immediate next tasks
-See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
+FL Studio is being documented outside → in, one UI layer per session (main menu bar done in session 13; next: the
+dialogs those menus open, then the toolbar; `next-steps.md`, Then 0). See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
 Actions settings), the rest of the session 7 plan (Playlist slip/slice, Mixer EQ + sidechain, Channel Rack depth),
 then **VST3 plugin hosting** (session 10: hosting, plugin channels and inserts, scanning and state are in; session 12:
 plugin windows on macOS; parameter automation, delay compensation and plugin windows on Windows/Linux are next).

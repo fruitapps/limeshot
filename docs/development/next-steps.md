@@ -31,6 +31,19 @@
 
 ## Then
 
+0. **FL Studio documentation, outside → in** (owner, 2026-10-22). Document each layer of FL's UI before building it,
+   one layer per session, into machine-readable inventories under `docs/roadmap/` plus evidence screenshots:
+   * [x] Main menu bar (session 13): `menus.json` / `menus.md`, every item and submenu.
+   * [ ] Dialogs and windows the main menus open (Options › Audio/MIDI/General/File/Theme settings, Project general
+     settings, Project info, File › Export dialog, Save as template, Manage plugins); extend `settings.json`.
+   * [ ] Toolbar: every panel, button and drop-down (pattern selector, snap, hint bar, CPU panel, the toolbar's own
+     menus) and the Browser's top bar.
+   * [ ] Each editor's own menus and context menus (Channel Rack, Piano Roll, Playlist, Mixer; partly recorded in
+     `fl-studio-analysis.md` §2–6).
+   Then implement the menu bar (APP-026) from `menus.md`'s "open work by feature" table, highest priority first:
+   SEQ-021 Pattern commands, Edit › Cut/Copy/Paste routed to the focused editor, a Tools menu with Macros, and
+   View › Layout (UI-013). Keep `menus.json` in step with `menus.rs` (the check enforces labels).
+
 4. **More live FL observation** (Accessibility is granted; session 4 settled clip looping, note length and step
    painting). Next: Playlist clip resize from the left edge and slip editing, Piano Roll right-click default length,
    Mixer send/route gestures, and Channel Settings layout. Repeat the real-input pass after UI changes (notes in the

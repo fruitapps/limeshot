@@ -2,12 +2,14 @@
 """Validate the keybinding and settings inventories and (re)generate their Markdown views.
 
     python3 scripts/inventories.py check     # validate; fail if the .md files are stale (CI)
-    python3 scripts/inventories.py generate  # rewrite keybindings.md and settings.md
+    python3 scripts/inventories.py generate  # rewrite keybindings.md, settings.md and menus.md
 
 docs/roadmap/keybindings.json tracks FL Studio's keyboard shortcuts against LimeShot's;
-docs/roadmap/settings.json tracks FL Studio's settings against LimeShot's. Both are checked
+docs/roadmap/settings.json tracks FL Studio's settings against LimeShot's; docs/roadmap/menus.json
+tracks every item of FL Studio's main menu bar against LimeShot's menus. All three are checked
 against the code: a binding LimeShot has must appear in the Help › Keyboard shortcuts list
-(crates/limeshot-ui/src/shortcuts.rs), and a setting LimeShot has must name a real field.
+(crates/limeshot-ui/src/shortcuts.rs), a setting LimeShot has must name a real field, and a
+menu item LimeShot has must name a label that exists in the UI code.
 `scripts/features.py` runs this check too.
 """
 import json
@@ -20,6 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 ROADMAP = ROOT / "docs/roadmap"
 KB_JSON, KB_MD = ROADMAP / "keybindings.json", ROADMAP / "keybindings.md"
 ST_JSON, ST_MD = ROADMAP / "settings.json", ROADMAP / "settings.md"
+MN_JSON, MN_MD = ROADMAP / "menus.json", ROADMAP / "menus.md"
+UI_SRC = ROOT / "crates/limeshot-ui/src"
 SHORTCUTS_RS = ROOT / "crates/limeshot-ui/src/shortcuts.rs"
 FIELD_SOURCES = {
     "settings.audio.": ROOT / "crates/limeshot-audio/src/devices.rs",
@@ -33,6 +37,9 @@ KB_STATUS = ["IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY", "NOT_STARTED", "NOT_PL
 ST_STATUS = ["IMPLEMENTED", "IN_PROGRESS", "NOT_STARTED", "NOT_PLANNED"]
 # Bindings LimeShot has, in some form.
 HAS_KEYS = ("IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY")
+MN_STATUS = ["IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY", "NOT_STARTED", "NOT_PLANNED"]
+MN_KINDS = ["action", "dialog", "submenu", "toggle", "radio", "list", "link"]
+FL_MENUS = ["File", "Edit", "Add", "Patterns", "View", "Options", "Tools", "Help"]
 
 
 def combos(s):
@@ -96,6 +103,46 @@ def validate(kb, st, feature_ids):
     return errors
 
 
+def ui_labels():
+    """Every string literal in the UI crate, to check that a menu label LimeShot claims exists."""
+    out = set()
+    for path in UI_SRC.glob("*.rs"):
+        out |= set(re.findall(r'"((?:[^"\\]|\\.)*)"', path.read_text(encoding="utf-8")))
+    return out
+
+
+def validate_menus(mn, feature_ids):
+    errors = []
+    labels = ui_labels()
+    items = mn["menus"]
+    for dup, n in Counter(i.get("id") for i in items).items():
+        if n > 1:
+            errors.append(f"duplicate menu id {dup}")
+    for i in items:
+        iid = i.get("id", "?")
+        if i.get("menu") not in FL_MENUS or not i.get("path") or i["path"][0] != i["menu"]:
+            errors.append(f"{iid}: menu must be one of FL's menus and the first element of path")
+        if i.get("kind") not in MN_KINDS:
+            errors.append(f"{iid}: bad kind {i.get('kind')}")
+        if i.get("status") not in MN_STATUS:
+            errors.append(f"{iid}: bad status {i.get('status')}")
+        if i.get("confidence") not in CONFIDENCE:
+            errors.append(f"{iid}: bad confidence {i.get('confidence')}")
+        if i.get("feature") and i["feature"] not in feature_ids:
+            errors.append(f"{iid}: unknown feature {i['feature']}")
+        where = i.get("limeshot", "")
+        if i.get("status") in HAS_KEYS:
+            if not where:
+                errors.append(f"{iid}: {i['status']} needs limeshot (where LimeShot has it)")
+            # "Menu › Label" or "Menu › A / B": capitalised labels must exist in the UI code.
+            for label in where.split(" › ")[-1].split(" / "):
+                if label[:1].isupper() and label not in labels:
+                    errors.append(f"{iid}: label {label!r} not found in crates/limeshot-ui/src")
+        elif where:
+            errors.append(f"{iid}: {i['status']} but limeshot is set")
+    return errors
+
+
 def esc(s):
     return s.replace("|", "\\|")
 
@@ -155,22 +202,92 @@ def generate_st(st):
     return "\n".join(lines) + "\n"
 
 
+def generate_mn(mn, features):
+    items = mn["menus"]
+    fl = [i for i in items if i["status"] != "LIMESHOT_ONLY"]
+    total = Counter(i["status"] for i in items)
+    lines = [
+        "# Main menu bar: FL Studio and LimeShot",
+        "",
+        "> Generated from [`menus.json`](menus.json) by `python3 scripts/inventories.py generate`. Do not edit by hand.",
+        f"> Reference: {mn['reference']}.",
+        f"> Source: {mn['source']}",
+        "",
+        mn["notes"],
+        "",
+        f"Tracked: **{len(items)}** — " + ", ".join(f"{s} {total[s]}" for s in MN_STATUS if total[s]),
+        "",
+        "## Summary",
+        "",
+        "| Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for menu in FL_MENUS:
+        c = Counter(i["status"] for i in items if i["menu"] == menu)
+        n = sum(1 for i in fl if i["menu"] == menu)
+        lines.append(f"| {menu} | {n} | {c['IMPLEMENTED']} | {c['DIFFERENT']} | {c['NOT_STARTED']} | {c['NOT_PLANNED']} | {c['LIMESHOT_ONLY']} |")
+    lines += [
+        "",
+        "## Open work by feature",
+        "",
+        "Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that implements them, highest priority first.",
+        "",
+        "| Feature | Pri | Status | Name | Menu items |",
+        "|---|---|---|---|---|",
+    ]
+    todo = OrderedDict()
+    for i in items:
+        if i["status"] == "NOT_STARTED":
+            todo.setdefault(i["feature"] or "—", []).append(i)
+    order = sorted(todo, key=lambda f: (features.get(f, {}).get("priority", "P9"), f))
+    for fid in order:
+        f = features.get(fid, {})
+        paths = "<br>".join(f"{i['id']} {esc(' › '.join(i['path']))}" for i in todo[fid])
+        lines.append(f"| {fid} | {f.get('priority', '')} | {f.get('status', '')} | {esc(f.get('name', ''))} | {paths} |")
+    for menu in FL_MENUS:
+        lines += ["", f"## {menu}", "", "| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |",
+                  "|---|---|---|---|---|---|---|---|---|---|"]
+        for i in items:
+            if i["menu"] != menu:
+                continue
+            depth = len(i["path"]) - 2
+            name = "&nbsp;&nbsp;" * 2 * depth + ("↳ " if depth else "") + esc(i["path"][-1])
+            lines.append(
+                f"| {i['id']} | {name} | {esc(i['section'])} | {i['kind']} | {'`' + esc(i['fl_keys']) + '`' if i['fl_keys'] else ''} | "
+                f"{esc(i['fl_state'])} | {esc(i['limeshot']) or '—'} | {i['status']} | {i['feature']} | {esc(i['notes'])} |"
+            )
+    lines += ["", "## Lists", "", "Static contents of the `list` items, as shipped with FL Studio."]
+    for name, value in mn["lists"].items():
+        lines += ["", f"### {name}", ""]
+        if isinstance(value, dict):
+            for k, v in value.items():
+                lines.append(f"* **{esc(k)}**: " + (", ".join(esc(x) for x in v) if isinstance(v, list) else esc(v)))
+        else:
+            lines.append(", ".join(esc(x) for x in value))
+    return "\n".join(lines) + "\n"
+
+
 def run(mode, feature_ids):
     """Validate and check or write the Markdown. Returns error lines (empty when fine)."""
     kb = json.loads(KB_JSON.read_text(encoding="utf-8"))
     st = json.loads(ST_JSON.read_text(encoding="utf-8"))
-    errors = validate(kb, st, feature_ids)
+    mn = json.loads(MN_JSON.read_text(encoding="utf-8"))
+    errors = validate(kb, st, feature_ids) + validate_menus(mn, feature_ids)
     if errors:
         return errors
+    features = {f["id"]: f for f in json.loads((ROADMAP / "features.json").read_text(encoding="utf-8"))["features"]}
     out = []
-    for path, md in ((KB_MD, generate_kb(kb)), (ST_MD, generate_st(st))):
+    for path, md in ((KB_MD, generate_kb(kb)), (ST_MD, generate_st(st)), (MN_MD, generate_mn(mn, features))):
         if mode == "generate":
             path.write_text(md, encoding="utf-8")
             print(f"wrote {path.relative_to(ROOT)}")
         elif path.read_text(encoding="utf-8") != md if path.exists() else True:
             out.append(f"{path.name} is out of date: run python3 scripts/inventories.py generate")
     if not out and mode != "generate":
-        print(f"keybindings.json ({len(kb['bindings'])}) and settings.json ({len(st['settings'])}) valid; Markdown up to date")
+        print(
+            f"keybindings.json ({len(kb['bindings'])}), settings.json ({len(st['settings'])}) and "
+            f"menus.json ({len(mn['menus'])}) valid; Markdown up to date"
+        )
     return out
 
 

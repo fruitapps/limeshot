@@ -473,3 +473,27 @@ Differences from FL: two tabs instead of three pages (no wrapper options page), 
 keyboard toggle or captionize, no ON/PAN/VOL strip, positions not saved in the project. Verification:
 `cargo test --workspace` passes; Clippy (`-D warnings`, also for `x86_64-pc-windows-msvc`), `cargo fmt --check` and
 `scripts/features.py check` are clean.
+
+## 2026-10-22 — Session 13: FL Studio's main menu bar (outside-in documentation)
+
+The owner asked for FL Studio to be documented from the outside in, starting with the main menu bar, and for the
+missing menus to be tracked in the roadmap in a form both people and scripts can read. Scope agreed up front: FL's
+in-window menu bar, every submenu, no dialogs yet; static lists (templates, plugins) recorded in full.
+
+1. **FL observed live** (FL Studio 2026.1.1, synthetic input; `fl-studio-analysis.md` §18, `fl-menu-*.png`). Each of
+   the eight menus and their submenus was opened and captured. FL mirrors its menus into the native macOS menu bar, so
+   an Accessibility dump (`docs/research/evidence/menus/`) gave exact labels and shortcuts; the in-window screenshots
+   added section headers, enabled states and check marks. Template names were read from the bundle's
+   `Data/Templates` folder. An accidental clip painted into the Playlist was undone through the Edit menu (which
+   showed how FL names the undo step). Nothing was saved in FL.
+2. **`docs/roadmap/menus.json`** (new inventory, 277 items): one record per menu item with FL's path, section, kind,
+   keys, default state, where LimeShot has it, a status (IMPLEMENTED, DIFFERENT, LIMESHOT_ONLY, NOT_STARTED,
+   NOT_PLANNED) and the feature that implements it; `lists` holds templates, generators, effects, toolbar presets,
+   stretch modes and declicking modes. `scripts/inventories.py` validates it (a claimed LimeShot label must exist in
+   `crates/limeshot-ui/src`) and generates `menus.md` with a per-menu summary and an "open work by feature" table.
+3. **Roadmap:** 31 new feature records for menu items that had none (APP-026 main menu bar, APP-027…032, EXP-014…017,
+   SEQ-021/022, UI-013…018, PLG-011, WF-009…013, REC-010/011, PR-028/029, PL-030, BR-011). `keybindings.json` gained 24
+   menu shortcuts (KB-095…118) and six INFERRED bindings became OBSERVED.
+
+Result: of FL's 268 menu items LimeShot has 12 as in FL and 35 in another form; 194 are not started and 27 are not
+planned (Image-Line services). No code changed. Verification: `scripts/features.py check` is clean.

@@ -54,6 +54,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
 ## Project and app
 * No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
   (`docs/roadmap/keybindings.json`); settings are spread over menus and dialogs (`docs/roadmap/settings.json`).
+* The menu bar has a subset of FL Studio's menus: no Tools menu, no section headers, no template, layout,
+  recording-switch or pattern-management commands (`docs/roadmap/menus.md` lists all 194 missing items).
 * One autosave slot per user: two LimeShot instances share it.
 * `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
   pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer

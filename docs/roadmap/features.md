@@ -1,34 +1,34 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-21 (session 7).
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-22 (session 13).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **239**
+- Features tracked: **270**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 86, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 9, VERIFIED 130, DEFERRED 2
+- By status: NOT_STARTED 113, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 9, VERIFIED 130, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 25 | 16 | 1 | 2 | 6 |
-| Channel Rack | 20 | 17 | 0 | 0 | 3 |
-| Piano Roll | 27 | 18 | 0 | 0 | 9 |
-| Playlist | 28 | 20 | 1 | 1 | 6 |
+| Application | 32 | 16 | 1 | 4 | 11 |
+| Channel Rack | 22 | 17 | 0 | 0 | 5 |
+| Piano Roll | 29 | 18 | 0 | 0 | 11 |
+| Playlist | 29 | 20 | 1 | 1 | 7 |
 | Mixer | 16 | 11 | 0 | 1 | 4 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 13 | 3 | 0 | 0 | 10 |
-| Recording | 9 | 0 | 0 | 0 | 9 |
-| Browser | 10 | 5 | 1 | 0 | 4 |
-| Plugins | 10 | 3 | 1 | 2 | 4 |
-| Export | 13 | 5 | 0 | 0 | 8 |
+| Recording | 11 | 0 | 0 | 0 | 11 |
+| Browser | 11 | 5 | 1 | 0 | 5 |
+| Plugins | 11 | 3 | 1 | 2 | 5 |
+| Export | 17 | 5 | 0 | 0 | 12 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
-| Workflow | 8 | 0 | 1 | 1 | 6 |
-| UI | 12 | 8 | 1 | 1 | 2 |
+| Workflow | 13 | 0 | 1 | 1 | 11 |
+| UI | 18 | 8 | 1 | 1 | 8 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
 ## Application
@@ -60,6 +60,13 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-023 | Welcome window | P3 |  | NOT_STARTED | Planned (offline parts only: templates, recent files, demo song). | — |
 | APP-024 | Autosave interval setting | P2 |  | VERIFIED | Options › Autosave: off, 1, 2, 5 (default) or 10 minutes; stored in the settings. | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
 | APP-025 | Settings window | P2 |  | IN_PROGRESS | Audio settings have a dialog; UI scale, autosave and browser folders are set from menus and the Browser. A single window with pages is planned; settings.json tracks every setting. | — |
+| APP-026 | Main menu bar in FL's layout | P1 |  | IN_PROGRESS | File, Edit, Add, Patterns, View, Options and Help exist with a subset of FL's items (see menus.md); no Tools menu and no section headers.<br>*Track each item in docs/roadmap/menus.json.* | — |
+| APP-027 | Revert to last backup | P2 |  | NOT_STARTED | Not implemented. | — |
+| APP-028 | Save to new project folder | P3 |  | NOT_STARTED | Not implemented. | — |
+| APP-029 | Delete unused files and save project | P3 |  | NOT_STARTED | Not implemented. | — |
+| APP-030 | Project general settings | P2 |  | NOT_STARTED | Not implemented. | — |
+| APP-031 | Debugging log and diagnostics | P3 |  | NOT_STARTED | Not implemented. | — |
+| APP-032 | Help index, tutorials and about | P2 |  | IN_PROGRESS | Help › About LimeShot and Help › Keyboard shortcuts exist; no manual, tutorials or release notes. | — |
 
 ## Channel Rack
 
@@ -85,6 +92,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-018 | Multiple patterns | P0 | ✓ | VERIFIED | Toolbar pattern selector: the list of patterns, then Create new (no − / + buttons); F4 new, + / − keys switch; Patterns menu clone/delete.<br>*Session 9: patterns can be recoloured from a palette swatch picker (Patterns menu, the Playlist's pattern picker and pattern clip menus; Command::SetPatternColor). The channel menu's Color uses the same picker. Session 11 (owner's list item 16): FL 2026.1.1's selector menu lists the patterns next to Find first empty…/Find next empty… (which make a new pattern), Clone, Delete etc., and FL keeps a + button beside the selector; LimeShot drops both buttons at the owner's request and offers Create new in the list.* | `limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo`<br>`limeshot-core document::tests::pattern_color_changes_in_one_undo_step`<br>`limeshot-app tests/ui.rs::pattern_color_is_picked_from_swatches`<br>`limeshot-app tests/ui.rs::the_pattern_selector_creates_new_patterns_from_its_list` |
 | SEQ-019 | Audio clip channels | P1 |  | VERIFIED | A sample dropped on the Playlist adds a sampler channel (one-shot off) that the audio clip plays; dropping the same sample again reuses it.<br>*LimeShot uses its sampler for these channels instead of a separate Audio Clip generator.* | `limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it` |
 | SEQ-020 | Channel selection (selector LEDs) | P1 |  | VERIFIED | The same selector LEDs and gestures (Cmd on macOS for Ctrl). The selection is UI state; the current channel (Piano Roll, Channel Settings) is the last one selected. Alt+Up/Down, Alt+Delete and Cmd+L act on all selected channels.<br>*Observed live (session 7). Neither Ctrl+A nor Cmd+A selects all channels in FL's Channel Rack. FL also saves the selection in the project; LimeShot does not. Channel filter groups (SEQ-012) are not implemented.* | `crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels`<br>`crates/limeshot-app/tests/ui.rs::cmd_l_routes_each_selected_channel_to_its_own_free_track` |
+| SEQ-021 | Pattern menu commands | P1 |  | NOT_STARTED | Not implemented. | — |
+| SEQ-022 | Pattern groups | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Piano Roll
 
@@ -117,6 +126,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-025 | Waveform helper background | P3 |  | NOT_STARTED | Show a sample waveform behind the grid. | — |
 | PR-026 | New notes take the last note's length | P1 |  | VERIFIED | Identical: first note two steps, then the length of the last drawn or resized note. | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes` |
 | PR-027 | Stamp tool (chords and scales) | P2 |  | NOT_STARTED | A Stamp selector: drawing a note adds the chosen chord or scale.<br>*Split out of PR-012 in session 7.* | — |
+| PR-028 | Chord progression tool | P3 |  | NOT_STARTED | Not implemented. | — |
+| PR-029 | Riff machine | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Playlist
 
@@ -150,6 +161,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |
 | PL-027 | Picker lists audio and automation clips | P1 |  | VERIFIED | The picker has Patterns, Audio and Automation tabs. The Audio tab lists the audio clip channels (samplers with a sample that play audio clips or were added to the picker, filed under "Audio"); + or dropping a sample on the picker adds one (a sampler channel with the sample loaded, reused for the same file). Clicking an entry (or a clip of it) picks it — an audio entry also plays its sample — and the Draw and Paint tools place it like a pattern; double-click opens the Piano Roll or the channel settings.<br>*Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'.* | `limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns` |
 | PL-028 | Automation STEP / SLIDE display options | P3 |  | RESEARCHED | Not started; research first.<br>*UNKNOWN: what STEP and SLIDE change.* | — |
+| PL-030 | Stem separation (Remix a song) | P3 |  | DEFERRED | Not implemented. | — |
 
 ## Mixer
 
@@ -242,6 +254,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | REC-007 | Count-in | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-008 | Recorded clip management | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-009 | Step edit mode | P3 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
+| REC-010 | Start on input and blend recorded notes | P2 |  | NOT_STARTED | Not implemented. | — |
+| REC-011 | Audio logger | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Browser
 
@@ -257,6 +271,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | BR-008 | Plugin and preset browser | P2 |  | NOT_STARTED | — | — |
 | BR-009 | Online content | P3 |  | DEFERRED | Out of scope (offline-first). | — |
 | BR-010 | Drag samples to the Playlist (audio clips) | P1 |  | VERIFIED | Drag a sample from the Browser onto the Playlist: while it is over the grid a ghost clip shows where it lands and how long it is; on release it is decoded, placed at the snapped position as an audio clip as long as the sample, and picked in the picker's Audio tab. Its audio-clip channel is reused when the same sample is dropped again.<br>*Session 11 (owner's list item 12). Differs from FL: FL 2026.1.1 labels the pointer with the file name and highlights the target grid cell; LimeShot draws the whole clip ghost.* | `limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge`<br>`limeshot-app tests/ui.rs::a_sample_dragged_over_the_playlist_shows_where_it_lands` |
+| BR-011 | Save clipboard to browser | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Plugins
 
@@ -272,6 +287,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PLG-008 | Plugin preset management | P3 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
 | PLG-009 | Plugin latency reporting | P1 |  | IN_PROGRESS | `Vst3Instance::latency_samples` reports the plugin's latency (for example 1080 samples for Elephant on the dev Mac) and the plugin panel shows it. Delay compensation does not use it yet.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-010 | Plugin crash isolation | P3 |  | IN_PROGRESS | Scanning runs each bundle in a child process with a time limit (PLG-004). Running plugins are still in LimeShot's process, so one that crashes while playing takes LimeShot down. | — |
+| PLG-011 | Plugin performance monitor | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Export
 
@@ -290,6 +306,10 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
 | EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
 | EXP-013 | Wrap the tail into the loop | P3 |  | NOT_STARTED | Planned. | — |
+| EXP-014 | Export playlist tracks or track groups | P2 |  | NOT_STARTED | Not implemented. | — |
+| EXP-015 | Export in the last used format(s) | P2 |  | NOT_STARTED | Not implemented. | — |
+| EXP-016 | Video export | P3 |  | NOT_STARTED | Not implemented. | — |
+| EXP-017 | Project bones and project data files | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Transport & Time
 
@@ -321,6 +341,11 @@ automated tests or recorded manual verification. Everything else is not done.
 | WF-006 | Multichannel / surround output | P3 |  | NOT_STARTED | Stereo only; extra device channels receive silence. | — |
 | WF-007 | Accessibility (screen readers, keyboard nav) | P2 |  | IN_PROGRESS | eframe AccessKit enabled; standard egui widgets are exposed; custom-painted editors are not yet labelled. | — |
 | WF-008 | Python-style scripting API | P3 |  | NOT_STARTED | Possible future scripting over the typed command set. | — |
+| WF-009 | Project macros | P3 |  | NOT_STARTED | Not implemented. | — |
+| WF-010 | Score logger | P2 |  | NOT_STARTED | Not implemented. | — |
+| WF-011 | Touch controller | P3 |  | NOT_STARTED | Not implemented. | — |
+| WF-012 | MIDI clock sync | P3 |  | NOT_STARTED | Not implemented. | — |
+| WF-013 | Item groups | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## UI
 
@@ -338,6 +363,12 @@ automated tests or recorded manual verification. Everything else is not done.
 | UI-010 | Control context menu | P1 |  | IN_PROGRESS | Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.<br>*Observed 2026-10-20 (session 4) on a Channel Rack pan knob.* | — |
 | UI-011 | Customizable keyboard shortcuts | P2 |  | NOT_STARTED | Planned: a shortcuts page in the settings that rebinds the actions in keybindings.json, stored in settings.json, with conflict detection. Today the bindings are fixed and listed in Help › Keyboard shortcuts (F1). | — |
 | UI-012 | Soft detent at a control's default | P1 |  | VERIFIED | Knobs, faders and the egui sliders (Channel Settings, the Mixer's track panel, effect cards, plugin parameters) stop at their default when a drag crosses it and let go after 6 px more travel; a drag that starts at the default moves freely, so small adjustments near it stay easy. Double-click still resets.<br>*Session 11 (owner's list item 19).* | `limeshot-app tests/ui.rs::dials_and_sliders_catch_at_their_default` |
+| UI-013 | Window layout commands | P2 |  | NOT_STARTED | Not implemented. | — |
+| UI-014 | Toolbar customisation and presets | P3 |  | NOT_STARTED | Not implemented. | — |
+| UI-015 | Workspace background | P3 |  | NOT_STARTED | Not implemented. | — |
+| UI-016 | Auto scrolling option | P2 |  | NOT_STARTED | Not implemented.<br>*Check what LimeShot's editors do today before implementing.* | — |
+| UI-017 | Control creator | P3 |  | DEFERRED | Not implemented. | — |
+| UI-018 | Plugin picker | P3 |  | NOT_STARTED | Not implemented. | — |
 
 ## Platform
 

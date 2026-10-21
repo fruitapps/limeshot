@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
+Tracked: **118** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 44, NOT_PLANNED 2
 
 ## Global
 
@@ -20,7 +20,7 @@ Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 | KB-004 | Record | `R` | VERIFIED | — | NOT_STARTED | REC-001 | The Record button is shown disabled. |
 | KB-005 | Metronome | `Ctrl+M` | VERIFIED | `Cmd+M` | IMPLEMENTED | TR-008 |  |
 | KB-006 | Panic (stop all sound) | `Ctrl+H` | VERIFIED | `Cmd+H` | IMPLEMENTED | TR-010 |  |
-| KB-007 | Step edit mode | `Ctrl+E` | INFERRED | — | NOT_STARTED | REC-009 |  |
+| KB-007 | Step edit mode | `Ctrl+E` | OBSERVED | — | NOT_STARTED | REC-009 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-008 | Typing keyboard to piano | `Ctrl+T` | INFERRED | — | NOT_STARTED | WF-002 |  |
 | KB-009 | Playlist | `F5` | VERIFIED | `F5` | IMPLEMENTED | UI-002 |  |
 | KB-010 | Channel Rack | `F6` | VERIFIED | `F6` | IMPLEMENTED | UI-002 |  |
@@ -28,18 +28,40 @@ Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 | KB-012 | Plugin Picker | `F8` | VERIFIED | — | NOT_STARTED | PLG-004 |  |
 | KB-013 | Mixer | `F9` | VERIFIED | `F9` | IMPLEMENTED | UI-002 |  |
 | KB-014 | Browser | `Alt+F8` | VERIFIED | `Alt+F8` | IMPLEMENTED | UI-001 |  |
-| KB-015 | MIDI settings | `F10` | INFERRED | — | NOT_STARTED | APP-020 |  |
-| KB-016 | Project info | `F11` | INFERRED | — | NOT_STARTED | APP-017 |  |
+| KB-015 | MIDI settings | `F10` | OBSERVED | — | NOT_STARTED | APP-020 | Seen in the main menu on macOS (session 13, menus.json). |
+| KB-016 | Project info | `F11` | OBSERVED | — | NOT_STARTED | APP-017 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-017 | Close all windows | `F12` | VERIFIED | — | NOT_STARTED | UI-002 |  |
 | KB-018 | Close the focused window | `Esc` | VERIFIED | — | NOT_STARTED | UI-002 | Esc closes menus and dialogs only. |
 | KB-019 | Maximise the Playlist | `Enter` | VERIFIED | — | NOT_STARTED | UI-002 |  |
-| KB-020 | Arrange windows | `Ctrl+Shift+H` | INFERRED | `Cmd+Shift+H` | IMPLEMENTED | UI-002 |  |
+| KB-020 | Arrange windows | `Ctrl+Shift+H` | OBSERVED | `Cmd+Shift+H` | IMPLEMENTED | UI-002 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-021 | Help | `F1` | INFERRED | `F1` | DIFFERENT | UI-004 | LimeShot's F1 lists the keyboard shortcuts (no manual). |
 | KB-022 | Next / previous pattern | `Numpad + / −` | INFERRED | `+ / −` | IMPLEMENTED | SEQ-018 |  |
-| KB-023 | Next empty pattern | `F4` | INFERRED | `F4` | IMPLEMENTED | SEQ-018 | LimeShot adds a new pattern. |
+| KB-023 | Next empty pattern | `F4` | OBSERVED | `F4` | IMPLEMENTED | SEQ-018 | LimeShot adds a new pattern. Seen in the main menu on macOS (session 13, menus.json). |
 | KB-024 | Undo | `Ctrl+Z` | VERIFIED | `Cmd+Z` | DIFFERENT | APP-005 | FL's Ctrl+Z toggles the last undo/redo and Ctrl+Alt+Z steps back; LimeShot's Cmd+Z steps back through the history. |
 | KB-025 | Redo | `Ctrl+Shift+Z` | INFERRED | `Cmd+Shift+Z` | IMPLEMENTED | APP-005 | Cmd+Y also redoes. |
 | KB-026 | UI zoom | `—` | VERIFIED | `Cmd+= / Cmd+- / Cmd+0` | LIMESHOT_ONLY | UI-005 | FL scales through Options. |
+| KB-097 | Plugin database in the Browser | `Shift+F8` | OBSERVED | — | NOT_STARTED | BR-008 | View › Plugin database (MENU-145); also Add › Effect › Plugin database. |
+| KB-098 | Find first empty pattern (asks for a name) | `Shift+F4` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Find first empty... (MENU-079). |
+| KB-099 | Find next empty pattern without naming | `Ctrl+F4` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Find next empty (no naming) (MENU-081). |
+| KB-100 | Open the current pattern in the project browser | `Ctrl+Shift+P` | OBSERVED | — | NOT_STARTED | BR-005 | Patterns › Open in project browser (MENU-086). |
+| KB-101 | Insert a pattern | `Ctrl+Shift+Ins` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Insert one (MENU-092). |
+| KB-102 | Clone pattern | `Ctrl+Shift+C` | OBSERVED | — | NOT_STARTED | SEQ-018 | Patterns › Clone (MENU-093). |
+| KB-103 | Delete pattern | `Ctrl+Shift+Del` | OBSERVED | — | NOT_STARTED | SEQ-018 | Patterns › Delete (MENU-094). |
+| KB-104 | Move pattern up | `Ctrl+Shift+Up` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Move up (MENU-095). |
+| KB-105 | Move pattern down | `Ctrl+Shift+Down` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Move down (MENU-096). |
+| KB-106 | Project picker | `Ctrl+F8` | OBSERVED | — | NOT_STARTED | BR-005 | View › Project picker (MENU-106). |
+| KB-107 | Tempo tapper | `Ctrl+F5` | OBSERVED | — | NOT_STARTED | TR-012 | View › Tempo tapper (MENU-108). |
+| KB-108 | Touch controller | `Alt+F7` | OBSERVED | — | NOT_STARTED | WF-011 | View › Touch controller (MENU-109). |
+| KB-109 | Hide toolbars | `Ctrl+F11` | OBSERVED | — | NOT_STARTED | UI-014 | View › Toolbars › Hide (MENU-118). |
+| KB-110 | Close all plugin windows | `Alt+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Close all plugin windows (MENU-124). |
+| KB-111 | Close all unfocused windows | `Ctrl+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Close all unfocused windows (MENU-125). |
+| KB-112 | Align all channel editors | `Shift+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Align all channel editors (MENU-126). |
+| KB-113 | Recording precount | `Ctrl+P` | OBSERVED | — | NOT_STARTED | REC-007 | Options › Recording precount (MENU-168). |
+| KB-114 | Start on input | `Ctrl+I` | OBSERVED | — | NOT_STARTED | REC-010 | Options › Start on input (MENU-169). |
+| KB-115 | Enable groups | `Alt+Shift+G` | OBSERVED | — | NOT_STARTED | WF-013 | Options › Enable groups (MENU-174). |
+| KB-116 | Multilink to controllers | `Ctrl+J` | OBSERVED | — | NOT_STARTED | WF-004 | Options › Multilink to controllers (MENU-175). |
+| KB-117 | Browser find | `Ctrl+F` | OBSERVED | — | NOT_STARTED | BR-004 | Tools › Browser find... (MENU-179). |
+| KB-118 | Gopher (chat assistant) | `Alt+F1` | OBSERVED | — | NOT_PLANNED |  | Help › Gopher (chat assistant) (MENU-262). |
 
 ## File
 
@@ -53,7 +75,9 @@ Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 | KB-032 | Export WAV | `Ctrl+R` | VERIFIED | `Cmd+R` | IMPLEMENTED | EXP-001 |  |
 | KB-033 | Export MP3 | `Ctrl+Shift+R` | VERIFIED | — | NOT_STARTED | EXP-005 |  |
 | KB-034 | Open recent project 1–10 | `Alt+1…0` | VERIFIED | — | NOT_STARTED | APP-010 | Recent files are in File › Open recent. |
-| KB-035 | Quit | `Alt+F4 / Cmd+Q` | INFERRED | `Cmd+Q` | IMPLEMENTED | APP-014 |  |
+| KB-035 | Quit | `Alt+F4 / Cmd+Q` | OBSERVED | `Cmd+Q` | IMPLEMENTED | APP-014 | Seen in the main menu on macOS (session 13, menus.json). |
+| KB-095 | Export MIDI file | `Ctrl+Shift+M` | OBSERVED | — | NOT_STARTED | EXP-012 | File › Export › MIDI file... (MENU-026). |
+| KB-096 | Export with FL Cloud mastering | `Ctrl+Alt+M` | OBSERVED | — | NOT_PLANNED |  | File › Export › Master... (MENU-029). |
 
 ## Channel Rack
 
@@ -109,7 +133,7 @@ Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 |---|---|---|---|---|---|---|---|
 | KB-064 | Draw / paint / delete / mute / slip / slice / select / zoom / playback tools | `P / B / D / T / S / C / E / Z / Y` | VERIFIED | `P / B / D / T / S / C / E / Z / Y` | IMPLEMENTED | PL-017 | Session 8: the tool strip and keys observed live in FL Studio 2026.1.1 (fl-playlist-tools.png); test playlist_tool_keys_and_strip. |
 | KB-065 | Select all | `Ctrl+A` | OBSERVED | `Cmd+A` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
-| KB-066 | Duplicate selection | `Ctrl+B` | VERIFIED | `Cmd+B` | IMPLEMENTED | PL-005 |  |
+| KB-066 | Duplicate selection | `Ctrl+B` | VERIFIED | `Cmd+B` | IMPLEMENTED | PL-005 | Globally, Options › Blend recorded notes also shows Ctrl+B; the editor binding wins while an editor has focus. |
 | KB-067 | Delete selection | `Delete` | OBSERVED | `Delete / Backspace` | IMPLEMENTED | PL-004 | FL 2026.1.1 Playlist Edit menu (Del). |
 | KB-068 | Copy / cut / paste clips | `Ctrl+C / Ctrl+X / Ctrl+V` | OBSERVED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | PL-026 | FL 2026.1.1 Playlist Edit menu. |
 | KB-069 | Shift clips left / right / up / down | `Shift+Left / Shift+Right / Shift+Up / Shift+Down` | OBSERVED | `Shift+← / Shift+→ / Shift+↑ / Shift+↓` | IMPLEMENTED | PL-002 | FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. Plain Up/Down scroll a track (observed live). |
@@ -119,7 +143,7 @@ Tracked: **94** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 | KB-085 | Deselect | `Cmd+D` | OBSERVED | `Cmd+D` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-086 | Mute / unmute selected clips | `Opt+M / Shift+Opt+M` | OBSERVED | — | NOT_STARTED | PL-005 | FL 2026.1.1 Playlist Edit menu. |
 | KB-087 | Merge selected clips | `Cmd+G` | OBSERVED | — | NOT_STARTED | PL-022 | FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G. |
-| KB-090 | Add a time marker at the song position | `Cmd+T` | OBSERVED | `Cmd+T` | IMPLEMENTED | PL-016 | FL 2026.1.1 Time markers menu: Add auto. |
+| KB-090 | Add a time marker at the song position | `Cmd+T` | OBSERVED | `Cmd+T` | IMPLEMENTED | PL-016 | FL 2026.1.1 Time markers menu: Add auto. Globally, Options › Typing keyboard to piano also shows Ctrl+T; the Playlist binding wins while the Playlist has focus. |
 | KB-091 | Time selection | `Ctrl+drag on the ruler` | OBSERVED | `Cmd+drag on the ruler` | IMPLEMENTED | PL-016 | A mouse binding. Song playback loops the selection. |
 | KB-092 | Place loop markers around the selection | `Shift+T` | OBSERVED | — | NOT_STARTED | PL-016 | FL 2026.1.1 Time markers menu. |
 

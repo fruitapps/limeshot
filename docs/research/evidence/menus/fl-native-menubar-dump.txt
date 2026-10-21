@@ -1,0 +1,593 @@
+FL Studio
+  Services
+    No Services Apply	(disabled)
+    Services Settings…
+  ----	(disabled)
+  Hide FL Studio
+  Hide Others
+  Show All	(disabled)
+  ----	(disabled)
+  Quit FL Studio
+File
+  New (Basic with limiter)
+  New from template
+    Advanced
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Electronic
+      Instrumental
+      Instrumental
+      Instrumental
+      Instrumental
+    Minimal
+      Basic with limiter
+      Basic
+      Delay and reverb
+      Empty with 4 sends
+      Empty
+    Other
+      All MIDI CC
+      Blocks
+      Patch bank
+      Video chopping
+    Performance
+      4x4
+      8x8
+      Touchscreen
+    Power User
+      Cheese's recording setup
+    Utility
+      Create a chord progression
+      Drum mix
+      Launch loop starter
+      Record Audio
+      Remix a song
+      SFX transitions
+      Surround mix
+      Vocoder
+    ----	(disabled)
+    Empty
+    ----	(disabled)
+    Change default template...
+  Open...	[Cmd+O]
+  ----	[Cmd+A]	(disabled)
+  Save	[Cmd+S]
+  Save as...	[Shift+Cmd+S]
+  Save new version	[Cmd+N]
+  Save and back up to FL Cloud
+  Save to new project folder...
+  Save as template...
+  Delete unused files and save project
+  ----	(disabled)
+  Import
+    MIDI file...
+  Export
+    ----	(disabled)
+    Wave file...	[Cmd+R]
+    MP3 file...	[Shift+Cmd+R]
+    OGG file...
+    FLAC file...
+    MIDI file...	[Shift+Cmd+M]
+    M4A file...
+    Last exported format(s)...
+    ----	(disabled)
+    Master...	[Opt+Cmd+M]
+    ----	(disabled)
+    Upload...
+    ----	(disabled)
+    All playlist tracks
+      From song start...
+      From track start...
+      Time selection...	(disabled)
+    All playlist track groups
+      From song start...
+      From track start...
+      Time selection...	(disabled)
+    ----	(disabled)
+    Video file...
+    ----	(disabled)
+    Zipped loop package...
+    Project bones...
+    Project data files...
+  ----	(disabled)
+  lime-arrange.flp	[Opt+1]
+  lime-notes.flp	[Opt+2]
+  ----	(disabled)
+  Revert to last backup
+  ----	(disabled)
+  Exit	[Cmd+Q]
+Edit
+  Undo	[Cmd+Z]	(disabled)
+  ----	(disabled)
+  Cut	[Cmd+X]
+  Copy	[Cmd+C]
+  Paste	[Cmd+V]	(disabled)
+  ----	(disabled)
+  AutoFill
+    Contact…	(disabled)
+    Passwords…	(disabled)
+    Credit Card…	(disabled)
+  Start Dictation	[D]	(disabled)
+  Emoji & Symbols	[E]
+Add
+  ----	(disabled)
+  More plugins...
+  ----	(disabled)
+  ----	(disabled)
+  Fruity Envelope Controller
+  Fruity Keyboard Controller
+  ----	(disabled)
+  BassDrum
+  Drumaxx
+  Drumpad
+  FPC
+  Fruit Kick
+  Fruity DrumSynth Live
+  Fruity Slicer
+  Fruity Slicer 2
+  Ogun
+  Slicex
+  ----	(disabled)
+  MIDI Out
+  ----	(disabled)
+  Audio Clip
+  Automation Clip
+  BooBass
+  FL Keys
+  FL Studio Mobile
+  FL Studio Mobile Rack
+  Fruity Voltage Controller
+  Layer
+  SoundFont Player
+  ----	(disabled)
+  Patcher
+  VFX Color Mapper
+  VFX Envelope
+  VFX Key Mapper
+  VFX Keyboard Splitter
+  VFX Level Scaler
+  VFX Script
+  VFX Sequencer
+  ----	(disabled)
+  DirectWave
+  Fruity Granulizer
+  Sampler
+  Wave Traveller
+  ----	(disabled)
+  3x Osc
+  FLEX
+  Fruity DX10
+  GMS
+  Harmless
+  Kepler
+  Kepler Exo
+  MiniSynth
+  PoiZone
+  Sawer
+  SimSynth
+  Sytrus
+  Toxic Biohazard
+  Transistor Bass
+  ----	(disabled)
+  Autogun
+  BeepMap
+  Harmor
+  Morphine
+  Ogun
+  Plucked!
+  Sakura
+  ----	(disabled)
+  Fruity Dance
+  Fruity Video Player
+  ----	(disabled)
+  Categories	{✓}
+  Simple
+  Tree
+  ----	(disabled)
+  Effect
+    More plugins...
+    Plugin database	[Shift+]	<chars=F70B vk=100 glyph=118 mods=9>
+    ----	(disabled)
+    ----	(disabled)
+    Control Surface
+    Fruity Formula Controller
+    Fruity Peak Controller
+    Fruity X-Y Controller
+    Fruity X-Y-Z Controller
+    ----	(disabled)
+    Fruity Convolver
+    Fruity Delay 2
+    Fruity Delay 3
+    Fruity Delay Bank
+    Fruity Reeverb 2
+    LuxeVerb
+    Multiband Delay
+    ----	(disabled)
+    Distructor
+    Fruity Blood Overdrive
+    Fruity Fast Dist
+    Fruity Soft Clipper
+    Fruity Squeeze
+    Fruity WaveShaper
+    Hardcore
+    ----	(disabled)
+    Emphasis
+    Emphasizer
+    Fruity Compressor
+    Fruity Limiter
+    Fruity Multiband Compressor
+    Fruity Soft Clipper
+    Maximus
+    Soundgoodizer
+    Transient Processor
+    ----	(disabled)
+    EQUO
+    Frequency Splitter
+    Fruity Filter
+    Fruity Love Philter
+    Fruity Parametric EQ
+    Fruity Parametric EQ 2
+    ----	(disabled)
+    Fruity Chorus
+    Fruity Flanger
+    Fruity Flangus
+    Fruity Phaser
+    Hyper Chorus
+    Vintage Chorus
+    Vintage Phaser
+    ----	(disabled)
+    Fruity Balance
+    Fruity PanOMatic
+    Fruity Send
+    Fruity Stereo Enhancer
+    Fruity Stereo Shaper
+    Spreader
+    ----	(disabled)
+    Edison
+    Effector
+    FL Studio Mobile Rack FX
+    Frequency Shifter
+    Fruity Scratcher
+    Fruity Vocoder
+    Gross Beat
+    Low Lifter
+    Newtime
+    Newtone
+    Pitch Shifter
+    Pitcher
+    Transmitter
+    Transporter
+    Vocodex
+    ----	(disabled)
+    Patcher
+    VFX Color Mapper
+    VFX Envelope
+    VFX Key Mapper
+    VFX Keyboard Splitter
+    VFX Level Scaler
+    VFX Script
+    VFX Sequencer
+    ----	(disabled)
+    Fruity Big Clock
+    Fruity dB Meter
+    Fruity HTML NoteBook
+    Fruity NoteBook
+    Fruity NoteBook 2
+    Fruity Spectroman
+    Tuner
+    Wave Candy
+    ZGameEditor Visualizer
+    ----	(disabled)
+    Categories	{✓}
+    Simple
+    Tree
+  Plugin picker	[]	<chars=F70B vk=100 glyph=118 mods=8>
+  Browse plugin database
+  Browse all installed plugins
+  Browse presets
+  ----	(disabled)
+  Refresh plugin list (fast scan)
+  Manage plugins
+  Manage FL Cloud plugins...
+  ----	(disabled)
+  Automation for last tweaked parameter	(disabled)
+  ----	(disabled)
+  Pattern
+Patterns
+  Find first empty...	[Shift+]	<chars=F707 vk=118 glyph=114 mods=9>
+  Find next empty...	[]	<chars=F707 vk=118 glyph=114 mods=8>
+  Find next empty (no naming)	[Cmd+]	<chars=F707 vk=118 glyph=114 mods=0>
+  ----	(disabled)
+  Select in playlist
+  Rename and color...	[]	<chars=F705 vk=120 glyph=112 mods=8>
+  Change color...
+  Random color
+  Open in project browser	[Shift+Cmd+P]
+  Group selected...
+  Rename group...
+  Ungroup selected...
+  Set time signature...
+  Transpose...
+  ----	(disabled)
+  Insert one
+  Clone	[Shift+Cmd+C]
+  Delete	[Shift+Cmd+]	<chars=F728 vk=117 glyph=10 mods=1>
+  ----	(disabled)
+  Move up
+  Move down
+  ----	(disabled)
+  Split by channel
+  Quick render as audio clip
+  Render as audio clip...
+  Render and replace...
+View
+  ----	(disabled)
+  Playlist	[]	<chars=F708 vk=96 glyph=115 mods=8>	{✓}
+  Piano roll	[]	<chars=F70A vk=98 glyph=117 mods=8>
+  Channel rack	[]	<chars=F709 vk=97 glyph=116 mods=8>	{✓}
+  Mixer
+  Browser	[Opt+]	<chars=F70B vk=100 glyph=118 mods=10>	{✓}
+  Project picker	[Cmd+]	<chars=F70B vk=100 glyph=118 mods=0>
+  Plugin picker	[]	<chars=F70B vk=100 glyph=118 mods=8>
+  Tempo tapper	[Cmd+]	<chars=F708 vk=96 glyph=115 mods=0>
+  Touch controller	[Opt+]	<chars=F70A vk=98 glyph=117 mods=10>
+  Script output
+  Toolbars
+    ----	(disabled)
+    Edit
+    Separators	{✓}
+    Flat buttons
+    Show FL Cloud status in the hint bar	{✓}
+    Show detected MIDI chords near the hint bar
+    ----	(disabled)
+    Hint bar
+    Hide
+    ----	(disabled)
+    Compact
+    Default (hint above menu)
+    Default (macOS)	{✓}
+    Default
+    FL Studio 12
+    FL Studio 24 (macOS)
+    FL Studio 24 (Windows)
+    FL Studio 25 (macOS)
+    FL Studio 25 (Windows)
+    Single line centered
+    Single line
+  Tests
+  Plugin performance monitor
+  Welcome to FL Studio
+  ----	(disabled)
+  Close all windows
+  Close all plugin windows
+  Close all unfocused windows
+  Align all channel editors
+  Arrange windows
+    Realign	[Shift+Cmd+H]
+    Into workspace
+    ----	(disabled)
+    Desktop (default)
+    Desktop (alternate)
+    Tablet (default)
+    Tablet (alternate)
+    Custom
+    ----	(disabled)
+    Save custom layout
+  Background
+    Set image wallpaper...
+    Set dynamic wallpaper
+    Set background color...
+  ----	(disabled)
+  Undo history
+  Patterns
+  Generators in use
+  Effects in use
+  Remote control
+  Plugin database	[Shift+]	<chars=F70B vk=100 glyph=118 mods=9>
+  ----	(disabled)
+  Downloads
+  News
+  Notifications
+  Enter Full Screen	[F]	(disabled)
+Options
+  ----	(disabled)
+  MIDI settings
+  Audio settings
+  General settings
+  File settings
+  Theme settings
+  Manage plugins
+  ----	(disabled)
+  Project general settings
+  Project info
+  ----	(disabled)
+  Debugging log
+  Account settings
+  ----	(disabled)
+  Enable MIDI remote control	{✓}
+  Enable MIDI output
+  Enable MIDI master sync
+  ----	(disabled)
+  Typing keyboard to piano	[Cmd+T]	{✓}
+  Metronome	[Cmd+M]
+  Recording precount	[Cmd+P]	{✓}
+  Start on input	[Cmd+I]
+  Blend recorded notes	[Cmd+B]
+  Step edit	[Cmd+E]
+  Loop record
+  Auto scrolling
+  Enable groups	[Opt+Shift+G]	{✓}
+  Multilink to controllers	[Cmd+J]
+  ----	(disabled)
+  Manage accounts...
+Tools
+  Browser find...	[Cmd+F]
+  One-click audio recording
+    ----	(disabled)
+    Into Edison audio editor/recorder
+    Into playlist as an audio clip
+  Remix a song...
+  Riff machine...
+  Chord progression tool...
+  Control creator
+  ----	(disabled)
+  Sounds
+  Mastering...
+  Distribution...
+  Manage cloud plugins...
+  My account...
+  ----	(disabled)
+  Save audio clipboard to browser
+  Save MIDI clipboard to browser
+  ----	(disabled)
+  Dump score log to selected pattern
+    Last 2 minutes
+    Last 5 minutes
+    Last 10 minutes
+    Last 20 minutes
+    Last 30 minutes
+  Clear log
+  ----	(disabled)
+  Enabled	{✓}
+  Settings
+    ----	(disabled)
+    1 minute	{✓}
+    2 minutes
+    5 minutes
+    10 minutes
+    ----	(disabled)
+    Pre effects
+    Post effects, pre fader	{✓}
+  Dump to audio editor
+  ----	(disabled)
+  Last tweaked
+    ----	(disabled)
+    ----	(disabled)
+    Edit events	(disabled)
+    Edit events in new window	(disabled)
+    Edit events in piano roll	(disabled)
+    Init song with this position	(disabled)
+    Delete initial value	(disabled)
+    ----	(disabled)
+    Create automation clip	(disabled)
+    Edit automation clip...	(disabled)
+    ----	(disabled)
+    Link to controller...	(disabled)
+    Override global link...	(disabled)
+    ----	(disabled)
+    Copy value	(disabled)
+    Paste value 	(disabled)
+    Type in value...	(disabled)
+    Set...	(disabled)
+    ----	(disabled)
+    Override volatile link...
+  Next to last tweaked
+    ----	(disabled)
+    ----	(disabled)
+    Edit events	(disabled)
+    Edit events in new window	(disabled)
+    Edit events in piano roll	(disabled)
+    Init song with this position	(disabled)
+    Delete initial value	(disabled)
+    ----	(disabled)
+    Create automation clip	(disabled)
+    Edit automation clip...	(disabled)
+    ----	(disabled)
+    Link to controller...	(disabled)
+    Override global link...	(disabled)
+    ----	(disabled)
+    Copy value	(disabled)
+    Paste value 	(disabled)
+    Type in value...	(disabled)
+    Set...	(disabled)
+    ----	(disabled)
+    Override volatile link...
+  ----	(disabled)
+  Stop sound	[Cmd+H]
+  Cancel recording
+  ----	(disabled)
+  Prepare for performance mode
+  Prepare for MIDI export
+  Select unused channels
+  Purge unused audio clips
+  Switch smart disable for all plugins
+  Switch all audio clip channels to
+    ----	(disabled)
+    Resample
+    Stretch
+    Stretch Pro
+    ----	(disabled)
+    e3 generic
+    e3 mono
+    ----	(disabled)
+    Slice stretch
+    Slice map
+    Auto
+    ----	(disabled)
+    e2 generic
+    e2 transient
+    e2 mono
+    e2 speech
+  Switch selected audio clip channels to
+    ----	(disabled)
+    Resample
+    Stretch
+    Stretch Pro
+    ----	(disabled)
+    e3 generic
+    e3 mono
+    ----	(disabled)
+    Slice stretch
+    Slice map
+    Auto
+    ----	(disabled)
+    e2 generic
+    e2 transient
+    e2 mono
+    e2 speech
+  Lock all playlist tracks to content
+  Unlock all playlist tracks from content
+  Reset empty playlist tracks
+  Remove all Edison instances
+  Delete unused files and save project
+  Switch all plugin editors to
+    Attached
+    Detached
+  Set keyboard focus for all plugins to
+    Enabled
+    Disabled
+  Change declicking for selected channels to
+    Out only (no bleeding)
+    Transient (no bleeding)
+    Transient (bleeding)
+    Generic (bleeding)
+    Smooth (bleeding)
+    Crossfade (bleeding)
+Help
+  Help index
+  Gopher (chat assistant)
+  Tutorials
+    Loop starter tutorial
+    Step sequencer tutorial
+  ----	(disabled)
+  Unlock FL Studio
+  My account
+  ----	(disabled)
+  Diagnostics
+  What's new
+  ----	(disabled)
+  Buy FL Studio and upgrades
+  ----	(disabled)
+  FL Studio homepage
+  FL Studio Mobile
+  FL Studio tutorials
+  Support - Forum
+  Support - Knowledgebase
+  ----	(disabled)
+  About...

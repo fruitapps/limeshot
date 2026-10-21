@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-21 (session 7)",
+  "updated": "2026-10-22 (session 13)",
   "features": [
     {
       "id": "APP-001",
@@ -7366,6 +7366,940 @@
       "fl_reference": "FL Studio's knobs: a drag that crosses the default holds it for a few pixels (\"Channel panning: Centered\"); a drag starting at the default moves off it at once (observed live in FL 2026.1.1, session 11).",
       "limeshot_behavior": "Knobs, faders and the egui sliders (Channel Settings, the Mixer's track panel, effect cards, plugin parameters) stop at their default when a drag crosses it and let go after 6 px more travel; a drag that starts at the default moves freely, so small adjustments near it stay easy. Double-click still resets.",
       "status": "VERIFIED"
+    },
+    {
+      "id": "APP-026",
+      "category": "Application",
+      "name": "Main menu bar in FL's layout",
+      "description": "The menu bar has FL's eight menus in FL's order, with section headers, shortcuts and check marks.",
+      "fl_reference": "FILE EDIT ADD PATTERNS VIEW OPTIONS TOOLS HELP at the left of the toolbar; grey section headers inside menus (e.g. View › Windows, Layout, Browser).",
+      "limeshot_behavior": "File, Edit, Add, Patterns, View, Options and Help exist with a subset of FL's items (see menus.md); no Tools menu and no section headers.",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Menus File, Edit, Add, Patterns, View, Options, Tools, Help in that order.",
+        "Every implemented item of docs/roadmap/menus.json appears at FL's path with FL's shortcut.",
+        "Items that are not implemented are left out or shown disabled."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file.png",
+          "docs/research/evidence/screenshots/fl-menu-view.png"
+        ]
+      },
+      "notes": "Track each item in docs/roadmap/menus.json."
+    },
+    {
+      "id": "APP-027",
+      "category": "Application",
+      "name": "Revert to last backup",
+      "description": "Reopen the newest autosave/backup of the current project.",
+      "fl_reference": "File › Revert to last backup.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-016"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Replaces the open project with its newest backup after asking.",
+        "Undo history starts fresh."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-028",
+      "category": "Application",
+      "name": "Save to new project folder",
+      "description": "Save the project into a new folder named after it, together with its samples.",
+      "fl_reference": "File › Save to new project folder… (disabled until the project was saved once).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-009"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Creates the folder, writes the project and copies its samples; sample paths become relative."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-029",
+      "category": "Application",
+      "name": "Delete unused files and save project",
+      "description": "Remove samples in the project folder that the project no longer uses, then save.",
+      "fl_reference": "File › Delete unused files and save project; also Tools › Macros.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-028"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Lists the files before deleting them and asks.",
+        "Never touches files outside the project folder."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file.png",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-030",
+      "category": "Application",
+      "name": "Project general settings",
+      "description": "Per-project settings: time signature, PPQ, tempo and pitch defaults, project data folder.",
+      "fl_reference": "Options › Project general settings.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-025"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "A dialog edits the project's general settings through commands (undoable)."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-031",
+      "category": "Application",
+      "name": "Debugging log and diagnostics",
+      "description": "A window listing engine and plugin messages, and a diagnostics summary (audio device, CPU, plugins).",
+      "fl_reference": "Options › Debugging log; Help › Diagnostics.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Shows audio device errors, plugin load failures and dropped buffers with times."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png",
+          "docs/research/evidence/screenshots/fl-menu-help.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "APP-032",
+      "category": "Application",
+      "name": "Help index, tutorials and about",
+      "description": "Help menu entries that open LimeShot's documentation, guided tutorials and release notes.",
+      "fl_reference": "Help › Help index, Tutorials (Loop starter, Step sequencer), What's new, About….",
+      "limeshot_behavior": "Help › About LimeShot and Help › Keyboard shortcuts exist; no manual, tutorials or release notes.",
+      "priority": "P2",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Help index opens the bundled or online manual.",
+        "What's new shows the release notes of this version."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-help.png",
+          "docs/research/evidence/screenshots/fl-menu-help-tutorials.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-014",
+      "category": "Export",
+      "name": "Export playlist tracks or track groups",
+      "description": "Render each Playlist track (or track group) to its own audio file.",
+      "fl_reference": "File › Export › All playlist tracks / All playlist track groups › From song start…, From track start…, Time selection….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "EXP-001"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "One file per non-empty track, named after the track.",
+        "From track start trims leading silence; Time selection renders the selection."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file-export.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-015",
+      "category": "Export",
+      "name": "Export in the last used format(s)",
+      "description": "Repeat the last export with the same formats and options without the dialog.",
+      "fl_reference": "File › Export › Last exported format(s)….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "EXP-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Uses the remembered formats, options and folder; asks only for the file name."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file-export.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-016",
+      "category": "Export",
+      "name": "Video export",
+      "description": "Render the song with a visualiser to a video file.",
+      "fl_reference": "File › Export › Video file… (uses ZGameEditor Visualizer).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "EXP-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Writes a video with the rendered audio track."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file-export.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "EXP-017",
+      "category": "Export",
+      "name": "Project bones and project data files",
+      "description": "Export the project without audio (bones), or collect its samples into the project folder (data files).",
+      "fl_reference": "File › Export › Project bones…, Project data files….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "APP-009"
+      ],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Bones: a .lime without sample data.",
+        "Data files: every referenced sample copied next to the project, paths updated."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-file-export.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "SEQ-021",
+      "category": "Channel Rack",
+      "name": "Pattern menu commands",
+      "description": "FL's Patterns menu: find first/next empty pattern, select in playlist, random color, transpose, insert one, move up/down, split by channel.",
+      "fl_reference": "Patterns menu (F4, Shift+F4, Cmd+F4, Shift+Cmd+Ins, Shift+Cmd+Up/Down).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P1",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "SEQ-018"
+      ],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Each command is one undoable Command.",
+        "Keys as in FL.",
+        "Split by channel makes one pattern per channel that has notes or steps."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-patterns.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "SEQ-022",
+      "category": "Channel Rack",
+      "name": "Pattern groups",
+      "description": "Group patterns so the pattern selector can filter by group.",
+      "fl_reference": "Patterns › Group selected…, Rename group…, Ungroup selected….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "SEQ-018"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Groups are saved in the project.",
+        "The pattern selector can show one group."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-patterns.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-013",
+      "category": "UI",
+      "name": "Window layout commands",
+      "description": "Close all / plugin / unfocused windows, align channel editors, dock everything into the workspace, layout presets and a saved custom layout.",
+      "fl_reference": "View › Layout: Close all windows (F12), Close all plugin windows (Opt+F12), Close all unfocused windows (Cmd+F12), Align all channel editors (Shift+F12), Arrange windows › Into workspace, Desktop/Tablet layouts, Save custom layout.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "UI-002",
+        "UI-007"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Each command works with detached windows.",
+        "A saved custom layout survives a restart."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view.png",
+          "docs/research/evidence/screenshots/fl-menu-view-arrange.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-014",
+      "category": "UI",
+      "name": "Toolbar customisation and presets",
+      "description": "Edit which toolbar panels show, flat buttons, separators, hide the toolbar, and pick a toolbar layout preset.",
+      "fl_reference": "View › Toolbars (Edit, Separators, Flat buttons, Hint bar, Hide Cmd+F11, Factory Presets).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "UI-001"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Presets rearrange the toolbar panels.",
+        "The choice is saved in settings."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view-toolbars.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-015",
+      "category": "UI",
+      "name": "Workspace background",
+      "description": "An image, a moving pattern or a plain color behind the workspace windows.",
+      "fl_reference": "View › Background › Set image wallpaper…, Set dynamic wallpaper, Set background color….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "The background is saved in settings.",
+        "Image files are read as hostile input."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-016",
+      "category": "UI",
+      "name": "Auto scrolling option",
+      "description": "Editors follow the playhead during playback; one switch turns it off.",
+      "fl_reference": "Options › Auto scrolling.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "When on, Playlist and Piano Roll scroll to keep the playhead visible.",
+        "The switch is saved in settings."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png"
+        ]
+      },
+      "notes": "Check what LimeShot's editors do today before implementing."
+    },
+    {
+      "id": "UI-017",
+      "category": "UI",
+      "name": "Control creator",
+      "description": "Build custom touch-control surfaces.",
+      "fl_reference": "Tools › Control creator.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "DEFERRED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Deferred: FL-specific."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "UI-018",
+      "category": "UI",
+      "name": "Plugin picker",
+      "description": "A floating overlay of plugins to drag onto the Channel Rack or a mixer slot.",
+      "fl_reference": "View › Plugin picker / Add › Plugin picker (F8).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-004"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Dragging a plugin to the Channel Rack adds a channel; to a mixer slot adds an effect."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view.png",
+          "docs/research/evidence/screenshots/fl-menu-add.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-011",
+      "category": "Plugins",
+      "name": "Plugin performance monitor",
+      "description": "A window listing each plugin's CPU time.",
+      "fl_reference": "View › Plugin performance monitor.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-002"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Shows per-instance processing time, updated while playing."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "WF-009",
+      "category": "Workflow",
+      "name": "Project macros",
+      "description": "Bulk commands: select unused channels, purge unused audio clips, smart-disable all plugins, lock/unlock playlist tracks to content, reset empty playlist tracks, switch all plugin editors attached/detached, plugin keyboard focus, declicking for selected channels.",
+      "fl_reference": "Tools › Macros.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Each macro is one undoable step and says what it changed."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "WF-010",
+      "category": "Workflow",
+      "name": "Score logger",
+      "description": "Keep the notes played on the keyboard and dump the last minutes into the selected pattern.",
+      "fl_reference": "Tools › Score logger › Dump score log to selected pattern › Last 2/5/10/20/30 minutes; Clear log.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "WF-003"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Notes played while not recording are kept for 30 minutes.",
+        "Dumping writes them into the pattern as one undo step."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "WF-011",
+      "category": "Workflow",
+      "name": "Touch controller",
+      "description": "An on-screen pad/keyboard controller window.",
+      "fl_reference": "View › Touch controller (Opt+F7).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Pads and keys play the selected channel."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-view.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "WF-012",
+      "category": "Workflow",
+      "name": "MIDI clock sync",
+      "description": "Send or follow MIDI clock and song position.",
+      "fl_reference": "Options › Enable MIDI master sync.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "WF-005"
+      ],
+      "modules": [
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Sends MIDI clock to the selected output while playing."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "WF-013",
+      "category": "Workflow",
+      "name": "Item groups",
+      "description": "Group notes or clips so clicking one selects the whole group; a switch turns groups off.",
+      "fl_reference": "Options › Enable groups (Shift+Opt+G).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Groups are saved in the project.",
+        "With the switch off, items select singly."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "REC-010",
+      "category": "Recording",
+      "name": "Start on input and blend recorded notes",
+      "description": "Recording waits for the first MIDI note; recorded notes merge with the existing ones instead of replacing them.",
+      "fl_reference": "Options › Start on input (Cmd+I), Blend recorded notes (Cmd+B).",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "REC-002"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Both switches are saved in settings and shown checked in the menu."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-options.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "REC-011",
+      "category": "Recording",
+      "name": "Audio logger",
+      "description": "Keep the last minutes of the master output in memory and dump them to an audio editor.",
+      "fl_reference": "Tools › Audio logger: Enabled, Settings (Maximum length 1/2/5/10 minutes; Pre effects / Post effects, pre fader), Dump to audio editor.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Memory use is shown in the section header.",
+        "Dump creates an audio clip."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools-audio-logger.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PR-028",
+      "category": "Piano Roll",
+      "name": "Chord progression tool",
+      "description": "Generate a chord progression into a pattern.",
+      "fl_reference": "Tools › Chord progression tool…; File › New from template › Utility › Create a chord progression.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Writes the chosen progression as notes in the selected pattern."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PR-029",
+      "category": "Piano Roll",
+      "name": "Riff machine",
+      "description": "Generate melodies from rules into the Piano Roll.",
+      "fl_reference": "Tools › Riff machine….",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Generated notes are one undo step."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PL-030",
+      "category": "Playlist",
+      "name": "Stem separation (Remix a song)",
+      "description": "Split an audio file into vocals, instruments, bass and drums.",
+      "fl_reference": "Tools › Remix a song…; Welcome › Remix a song.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "DEFERRED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Deferred: needs a separation model."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "BR-011",
+      "category": "Browser",
+      "name": "Save clipboard to browser",
+      "description": "Save copied audio or notes as a file in the Browser.",
+      "fl_reference": "Tools › Clipboard › Save audio clipboard to browser, Save MIDI clipboard to browser.",
+      "limeshot_behavior": "Not implemented.",
+      "priority": "P3",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Writes a WAV or MIDI file into the user folder and selects it."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/roadmap/menus.json",
+          "docs/research/evidence/screenshots/fl-menu-tools.png"
+        ]
+      },
+      "notes": ""
     }
   ]
 }

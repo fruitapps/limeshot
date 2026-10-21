@@ -75,11 +75,11 @@
       "context": "Global",
       "action": "Step edit mode",
       "fl_keys": "Ctrl+E",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "REC-009",
-      "notes": ""
+      "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-008",
@@ -163,22 +163,22 @@
       "context": "Global",
       "action": "MIDI settings",
       "fl_keys": "F10",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "APP-020",
-      "notes": ""
+      "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-016",
       "context": "Global",
       "action": "Project info",
       "fl_keys": "F11",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "APP-017",
-      "notes": ""
+      "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-017",
@@ -218,11 +218,11 @@
       "context": "Global",
       "action": "Arrange windows",
       "fl_keys": "Ctrl+Shift+H",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+Shift+H",
       "status": "IMPLEMENTED",
       "feature": "UI-002",
-      "notes": ""
+      "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-021",
@@ -251,11 +251,11 @@
       "context": "Global",
       "action": "Next empty pattern",
       "fl_keys": "F4",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "F4",
       "status": "IMPLEMENTED",
       "feature": "SEQ-018",
-      "notes": "LimeShot adds a new pattern."
+      "notes": "LimeShot adds a new pattern. Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-024",
@@ -383,11 +383,11 @@
       "context": "File",
       "action": "Quit",
       "fl_keys": "Alt+F4 / Cmd+Q",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+Q",
       "status": "IMPLEMENTED",
       "feature": "APP-014",
-      "notes": ""
+      "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },
     {
       "id": "KB-036",
@@ -728,7 +728,7 @@
       "limeshot_keys": "Cmd+B",
       "status": "IMPLEMENTED",
       "feature": "PL-005",
-      "notes": ""
+      "notes": "Globally, Options › Blend recorded notes also shows Ctrl+B; the editor binding wins while an editor has focus."
     },
     {
       "id": "KB-067",
@@ -992,7 +992,7 @@
       "limeshot_keys": "Cmd+T",
       "status": "IMPLEMENTED",
       "feature": "PL-016",
-      "notes": "FL 2026.1.1 Time markers menu: Add auto."
+      "notes": "FL 2026.1.1 Time markers menu: Add auto. Globally, Options › Typing keyboard to piano also shows Ctrl+T; the Playlist binding wins while the Playlist has focus."
     },
     {
       "id": "KB-091",
@@ -1037,6 +1037,270 @@
       "status": "IMPLEMENTED",
       "feature": "PR-005",
       "notes": "Session 9 (owner's hands-on test: no vertical zoom). Not checked live in FL this session; test alt_wheel_zooms_vertically."
+    },
+    {
+      "id": "KB-095",
+      "context": "File",
+      "action": "Export MIDI file",
+      "fl_keys": "Ctrl+Shift+M",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-012",
+      "notes": "File › Export › MIDI file... (MENU-026)."
+    },
+    {
+      "id": "KB-096",
+      "context": "File",
+      "action": "Export with FL Cloud mastering",
+      "fl_keys": "Ctrl+Alt+M",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "File › Export › Master... (MENU-029)."
+    },
+    {
+      "id": "KB-097",
+      "context": "Global",
+      "action": "Plugin database in the Browser",
+      "fl_keys": "Shift+F8",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-008",
+      "notes": "View › Plugin database (MENU-145); also Add › Effect › Plugin database."
+    },
+    {
+      "id": "KB-098",
+      "context": "Global",
+      "action": "Find first empty pattern (asks for a name)",
+      "fl_keys": "Shift+F4",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Find first empty... (MENU-079)."
+    },
+    {
+      "id": "KB-099",
+      "context": "Global",
+      "action": "Find next empty pattern without naming",
+      "fl_keys": "Ctrl+F4",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Find next empty (no naming) (MENU-081)."
+    },
+    {
+      "id": "KB-100",
+      "context": "Global",
+      "action": "Open the current pattern in the project browser",
+      "fl_keys": "Ctrl+Shift+P",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": "Patterns › Open in project browser (MENU-086)."
+    },
+    {
+      "id": "KB-101",
+      "context": "Global",
+      "action": "Insert a pattern",
+      "fl_keys": "Ctrl+Shift+Ins",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Insert one (MENU-092)."
+    },
+    {
+      "id": "KB-102",
+      "context": "Global",
+      "action": "Clone pattern",
+      "fl_keys": "Ctrl+Shift+C",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-018",
+      "notes": "Patterns › Clone (MENU-093)."
+    },
+    {
+      "id": "KB-103",
+      "context": "Global",
+      "action": "Delete pattern",
+      "fl_keys": "Ctrl+Shift+Del",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-018",
+      "notes": "Patterns › Delete (MENU-094)."
+    },
+    {
+      "id": "KB-104",
+      "context": "Global",
+      "action": "Move pattern up",
+      "fl_keys": "Ctrl+Shift+Up",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Move up (MENU-095)."
+    },
+    {
+      "id": "KB-105",
+      "context": "Global",
+      "action": "Move pattern down",
+      "fl_keys": "Ctrl+Shift+Down",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Move down (MENU-096)."
+    },
+    {
+      "id": "KB-106",
+      "context": "Global",
+      "action": "Project picker",
+      "fl_keys": "Ctrl+F8",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-005",
+      "notes": "View › Project picker (MENU-106)."
+    },
+    {
+      "id": "KB-107",
+      "context": "Global",
+      "action": "Tempo tapper",
+      "fl_keys": "Ctrl+F5",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-012",
+      "notes": "View › Tempo tapper (MENU-108)."
+    },
+    {
+      "id": "KB-108",
+      "context": "Global",
+      "action": "Touch controller",
+      "fl_keys": "Alt+F7",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-011",
+      "notes": "View › Touch controller (MENU-109)."
+    },
+    {
+      "id": "KB-109",
+      "context": "Global",
+      "action": "Hide toolbars",
+      "fl_keys": "Ctrl+F11",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-014",
+      "notes": "View › Toolbars › Hide (MENU-118)."
+    },
+    {
+      "id": "KB-110",
+      "context": "Global",
+      "action": "Close all plugin windows",
+      "fl_keys": "Alt+F12",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "View › Close all plugin windows (MENU-124)."
+    },
+    {
+      "id": "KB-111",
+      "context": "Global",
+      "action": "Close all unfocused windows",
+      "fl_keys": "Ctrl+F12",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "View › Close all unfocused windows (MENU-125)."
+    },
+    {
+      "id": "KB-112",
+      "context": "Global",
+      "action": "Align all channel editors",
+      "fl_keys": "Shift+F12",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-013",
+      "notes": "View › Align all channel editors (MENU-126)."
+    },
+    {
+      "id": "KB-113",
+      "context": "Global",
+      "action": "Recording precount",
+      "fl_keys": "Ctrl+P",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-007",
+      "notes": "Options › Recording precount (MENU-168)."
+    },
+    {
+      "id": "KB-114",
+      "context": "Global",
+      "action": "Start on input",
+      "fl_keys": "Ctrl+I",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-010",
+      "notes": "Options › Start on input (MENU-169)."
+    },
+    {
+      "id": "KB-115",
+      "context": "Global",
+      "action": "Enable groups",
+      "fl_keys": "Alt+Shift+G",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-013",
+      "notes": "Options › Enable groups (MENU-174)."
+    },
+    {
+      "id": "KB-116",
+      "context": "Global",
+      "action": "Multilink to controllers",
+      "fl_keys": "Ctrl+J",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": "Options › Multilink to controllers (MENU-175)."
+    },
+    {
+      "id": "KB-117",
+      "context": "Global",
+      "action": "Browser find",
+      "fl_keys": "Ctrl+F",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "BR-004",
+      "notes": "Tools › Browser find... (MENU-179)."
+    },
+    {
+      "id": "KB-118",
+      "context": "Global",
+      "action": "Gopher (chat assistant)",
+      "fl_keys": "Alt+F1",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Help › Gopher (chat assistant) (MENU-262)."
     }
   ]
 }
