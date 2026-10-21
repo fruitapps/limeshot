@@ -25,6 +25,8 @@ pub struct State {
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
     pending_preview: Option<PathBuf>,
     pub selected: Option<PathBuf>,
+    /// Screen rectangles of the files listed in the last frame (for tests and tools).
+    pub file_rects: Vec<(PathBuf, Rect)>,
 }
 
 impl State {
@@ -48,6 +50,16 @@ impl State {
             v.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.file_name().cmp(&b.0.file_name())));
             v
         })
+    }
+
+    /// Centre of `path`'s row, as last drawn.
+    pub fn file_pos(&self, path: &Path) -> Option<egui::Pos2> {
+        self.file_rects.iter().find(|(p, _)| p == path).map(|(_, r)| r.center())
+    }
+
+    /// Whether a preview is waiting for its sample to load.
+    pub fn preview_pending(&self) -> bool {
+        self.pending_preview.is_some()
     }
 
     pub fn refresh(&mut self) {
@@ -103,7 +115,7 @@ pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<Channel
         name: file_label(path),
         instrument: Instrument::Sampler(params),
     })?;
-    app.ui.selected_channel = Some(ChannelId(id));
+    app.select_channel(ChannelId(id));
     Some(ChannelId(id))
 }
 
@@ -114,6 +126,7 @@ fn preview(app: &mut LimeShotApp, path: &Path) {
 
 pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
+    app.ui.browser.file_rects.clear();
     // Start a requested preview once its sample has loaded.
     if let Some(p) = app.ui.browser.pending_preview.clone() {
         match app.samples.status_of_path(&p) {
@@ -283,6 +296,7 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
             })
             .response;
         let resp = ui.interact(resp.rect, id.with("click"), Sense::click());
+        app.ui.browser.file_rects.push((path.clone(), resp.rect));
         if resp.clicked() {
             app.ui.browser.selected = Some(path.clone());
             preview(app, &path);

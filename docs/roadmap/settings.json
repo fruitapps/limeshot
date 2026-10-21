@@ -300,6 +300,17 @@
       "status": "IMPLEMENTED",
       "feature": "PR-003",
       "notes": "Not persisted between sessions."
+    },
+    {
+      "id": "SET-028",
+      "page": "Dialogs",
+      "setting": "Confirm channel deletion",
+      "fl_reference": "Confirm dialog › Remember my choice",
+      "confidence": "OBSERVED",
+      "limeshot_setting": "settings.confirm_channel_delete",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": "Turned off by ticking \"Remember my choice\"; no way to turn it back on yet except editing settings.json (APP-025)."
     }
   ]
 }

@@ -5,7 +5,7 @@
 
 limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project. Confidence as in keybindings.json.
 
-Tracked: **27** — IMPLEMENTED 10, IN_PROGRESS 1, NOT_STARTED 15, NOT_PLANNED 1
+Tracked: **28** — IMPLEMENTED 11, IN_PROGRESS 1, NOT_STARTED 15, NOT_PLANNED 1
 
 ## Audio
 
@@ -63,3 +63,9 @@ Tracked: **27** — IMPLEMENTED 10, IN_PROGRESS 1, NOT_STARTED 15, NOT_PLANNED 1
 | SET-025 | Metronome | Toolbar toggle (Ctrl+M) | VERIFIED | `ui.metronome` | IMPLEMENTED | TR-008 | Not persisted between sessions. |
 | SET-026 | Loop song | Toolbar / Options | INFERRED | `ui.song_loop` | IMPLEMENTED | TR-009 | Not persisted between sessions. |
 | SET-027 | Snap | Toolbar snap selector | OBSERVED | `ui.snap` | IMPLEMENTED | PR-003 | Not persisted between sessions. |
+
+## Dialogs
+
+| ID | Setting | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|
+| SET-028 | Confirm channel deletion | Confirm dialog › Remember my choice | OBSERVED | `settings.confirm_channel_delete` | IMPLEMENTED | SEQ-007 | Turned off by ticking "Remember my choice"; no way to turn it back on yet except editing settings.json (APP-025). |

@@ -398,18 +398,18 @@
       "limeshot_keys": "Cmd+L",
       "status": "IMPLEMENTED",
       "feature": "SEQ-005",
-      "notes": ""
+      "notes": "Routes every selected channel to its own free track."
     },
     {
       "id": "KB-037",
       "context": "Channel Rack",
       "action": "Select previous / next channel",
       "fl_keys": "Up / Down",
-      "confidence": "INFERRED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "↑ / ↓",
       "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": ""
+      "notes": "Observed in FL 2026.1.1: selects the channel after the last (before the first) selected one, on its own."
     },
     {
       "id": "KB-038",
@@ -417,10 +417,10 @@
       "action": "Move selected channels up / down",
       "fl_keys": "Alt+Up / Alt+Down",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Alt+↑ / Alt+↓",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": "Available from the channel button menu."
+      "notes": "Observed in FL 2026.1.1: each selected channel moves one row; the mixer track stays with the channel."
     },
     {
       "id": "KB-039",
@@ -447,13 +447,13 @@
     {
       "id": "KB-041",
       "context": "Channel Rack",
-      "action": "Rename channel",
+      "action": "Rename current pattern",
       "fl_keys": "F2",
-      "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
-      "feature": "SEQ-007",
-      "notes": "Rename is in the channel button menu."
+      "confidence": "OBSERVED",
+      "limeshot_keys": "F2",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-018",
+      "notes": "With the Channel Rack focused FL 2026.1.1 opens the pattern name dialog, not a channel rename (channels are renamed from the channel button menu)."
     },
     {
       "id": "KB-042",
@@ -839,6 +839,28 @@
       "status": "DIFFERENT",
       "feature": "UI-010",
       "notes": "Observed in FL's control menu (session 4)."
+    },
+    {
+      "id": "KB-077",
+      "context": "Channel Rack",
+      "action": "Delete selected channels (asks first)",
+      "fl_keys": "Alt+Del",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+Delete",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": "Forward delete; Alt+Backspace does nothing in FL 2026.1.1."
+    },
+    {
+      "id": "KB-078",
+      "context": "Channel Rack",
+      "action": "Add / remove a channel from the selection",
+      "fl_keys": "Ctrl+click / Shift+click / right-click selector LED",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+click / Shift+click / right-click selector LED",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-020",
+      "notes": "A mouse binding, listed for completeness. A plain click selects only that channel."
     }
   ]
 }

@@ -45,12 +45,22 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     (
         "↑ / ↓",
-        "Piano Roll: transpose a semitone · Channel Rack: select channel",
+        "Piano Roll: transpose a semitone · Channel Rack: select the previous / next channel",
     ),
     ("Cmd+↑ / Cmd+↓", "Piano Roll: transpose an octave"),
     ("← / →", "Piano Roll / Playlist: nudge by the snap"),
     ("Home", "Playlist: song position to the start"),
-    ("Cmd+L", "Channel Rack: route channel to a free mixer track"),
+    (
+        "Cmd+L",
+        "Channel Rack: route the selected channels to free mixer tracks",
+    ),
+    ("Alt+↑ / Alt+↓", "Channel Rack: move the selected channels"),
+    ("Alt+Delete", "Channel Rack: delete the selected channels"),
+    ("F2", "Channel Rack: rename the current pattern"),
+    (
+        "Cmd+click / Shift+click / right-click selector LED",
+        "Channel Rack: add a channel to the selection or remove it",
+    ),
     ("Alt+click", "Edit without snapping"),
 ];
 

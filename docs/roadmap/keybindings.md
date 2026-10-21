@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **76** — IMPLEMENTED 37, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 31
+Tracked: **78** — IMPLEMENTED 41, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 29
 
 ## Global
 
@@ -59,13 +59,15 @@ Tracked: **76** — IMPLEMENTED 37, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 31
 
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
-| KB-036 | Route selected channel to a free mixer track | `Ctrl+L` | VERIFIED | `Cmd+L` | IMPLEMENTED | SEQ-005 |  |
-| KB-037 | Select previous / next channel | `Up / Down` | INFERRED | `↑ / ↓` | IMPLEMENTED | SEQ-007 |  |
-| KB-038 | Move selected channels up / down | `Alt+Up / Alt+Down` | VERIFIED | — | NOT_STARTED | SEQ-007 | Available from the channel button menu. |
+| KB-036 | Route selected channel to a free mixer track | `Ctrl+L` | VERIFIED | `Cmd+L` | IMPLEMENTED | SEQ-005 | Routes every selected channel to its own free track. |
+| KB-037 | Select previous / next channel | `Up / Down` | OBSERVED | `↑ / ↓` | IMPLEMENTED | SEQ-007 | Observed in FL 2026.1.1: selects the channel after the last (before the first) selected one, on its own. |
+| KB-038 | Move selected channels up / down | `Alt+Up / Alt+Down` | VERIFIED | `Alt+↑ / Alt+↓` | IMPLEMENTED | SEQ-007 | Observed in FL 2026.1.1: each selected channel moves one row; the mixer track stays with the channel. |
 | KB-039 | Copy / cut / paste steps | `Ctrl+C / Ctrl+X / Ctrl+V` | INFERRED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | SEQ-015 |  |
 | KB-040 | Shift steps left / right | `Ctrl+Shift+Left / Right` | INFERRED | — | NOT_STARTED | SEQ-014 |  |
-| KB-041 | Rename channel | `F2` | INFERRED | — | NOT_STARTED | SEQ-007 | Rename is in the channel button menu. |
+| KB-041 | Rename current pattern | `F2` | OBSERVED | `F2` | IMPLEMENTED | SEQ-018 | With the Channel Rack focused FL 2026.1.1 opens the pattern name dialog, not a channel rename (channels are renamed from the channel button menu). |
 | KB-042 | Solo channel | `Ctrl+click mute` | VERIFIED | `Cmd+click / right-click mute` | IMPLEMENTED | SEQ-003 | A mouse binding, listed for completeness. |
+| KB-077 | Delete selected channels (asks first) | `Alt+Del` | OBSERVED | `Alt+Delete` | IMPLEMENTED | SEQ-007 | Forward delete; Alt+Backspace does nothing in FL 2026.1.1. |
+| KB-078 | Add / remove a channel from the selection | `Ctrl+click / Shift+click / right-click selector LED` | OBSERVED | `Cmd+click / Shift+click / right-click selector LED` | IMPLEMENTED | SEQ-020 | A mouse binding, listed for completeness. A plain click selects only that channel. |
 
 ## Piano Roll
 

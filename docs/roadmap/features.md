@@ -1,21 +1,21 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-21 (session 6).
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-21 (session 7).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **236**
-- MVP features: **69** — 67 implemented or verified, 47 verified
-- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 34, VERIFIED 87, DEFERRED 2
+- Features tracked: **237**
+- MVP features: **69** — 67 implemented or verified, 50 verified
+- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 28, VERIFIED 94, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 13 | 4 | 2 | 6 |
-| Channel Rack | 19 | 11 | 2 | 0 | 6 |
+| Channel Rack | 20 | 14 | 0 | 0 | 6 |
 | Piano Roll | 26 | 7 | 8 | 0 | 11 |
 | Playlist | 28 | 12 | 5 | 2 | 9 |
 | Mixer | 16 | 7 | 2 | 1 | 6 |
@@ -23,7 +23,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 13 | 3 | 0 | 0 | 10 |
 | Recording | 9 | 0 | 0 | 0 | 9 |
-| Browser | 10 | 1 | 5 | 0 | 4 |
+| Browser | 10 | 5 | 1 | 0 | 4 |
 | Plugins | 10 | 0 | 0 | 0 | 10 |
 | Export | 13 | 5 | 0 | 0 | 8 |
 | Transport & Time | 13 | 7 | 4 | 0 | 2 |
@@ -71,8 +71,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-004 | Channel volume and pan | P0 | ✓ | VERIFIED | Knobs (drag, Shift fine, wheel, double-click reset); default 78% volume. | `limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end` |
 | SEQ-005 | Channel → mixer track routing | P0 | ✓ | VERIFIED | Mixer field per row (M = master), drag or type; new channels take the next free insert; Cmd+L routes to a free insert.<br>*Deviation: FL defaults new channels to Master.* | `limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master`<br>`limeshot-core document::tests::new_channels_take_free_inserts` |
 | SEQ-006 | Pattern length (auto / manual) | P0 | ✓ | VERIFIED | Auto (whole bars covering the last note) or a fixed number of steps. | `limeshot-core model::tests::auto_pattern_length_covers_last_note` |
-| SEQ-007 | Rename, recolor, clone, delete, reorder channels | P1 |  | IMPLEMENTED | Right-click channel button: rename, color, clone, delete, move up/down. | `limeshot-core document::tests::removing_channel_removes_its_notes` |
-| SEQ-008 | Piano-roll preview in rack | P1 |  | IMPLEMENTED | Mini note preview; click opens the Piano Roll for that channel. | — |
+| SEQ-007 | Rename, recolor, clone, delete, reorder channels | P1 |  | VERIFIED | Right-click on a channel button selects only that channel and opens its menu: rename, color, clone, Delete… (asks first), move up/down. Alt+Up/Down moves every selected channel one row (the block stops at the edge); Alt+Delete deletes the selected channels after FL's confirmation ("Remember my choice" turns it off). Each is one undo step.<br>*Observed live in FL Studio 2026.1.1 (session 7): Alt+Up moves each selected channel up one row and the mixer track stays with the channel; the channel menu's Delete… and Alt+Del (forward delete; Alt+Backspace does nothing) ask "The selected channel(s) is/are about to be deleted." with "Remember my choice". FL's menu also has Fill each 2/4/8 steps and Rotate left/right (SEQ-014), Graph editor (SEQ-011), Random color and icons (not tracked).* | `limeshot-core document::tests::removing_channel_removes_its_notes`<br>`crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels`<br>`crates/limeshot-app/tests/ui.rs::deleting_channels_asks_first_and_is_one_undo_step`<br>`crates/limeshot-app/tests/ui.rs::right_click_on_a_channel_button_selects_it_and_opens_its_menu` |
+| SEQ-008 | Piano-roll preview in rack | P1 |  | VERIFIED | Mini note preview; click opens the Piano Roll for that channel. | `crates/limeshot-app/tests/ui.rs::clicking_a_note_preview_in_the_rack_opens_the_piano_roll` |
 | SEQ-009 | Channel settings window | P0 | ✓ | VERIFIED | Channel Settings window (opened by clicking the channel button): sampler (sample, waveform, gain, pitch, start/end, release, reverse, one-shot) or LimeSynth (waveform, octave, detune, gain, ADSR with a curve preview), plus root key. | `limeshot-app tests/ui.rs::renders_every_panel_without_panicking` |
 | SEQ-010 | Swing (global and per channel) | P1 |  | VERIFIED | Global swing knob in the Channel Rack header (0–100%): notes exactly on the second 16th of each pair are delayed by up to half a step (≈67% gives a triplet feel), in Pattern and Song playback.<br>*Per-channel swing mix and 'truncate swing notes' are not implemented.* | `limeshot-sequencer tests::swing_delays_every_second_sixteenth`<br>`limeshot-core document::tests::swing_is_clamped_and_undoable` |
 | SEQ-011 | Graph editor (per-step properties) | P2 |  | NOT_STARTED | Edit step velocity/pan/release/pitch in the rack. | — |
@@ -84,6 +84,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-017 | Loop Starter (FL Cloud) | P3 |  | DEFERRED | Out of scope: requires an online service (LimeShot is offline-first). | — |
 | SEQ-018 | Multiple patterns | P0 | ✓ | VERIFIED | Toolbar pattern selector (prev/next/new/rename), F4 new, +/− switch; Patterns menu clone/delete. | `limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement`<br>`limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo` |
 | SEQ-019 | Audio clip channels | P1 |  | VERIFIED | A sample dropped on the Playlist adds a sampler channel (one-shot off) that the audio clip plays; dropping the same sample again reuses it.<br>*LimeShot uses its sampler for these channels instead of a separate Audio Clip generator.* | `limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it` |
+| SEQ-020 | Channel selection (selector LEDs) | P1 |  | VERIFIED | The same selector LEDs and gestures (Cmd on macOS for Ctrl). The selection is UI state; the current channel (Piano Roll, Channel Settings) is the last one selected. Alt+Up/Down, Alt+Delete and Cmd+L act on all selected channels.<br>*Observed live (session 7). Neither Ctrl+A nor Cmd+A selects all channels in FL's Channel Rack. FL also saves the selection in the project; LimeShot does not. Channel filter groups (SEQ-012) are not implemented.* | `crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels`<br>`crates/limeshot-app/tests/ui.rs::cmd_l_routes_each_selected_channel_to_its_own_free_track` |
 
 ## Piano Roll
 
@@ -245,10 +246,10 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| BR-001 | Folder navigation (bundled + user folders) | P0 | ✓ | IMPLEMENTED | Bundled LimeShot samples plus folders added with +; collapsible tree; ⟳ re-reads. | — |
-| BR-002 | Sample preview | P0 | ✓ | IMPLEMENTED | Click a WAV to preview it through the engine (master).<br>*Engine preview path verified by unit tests; UI click manual-tested.* | — |
-| BR-003 | Load sample into channel / new channel | P0 | ✓ | IMPLEMENTED | Double-click loads into the selected sampler (or creates one); context menu; drag onto the rack or a channel name. | — |
-| BR-004 | Search / filter | P1 |  | IMPLEMENTED | Substring filter on file names.<br>*No wildcards/boolean logic.* | — |
+| BR-001 | Folder navigation (bundled + user folders) | P0 | ✓ | VERIFIED | Bundled LimeShot samples plus folders added with +; collapsible tree; ⟳ re-reads.<br>*The UI test opens a user folder and a subfolder; only WAV files are listed, sorted by name.* | `crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter` |
+| BR-002 | Sample preview | P0 | ✓ | VERIFIED | Click a WAV to preview it through the engine (master).<br>*The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine.* | `crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample` |
+| BR-003 | Load sample into channel / new channel | P0 | ✓ | VERIFIED | Double-click loads into the selected sampler (or creates one); context menu; drag onto the rack or a channel name. | `crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample`<br>`crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one` |
+| BR-004 | Search / filter | P1 |  | VERIFIED | Substring filter on file names.<br>*No wildcards/boolean logic.* | `crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter` |
 | BR-005 | Current project tree | P1 |  | IMPLEMENTED | Lists patterns (click to select) and channels. | — |
 | BR-006 | Favorites / starred | P2 |  | NOT_STARTED | Star files; favorites section. | — |
 | BR-007 | Tags | P3 |  | NOT_STARTED | — | — |

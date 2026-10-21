@@ -33,6 +33,11 @@ pub struct AudioOptions {
 
 pub enum Dialog {
     ConfirmDiscard(Pending),
+    /// FL Studio asks before deleting channels; `remember` skips the question from then on.
+    ConfirmDeleteChannels {
+        channels: Vec<ChannelId>,
+        remember: bool,
+    },
     Export(ExportOptions),
     Audio(AudioOptions),
     Rename {
@@ -228,6 +233,33 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                     if ui.button("Don't save").clicked() {
                         keep = false;
                         app.perform(action.clone());
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::ConfirmDeleteChannels { channels, remember } => {
+            let text = if channels.len() == 1 {
+                "The selected channel is about to be deleted."
+            } else {
+                "The selected channels are about to be deleted."
+            };
+            let channels = channels.clone();
+            modal(ctx, "Confirm", |ui| {
+                ui.label(text);
+                ui.add_space(4.0);
+                ui.checkbox(remember, "Remember my choice");
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("OK").strong()).clicked() {
+                        keep = false;
+                        if *remember {
+                            app.settings.confirm_channel_delete = false;
+                            app.settings.save();
+                        }
+                        crate::channel_rack::delete_channels(app, &channels);
                     }
                     if ui.button("Cancel").clicked() {
                         keep = false;

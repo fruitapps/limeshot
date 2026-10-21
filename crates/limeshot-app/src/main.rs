@@ -36,7 +36,9 @@ fn main() -> eframe::Result {
             Some(Ok(doc)) => {
                 let project = doc.project().clone();
                 app.doc.replace(project);
-                app.ui.selected_channel = app.project().channels.first().map(|c| c.id);
+                if let Some(c) = app.project().channels.first().map(|c| c.id) {
+                    app.select_channel(c);
+                }
             }
             Some(Err(e)) => log::error!("demo: {e}"),
             None => log::error!("demo: bundled samples not found"),

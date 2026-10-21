@@ -20,7 +20,9 @@ fn main() {
         && let Ok(doc) = limeshot_app::demo::build(dir)
     {
         app.doc.replace(doc.project().clone());
-        app.ui.selected_channel = app.project().channels.get(3).map(|c| c.id);
+        if let Some(c) = app.project().channels.get(3).map(|c| c.id) {
+            app.select_channel(c);
+        }
     }
     if args.iter().any(|a| a == "--piano") {
         app.show_window(Win::PianoRoll);

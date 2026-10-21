@@ -5,6 +5,7 @@
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
+use egui_kittest::kittest::Queryable;
 use limeshot_core::*;
 use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
@@ -44,6 +45,43 @@ fn click(h: &mut Harness<'static, LimeShotApp>, p: Pos2, button: PointerButton) 
     h.step();
     press(h, p, button, true);
     press(h, p, button, false);
+    h.step();
+}
+
+/// A click with modifier keys held (Ctrl/Cmd-click, Shift-click …).
+fn click_with(h: &mut Harness<'static, LimeShotApp>, p: Pos2, button: PointerButton, mods: Modifiers) {
+    h.event(Event::ModifiersChanged(mods));
+    h.event(Event::PointerMoved(p));
+    h.step();
+    for pressed in [true, false] {
+        h.event(Event::PointerButton {
+            pos: p,
+            button,
+            pressed,
+            modifiers: mods,
+        });
+        h.step();
+    }
+    h.event(Event::ModifiersChanged(Modifiers::NONE));
+    h.step();
+}
+
+/// Two clicks within egui's double-click window: the harness advances 0.25 s per frame, so the
+/// frame times are set explicitly.
+fn double_click(h: &mut Harness<'static, LimeShotApp>, p: Pos2) {
+    h.event(Event::PointerMoved(p));
+    h.step();
+    let t0 = h.ctx.input(|i| i.time) + 1.0;
+    for (k, pressed) in [true, false, true, false].into_iter().enumerate() {
+        h.input_mut().time = Some(t0 + k as f64 * 0.03);
+        h.event(Event::PointerButton {
+            pos: p,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+        h.step();
+    }
     h.step();
 }
 
@@ -663,4 +701,304 @@ fn opening_an_flp_imports_it_as_an_unsaved_project() {
     );
     // The rack shows the imported steps.
     assert!(app.ui.rack.step_pos(kick, 0).is_some());
+}
+
+fn led(h: &Harness<'static, LimeShotApp>, c: ChannelId) -> Pos2 {
+    h.state().ui.rack.led_pos(c).expect("selector LED drawn")
+}
+
+fn order(h: &Harness<'static, LimeShotApp>) -> Vec<ChannelId> {
+    h.state().project().channels.iter().map(|c| c.id).collect()
+}
+
+#[test]
+fn selector_leds_select_toggle_and_move_channels() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let (a, b, c) = (ids[0], ids[1], ids[2]);
+    let p = led(&h, b);
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(
+        h.state().ui.channel_selection,
+        vec![b],
+        "a click selects only that channel"
+    );
+    assert_eq!(h.state().selected_channel(), Some(b));
+    let p = led(&h, c);
+    click_with(&mut h, p, PointerButton::Primary, Modifiers::COMMAND);
+    assert_eq!(h.state().selected_channels(), vec![b, c], "Ctrl-click adds");
+    let p = led(&h, a);
+    click_with(&mut h, p, PointerButton::Primary, Modifiers::SHIFT);
+    assert_eq!(
+        h.state().selected_channels(),
+        vec![a, b, c],
+        "Shift-click adds, no range"
+    );
+    let p = led(&h, a);
+    click(&mut h, p, PointerButton::Secondary);
+    assert_eq!(h.state().selected_channels(), vec![b, c], "right-click toggles off");
+
+    // Alt+Up moves the selected block up one row, in one undo step.
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::ArrowUp);
+    h.step();
+    assert_eq!(order(&h)[..3], [b, c, a]);
+    h.key_press_modifiers(Modifiers::ALT, Key::ArrowUp);
+    h.step();
+    assert_eq!(order(&h)[..3], [b, c, a], "the block stops at the top");
+    h.key_press_modifiers(Modifiers::ALT, Key::ArrowDown);
+    h.step();
+    assert_eq!(order(&h)[..3], [a, b, c]);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(order(&h)[..3], [b, c, a], "one undo step per move");
+
+    // Up/Down select the neighbouring channel on its own.
+    h.key_press(Key::ArrowDown);
+    h.step();
+    assert_eq!(h.state().selected_channels(), vec![a]);
+    h.key_press(Key::ArrowUp);
+    h.step();
+    assert_eq!(h.state().selected_channels(), vec![c]);
+
+    // Clicking a step selects its channel only (FL Studio).
+    let step = h.state().ui.rack.step_pos(b, 1).expect("strip");
+    click(&mut h, step, PointerButton::Primary);
+    assert_eq!(h.state().selected_channels(), vec![b]);
+}
+
+#[test]
+fn deleting_channels_asks_first_and_is_one_undo_step() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let n = ids.len();
+    h.state_mut().select_channel(ids[1]);
+    h.state_mut().toggle_channel_selection(ids[2]);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Delete);
+    h.step();
+    assert!(
+        matches!(
+            &h.state().dialog,
+            Some(limeshot_ui::dialogs::Dialog::ConfirmDeleteChannels { channels, .. }) if *channels == ids[1..3]
+        ),
+        "Alt+Delete asks before deleting"
+    );
+    assert_eq!(h.state().project().channels.len(), n);
+    h.get_by_label("OK").click();
+    h.step();
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert_eq!(order(&h), [&ids[..1], &ids[3..]].concat());
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(order(&h), ids, "undo brings both back");
+
+    // With the question turned off ("Remember my choice"), the channels go at once.
+    h.state_mut().settings.confirm_channel_delete = false;
+    h.state_mut().select_channel(ids[0]);
+    h.key_press_modifiers(Modifiers::ALT, Key::Delete);
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert_eq!(h.state().project().channels.len(), n - 1);
+}
+
+#[test]
+fn cmd_l_routes_each_selected_channel_to_its_own_free_track() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    let before: Vec<u16> = h.state().project().channels.iter().map(|c| c.mixer_track).collect();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::L);
+    h.step();
+    let p = h.state().project();
+    let t0 = p.channel(ids[0]).expect("ch").mixer_track;
+    let t1 = p.channel(ids[1]).expect("ch").mixer_track;
+    assert!(t0 != 0 && t1 != 0 && t0 != t1, "{t0} {t1}");
+    for (i, ch) in p.channels.iter().enumerate().skip(2) {
+        assert_eq!(ch.mixer_track, before[i]);
+        assert!(ch.mixer_track == 0 || (ch.mixer_track != t0 && ch.mixer_track != t1));
+    }
+    assert_eq!(h.state().doc.history().len(), 1, "one undo step");
+}
+
+#[test]
+fn f2_in_the_channel_rack_renames_the_current_pattern() {
+    let mut h = harness(true);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press(Key::F2);
+    h.step();
+    let pat = h.state().current_pattern();
+    assert!(matches!(
+        &h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::Rename {
+            target: limeshot_ui::dialogs::RenameTarget::Pattern(p),
+            ..
+        }) if *p == pat
+    ));
+}
+
+#[test]
+fn right_click_on_a_channel_button_selects_it_and_opens_its_menu() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    let button = h.state().ui.rack.step_pos(ids[2], 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Secondary);
+    assert_eq!(h.state().selected_channels(), vec![ids[2]]);
+    h.get_by_label("Delete…").click();
+    h.step();
+    assert!(matches!(
+        &h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::ConfirmDeleteChannels { channels, .. }) if *channels == [ids[2]]
+    ));
+}
+
+#[test]
+fn clicking_a_note_preview_in_the_rack_opens_the_piano_roll() {
+    let mut h = harness(true);
+    let melody = h.state().project().patterns[1].id;
+    h.state_mut().set_current_pattern(melody);
+    h.step();
+    h.step();
+    let p = h.state().project().pattern(melody).expect("melody").clone();
+    let (ch, root) = h
+        .state()
+        .project()
+        .channels
+        .iter()
+        .find(|c| p.notes_for(c.id).next().is_some())
+        .map(|c| (c.id, c.root_key))
+        .expect("a channel with notes");
+    assert!(!p.is_step_sequence(ch, root), "the melody is not steps");
+    assert!(!h.state().is_window_open(Win::PianoRoll));
+    let pos = h.state().ui.rack.step_pos(ch, 3).expect("preview drawn");
+    click(&mut h, pos, PointerButton::Primary);
+    assert!(h.state().is_window_open(Win::PianoRoll));
+    assert_eq!(h.state().selected_channel(), Some(ch));
+}
+
+fn bundled(name: &str) -> std::path::PathBuf {
+    limeshot_app::bundled_samples_dir().expect("samples").join(name)
+}
+
+fn wait_for(h: &mut Harness<'static, LimeShotApp>, what: &str, mut done: impl FnMut(&LimeShotApp) -> bool) {
+    let start = std::time::Instant::now();
+    while !done(h.state()) {
+        assert!(start.elapsed().as_secs() < 10, "timed out waiting for {what}");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        h.step();
+    }
+}
+
+#[test]
+fn browser_click_previews_and_double_click_loads_a_sample() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let kick = bundled("Lime Kick.wav");
+    let pos = h.state().ui.browser.file_pos(&kick).expect("bundled samples listed");
+    click(&mut h, pos, PointerButton::Primary);
+    assert_eq!(h.state().ui.browser.selected.as_deref(), Some(kick.as_path()));
+    // The preview starts once the loader thread has decoded the file.
+    wait_for(&mut h, "the preview", |a| !a.ui.browser.preview_pending());
+    wait_for(&mut h, "a preview voice", |a| a.player.status().voices() > 0);
+
+    // Double-click loads it into the selected sampler channel and names the channel after it.
+    let clap = h.state().project().channels[1].id;
+    h.state_mut().select_channel(clap);
+    let pos = h.state().ui.browser.file_pos(&kick).expect("listed");
+    double_click(&mut h, pos);
+    let ch = h.state().project().channel(clap).expect("clap").clone();
+    assert_eq!(ch.name, "Lime Kick");
+    match &ch.instrument {
+        Instrument::Sampler(s) => assert_eq!(
+            s.sample.as_ref().map(|s| std::path::PathBuf::from(&s.path)),
+            Some(kick.clone())
+        ),
+        other => panic!("not a sampler: {other:?}"),
+    }
+    // On a synth channel a double-click makes a new sampler channel instead.
+    let n = h.state().project().channels.len();
+    let lead = h
+        .state()
+        .project()
+        .channels
+        .iter()
+        .find(|c| matches!(c.instrument, Instrument::Synth(_)))
+        .expect("synth")
+        .id;
+    h.state_mut().select_channel(lead);
+    double_click(&mut h, pos);
+    assert_eq!(h.state().project().channels.len(), n + 1);
+    assert_eq!(h.state().selected_channels(), vec![h.state().project().channels[n].id]);
+}
+
+#[test]
+fn browser_folders_open_and_filter() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sub = dir.path().join("Drums");
+    std::fs::create_dir(&sub).expect("mkdir");
+    std::fs::copy(bundled("Lime Kick.wav"), sub.join("Big Kick.wav")).expect("copy");
+    std::fs::copy(bundled("Lime Clap.wav"), sub.join("Snappy Clap.wav")).expect("copy");
+    std::fs::write(sub.join("notes.txt"), "not audio").expect("write");
+    let mut h = harness(false);
+    h.state_mut().settings.browser_folders.push(dir.path().to_path_buf());
+    h.step();
+    h.step();
+    let name = dir.path().file_name().expect("name").to_string_lossy().into_owned();
+    let listed = |h: &Harness<'static, LimeShotApp>| -> Vec<String> {
+        h.state()
+            .ui
+            .browser
+            .file_rects
+            .iter()
+            .filter(|(p, _)| p.starts_with(dir.path()))
+            .map(|(p, _)| p.file_name().expect("n").to_string_lossy().into_owned())
+            .collect()
+    };
+    assert!(listed(&h).is_empty(), "user folders start closed");
+    h.get_by_label(&name).click();
+    h.step();
+    h.step();
+    h.get_by_label("Drums").click();
+    h.step();
+    h.step();
+    assert_eq!(
+        listed(&h),
+        ["Big Kick.wav", "Snappy Clap.wav"],
+        "only WAV files, sorted"
+    );
+    h.state_mut().ui.browser.filter = "clap".into();
+    h.step();
+    h.step();
+    assert_eq!(listed(&h), ["Snappy Clap.wav"]);
+}
+
+#[test]
+fn dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one() {
+    let mut h = harness(true);
+    h.step();
+    let hat = bundled("Lime Hat Open.wav");
+    let n = h.state().project().channels.len();
+    let first = h.state().project().channels[0].id;
+    // Onto a channel button: replaces that channel's sample.
+    let button = h.state().ui.rack.step_pos(first, 0).expect("strip") - vec2(60.0, 0.0);
+    let from = h.state().ui.browser.file_pos(&hat).expect("listed");
+    drag(&mut h, from, button);
+    h.step();
+    assert_eq!(h.state().project().channels.len(), n);
+    assert_eq!(h.state().project().channel(first).expect("ch").name, "Lime Hat Open");
+    // Onto empty rack space below the rows: a new sampler channel.
+    let strips = &h.state().ui.rack.step_strips;
+    let below = strips.iter().map(|(_, r, _)| r.bottom()).fold(0.0, f32::max) + 20.0;
+    let x = strips[0].1.left() + 30.0;
+    let from = h.state().ui.browser.file_pos(&hat).expect("listed");
+    drag(&mut h, from, egui::pos2(x, below));
+    h.step();
+    assert_eq!(h.state().project().channels.len(), n + 1);
+    assert_eq!(h.state().project().channels[n].name, "Lime Hat Open");
 }

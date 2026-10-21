@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-21 (session 6)",
+  "updated": "2026-10-21 (session 7)",
   "features": [
     {
       "id": "APP-001",
@@ -898,10 +898,10 @@
       "category": "Channel Rack",
       "name": "Rename, recolor, clone, delete, reorder channels",
       "description": "Channel management.",
-      "fl_reference": "Channel button right-click menu; Alt+Up/Down.",
-      "limeshot_behavior": "Right-click channel button: rename, color, clone, delete, move up/down.",
+      "fl_reference": "Channel button right-click menu (Rename, color and icon…, Clone, Delete…); Alt+Up/Down moves the selected channels; Alt+Del deletes them after a confirmation.",
+      "limeshot_behavior": "Right-click on a channel button selects only that channel and opens its menu: rename, color, clone, Delete… (asks first), move up/down. Alt+Up/Down moves every selected channel one row (the block stops at the edge); Alt+Delete deletes the selected channels after FL's confirmation (\"Remember my choice\" turns it off). Each is one undo step.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -913,16 +913,22 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-core document::tests::removing_channel_removes_its_notes"
+        "limeshot-core document::tests::removing_channel_removes_its_notes",
+        "crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels",
+        "crates/limeshot-app/tests/ui.rs::deleting_channels_asks_first_and_is_one_undo_step",
+        "crates/limeshot-app/tests/ui.rs::right_click_on_a_channel_button_selects_it_and_opens_its_menu"
       ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "docs/research/evidence/screenshots/fl-rack-alt-up.png",
+          "docs/research/evidence/screenshots/fl-rack-delete-confirm.png",
+          "docs/research/evidence/screenshots/fl-rack-channel-menu.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL Studio 2026.1.1 (session 7): Alt+Up moves each selected channel up one row and the mixer track stays with the channel; the channel menu's Delete… and Alt+Del (forward delete; Alt+Backspace does nothing) ask \"The selected channel(s) is/are about to be deleted.\" with \"Remember my choice\". FL's menu also has Fill each 2/4/8 steps and Rotate left/right (SEQ-014), Graph editor (SEQ-011), Random color and icons (not tracked)."
     },
     {
       "id": "SEQ-008",
@@ -932,7 +938,7 @@
       "fl_reference": "Piano roll preview replaces steps; click opens Piano Roll.",
       "limeshot_behavior": "Mini note preview; click opens the Piano Roll for that channel.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -942,7 +948,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::clicking_a_note_preview_in_the_rack_opens_the_piano_roll"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4528,7 +4536,7 @@
       "fl_reference": "Browser tabs and user folders.",
       "limeshot_behavior": "Bundled LimeShot samples plus folders added with +; collapsible tree; ⟳ re-reads.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -4538,7 +4546,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4546,7 +4556,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": ""
+      "notes": "The UI test opens a user folder and a subfolder; only WAV files are listed, sorted by name."
     },
     {
       "id": "BR-002",
@@ -4556,7 +4566,7 @@
       "fl_reference": "Left-click previews.",
       "limeshot_behavior": "Click a WAV to preview it through the engine (master).",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -4568,7 +4578,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4576,7 +4588,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": "Engine preview path verified by unit tests; UI click manual-tested."
+      "notes": "The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine."
     },
     {
       "id": "BR-003",
@@ -4586,7 +4598,7 @@
       "fl_reference": "Drag to rack; Enter replaces channel.",
       "limeshot_behavior": "Double-click loads into the selected sampler (or creates one); context menu; drag onto the rack or a channel name.",
       "priority": "P0",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": true,
       "dependencies": [],
       "modules": [
@@ -4596,7 +4608,10 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4614,7 +4629,7 @@
       "fl_reference": "Ctrl+F search with wildcards.",
       "limeshot_behavior": "Substring filter on file names.",
       "priority": "P1",
-      "status": "IMPLEMENTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -4624,7 +4639,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6800,6 +6817,40 @@
         "evidence": []
       },
       "notes": "LimeShot uses its sampler for these channels instead of a separate Audio Clip generator."
+    },
+    {
+      "id": "SEQ-020",
+      "category": "Channel Rack",
+      "name": "Channel selection (selector LEDs)",
+      "description": "Select one or several channels; channel operations act on the selection.",
+      "fl_reference": "Selector LED right of each channel button. Click selects only that channel; Ctrl-, Shift- or right-click toggles one (no range); clicking a step or right-clicking a channel button selects that channel only; Up/Down select the neighbouring channel.",
+      "limeshot_behavior": "The same selector LEDs and gestures (Cmd on macOS for Ctrl). The selection is UI state; the current channel (Piano Roll, Channel Settings) is the last one selected. Alt+Up/Down, Alt+Delete and Cmd+L act on all selected channels.",
+      "priority": "P1",
+      "status": "VERIFIED",
+      "mvp": false,
+      "dependencies": [
+        "SEQ-007"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels",
+        "crates/limeshot-app/tests/ui.rs::cmd_l_routes_each_selected_channel_to_its_own_free_track"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/evidence/screenshots/fl-rack-select-ctrl-shift.png",
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+        ]
+      },
+      "notes": "Observed live (session 7). Neither Ctrl+A nor Cmd+A selects all channels in FL's Channel Rack. FL also saves the selection in the project; LimeShot does not. Channel filter groups (SEQ-012) are not implemented."
     },
     {
       "id": "PR-026",

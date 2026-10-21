@@ -75,8 +75,13 @@ Cmd+Z / Cmd+Shift+Z (or Cmd+Y) undo/redo, Cmd+N/O/S/Shift+S/R new/open/save/save
 
 Focused editor (the last one clicked): Delete/Backspace, Cmd+A, Cmd+D, Cmd+B duplicate, Cmd+C/X/V (notes; the selected
 channel's steps in the rack; clips in the Playlist, pasted at the song position in Song mode), Alt+Q quantize (Piano Roll),
-arrows (transpose/nudge in the Piano Roll, nudge/move in the Playlist, channel selection in the rack), Cmd+L route the
-channel to a free insert.
+arrows (transpose/nudge in the Piano Roll, nudge/move in the Playlist, channel selection in the rack). Channel Rack:
+Alt+Up/Down move, Alt+Delete delete (with FL's confirmation) and Cmd+L route the selected channels; F2 renames the
+current pattern.
+
+The Channel Rack's selector LEDs are FL Studio's channel selection (`UiState::channel_selection`): a click selects one
+channel, Cmd/Shift/right-click toggles one. `selected_channel` stays the current channel that the Piano Roll and
+Channel Settings edit; it is the last channel selected.
 
 Single-key shortcuts are ignored while a text field has focus.
 

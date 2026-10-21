@@ -6,6 +6,11 @@
 //! as in FL Studio. A channel whose notes are not
 //! plain steps shows a preview of its notes instead; clicking it opens the Piano Roll. Clicking a
 //! channel name shows its instrument in the Inspector.
+//!
+//! The selector LED between the name and the steps is FL Studio's channel selection (observed in
+//! FL Studio 2026.1.1): a click selects only that channel, Ctrl-, Shift- or right-click toggles it.
+//! Alt+Up/Down moves, Alt+Delete deletes (after a confirmation) and Ctrl+L routes the selected
+//! channels.
 
 use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
@@ -17,6 +22,7 @@ use limeshot_core::*;
 
 const ROW_H: f32 = 30.0;
 const STEP_W: f32 = 22.0;
+const LED_W: f32 = 8.0;
 
 #[derive(Default)]
 pub struct State {
@@ -24,8 +30,11 @@ pub struct State {
     paint: Option<(ChannelId, bool)>,
     /// Steps already painted in the current drag.
     painted: Vec<u32>,
-    /// Screen rectangles of each channel's step strip in the last frame (for tests and tools).
+    /// Screen rectangles of each channel's step strip (or note preview) in the last frame (for
+    /// tests and tools).
     pub step_strips: Vec<(ChannelId, Rect, u32)>,
+    /// Screen rectangles of each channel's selector LED in the last frame.
+    pub leds: Vec<(ChannelId, Rect)>,
 }
 
 impl State {
@@ -36,10 +45,16 @@ impl State {
             .find(|(c, _, n)| *c == channel && step < *n)
             .map(|(_, r, _)| pos2(r.left() + (step as f32 + 0.5) * STEP_W - 1.0, r.center().y))
     }
+
+    /// Centre of `channel`'s selector LED, as last drawn.
+    pub fn led_pos(&self, channel: ChannelId) -> Option<egui::Pos2> {
+        self.leds.iter().find(|(c, _)| *c == channel).map(|(_, r)| r.center())
+    }
 }
 
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.rack.step_strips.clear();
+    app.ui.rack.leds.clear();
     let t = Theme::current();
     let pid = app.current_pattern();
     let sig = app.project().time_signature;
@@ -188,7 +203,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 });
                 app.exec_gesture(&r, cmd);
                 channel_button(app, ui, ch, selected);
-                ui.add_space(6.0);
+                selector_led(app, ui, ch);
+                ui.add_space(2.0);
                 let is_steps = app
                     .project()
                     .pattern(pid)
@@ -285,7 +301,91 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         }
     );
     let resp = resp.on_hover_text(hover);
+    // FL Studio: right-clicking a channel button selects that channel only; the menu acts on it.
+    if resp.secondary_clicked() {
+        app.select_channel(ch.id);
+    }
     resp.context_menu(|ui| channel_menu(app, ui, ch));
+}
+
+fn selector_led(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
+    let t = Theme::current();
+    let (r, resp) = ui.allocate_exact_size(vec2(LED_W, 22.0), Sense::click());
+    app.ui.rack.leds.push((ch.id, r));
+    let on = app.ui.channel_selection.contains(&ch.id);
+    ui.painter().rect_filled(r, CornerRadius::same(2), t.sunken);
+    if on {
+        ui.painter()
+            .rect_filled(r.shrink(2.0), CornerRadius::same(1), mix(t.sunken, t.accent, 0.35));
+        ui.painter().rect_stroke(
+            r,
+            CornerRadius::same(2),
+            Stroke::new(1.5, t.accent),
+            egui::StrokeKind::Inside,
+        );
+    }
+    let mods = ui.input(|i| i.modifiers);
+    if resp.secondary_clicked() || (resp.clicked() && (mods.command || mods.shift)) {
+        app.toggle_channel_selection(ch.id);
+    } else if resp.clicked() {
+        app.select_channel(ch.id);
+    }
+    if resp.hovered() {
+        app.hint("Select channel — Ctrl, Shift or right-click: add to / remove from the selection");
+    }
+}
+
+/// Delete `channels` in one undo step.
+pub fn delete_channels(app: &mut LimeShotApp, channels: &[ChannelId]) {
+    if channels.is_empty() {
+        return;
+    }
+    app.exec(Command::Batch(
+        channels.iter().map(|c| Command::RemoveChannel(*c)).collect(),
+    ));
+    app.ui.channel_selection.retain(|c| !channels.contains(c));
+}
+
+/// Delete `channels`, asking first as FL Studio does unless the user turned the question off.
+pub fn request_delete(app: &mut LimeShotApp, channels: Vec<ChannelId>) {
+    if channels.is_empty() {
+        return;
+    }
+    if app.settings.confirm_channel_delete {
+        app.dialog = Some(crate::dialogs::Dialog::ConfirmDeleteChannels {
+            channels,
+            remember: false,
+        });
+    } else {
+        delete_channels(app, &channels);
+    }
+}
+
+/// Move every selected channel one row up (`delta` -1) or down (+1). A selected channel at the
+/// edge stays, and so do selected channels stacked against it, keeping the block together.
+pub fn move_selected(app: &mut LimeShotApp, delta: i32) {
+    let sel = app.selected_channels();
+    let mut order: Vec<ChannelId> = app.project().channels.iter().map(|c| c.id).collect();
+    let mut cmds = Vec::new();
+    let n = order.len();
+    let idx: Vec<usize> = if delta < 0 {
+        (1..n).collect()
+    } else {
+        (0..n.saturating_sub(1)).rev().collect()
+    };
+    for i in idx {
+        let j = if delta < 0 { i - 1 } else { i + 1 };
+        if sel.contains(&order[i]) && !sel.contains(&order[j]) {
+            cmds.push(Command::MoveChannel {
+                channel: order[i],
+                delta: delta.signum(),
+            });
+            order.swap(i, j);
+        }
+    }
+    if !cmds.is_empty() {
+        app.exec(Command::Batch(cmds));
+    }
 }
 
 fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
@@ -330,7 +430,7 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     }
     ui.separator();
     if ui.button("Route to free mixer track").clicked() {
-        route_to_free(app, ch.id);
+        route_to_free(app, &[ch.id]);
         ui.close();
     }
     if ui.button("Clear notes in this pattern").clicked() {
@@ -362,27 +462,40 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         ui.close();
     }
     if ui
-        .button(RichText::new("Delete").color(Theme::current().danger))
+        .button(RichText::new("Delete…").color(Theme::current().danger))
         .clicked()
     {
-        app.exec(Command::RemoveChannel(ch.id));
+        request_delete(app, vec![ch.id]);
         ui.close();
     }
 }
 
-pub fn route_to_free(app: &mut LimeShotApp, channel: ChannelId) {
-    match app.project().free_mixer_track() {
-        Some(track) => {
-            app.exec(Command::SetChannelMixerTrack { channel, track });
-        }
-        None => {
-            if let Some(track) = app.exec(Command::AddMixerTrack) {
-                app.exec(Command::SetChannelMixerTrack {
-                    channel,
-                    track: track as u16,
-                });
+/// Route each of `channels` to its own free mixer track (adding tracks when none is free), in one
+/// undo step. FL Studio's Ctrl+L.
+pub fn route_to_free(app: &mut LimeShotApp, channels: &[ChannelId]) {
+    let p = app.project();
+    let tracks = p.mixer.tracks.len();
+    let mut used: Vec<u16> = p.channels.iter().map(|c| c.mixer_track).collect();
+    let mut next_new = tracks;
+    let mut cmds = Vec::new();
+    for &channel in channels {
+        let free = (1..tracks)
+            .filter_map(|i| u16::try_from(i).ok())
+            .find(|i| !used.contains(i));
+        let track = match free {
+            Some(t) => t,
+            None if next_new < limeshot_core::Mixer::MAX_TRACKS => {
+                cmds.push(Command::AddMixerTrack);
+                next_new += 1;
+                (next_new - 1) as u16
             }
-        }
+            None => break,
+        };
+        used.push(track);
+        cmds.push(Command::SetChannelMixerTrack { channel, track });
+    }
+    if !cmds.is_empty() {
+        app.exec(Command::Batch(cmds));
     }
 }
 
@@ -440,6 +553,7 @@ fn step_strip(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, 
         let on = !currently_on;
         app.ui.rack.paint = Some((ch.id, on));
         app.ui.rack.painted.clear();
+        // FL Studio: clicking a step selects that channel only.
         app.select_channel(ch.id);
         app.doc.begin_gesture();
     }
@@ -474,6 +588,7 @@ fn note_preview(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId
     let t = Theme::current();
     let width = steps as f32 * STEP_W;
     let (r, resp) = ui.allocate_exact_size(vec2(width, 22.0), Sense::click());
+    app.ui.rack.step_strips.push((ch.id, r, steps));
     ui.painter().rect_filled(r, CornerRadius::same(t.radius_sm), t.sunken);
     if let Some(p) = app.project().pattern(pid) {
         let notes: Vec<&Note> = p.notes_for(ch.id).collect();
@@ -500,22 +615,41 @@ fn note_preview(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
+    if key(ctx, Modifiers::ALT, Key::ArrowUp) {
+        move_selected(app, -1);
+    }
+    if key(ctx, Modifiers::ALT, Key::ArrowDown) {
+        move_selected(app, 1);
+    }
+    if key(ctx, Modifiers::ALT, Key::Delete) {
+        let sel = app.selected_channels();
+        request_delete(app, sel);
+    }
+    // F2 renames the current pattern (observed in FL Studio 2026.1.1 with the Channel Rack
+    // focused; channels are renamed from the channel button's menu).
+    if key(ctx, Modifiers::NONE, Key::F2) {
+        let pid = app.current_pattern();
+        app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, pid));
+        return;
+    }
+    // Up/Down select the channel before the first / after the last selected one, on its own.
     let chans: Vec<ChannelId> = app.project().channels.iter().map(|c| c.id).collect();
-    let cur = app.selected_channel().and_then(|c| chans.iter().position(|x| *x == c));
+    let sel = app.selected_channels();
+    let first = sel.first().and_then(|c| chans.iter().position(|x| x == c));
+    let last = sel.last().and_then(|c| chans.iter().position(|x| x == c));
     if key(ctx, Modifiers::NONE, Key::ArrowUp)
-        && let Some(i) = cur
+        && let Some(c) = first.and_then(|i| chans.get(i.saturating_sub(1)))
     {
-        app.ui.selected_channel = chans.get(i.saturating_sub(1)).copied();
+        app.select_channel(*c);
     }
     if key(ctx, Modifiers::NONE, Key::ArrowDown)
-        && let Some(i) = cur
+        && let Some(c) = last.and_then(|i| chans.get((i + 1).min(chans.len().saturating_sub(1))))
     {
-        app.ui.selected_channel = chans.get((i + 1).min(chans.len().saturating_sub(1))).copied();
+        app.select_channel(*c);
     }
-    if key(ctx, Modifiers::COMMAND, Key::L)
-        && let Some(c) = app.selected_channel()
-    {
-        route_to_free(app, c);
+    if key(ctx, Modifiers::COMMAND, Key::L) {
+        let sel = app.selected_channels();
+        route_to_free(app, &sel);
     }
     // Copy/cut/paste the selected channel's notes in the current pattern (steps included);
     // pasting replaces the target channel's notes, as in FL Studio.

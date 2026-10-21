@@ -66,6 +66,17 @@ headers keep the LED at the right.
   drag that starts on a lit step erases the steps it crosses. Each row shows mute LED, pan knob, volume knob, mixer
   track number, name button, selector LED, then the steps in groups of four with alternating grey/red tints. The
   Default template has 808 Kick, Clap, HiHat, Snare and a fifth "808 Astronomic" channel at 130 BPM.
+- **OBSERVED live (FL Studio 2026.1.1, session 7; `fl-rack-select-ctrl-shift.png`, `fl-rack-alt-up.png`,
+  `fl-rack-channel-menu.png`, `fl-rack-delete-confirm.png`, `fl-rack-f2-renames-pattern.png`):** the selector LED
+  selects channels. A plain click selects only that channel; Ctrl-, Shift- and right-click each toggle one channel (Shift
+  is *not* a range). Clicking a step, or right-clicking a channel button, also selects that channel only. Up/Down select
+  the neighbouring channel on its own; Ctrl+A / Cmd+A do not select all. Alt+Up/Down moves every selected channel one row
+  (the mixer-track number moves with it). Alt+Del (forward delete) and the menu's Delete… ask "The selected channel(s)
+  is/are about to be deleted." with a "Remember my choice" box; Alt+Backspace does nothing. F2 with the rack focused
+  opens the *pattern* name dialog. The channel button menu: Piano roll (F7), Graph editor, Rename color and icon…,
+  Change color…, Random color, Change icon…, Load sample…, Cut itself, Insert, Replace, Clone, Delete…, Assign to new
+  instrument track, and a second column with Cut/Copy/Paste, Fill each 2/4/8 steps, Advanced fill…, Rotate left/right
+  (Shift+Cmd+Left/Right), MIDI channel through, Receive notes from, Create DirectWave instrument, Burn MIDI to.
 - **LimeShot equivalent:** `ChannelRack` window. Rows carry mute/solo, pan knob, volume knob, mixer-target spinner, name button and step buttons. Steps are notes at `step × 240 ticks` with the channel's root key. Left-click toggles a step on, right-click toggles it off. A channel with non-step notes shows a mini preview (clicking it opens the Piano Roll). Pattern length is Auto or a fixed number of steps.
 
 ## 3. Piano Roll

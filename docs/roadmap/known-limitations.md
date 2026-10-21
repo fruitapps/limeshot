@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-20 (session 5). Everything here is either not implemented or not verified.
+Current as of 2026-10-21 (session 7). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -35,7 +35,9 @@ Current as of 2026-10-20 (session 5). Everything here is either not implemented 
 * No markers, loop regions or time selections; no performance mode.
 * No MIDI devices or MIDI recording. MIDI files: notes, tempo and time signature only; exported files were only read
   back by LimeShot's own reader.
-* There is no confirmation when deleting a channel or pattern (undo restores it).
+* There is no confirmation when deleting a pattern (undo restores it). Channel deletion asks first, as in FL Studio;
+  once "Remember my choice" is ticked the question can only be turned back on in `settings.json`.
+* The channel selection is not saved with the project (FL Studio saves it).
 
 ## Project and app
 * No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped

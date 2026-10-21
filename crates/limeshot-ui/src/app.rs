@@ -42,7 +42,11 @@ pub struct UiState {
     /// What a click on empty Playlist space places: an automation picked in the clip picker, or
     /// (`None`) the current pattern.
     pub place: Option<limeshot_core::ClipSource>,
+    /// The current channel: the Piano Roll and Channel Settings edit it.
     pub selected_channel: Option<ChannelId>,
+    /// Channels whose selector LED is lit in the Channel Rack (FL Studio's channel selection);
+    /// moving, deleting and routing act on all of them.
+    pub channel_selection: Vec<ChannelId>,
     pub snap: Snap,
     pub mode: PlayMode,
     pub song_loop: bool,
@@ -64,6 +68,7 @@ impl UiState {
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
             place: None,
             selected_channel: project.channels.first().map(|c| c.id),
+            channel_selection: project.channels.first().map(|c| c.id).into_iter().collect(),
             snap: Snap::Step,
             mode: PlayMode::Pattern,
             song_loop: true,
@@ -224,9 +229,38 @@ impl LimeShotApp {
         self.ui.workspace.is_open(w)
     }
 
-    /// Select a channel (the Piano Roll and Channel Settings follow the selection).
+    /// Make `id` the current channel and the only selected one (the Piano Roll and Channel
+    /// Settings follow it).
     pub fn select_channel(&mut self, id: ChannelId) {
         self.ui.selected_channel = Some(id);
+        self.ui.channel_selection = vec![id];
+    }
+
+    /// Add `id` to the channel selection or remove it (FL Studio: Ctrl-, Shift- or right-click on
+    /// a selector LED). An added channel becomes the current one.
+    pub fn toggle_channel_selection(&mut self, id: ChannelId) {
+        if let Some(i) = self.ui.channel_selection.iter().position(|c| *c == id) {
+            self.ui.channel_selection.remove(i);
+        } else {
+            self.ui.channel_selection.push(id);
+            self.ui.selected_channel = Some(id);
+        }
+    }
+
+    /// The selected channels in rack order. Falls back to the current channel when no LED is lit.
+    pub fn selected_channels(&self) -> Vec<ChannelId> {
+        let sel: Vec<ChannelId> = self
+            .project()
+            .channels
+            .iter()
+            .map(|c| c.id)
+            .filter(|c| self.ui.channel_selection.contains(c))
+            .collect();
+        if sel.is_empty() {
+            self.selected_channel().into_iter().collect()
+        } else {
+            sel
+        }
     }
 
     pub fn send(&mut self, msg: Msg) {

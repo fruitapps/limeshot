@@ -172,3 +172,20 @@ Verification: `cargo test --workspace` (136 tests) passes; Clippy (`-D warnings`
 
 Not verified: `.flp` files from FL versions other than 26.1.1 with known content (older ones only import without
 errors); opening an `.flp` through the real file dialog by a person (the headless test calls the same `open_path`).
+
+## 2026-10-21 — Session 7: closing the MVP one FL feature area at a time
+
+Plan agreed with the user: verify the remaining MVP features area by area (each observed in FL Studio first), get
+Windows/Linux CI running, then expand, starting with the Piano Roll tools. Each area is one commit.
+
+1. **Channel Rack + Browser.** Observed live in FL 2026.1.1 (`fl-studio-analysis.md` §2, five new screenshots):
+   selector LEDs (click selects one; Ctrl/Shift/right-click toggles, no Shift range), Alt+Up/Down moves the selected
+   channels, Alt+Del and the menu's Delete… ask first ("Remember my choice"), F2 renames the *pattern* (KB-041 had
+   guessed "rename channel"), clicking a step or right-clicking a channel button selects that channel only.
+   LimeShot now has the same channel selection (SEQ-020, new), move/delete/Cmd+L on the selection (one undo step
+   each), the confirmation dialog (setting `confirm_channel_delete`, SET-028) and F2. SEQ-007, SEQ-008, SEQ-020 and
+   BR-001…004 are VERIFIED by new headless UI tests (LEDs with modifiers, delete dialog, Cmd+L, F2, the rack's note
+   preview, Browser preview/double-click/drag/folders/filter). Real-input check in the live app: Cmd-click on LEDs,
+   Option+Up and Option+Delete behave as in the tests.
+   Test note: the egui_kittest harness advances 0.25 s per frame, so double-clicks set the frame time explicitly
+   (`double_click` in `tests/ui.rs`).
