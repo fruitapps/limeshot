@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 98, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 117, DEFERRED 2
+- By status: NOT_STARTED 97, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 118, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -18,7 +18,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Channel Rack | 20 | 14 | 0 | 0 | 6 |
 | Piano Roll | 27 | 18 | 0 | 0 | 9 |
 | Playlist | 28 | 18 | 1 | 2 | 7 |
-| Mixer | 16 | 8 | 1 | 1 | 6 |
+| Mixer | 16 | 9 | 1 | 1 | 5 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
 | Effects | 15 | 8 | 0 | 0 | 7 |
 | Automation | 13 | 3 | 0 | 0 | 10 |
@@ -164,7 +164,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | MIX-007 | Insert effect slots | P1 |  | VERIFIED | Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips.<br>*Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects.* | `limeshot-core effects::tests`<br>`limeshot-core document::tests::effect_chain_commands`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed` |
 | MIX-008 | Routing and sends between tracks | P1 |  | VERIFIED | Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent.<br>*Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency).* | `limeshot-core document::tests::routing_refuses_feedback_and_orders_tracks`<br>`limeshot-core document::tests::sanitize_breaks_routing_loops_from_files`<br>`limeshot-engine tests/audio.rs::mixer_routes_through_buses`<br>`limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track` |
 | MIX-009 | Sidechain routing | P2 |  | NOT_STARTED | Sidechain inputs for dynamics. | — |
-| MIX-010 | Built-in 3-band EQ | P1 |  | NOT_STARTED | Per-track 3-band parametric EQ.<br>*Available as the Lime EQ insert effect (FX-002); not built into every strip.* | — |
+| MIX-010 | Built-in 3-band EQ | P1 |  | VERIFIED | Every mixer track (master included) has FL Studio's built-in EQ after its insert effects and before the fader: a low shelf, a peak and a high shelf with FL's defaults (90 Hz, 1500 Hz, 8000 Hz, 0 dB, width 0.27), ±18 dB. The Mixer's track panel shows the response curve with a handle per band (drag: frequency and gain; right-drag: width), knobs for gain, frequency and width, and Reset. Saved in the .lime file only when changed.<br>*Observed live in FL 2026.1.1 (session 8): band names, defaults and the ±18 dB range from the hint bar. LimeShot's mapping from width to Q is its own. Not automatable yet; the Lime EQ insert effect (FX-002) remains.* | `limeshot-dsp effects::tests::track_eq_bands_shape_the_response`<br>`limeshot-core model::tests::track_eq_is_saved_only_when_changed`<br>`limeshot-engine audio.rs mixer_track_eq_shapes_the_track_and_the_master`<br>`ui.rs mixer_eq_graph_and_reset_edit_the_track_eq` |
 | MIX-011 | Stereo separation, phase invert, swap L/R | P2 |  | IN_PROGRESS | Width and polarity are available through the Utility insert (FX-013); no per-strip controls or L/R swap. | — |
 | MIX-012 | Plugin delay compensation | P2 |  | NOT_STARTED | Latency reported by effects aligned across paths. | — |
 | MIX-013 | Insert-to-insert routing | P1 |  | VERIFIED | Covered by MIX-008: an insert can route to another insert instead of (or as well as) the master; inserts are processed in dependency order. | `limeshot-engine tests/audio.rs::mixer_routes_through_buses` |

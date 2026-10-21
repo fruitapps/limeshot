@@ -420,8 +420,65 @@ pub struct MixerTrack {
     /// master has no routes (it feeds the audio device). FL Studio's mixer routing.
     #[serde(default = "default_routes")]
     pub routes: Vec<Route>,
+    /// The built-in 3-band EQ (FL Studio's track EQ), after the insert effects and before the
+    /// fader. Saved only when changed.
+    #[serde(default = "default_eq", skip_serializing_if = "is_default_eq")]
+    pub eq: [EqBand; 3],
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// One band of a mixer track's EQ: band 0 is a low shelf, 1 a peak, 2 a high shelf.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct EqBand {
+    /// Hz, 20–20000.
+    pub freq: f32,
+    /// dB, ±18.
+    pub gain: f32,
+    /// Bandwidth 0–1 (FL Studio's "width"; 0.27 by default).
+    pub width: f32,
+}
+
+impl EqBand {
+    pub const FREQ: (f32, f32) = (20.0, 20_000.0);
+    pub const GAIN: f32 = 18.0;
+    /// FL Studio 2026's defaults: low shelf 90 Hz, peak 1500 Hz, high shelf 8000 Hz, all at 0 dB
+    /// and width 0.27 (observed in its Mixer).
+    pub const DEFAULTS: [EqBand; 3] = [
+        EqBand {
+            freq: 90.0,
+            gain: 0.0,
+            width: 0.27,
+        },
+        EqBand {
+            freq: 1500.0,
+            gain: 0.0,
+            width: 0.27,
+        },
+        EqBand {
+            freq: 8000.0,
+            gain: 0.0,
+            width: 0.27,
+        },
+    ];
+
+    /// The band with every value made finite and in range.
+    pub fn sanitized(self, band: usize) -> Self {
+        let d = Self::DEFAULTS[band.min(2)];
+        Self {
+            freq: finite(self.freq, d.freq).clamp(Self::FREQ.0, Self::FREQ.1),
+            gain: finite(self.gain, 0.0).clamp(-Self::GAIN, Self::GAIN),
+            width: finite(self.width, d.width).clamp(0.0, 1.0),
+        }
+    }
+}
+
+fn default_eq() -> [EqBand; 3] {
+    EqBand::DEFAULTS
+}
+
+fn is_default_eq(eq: &[EqBand; 3]) -> bool {
+    *eq == EqBand::DEFAULTS
 }
 
 /// A mixer route: send this track's output to mixer track `to` at `level` (linear gain).
@@ -445,6 +502,7 @@ impl MixerTrack {
             solo: false,
             effects: Vec::new(),
             routes: default_routes(),
+            eq: EqBand::DEFAULTS,
             extra: Extra::new(),
         }
     }
@@ -665,6 +723,9 @@ impl Project {
         for t in &mut self.mixer.tracks {
             t.volume = finite(t.volume, 0.8).clamp(0.0, 2.0);
             t.pan = finite(t.pan, 0.0).clamp(-1.0, 1.0);
+            for (i, b) in t.eq.iter_mut().enumerate() {
+                *b = b.sanitized(i);
+            }
             t.effects.truncate(crate::effects::MAX_EFFECTS);
             for e in &mut t.effects {
                 e.sanitize();
@@ -829,6 +890,37 @@ mod tests {
         let i: Instrument = serde_json::from_value(raw.clone()).unwrap();
         assert!(matches!(i, Instrument::Unsupported(_)));
         assert_eq!(serde_json::to_value(&i).unwrap(), raw);
+    }
+
+    #[test]
+    fn track_eq_is_saved_only_when_changed() {
+        let mut t = MixerTrack::new("Insert 1");
+        let json = serde_json::to_value(&t).unwrap();
+        assert!(json.get("eq").is_none(), "a flat EQ is not written");
+        t.eq[1].gain = -3.0;
+        let json = serde_json::to_string(&t).unwrap();
+        let back: MixerTrack = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.eq, t.eq);
+        // Files from before the EQ load with the defaults.
+        let old: MixerTrack =
+            serde_json::from_str(r#"{"name":"A","volume":1.0,"pan":0.0,"muted":false,"solo":false}"#).unwrap();
+        assert_eq!(old.eq, EqBand::DEFAULTS);
+        // Hostile values are repaired.
+        let mut p = Project::new();
+        p.mixer.tracks[1].eq[0] = EqBand {
+            freq: f32::NAN,
+            gain: f32::INFINITY,
+            width: -1.0,
+        };
+        p.sanitize();
+        assert_eq!(
+            p.mixer.tracks[1].eq[0],
+            EqBand {
+                freq: 90.0,
+                gain: 0.0,
+                width: 0.0
+            }
+        );
     }
 
     #[test]

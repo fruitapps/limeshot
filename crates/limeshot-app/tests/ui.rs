@@ -1946,3 +1946,54 @@ fn playlist_paint_mute_delete_select_zoom_and_playback_tools() {
     assert!(h.state().ui.playlist.zoom_x < zoom * 0.6);
     assert!(h.state().project().clip(b.id).is_some(), "zooming does not delete");
 }
+
+#[test]
+fn mixer_eq_graph_and_reset_edit_the_track_eq() {
+    let mut h = harness(true);
+    h.state_mut().ui.mixer.selected = 1;
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    for _ in 0..3 {
+        h.step();
+    }
+    let eq = |h: &Harness<'static, LimeShotApp>| h.state().project().mixer.tracks[1].eq;
+    assert_eq!(eq(&h), EqBand::DEFAULTS);
+    let g = h.state().ui.mixer.eq_graph.expect("EQ graph drawn");
+    let history = h.state().doc.history().len();
+    // Drag the peak's handle right and up: higher frequency, a boost.
+    let from = limeshot_ui::mixer::eq_handle(g, EqBand::DEFAULTS[1]);
+    let to = egui::pos2(from.x + g.width() * 0.1, g.center().y - g.height() * 0.25);
+    drag(&mut h, from, to);
+    h.step();
+    let b = eq(&h)[1];
+    assert!(b.freq > 2500.0 && b.freq < 3500.0, "{b:?}");
+    assert!((b.gain - 9.0).abs() < 0.6, "{b:?}");
+    assert_eq!((eq(&h)[0], eq(&h)[2]), (EqBand::DEFAULTS[0], EqBand::DEFAULTS[2]));
+    assert_eq!(h.state().doc.history().len(), history + 1, "one undo step");
+    // Right-drag left/right changes the width of the nearest band (the low shelf here).
+    let low = limeshot_ui::mixer::eq_handle(g, EqBand::DEFAULTS[0]);
+    h.event(Event::PointerMoved(low));
+    h.step();
+    press(&mut h, low, PointerButton::Secondary, true);
+    for k in 1..=8 {
+        h.event(Event::PointerMoved(low + vec2(g.width() * 0.04 * k as f32, 0.0)));
+        h.step();
+    }
+    press(
+        &mut h,
+        low + vec2(g.width() * 0.32, 0.0),
+        PointerButton::Secondary,
+        false,
+    );
+    h.step();
+    let l = eq(&h)[0];
+    assert!(l.width > 0.5, "{l:?}");
+    assert_eq!(l.freq, EqBand::DEFAULTS[0].freq, "right-drag keeps the frequency");
+    // Reset puts every band back, as one undo step.
+    h.get_by_label("Reset").click();
+    h.step();
+    assert_eq!(eq(&h), EqBand::DEFAULTS);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(eq(&h)[0], l);
+}

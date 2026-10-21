@@ -160,6 +160,17 @@ impl Biquad {
         self.y1[c]
     }
 
+    /// Magnitude response in dB at `freq`.
+    fn response_db(&self, freq: f32, sr: f32) -> f32 {
+        let w = 2.0 * PI * (freq / sr).clamp(0.0, 0.5);
+        let (s1, c1) = w.sin_cos();
+        let (s2, c2) = (2.0 * w).sin_cos();
+        let (nr, ni) = (self.b0 + self.b1 * c1 + self.b2 * c2, -(self.b1 * s1 + self.b2 * s2));
+        let (dr, di) = (1.0 + self.a1 * c1 + self.a2 * c2, -(self.a1 * s1 + self.a2 * s2));
+        let mag2 = (nr * nr + ni * ni) / (dr * dr + di * di).max(1e-20);
+        10.0 * mag2.max(1e-20).log10()
+    }
+
     fn clear(&mut self) {
         self.x1 = [0.0; 2];
         self.x2 = [0.0; 2];
@@ -184,6 +195,44 @@ impl Eq3 {
         };
         e.set_params(&[0.0, 120.0, 0.0, 1000.0, 0.8, 0.0, 6000.0]);
         e
+    }
+}
+
+/// One band of a mixer track's EQ as (frequency Hz, gain dB, width 0–1).
+pub type EqBandParams = (f32, f32, f32);
+
+/// The Q a band's width 0–1 stands for. The peak's width is its bandwidth, 0.1 to 4 octaves
+/// (FL Studio's default 0.27 is about 1.15 octaves); shelves get gentler as the width grows.
+pub fn eq_width_to_q(band: usize, width: f32) -> f32 {
+    let w = width.clamp(0.0, 1.0);
+    if band == 1 {
+        let octaves = 0.1 + 3.9 * w;
+        let x = std::f32::consts::LN_2 / 2.0 * octaves;
+        1.0 / (2.0 * x.sinh())
+    } else {
+        1.0 - 0.6 * w
+    }
+}
+
+impl Eq3 {
+    /// Design the three bands of a mixer track's EQ (low shelf, peak, high shelf). Does not
+    /// allocate: safe on the audio thread.
+    pub fn set_bands(&mut self, bands: &[EqBandParams; 3]) {
+        let shapes = [Shape::LowShelf, Shape::Peak, Shape::HighShelf];
+        for (i, ((f, g, w), shape)) in bands.iter().zip(shapes).enumerate() {
+            self.bands[i].design(shape, *f, *g, eq_width_to_q(i, *w), self.sr);
+            self.active[i] = g.abs() > 0.01;
+        }
+    }
+
+    /// The EQ's response in dB at `freq` (for drawing its curve).
+    pub fn response_db(&self, freq: f32) -> f32 {
+        self.bands
+            .iter()
+            .zip(self.active)
+            .filter(|(_, on)| *on)
+            .map(|(b, _)| b.response_db(freq, self.sr))
+            .sum()
     }
 }
 
@@ -701,6 +750,29 @@ mod tests {
             (b[0] + 0.25).abs() < 1e-4 && (b[1] + 0.25).abs() < 1e-4,
             "{b:?}: half gain, mono, inverted"
         );
+    }
+
+    #[test]
+    fn track_eq_bands_shape_the_response() {
+        let mut e = Eq3::new(SR);
+        let flat = [(90.0, 0.0, 0.27), (1500.0, 0.0, 0.27), (8000.0, 0.0, 0.27)];
+        e.set_bands(&flat);
+        assert_eq!(e.response_db(1000.0), 0.0, "all bands at 0 dB are bypassed");
+        e.set_bands(&[(90.0, 12.0, 0.27), (1500.0, -6.0, 0.27), (8000.0, 0.0, 0.27)]);
+        assert!((e.response_db(20.0) - 12.0).abs() < 0.5, "{}", e.response_db(20.0));
+        assert!((e.response_db(1500.0) + 6.0).abs() < 0.3, "{}", e.response_db(1500.0));
+        assert!(e.response_db(15_000.0).abs() < 0.3);
+        // The response matches what the filter does to a sine.
+        let out = run(&mut e, sine(1500.0, 0.1, 48_000));
+        let gain = rms(&out[48_000..]) / rms(&sine(1500.0, 0.1, 24_000));
+        assert!((crate::gain_to_db(gain) + 6.0).abs() < 0.3, "{gain}");
+        // A wider peak reaches further.
+        let narrow = {
+            e.set_bands(&[(90.0, 0.0, 0.0), (1500.0, 12.0, 0.1), (8000.0, 0.0, 0.0)]);
+            e.response_db(3000.0)
+        };
+        e.set_bands(&[(90.0, 0.0, 0.0), (1500.0, 12.0, 0.9), (8000.0, 0.0, 0.0)]);
+        assert!(e.response_db(3000.0) > narrow + 3.0);
     }
 
     #[test]

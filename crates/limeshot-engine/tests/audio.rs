@@ -1197,3 +1197,99 @@ fn synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch() {
     assert!(p.iter().max().unwrap() - p.iter().min().unwrap() <= 1, "{p:?}");
     assert!(v.iter().max().unwrap() - v.iter().min().unwrap() >= 3, "{v:?}");
 }
+
+#[test]
+fn mixer_track_eq_shapes_the_track_and_the_master() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::AddNote {
+            pattern: f.pat,
+            note: NewNote {
+                channel: f.synth,
+                key: 69,
+                start: 0,
+                length: 3 * PPQ,
+                velocity: 0.8,
+            },
+        })
+        .unwrap();
+    let rms = |doc: &Document| {
+        let snap = Arc::new(compile(doc.project(), f.pat, &NoSamples));
+        let (a, _) = render(snap, ExportRange::Pattern, 256, SR);
+        let n = a.len().min(2 * SR as usize);
+        (a[..n].iter().map(|v| v * v).sum::<f32>() / n as f32).sqrt()
+    };
+    let flat = rms(&f.doc);
+    assert!(flat > 0.01);
+    // The default EQ (every band at 0 dB) leaves the sound untouched.
+    let same = EqBand::DEFAULTS[0];
+    f.doc
+        .execute(Command::SetMixerEq {
+            track: 2,
+            band: 0,
+            value: same,
+        })
+        .unwrap();
+    assert_eq!(rms(&f.doc), flat);
+    // A high shelf at 100 Hz, -18 dB, on the synth's insert cuts nearly everything by 18 dB.
+    let cut = EqBand {
+        freq: 100.0,
+        gain: -18.0,
+        width: 0.27,
+    };
+    f.doc
+        .execute(Command::SetMixerEq {
+            track: 2,
+            band: 2,
+            value: cut,
+        })
+        .unwrap();
+    let ratio = limeshot_dsp::gain_to_db(rms(&f.doc) / flat);
+    assert!((ratio + 18.0).abs() < 1.5, "insert EQ: {ratio} dB");
+    // The same on the master instead.
+    f.doc
+        .execute(Command::SetMixerEq {
+            track: 2,
+            band: 2,
+            value: EqBand::DEFAULTS[2],
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::SetMixerEq {
+            track: 0,
+            band: 2,
+            value: cut,
+        })
+        .unwrap();
+    let ratio = limeshot_dsp::gain_to_db(rms(&f.doc) / flat);
+    assert!((ratio + 18.0).abs() < 1.5, "master EQ: {ratio} dB");
+    // Out-of-range values are clamped; a bad band is refused.
+    f.doc
+        .execute(Command::SetMixerEq {
+            track: 1,
+            band: 1,
+            value: EqBand {
+                freq: 1e9,
+                gain: 99.0,
+                width: 7.0,
+            },
+        })
+        .unwrap();
+    assert_eq!(
+        f.doc.project().mixer.tracks[1].eq[1],
+        EqBand {
+            freq: 20_000.0,
+            gain: 18.0,
+            width: 1.0
+        }
+    );
+    assert!(
+        f.doc
+            .execute(Command::SetMixerEq {
+                track: 1,
+                band: 3,
+                value: cut
+            })
+            .is_err()
+    );
+}

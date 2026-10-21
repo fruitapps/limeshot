@@ -14,6 +14,8 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
 * WAV is the only sample format (no MP3/FLAC/OGG/AIFF); this includes audio clips.
 * Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). Mixer routing is
   post-fader only; there are no pre-fader sends, no sidechain, no delay tempo sync and no gain-reduction metering.
+* Each mixer track's built-in EQ (MIX-010) cannot be automated, and its width-to-Q mapping is LimeShot's own (FL
+  Studio's exact curve shapes were not measured).
 * Automation covers channel volume/pan, mixer volume/pan and effect parameters in Song mode only; no tempo automation
   (one project tempo), no synth/sampler parameter automation, single-curve segments only. Automated controls do not
   move on screen. Automation clips are edited in their Playlist clip, whose curve area is small at the default track

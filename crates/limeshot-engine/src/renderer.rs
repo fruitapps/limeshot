@@ -82,6 +82,8 @@ pub struct Renderer {
     /// Set when Song mode reached its end without looping.
     finished: bool,
     fx: crate::fx::FxRack,
+    /// Each mixer track's built-in EQ, after its insert effects.
+    eqs: Vec<limeshot_dsp::effects::Eq3>,
     /// Peak of the last block's output (for detecting when effect tails have died away).
     last_peak: f32,
     /// Start the audio clips that span the position on the next schedule (after play, locate or
@@ -97,7 +99,7 @@ impl Renderer {
     pub fn new(sample_rate: u32, snapshot: Arc<Snapshot>) -> Self {
         let sample_rate = sample_rate.clamp(8_000, 768_000);
         let tempo = snapshot.tempo;
-        Self {
+        let mut r = Self {
             sample_rate,
             snapshot,
             voices: vec![Voice::default(); MAX_VOICES],
@@ -118,11 +120,16 @@ impl Renderer {
             start_tick: 0,
             finished: false,
             fx: crate::fx::FxRack::new(),
+            eqs: (0..limeshot_core::Mixer::MAX_TRACKS)
+                .map(|_| limeshot_dsp::effects::Eq3::new(sample_rate as f32))
+                .collect(),
             last_peak: 0.0,
             chase: true,
             chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
             track_mix: vec![(1.0, 0.0); limeshot_core::Mixer::MAX_TRACKS],
-        }
+        };
+        r.design_eqs();
+        r
     }
 
     pub fn sample_rate(&self) -> u32 {
@@ -139,6 +146,7 @@ impl Renderer {
         let channels = snapshot.channels.len();
         let old = std::mem::replace(&mut self.snapshot, snapshot);
         self.fx.arrange(&self.snapshot);
+        self.design_eqs();
         if tempo_changed {
             // Keep the musical position; continue at the new tempo from here.
             let tick = self.timeline.tick_at_sample(self.now);
@@ -645,6 +653,13 @@ impl Renderer {
         }
     }
 
+    /// Design every track's EQ from the snapshot (no allocation).
+    fn design_eqs(&mut self) {
+        for (eq, t) in self.eqs.iter_mut().zip(&self.snapshot.mixer) {
+            eq.set_bands(&t.eq);
+        }
+    }
+
     /// Take ownership of an effect processor built on the control thread (see [`crate::fx`]). It
     /// is placed by the next snapshot; call [`Renderer::rearrange`] to place it now.
     pub fn adopt_effect(&mut self, id: u32, fx: Box<dyn limeshot_dsp::effects::Effect>) {
@@ -686,6 +701,9 @@ impl Renderer {
             }
             let Some(t) = snapshot.mixer.get(i) else { continue };
             self.fx.process(i, &mut self.buses[i][..2 * frames]);
+            if let Some(eq) = self.eqs.get_mut(i) {
+                limeshot_dsp::effects::Effect::process(eq, &mut self.buses[i][..2 * frames]);
+            }
             let (gain, pan) = self.track_mix.get(i).copied().unwrap_or((t.gain, t.pan));
             let (pl, pr) = pan_gains(pan);
             let (gl, gr) = if t.audible { (gain * pl, gain * pr) } else { (0.0, 0.0) };
@@ -718,6 +736,9 @@ impl Renderer {
         }
         let master = &mut self.buses[0];
         self.fx.process(0, &mut master[..2 * frames]);
+        if let Some(eq) = self.eqs.first_mut() {
+            limeshot_dsp::effects::Effect::process(eq, &mut master[..2 * frames]);
+        }
         let t = &self.snapshot.mixer[0];
         let (gain, pan) = self.track_mix.first().copied().unwrap_or((t.gain, t.pan));
         let (pl, pr) = pan_gains(pan);

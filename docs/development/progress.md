@@ -239,3 +239,11 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    mute drag and a slip drag are each one undo step (new merge keys for clip placing and muting). PL-017 is VERIFIED
    by a core test and four UI tests; `ui_shot --audio --tools` shows a sliced and a slipped audio clip. Missing:
    Shift+S ripple edit, diagonal and Shift+click slicing, zero-cross snapping.
+2. **Mixer track EQ (MIX-010).** Observed live in FL 2026.1.1 (`fl-mixer-eq.png`): the Equalizer at the bottom of
+   the Mixer's track panel, its band names, defaults (90 / 1500 / 8000 Hz, 0 dB, width 0.27) and ±18 dB range read
+   from the hint bar. Every LimeShot mixer track now has `MixerTrack::eq` (three `EqBand`s, saved only when changed,
+   sanitised on load) and `Command::SetMixerEq`. The renderer runs a preallocated `Eq3` per track after the insert
+   effects and before the fader, redesigning the bands only when a snapshot arrives (no allocation on the audio
+   thread). The Mixer's track panel shows the response curve with a draggable handle per band (left-drag frequency
+   and gain, right-drag width, as in FL), gain/frequency/width knobs and Reset. Tested in the DSP, core, engine and
+   UI; `ui_shot --eq` shows it.

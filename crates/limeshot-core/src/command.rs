@@ -321,6 +321,12 @@ pub enum Command {
         track: u16,
         pan: f32,
     },
+    /// Set one band (0 low, 1 mid, 2 high) of a mixer track's built-in EQ.
+    SetMixerEq {
+        track: u16,
+        band: u8,
+        value: EqBand,
+    },
     SetMixerMute {
         track: u16,
         muted: bool,
@@ -473,6 +479,7 @@ impl Command {
             RenameMixerTrack { .. } => "Rename mixer track",
             SetMixerVolume { .. } => "Mixer volume",
             SetMixerPan { .. } => "Mixer pan",
+            SetMixerEq { .. } => "Mixer EQ",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
             SetRoute { level: None, .. } => "Remove route",
@@ -507,6 +514,7 @@ impl Command {
             SetInstrument { channel, .. } => format!("inst{}", channel.0),
             SetMixerVolume { track, .. } => format!("mxvol{track}"),
             SetMixerPan { track, .. } => format!("mxpan{track}"),
+            SetMixerEq { track, band, .. } => format!("mxeq{track}:{band}"),
             MoveNotes { pattern, notes, .. } => format!("mvn{}:{notes:?}", pattern.0),
             ResizeNotes { pattern, notes, .. } => format!("rsn{}:{notes:?}", pattern.0),
             ResizeNotesStart { pattern, notes, .. } => format!("rsns{}:{notes:?}", pattern.0),
@@ -1154,6 +1162,16 @@ impl Command {
             RenameMixerTrack { track, name } => mixer_track(p, track)?.name = name,
             SetMixerVolume { track, volume } => mixer_track(p, track)?.volume = finite(volume)?.clamp(0.0, 2.0),
             SetMixerPan { track, pan } => mixer_track(p, track)?.pan = finite(pan)?.clamp(-1.0, 1.0),
+            SetMixerEq { track, band, value } => {
+                let b = usize::from(band);
+                if b > 2 {
+                    return Err(CommandError::Invalid(format!("no EQ band {band}")));
+                }
+                finite(value.freq)?;
+                finite(value.gain)?;
+                finite(value.width)?;
+                mixer_track(p, track)?.eq[b] = value.sanitized(b);
+            }
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
             SetRoute { from, to, level } => {

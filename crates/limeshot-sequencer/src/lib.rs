@@ -152,6 +152,8 @@ pub struct MixerTrackState {
     pub effects: Vec<EffectState>,
     /// Post-fader outputs: (destination track, linear level). Empty for the master.
     pub routes: Vec<(usize, f32)>,
+    /// The built-in EQ's bands as (frequency, gain dB, width).
+    pub eq: [(f32, f32, f32); 3],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -243,6 +245,7 @@ impl Default for Snapshot {
                 audible: true,
                 effects: Vec::new(),
                 routes: Vec::new(),
+                eq: flat_eq(),
             }],
             mix_order: Vec::new(),
             pattern: Program::default(),
@@ -250,6 +253,10 @@ impl Default for Snapshot {
             automation: Vec::new(),
         }
     }
+}
+
+fn flat_eq() -> [(f32, f32, f32); 3] {
+    limeshot_core::EqBand::DEFAULTS.map(|b| (b.freq, b.gain, b.width))
 }
 
 /// Supplies decoded samples for stored sample paths. The UI's sample cache implements it; tests
@@ -350,6 +357,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         .iter()
         .enumerate()
         .map(|(i, t)| MixerTrackState {
+            eq: t.eq.map(|b| (b.freq, b.gain, b.width)),
             gain: t.volume,
             pan: t.pan,
             audible: !t.muted && (i == 0 || !any_insert_solo || t.solo),

@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -53,6 +53,20 @@ fn main() {
         app.doc.mark_saved();
         app.ui.mixer.selected = 4;
         app.show_window(Win::Mixer);
+    }
+    if args.iter().any(|a| a == "--eq") {
+        // Insert 1 (the drums) with a low boost and a mid cut, its panel scrolled to the EQ.
+        for (band, freq, gain, width) in [(0u8, 120.0, 6.0, 0.27), (1, 2200.0, -7.5, 0.4)] {
+            app.exec(limeshot_core::Command::SetMixerEq {
+                track: 1,
+                band,
+                value: limeshot_core::EqBand { freq, gain, width },
+            });
+        }
+        app.doc.mark_saved();
+        app.ui.mixer.selected = 1;
+        app.show_window(Win::Mixer);
+        app.ui.workspace.state_mut(Win::Mixer).maximized = true;
     }
     if args.iter().any(|a| a == "--settings")
         && let Some(c) = app.project().channels.first().map(|c| c.id)

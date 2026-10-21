@@ -2,13 +2,14 @@
 //! mixer field); inserts sum into the master. Each strip has a meter, fader, pan, mute and solo.
 //! Mute: left-click · Solo: right-click or Cmd+click (FL Studio convention). Clicking a strip's
 //! name or FX area selects it; the panel on the right shows its level, routing and FX slots (as FL Studio's
-//! Mixer does).
+//! Mixer does), and its built-in 3-band EQ: drag a band's handle in the graph left/right for
+//! its frequency and up/down for its gain, right-drag left/right for its width (FL Studio).
 
 use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, mono, rgb, semibold};
 use crate::widgets::{fader, knob, meter, panel_header, section, toggle_label};
 use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
-use limeshot_core::{AutomationTarget, Command};
+use limeshot_core::{AutomationTarget, Command, EqBand};
 
 const STRIP_W: f32 = 68.0;
 
@@ -17,6 +18,10 @@ pub struct State {
     pub selected: u16,
     /// Route buttons drawn in the last frame: (strip, rectangle). For tests and tools.
     pub route_buttons: Vec<(u16, Rect)>,
+    /// The EQ graph drawn in the last frame.
+    pub eq_graph: Option<Rect>,
+    /// The EQ band being dragged in the graph.
+    eq_drag: Option<usize>,
 }
 
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -498,7 +503,187 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 });
             }
             crate::effects_ui::chain(app, ui, i);
+            ui.add_space(10.0);
+            eq_section(app, ui, i, &track.eq);
         });
+    });
+}
+
+const EQ_NAMES: [&str; 3] = ["Low shelf", "Peak", "High shelf"];
+
+/// Frequency ↔ position 0–1 on the EQ graph's logarithmic axis.
+fn eq_freq_pos(f: f32) -> f32 {
+    let (lo, hi) = EqBand::FREQ;
+    ((f / lo).ln() / (hi / lo).ln()).clamp(0.0, 1.0)
+}
+
+fn eq_pos_freq(x: f32) -> f32 {
+    let (lo, hi) = EqBand::FREQ;
+    lo * (hi / lo).powf(x.clamp(0.0, 1.0))
+}
+
+/// Where a band's handle sits in the graph.
+pub fn eq_handle(graph: Rect, b: EqBand) -> egui::Pos2 {
+    pos2(
+        graph.left() + eq_freq_pos(b.freq) * graph.width(),
+        graph.center().y - b.gain / EqBand::GAIN * graph.height() * 0.5,
+    )
+}
+
+/// The track's built-in EQ (FL Studio's Equalizer in the Mixer): a response graph with a handle
+/// per band, and gain, frequency and width knobs.
+fn eq_section(app: &mut LimeShotApp, ui: &mut Ui, i: u16, eq: &[EqBand; 3]) {
+    let t = Theme::current();
+    ui.horizontal(|ui| {
+        section(ui, "Equalizer");
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let flat = *eq == EqBand::DEFAULTS;
+            if ui
+                .add_enabled(!flat, egui::Button::new("Reset").small())
+                .on_hover_text("All bands back to 0 dB and their default frequency and width")
+                .clicked()
+            {
+                let cmds = (0..3u8)
+                    .map(|band| Command::SetMixerEq {
+                        track: i,
+                        band,
+                        value: EqBand::DEFAULTS[usize::from(band)],
+                    })
+                    .collect();
+                app.exec(Command::Batch(cmds));
+            }
+        });
+    });
+    let colors = [
+        t.accent,
+        rgb(limeshot_core::Rgb(0x4f, 0xb4, 0xe8)),
+        rgb(limeshot_core::Rgb(0xf0, 0x9a, 0x3e)),
+    ];
+    let (graph, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 96.0), Sense::click_and_drag());
+    app.ui.mixer.eq_graph = Some(graph);
+    let p = ui.painter_at(graph);
+    p.rect_filled(graph, CornerRadius::same(t.radius_sm), t.sunken);
+    for f in [100.0f32, 1000.0, 10_000.0] {
+        let x = graph.left() + eq_freq_pos(f) * graph.width();
+        p.line_segment(
+            [pos2(x, graph.top()), pos2(x, graph.bottom())],
+            Stroke::new(1.0, t.grid_step),
+        );
+    }
+    p.line_segment(
+        [
+            pos2(graph.left(), graph.center().y),
+            pos2(graph.right(), graph.center().y),
+        ],
+        Stroke::new(1.0, t.grid_beat),
+    );
+    let mut dsp = limeshot_dsp::effects::Eq3::new(48_000.0);
+    dsp.set_bands(&eq.map(|b| (b.freq, b.gain, b.width)));
+    let pts: Vec<egui::Pos2> = (0..=graph.width() as usize)
+        .map(|k| {
+            let x = graph.left() + k as f32;
+            let db = dsp.response_db(eq_pos_freq(k as f32 / graph.width()));
+            pos2(x, graph.center().y - db / EqBand::GAIN * graph.height() * 0.5)
+        })
+        .collect();
+    p.add(egui::Shape::line(pts, Stroke::new(1.5, t.text)));
+    for (b, c) in eq.iter().zip(colors) {
+        p.circle(eq_handle(graph, *b), 4.5, c, Stroke::new(1.0, t.sunken));
+    }
+    // Graph gestures: press near a band's handle (or anywhere: the nearest band) and drag.
+    let pointer = resp.interact_pointer_pos();
+    if resp.drag_started()
+        && let Some(pp) = pointer
+    {
+        let nearest = (0..3).min_by(|&a, &b| {
+            let da = eq_handle(graph, eq[a]).distance(pp);
+            let db = eq_handle(graph, eq[b]).distance(pp);
+            da.total_cmp(&db)
+        });
+        app.ui.mixer.eq_drag = nearest;
+    }
+    if let (Some(band), Some(pp)) = (app.ui.mixer.eq_drag, pointer)
+        && resp.dragged()
+    {
+        let mut v = eq[band];
+        let gain =
+            ((graph.center().y - pp.y) / (graph.height() * 0.5) * EqBand::GAIN).clamp(-EqBand::GAIN, EqBand::GAIN);
+        v.gain = (gain * 10.0).round() / 10.0;
+        if resp.dragged_by(egui::PointerButton::Secondary) {
+            v.width = (v.width + resp.drag_delta().x / graph.width()).clamp(0.0, 1.0);
+        } else {
+            v.freq = eq_pos_freq((pp.x - graph.left()) / graph.width()).round();
+        }
+        let cmd = (v != eq[band]).then_some(Command::SetMixerEq {
+            track: i,
+            band: band as u8,
+            value: v,
+        });
+        app.exec_gesture(&resp, cmd);
+        app.hint(format!(
+            "EQ band {} ({}): {:.0} Hz, {:+.1} dB, width {:.2}",
+            band + 1,
+            EQ_NAMES[band],
+            v.freq,
+            v.gain,
+            v.width
+        ));
+    } else {
+        app.exec_gesture(&resp, None);
+    }
+    if resp.drag_stopped() {
+        app.ui.mixer.eq_drag = None;
+    }
+    if resp.hovered()
+        && let Some(pp) = resp.hover_pos()
+    {
+        let f = eq_pos_freq((pp.x - graph.left()) / graph.width());
+        app.hint(format!(
+            "{f:.0} Hz — drag a band: left/right frequency, up/down gain · right-drag: width"
+        ));
+    }
+
+    // Knobs: one column per band (gain, frequency, width), as in FL Studio's track EQ.
+    ui.add_space(4.0);
+    ui.columns(3, |cols| {
+        for (band, col) in cols.iter_mut().enumerate() {
+            let b = eq[band];
+            col.vertical_centered(|ui| {
+                ui.label(RichText::new(EQ_NAMES[band]).font(mono(9.5)).color(colors[band]));
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 2.0;
+                    let set = |v: EqBand| Command::SetMixerEq {
+                        track: i,
+                        band: band as u8,
+                        value: v,
+                    };
+                    let mut g = b.gain;
+                    let r = knob(ui, &mut g, -EqBand::GAIN, EqBand::GAIN, 0.0, 26.0, true, |v| {
+                        format!("Band {} gain {v:+.1} dB", band + 1)
+                    });
+                    let cmd = r.changed().then(|| set(EqBand { gain: g, ..b }));
+                    app.exec_gesture(&r, cmd);
+                    let d = EqBand::DEFAULTS[band];
+                    let mut f = eq_freq_pos(b.freq);
+                    let r = knob(ui, &mut f, 0.0, 1.0, eq_freq_pos(d.freq), 26.0, false, |v| {
+                        format!("Band {} frequency {:.0} Hz", band + 1, eq_pos_freq(v))
+                    });
+                    let cmd = r.changed().then(|| {
+                        set(EqBand {
+                            freq: eq_pos_freq(f).round(),
+                            ..b
+                        })
+                    });
+                    app.exec_gesture(&r, cmd);
+                    let mut w = b.width;
+                    let r = knob(ui, &mut w, 0.0, 1.0, d.width, 26.0, false, |v| {
+                        format!("Band {} width {v:.2}", band + 1)
+                    });
+                    let cmd = r.changed().then(|| set(EqBand { width: w, ..b }));
+                    app.exec_gesture(&r, cmd);
+                });
+            });
+        }
     });
 }
 

@@ -3053,27 +3053,38 @@
       "name": "Built-in 3-band EQ",
       "description": "Track EQ.",
       "fl_reference": "Track properties EQ.",
-      "limeshot_behavior": "Per-track 3-band parametric EQ.",
+      "limeshot_behavior": "Every mixer track (master included) has FL Studio's built-in EQ after its insert effects and before the fader: a low shelf, a peak and a high shelf with FL's defaults (90 Hz, 1500 Hz, 8000 Hz, 0 dB, width 0.27), ±18 dB. The Mixer's track panel shows the response curve with a handle per band (drag: frequency and gain; right-drag: width), knobs for gain, frequency and width, and Reset. Saved in the .lime file only when changed.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core::model (EqBand, MixerTrack::eq)",
+        "limeshot-dsp::effects (Eq3::set_bands)",
+        "limeshot-engine::renderer",
+        "limeshot-ui::mixer"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::track_eq_bands_shape_the_response",
+        "limeshot-core model::tests::track_eq_is_saved_only_when_changed",
+        "limeshot-engine audio.rs mixer_track_eq_shapes_the_track_and_the_master",
+        "ui.rs mixer_eq_graph_and_reset_edit_the_track_eq"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm",
+          "docs/research/evidence/screenshots/fl-mixer-eq.png"
         ]
       },
-      "notes": "Available as the Lime EQ insert effect (FX-002); not built into every strip."
+      "notes": "Observed live in FL 2026.1.1 (session 8): band names, defaults and the ±18 dB range from the hint bar. LimeShot's mapping from width to Q is its own. Not automatable yet; the Lime EQ insert effect (FX-002) remains."
     },
     {
       "id": "MIX-011",

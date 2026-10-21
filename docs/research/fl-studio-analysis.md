@@ -124,6 +124,11 @@ headers keep the LED at the right.
 
 ## 6. Mixer
 - **VERIFIED (`mixer.htm`):** Master plus up to 500 inserts plus a "Current" track. Per track: pan, fader (post-FX), stereo separation, phase invert, swap L/R, mute (left-click), solo (Ctrl/right-click), 10 FX slots, a 3-band EQ, peak meters in dB, record arm and PDC delay. Channels route to inserts (the default route for new channels is Master). Inserts route to Master by default; post-fader sends can go to other inserts; sidechains are supported. Insert tracks practically cannot clip; Master can.
+- **OBSERVED live (session 8, `fl-mixer-eq.png`):** the Mixer's track panel ends with an Equalizer: a response graph,
+  three vertical gain sliders and two rows of knobs (frequency, width). The hint bar names them "EQ band 1 (low
+  shelf)", "EQ band 2 (peaking)", "EQ band 3 (high shelf)"; defaults 90 Hz, 1500 Hz and 8000 Hz, level 0.0 dB, width
+  0.27 each; a gain slider dragged to the top reads +18.0 dB. Hovering the graph shows the frequency and "Tweak band
+  N" for the nearest band. The manual: left-drag sets frequency and level, right-drag bandwidth and level.
 - **LimeShot equivalent:** Master plus 16 inserts by default (more can be added). Each strip has a name, a peak meter, a fader (dB), pan, mute and solo. Channels have a mixer-target number. Inserts route to Master. FX slots, sends and EQ are tracked (P1). A clip indicator appears on Master.
 
 ## 7. Browser
