@@ -77,6 +77,9 @@ errors, not per buffer.
 3. Voices are rendered between action offsets, and each action starts its voice exactly at its frame.
 4. At the end of a pass: Pattern mode (and Song mode with loop on) re-anchors the timeline at tick 0 and releases
    gated notes. One-shot samples keep ringing across the loop. Song mode with loop off stops and sets `finished`.
+   With a loop range (`Msg::LoopRange`, the Playlist's time selection) Song mode ends each pass at the range end and
+   re-anchors at the range start with a chase, looping even when song loop is off; locating past the end lands at
+   the range start.
 5. Note-offs: each sequenced voice stores `release_at` (an absolute sample) and is released at that exact frame inside
    the voice loop.
 

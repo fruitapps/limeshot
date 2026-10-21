@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -23,6 +23,19 @@ fn main() {
         if let Some(c) = app.project().channels.get(3).map(|c| c.id) {
             app.select_channel(c);
         }
+    }
+    if args.iter().any(|a| a == "--markers") {
+        // Two time markers and a time selection over bars 3–4, Channel Rack closed.
+        let bar = app.project().time_signature.ticks_per_bar();
+        for (tick, name) in [(0, "Intro"), (4 * bar, "Drop")] {
+            app.exec(limeshot_core::Command::AddMarker {
+                tick,
+                name: name.into(),
+            });
+        }
+        app.doc.mark_saved();
+        app.ui.playlist.time_sel = Some((2 * bar, 4 * bar));
+        app.ui.workspace.close(Win::ChannelRack);
     }
     if args.iter().any(|a| a == "--piano") {
         app.show_window(Win::PianoRoll);

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **89** — IMPLEMENTED 57, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
+Tracked: **92** — IMPLEMENTED 60, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
 
 ## Global
 
@@ -111,13 +111,16 @@ Tracked: **89** — IMPLEMENTED 57, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
 | KB-066 | Duplicate selection | `Ctrl+B` | VERIFIED | `Cmd+B` | IMPLEMENTED | PL-005 |  |
 | KB-067 | Delete selection | `Delete` | OBSERVED | `Delete / Backspace` | IMPLEMENTED | PL-004 | FL 2026.1.1 Playlist Edit menu (Del). |
 | KB-068 | Copy / cut / paste clips | `Ctrl+C / Ctrl+X / Ctrl+V` | OBSERVED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | PL-026 | FL 2026.1.1 Playlist Edit menu. |
-| KB-069 | Shift clips left / right / up / down | `Shift+Left / Shift+Right / Shift+Up / Shift+Down` | OBSERVED | `Shift+← / Shift+→ / Shift+↑ / Shift+↓` | IMPLEMENTED | PL-002 | FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. LimeShot used plain arrows before session 7; plain arrows now scroll. |
-| KB-070 | Add time marker | `Alt+T` | INFERRED | — | NOT_STARTED | PL-016 |  |
+| KB-069 | Shift clips left / right / up / down | `Shift+Left / Shift+Right / Shift+Up / Shift+Down` | OBSERVED | `Shift+← / Shift+→ / Shift+↑ / Shift+↓` | IMPLEMENTED | PL-002 | FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. Plain Up/Down scroll a track (observed live). |
+| KB-070 | Add a time marker (asks its name) | `Opt+T` | OBSERVED | `Alt+T` | IMPLEMENTED | PL-016 | FL 2026.1.1 Time markers menu: Add one… |
 | KB-071 | Song position to the start | `Home` | INFERRED | `Home` | IMPLEMENTED | PL-009 |  |
 | KB-084 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-085 | Deselect | `Cmd+D` | OBSERVED | `Cmd+D` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-086 | Mute / unmute selected clips | `Opt+M / Shift+Opt+M` | OBSERVED | — | NOT_STARTED | PL-005 | FL 2026.1.1 Playlist Edit menu. |
 | KB-087 | Merge selected clips | `Cmd+G` | OBSERVED | — | NOT_STARTED | PL-022 | FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G. |
+| KB-090 | Add a time marker at the song position | `Cmd+T` | OBSERVED | `Cmd+T` | IMPLEMENTED | PL-016 | FL 2026.1.1 Time markers menu: Add auto. |
+| KB-091 | Time selection | `Ctrl+drag on the ruler` | OBSERVED | `Cmd+drag on the ruler` | IMPLEMENTED | PL-016 | A mouse binding. Song playback loops the selection. |
+| KB-092 | Place loop markers around the selection | `Shift+T` | OBSERVED | — | NOT_STARTED | PL-016 | FL 2026.1.1 Time markers menu. |
 
 ## Mixer
 

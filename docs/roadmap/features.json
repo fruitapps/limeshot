@@ -2493,26 +2493,38 @@
       "category": "Playlist",
       "name": "Markers and loop region / time selection",
       "description": "Navigation and looping a range.",
-      "fl_reference": "Alt+T markers, Ctrl+drag time selection.",
-      "limeshot_behavior": "Markers and a loop range for playback/export.",
+      "fl_reference": "Ctrl+drag on the Playlist ruler makes a time selection that Song playback loops; Time markers menu: Add one… (Opt+T), Add auto (Cmd+T), Place loop (Shift+T), key/time-signature/jump markers.",
+      "limeshot_behavior": "Cmd+drag on the ruler: time selection (snapped; Alt: free), shaded on the ruler and the arrangement; Song playback starts at it and loops it, even with song loop off; Cmd+click or Cmd+D clears it. Markers: Cmd+T adds one at the song position, Alt+T adds one and asks its name; flags in the ruler's lower half — click jumps, drag moves (one undo step), right-click renames or deletes; markers are saved with the project.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-engine",
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::playlist_time_selection_loops_song_playback",
+        "crates/limeshot-app/tests/ui.rs::playlist_markers_add_jump_move_and_delete",
+        "limeshot-engine tests/audio.rs::song_loops_the_time_selection_at_any_block_size",
+        "limeshot-core document::tests::markers_are_added_sorted_renamed_moved_and_removed"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm",
+          "docs/research/evidence/screenshots/fl-playlist-time-selection.png",
+          "docs/research/evidence/screenshots/fl-playlist-time-markers-menu.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project."
     },
     {
       "id": "PL-017",

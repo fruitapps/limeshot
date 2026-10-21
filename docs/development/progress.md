@@ -217,3 +217,10 @@ here is not an org admin, so the org's Actions and billing settings could not be
    New commands `SliceNotes`, `GlueNotes`, `SetNotesMuted`, `ResizeNotesStart`; a paint stroke, a mute drag and a
    left-edge drag are each one undo step (merge keys). PR-012, PR-023 and PR-024 are VERIFIED; the Stamp tool is a new
    record (PR-027). FL's macOS menu binds quick quantize to Cmd+Q; LimeShot keeps Cmd+Q for Quit (KB-059 DIFFERENT).
+6. **Playlist time selection and markers (expansion).** Observed live in FL 2026.1.1: a plain ruler drag scrubs,
+   Ctrl+drag makes a time selection (red band, song position to its start), the Time markers menu (Add one… Opt+T,
+   Add auto Cmd+T …), and plain Up/Down scrolling the Playlist a track (confirming task 3's inference). LimeShot now
+   has the Cmd+drag time selection, looped by the engine in Song mode (`Renderer::set_loop_range`, tested at block
+   sizes 1…1024), and time markers in the model (`Playlist::markers`, `AddMarker`/`RemoveMarker`/`RenameMarker`/
+   `MoveMarker`) with Cmd+T / Alt+T and click-to-jump, drag-to-move and right-click menus on the ruler. PL-016 is
+   VERIFIED; special marker kinds and Place loop are recorded as missing. `ui_shot --markers` shows them.

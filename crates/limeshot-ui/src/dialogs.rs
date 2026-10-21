@@ -17,6 +17,7 @@ pub enum RenameTarget {
     Channel(ChannelId),
     PlaylistTrack(u32),
     MixerTrack(u16),
+    Marker(limeshot_core::MarkerId),
     Project,
 }
 
@@ -83,6 +84,21 @@ impl Dialog {
         let text = app.project().automation(id).map(|a| a.name.clone()).unwrap_or_default();
         Dialog::Rename {
             target: RenameTarget::Automation(id),
+            text,
+        }
+    }
+
+    pub fn rename_marker(app: &LimeShotApp, id: limeshot_core::MarkerId) -> Self {
+        let text = app
+            .project()
+            .playlist
+            .markers
+            .iter()
+            .find(|m| m.id == id)
+            .map(|m| m.name.clone())
+            .unwrap_or_default();
+        Dialog::Rename {
+            target: RenameTarget::Marker(id),
             text,
         }
     }
@@ -465,6 +481,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 RenameTarget::Channel(channel) => Command::RenameChannel { channel, name },
                                 RenameTarget::PlaylistTrack(track) => Command::RenamePlaylistTrack { track, name },
                                 RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },
+                                RenameTarget::Marker(marker) => Command::RenameMarker { marker, name },
                                 RenameTarget::Project => Command::SetTitle(name),
                             });
                         }

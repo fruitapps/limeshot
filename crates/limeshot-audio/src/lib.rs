@@ -48,6 +48,8 @@ pub enum Msg {
     Locate(Tick),
     Mode(PlayMode),
     SongLoop(bool),
+    /// Song mode loops this range (the Playlist's time selection); `None` loops the whole song.
+    LoopRange(Option<(Tick, Tick)>),
     Metronome(bool),
     NoteOn {
         channel: u16,
@@ -170,6 +172,7 @@ impl AudioState {
                 Msg::Locate(t) => r.locate(t),
                 Msg::Mode(m) => r.set_mode(m),
                 Msg::SongLoop(b) => r.set_song_loop(b),
+                Msg::LoopRange(range) => r.set_loop_range(range),
                 Msg::Metronome(b) => r.set_metronome(b),
                 Msg::NoteOn { channel, key, velocity } => r.preview_note_on(channel, key, velocity),
                 Msg::NoteOff { channel, key } => r.preview_note_off(channel, key),

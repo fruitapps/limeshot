@@ -287,6 +287,47 @@ mod tests {
     }
 
     #[test]
+    fn markers_are_added_sorted_renamed_moved_and_removed() {
+        let mut d = Document::default();
+        let id = |c: Created| MarkerId(c.0.unwrap());
+        let b = id(d
+            .execute(Command::AddMarker {
+                tick: 7680,
+                name: "Chorus".into(),
+            })
+            .unwrap());
+        let a = id(d
+            .execute(Command::AddMarker {
+                tick: 0,
+                name: "Intro".into(),
+            })
+            .unwrap());
+        let names =
+            |d: &Document| -> Vec<String> { d.project().playlist.markers.iter().map(|m| m.name.clone()).collect() };
+        assert_eq!(names(&d), ["Intro", "Chorus"], "sorted by time");
+        d.execute(Command::RenameMarker {
+            marker: b,
+            name: "Drop".into(),
+        })
+        .unwrap();
+        d.begin_gesture();
+        for t in [100, 200, 9000] {
+            d.execute(Command::MoveMarker { marker: a, tick: t }).unwrap();
+        }
+        d.end_gesture();
+        assert_eq!(names(&d), ["Drop", "Intro"]);
+        d.undo();
+        assert_eq!(
+            d.project().playlist.markers[0].tick,
+            0,
+            "a marker drag is one undo step"
+        );
+        d.execute(Command::RemoveMarker(b)).unwrap();
+        assert!(d.execute(Command::RemoveMarker(b)).is_err());
+        assert_eq!(names(&d), ["Intro"]);
+    }
+
+    #[test]
     fn slice_glue_and_mute_notes() {
         let (mut d, ch, pat) = doc_with_channel();
         let add = |d: &mut Document, key: u8, start: Tick, length: Tick| {

@@ -490,6 +490,75 @@ fn song_stops_at_the_end_without_loop() {
     assert_eq!(r.position(), 0);
 }
 
+#[test]
+fn song_loops_the_time_selection_at_any_block_size() {
+    let mut f = fixture();
+    // Pattern A hits on step 0, pattern B on step 8 (half a bar later).
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let b = PatternId(
+        f.doc
+            .execute(Command::AddPattern { name: "B".into() })
+            .unwrap()
+            .0
+            .unwrap(),
+    );
+    f.doc
+        .execute(Command::SetStep {
+            pattern: b,
+            channel: f.drum,
+            step: 8,
+            on: true,
+        })
+        .unwrap();
+    // B A A B: the selection covers the two A bars.
+    for (p, bar) in [(b, 0u64), (f.pat, 1), (f.pat, 2), (b, 3)] {
+        f.doc
+            .execute(Command::AddClip {
+                pattern: p,
+                track: 0,
+                start: bar * 3840,
+                length: None,
+            })
+            .unwrap();
+    }
+    let bar = 96_000;
+    for block in [1, 64, 480, 1000, MAX_BLOCK] {
+        let mut r = Renderer::new(SR, snapshot(&f));
+        r.set_mode(PlayMode::Song);
+        r.set_song_loop(false);
+        r.set_loop_range(Some((3840, 3 * 3840)));
+        r.locate(3840);
+        r.play();
+        let mut audio = Vec::new();
+        let mut buf = vec![0.0; 2 * block];
+        while audio.len() < 2 * 5 * bar {
+            r.render(&mut buf);
+            audio.extend_from_slice(&buf);
+        }
+        assert_eq!(
+            onsets(&audio[..2 * 5 * bar], 0.1),
+            vec![0, bar, 2 * bar, 3 * bar, 4 * bar],
+            "block {block}: only the A bars, looped"
+        );
+        assert!(r.is_playing(), "the selection loops even with song loop off");
+        let pos = r.position();
+        assert!((3840..3 * 3840).contains(&pos), "{pos}");
+        // Locating past the selection lands at its start; clearing it plays the whole song.
+        r.locate(10 * 3840);
+        assert_eq!(r.position(), 3840);
+        r.set_loop_range(None);
+        r.locate(3 * 3840);
+        assert_eq!(r.position(), 3 * 3840);
+    }
+}
+
 /// A 1000-frame ramp sample at the engine rate, for sampler parameter tests.
 fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
     let mut doc = Document::default();

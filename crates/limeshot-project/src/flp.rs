@@ -663,6 +663,7 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
             })
             .collect(),
         clips,
+        markers: Vec::new(),
     };
     p.sanitize();
     (p, r)

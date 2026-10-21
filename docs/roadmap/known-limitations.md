@@ -34,7 +34,8 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
-* No markers, loop regions or time selections; no performance mode.
+* Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
+  Playlist-only and not saved with the project. No performance mode.
 * No MIDI devices or MIDI recording. MIDI files: notes, tempo and time signature only; exported files were only read
   back by LimeShot's own reader.
 * There is no confirmation when deleting a pattern (undo restores it). Channel deletion asks first, as in FL Studio;

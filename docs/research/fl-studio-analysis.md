@@ -104,6 +104,12 @@ headers keep the LED at the right.
 - **Expected behaviour (VERIFIED, `playlist.htm`):** Tracks are generic "clip tracks", not bound to mixer tracks. Clip types: pattern, audio, automation. Pattern clips reference a pattern; editing the pattern changes every instance until **Make unique**. Tools: Draw, Paint, Delete, Mute, Slip, Slice, Select, Zoom, Playback. In Draw, left-click places the current pattern, dragging moves, right-click deletes, Shift-drag on an edge resizes. Ctrl+B duplicates to the right. Snap options include Main/Line/Cell/beats/bar. Markers and time selection live on the timeline. Performance mode and Arrangements exist.
 - **Song vs pattern playback:** the toolbar PAT/SONG switch (L key). SONG plays the Playlist; PAT loops the current pattern (VERIFIED, `toolbar_panels.htm`).
 - **Confidence:** VERIFIED (docs). **OBSERVED live (`fl-clip-no-loop.png`):** a one-bar pattern clip (steps only) dragged out to five bars draws its notes only in the first bar, and playing in SONG mode from bar 4 inside the clip is silent (flat oscilloscope, empty peak meter) while playing from bar 1 sounds. Pattern clips do **not** loop their pattern; the extended region is silence. This confirms decision D14.
+- **OBSERVED live (session 7, `fl-playlist-time-selection.png`, `fl-playlist-time-markers-menu.png`):** a plain drag
+  on the ruler scrubs the song position (switching to SONG); Ctrl+drag makes a time selection, drawn as a red band, and
+  moves the song position to its start. Time markers menu: Add one… Opt+T, Add auto Cmd+T (a marker named "Auto" at the
+  song position, drawn as a flag under the ruler), Add two…, Add one every, Add jump to next bar, Add time signature
+  change… Shift+Opt+T, Add key marker, Place loop Shift+T, Delete, Change to marker loop. Plain Up/Down scroll the
+  Playlist one track.
 - **LimeShot equivalent:** Playlist window with tracks, pattern clips that reference patterns by `PatternId` (linked by default), "Make unique", draw/move/resize/delete/duplicate, a bar/beat ruler, a playhead, click-to-seek on the ruler, horizontal zoom and scroll, and snap to bar/beat/step. Song mode drives the engine from these clips. A pattern clip in LimeShot plays its pattern **once**, truncated to the clip length (documented choice).
 
 ## 5. Pattern management

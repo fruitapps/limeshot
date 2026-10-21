@@ -132,6 +132,8 @@ pub struct LimeShotApp {
     pub bundled_samples: Option<PathBuf>,
     pub export_job: Option<dialogs::ExportJob>,
     compiled: Option<(u64, PatternId)>,
+    /// The Song loop range last sent to the engine (`None`: nothing sent yet).
+    loop_sent: Option<Option<(Tick, Tick)>>,
     /// Effect processors already handed to the audio thread, and for which document generation.
     sent_effects: std::collections::HashSet<u32>,
     effects_generation: u64,
@@ -186,6 +188,7 @@ impl LimeShotApp {
             bundled_samples,
             export_job: None,
             compiled: None,
+            loop_sent: None,
             sent_effects: Default::default(),
             effects_generation: 0,
             snapshot,
@@ -748,6 +751,11 @@ impl LimeShotApp {
         ctx.set_zoom_factor(self.settings.ui_scale);
         self.player.collect_garbage();
         self.sync_engine();
+        let range = self.ui.playlist.time_sel;
+        if self.loop_sent != Some(range) {
+            self.send(Msg::LoopRange(range));
+            self.loop_sent = Some(range);
+        }
         crate::autosave::tick(self);
         dialogs::poll_export(self);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));

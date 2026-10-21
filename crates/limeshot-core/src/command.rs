@@ -273,6 +273,20 @@ pub enum Command {
         muted: bool,
     },
     AddPlaylistTrack,
+    /// A time marker on the Playlist; returns its id.
+    AddMarker {
+        tick: Tick,
+        name: String,
+    },
+    RemoveMarker(MarkerId),
+    RenameMarker {
+        marker: MarkerId,
+        name: String,
+    },
+    MoveMarker {
+        marker: MarkerId,
+        tick: Tick,
+    },
     RenamePlaylistTrack {
         track: u32,
         name: String,
@@ -436,6 +450,10 @@ impl Command {
             SetClipMuted { .. } => "Mute clip",
             AddPlaylistTrack => "Add playlist track",
             RenamePlaylistTrack { .. } => "Rename track",
+            AddMarker { .. } => "Add marker",
+            RemoveMarker(_) => "Delete marker",
+            RenameMarker { .. } => "Rename marker",
+            MoveMarker { .. } => "Move marker",
             SetPlaylistTrackMute { .. } => "Mute track",
             AddMixerTrack => "Add mixer track",
             RenameMixerTrack { .. } => "Rename mixer track",
@@ -489,6 +507,7 @@ impl Command {
             SetStep {
                 pattern, channel, on, ..
             } => format!("step{}:{}:{on}", pattern.0, channel.0),
+            MoveMarker { marker, .. } => format!("mvm{}", marker.0),
             _ => return None,
         })
     }
@@ -1044,6 +1063,24 @@ impl Command {
                     muted: false,
                 });
             }
+            AddMarker { tick, name } => {
+                let id = MarkerId(p.alloc_id());
+                p.playlist.markers.push(Marker { id, tick, name });
+                p.playlist.markers.sort_by_key(|m| m.tick);
+                return Ok(Created(Some(id.0)));
+            }
+            RemoveMarker(id) => {
+                let before = p.playlist.markers.len();
+                p.playlist.markers.retain(|m| m.id != id);
+                if p.playlist.markers.len() == before {
+                    return Err(CommandError::Invalid(format!("no marker {}", id.0)));
+                }
+            }
+            RenameMarker { marker, name } => marker_mut(p, marker)?.name = name,
+            MoveMarker { marker, tick } => {
+                marker_mut(p, marker)?.tick = tick;
+                p.playlist.markers.sort_by_key(|m| m.tick);
+            }
             RenamePlaylistTrack { track, name } => {
                 p.playlist
                     .tracks
@@ -1201,6 +1238,14 @@ fn place_clip(p: &mut Project, source: ClipSource, track: u32, start: Tick, leng
         extra: Extra::new(),
     });
     Ok(Created(Some(id)))
+}
+
+fn marker_mut(p: &mut Project, id: MarkerId) -> Result<&mut Marker, CommandError> {
+    p.playlist
+        .markers
+        .iter_mut()
+        .find(|m| m.id == id)
+        .ok_or_else(|| CommandError::Invalid(format!("no marker {}", id.0)))
 }
 
 fn add_notes(p: &mut Project, pid: PatternId, notes: Vec<NewNote>) -> R {

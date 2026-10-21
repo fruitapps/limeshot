@@ -28,6 +28,7 @@ id_type!(ChannelId);
 id_type!(PatternId);
 id_type!(ClipId);
 id_type!(NoteId);
+id_type!(MarkerId);
 
 /// An sRGB color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -381,6 +382,17 @@ pub struct PlaylistTrack {
 pub struct Playlist {
     pub tracks: Vec<PlaylistTrack>,
     pub clips: Vec<Clip>,
+    /// Time markers on the Playlist ruler, sorted by time.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
+}
+
+/// A named point on the Playlist's timeline (FL Studio's time marker).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Marker {
+    pub id: MarkerId,
+    pub tick: Tick,
+    pub name: String,
 }
 
 impl Playlist {
@@ -562,6 +574,7 @@ impl Project {
                     })
                     .collect(),
                 clips: Vec::new(),
+                markers: Vec::new(),
             },
             mixer: Mixer::default(),
             automations: Vec::new(),
@@ -760,6 +773,11 @@ impl Project {
         for c in &mut self.playlist.clips {
             c.length = c.length.max(1);
             max_id = max_id.max(c.id.0);
+        }
+        self.playlist.markers.truncate(10_000);
+        self.playlist.markers.sort_by_key(|m| m.tick);
+        for m in &self.playlist.markers {
+            max_id = max_id.max(m.id.0);
         }
         self.next_id = self.next_id.max(max_id.saturating_add(1));
         // A pattern id of 0 can only come from the repair above; give it a real id.

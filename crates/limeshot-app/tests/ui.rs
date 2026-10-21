@@ -320,7 +320,9 @@ fn picker_selects_the_pattern_to_place() {
     let melody = h.state().project().patterns[1].id;
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     // The picker column sits left of the track headers; the second row is the Melody pattern.
-    let p = egui::pos2(g.grid.left() - 118.0 - 150.0 + 40.0, g.grid.top() + 26.0 + 28.0 + 13.0);
+    // Rows are laid out from the panel top, which is the 32 px ruler above the grid.
+    let top = g.grid.top() - 32.0;
+    let p = egui::pos2(g.grid.left() - 118.0 - 150.0 + 40.0, top + 20.0 + 26.0 + 28.0 + 13.0);
     click(&mut h, p, PointerButton::Primary);
     assert_eq!(h.state().current_pattern(), melody);
 }
@@ -1637,4 +1639,103 @@ fn delete_select_zoom_and_draw_left_edge() {
     click(&mut h, g2.grid.center(), PointerButton::Secondary);
     assert!(h.state().ui.piano.zoom_x < zoom * 0.6);
     assert_eq!(pattern_notes(&h, pat, lead).len(), 3, "zooming does not delete");
+}
+
+#[test]
+fn playlist_time_selection_loops_song_playback() {
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let y = g.grid.top() - 24.0; // the ruler's bar-number half
+    // Cmd+drag from bar 2 to bar 4: a time selection snapped to the grid.
+    drag_with(
+        &mut h,
+        egui::pos2(g.pos(bar, 0).x + 1.0, y),
+        egui::pos2(g.pos(3 * bar, 0).x + 1.0, y),
+        Modifiers::COMMAND,
+    );
+    assert_eq!(h.state().ui.playlist.time_sel, Some((bar, 3 * bar)));
+    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Song);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == bar);
+    // Playing never leaves the selection (the silent clock runs in real time; 10 ms blocks).
+    h.state_mut().toggle_play();
+    let start = std::time::Instant::now();
+    let mut seen_wrap = false;
+    let mut last = 0;
+    while start.elapsed().as_secs_f32() < 4.5 {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        h.step();
+        let pos = h.state().player.status().position();
+        assert!((bar..3 * bar).contains(&pos), "{pos} left the selection");
+        seen_wrap |= pos < last;
+        last = pos;
+    }
+    assert!(seen_wrap, "playback looped back to the selection's start");
+    h.state_mut().stop();
+    // A Cmd+click on the ruler clears it.
+    click_with(
+        &mut h,
+        egui::pos2(g.pos(5 * bar, 0).x, y),
+        PointerButton::Primary,
+        Modifiers::COMMAND,
+    );
+    assert_eq!(h.state().ui.playlist.time_sel, None);
+}
+
+#[test]
+fn playlist_markers_add_jump_move_and_delete() {
+    let mut h = playlist_harness();
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+    h.state_mut().locate(2 * bar);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == 2 * bar);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::T);
+    h.step();
+    h.step();
+    let m = h.state().project().playlist.markers.clone();
+    assert_eq!(m.len(), 1);
+    assert_eq!((m[0].tick, m[0].name.as_str()), (2 * bar, "Marker 1"));
+    // Alt+T adds one and asks for its name.
+    h.key_press_modifiers(Modifiers::ALT, Key::T);
+    h.step();
+    assert!(matches!(
+        h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::Rename {
+            target: limeshot_ui::dialogs::RenameTarget::Marker(_),
+            ..
+        })
+    ));
+    h.state_mut().dialog = None;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    // Clicking the flag jumps there; dragging it moves the marker (one undo step).
+    h.state_mut().locate(0);
+    wait_for(&mut h, "the locate", |a| a.player.status().position() == 0);
+    let id = m[0].id;
+    let flag = |h: &Harness<'static, LimeShotApp>| {
+        h.state()
+            .ui
+            .playlist
+            .marker_rects
+            .iter()
+            .find(|(i, _)| *i == id)
+            .map(|(_, r)| r.center())
+            .expect("marker flag drawn")
+    };
+    let p = flag(&h);
+    click(&mut h, p, PointerButton::Primary);
+    wait_for(&mut h, "the jump", |a| a.player.status().position() == 2 * bar);
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let history = h.state().doc.history().len();
+    let p = flag(&h);
+    drag(&mut h, p, egui::pos2(g.pos(4 * bar, 0).x + 2.0, p.y));
+    h.step();
+    assert_eq!(h.state().project().playlist.markers[0].tick, 4 * bar);
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    // Right-click › Delete.
+    let p = flag(&h);
+    click(&mut h, p, PointerButton::Secondary);
+    h.get_by_label("Delete").click();
+    h.step();
+    assert!(h.state().project().playlist.markers.is_empty());
 }

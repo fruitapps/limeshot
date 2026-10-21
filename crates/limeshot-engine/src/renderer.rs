@@ -71,6 +71,8 @@ pub struct Renderer {
     mode: PlayMode,
     /// Song mode loops at the end of the arrangement; otherwise playback stops there.
     song_loop: bool,
+    /// Song mode: a time selection that playback loops (FL Studio's Playlist time selection).
+    loop_range: Option<(Tick, Tick)>,
     metronome: bool,
     /// Engine sample counter (advances whether or not the transport plays).
     now: u64,
@@ -109,6 +111,7 @@ impl Renderer {
             playing: false,
             mode: PlayMode::Pattern,
             song_loop: true,
+            loop_range: None,
             metronome: false,
             now: 0,
             timeline: Timeline::new(tempo, sample_rate),
@@ -182,6 +185,15 @@ impl Renderer {
         self.song_loop = on;
     }
 
+    /// Loop `start..end` in Song mode (`None` or an empty range: the whole song).
+    pub fn set_loop_range(&mut self, range: Option<(Tick, Tick)>) {
+        self.loop_range = range.filter(|(a, b)| a < b);
+    }
+
+    fn active_loop(&self) -> Option<(Tick, Tick)> {
+        self.loop_range.filter(|_| self.mode == PlayMode::Song)
+    }
+
     pub fn set_metronome(&mut self, on: bool) {
         self.metronome = on;
     }
@@ -200,6 +212,9 @@ impl Renderer {
 
     /// The loop/end point of the current program; an empty song still runs one bar.
     fn program_length(&self) -> Tick {
+        if let Some((_, end)) = self.active_loop() {
+            return end;
+        }
         let len = self.program().length;
         if len == 0 {
             self.snapshot.time_signature.ticks_per_bar()
@@ -237,7 +252,11 @@ impl Renderer {
     }
 
     pub fn locate(&mut self, tick: Tick) {
-        let tick = if tick >= self.program_length() { 0 } else { tick };
+        let tick = if tick >= self.program_length() {
+            self.active_loop().map_or(0, |r| r.0)
+        } else {
+            tick
+        };
         self.timeline = Timeline {
             origin_tick: tick,
             origin_sample: self.now,
@@ -510,7 +529,7 @@ impl Renderer {
         if self.now < pass_end {
             return;
         }
-        if self.mode == PlayMode::Song && !self.song_loop {
+        if self.mode == PlayMode::Song && !self.song_loop && self.loop_range.is_none() {
             self.playing = false;
             self.finished = true;
             self.release_sequenced();
@@ -531,12 +550,15 @@ impl Renderer {
         {
             v.release();
         }
+        let restart = self.active_loop().map_or(0, |r| r.0);
         self.timeline = Timeline {
-            origin_tick: 0,
+            origin_tick: restart,
             origin_sample: pass_end,
             tempo: self.snapshot.tempo,
             sample_rate: self.sample_rate,
         };
+        // A loop range can start inside a clip that began earlier.
+        self.chase = restart > 0;
     }
 
     fn start(&mut self, action: Action) {

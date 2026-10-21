@@ -20,7 +20,8 @@ use limeshot_core::*;
 use limeshot_engine::PlayMode;
 
 const HEADER_W: f32 = 118.0;
-const RULER_H: f32 = 20.0;
+/// Bar numbers in the top half, time markers in the bottom half.
+const RULER_H: f32 = 32.0;
 const EDGE: f32 = 7.0;
 
 #[derive(Debug, Clone)]
@@ -65,6 +66,15 @@ pub struct State {
     pub track_h: f32,
     pub scroll: Vec2,
     pub selection: Vec<ClipId>,
+    /// The time selection made with Ctrl/Cmd+drag on the ruler; Song mode loops it.
+    pub time_sel: Option<(Tick, Tick)>,
+    /// Ruler gestures: the time selection's anchor, or the marker being dragged (and whether it
+    /// moved).
+    sel_anchor: Option<Tick>,
+    marker_drag: Option<(MarkerId, bool)>,
+    menu_marker: Option<MarkerId>,
+    /// Screen rectangles of the markers' flags in the last frame.
+    pub marker_rects: Vec<(MarkerId, Rect)>,
     drag: Option<Drag>,
     menu: Option<(ClipId, Pos2)>,
     /// Waveform overviews of audio clip samples, by stored sample path.
@@ -80,6 +90,11 @@ impl Default for State {
             track_h: 44.0,
             scroll: Vec2::ZERO,
             selection: Vec::new(),
+            time_sel: None,
+            sel_anchor: None,
+            marker_drag: None,
+            menu_marker: None,
+            marker_rects: Vec::new(),
             drag: None,
             menu: None,
             peaks: Default::default(),
@@ -536,6 +551,16 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             egui::StrokeKind::Inside,
         );
     }
+    // The time selection, shaded over the arrangement.
+    if let Some((a, b)) = app.ui.playlist.time_sel {
+        let r = Rect::from_min_max(
+            pos2(view.x(a).max(grid.left()), grid.top()),
+            pos2(view.x(b).min(grid.right()), grid.bottom()),
+        );
+        if r.width() > 0.0 {
+            painter.rect_filled(r, 0.0, t.selection.gamma_multiply(0.5));
+        }
+    }
     // Playhead (Song mode).
     if app.ui.mode == PlayMode::Song {
         let x = view.x(app.player.status().position());
@@ -833,16 +858,148 @@ fn automation_hit(app: &LimeShotApp, view: &View, clips: &[Clip], p: Pos2) -> Op
 }
 
 fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: TimeSignature) {
-    draw_ruler(&ui.painter_at(ruler), view, ruler, sig);
-    let resp = ui.interact(ruler, ui.id().with("pl_ruler"), Sense::click_and_drag());
-    if (resp.clicked() || resp.dragged())
-        && let Some(p) = resp.interact_pointer_pos()
-    {
-        let tick = Snap::Beat.floor(view.tick_at(p.x).max(0) as u64, sig);
-        app.set_mode(PlayMode::Song);
-        app.locate(tick);
+    let t = Theme::current();
+    let painter = ui.painter_at(ruler);
+    draw_ruler(&painter, view, ruler, sig);
+    if let Some((a, b)) = app.ui.playlist.time_sel {
+        let r = Rect::from_min_max(
+            pos2(view.x(a).max(ruler.left()), ruler.top()),
+            pos2(view.x(b).min(ruler.right()), ruler.bottom()),
+        );
+        if r.width() > 0.0 {
+            painter.rect_filled(r, 0.0, mix(t.surface, t.danger, 0.45).gamma_multiply(0.8));
+        }
     }
-    resp.on_hover_text("Click or drag to set the song position (switches to Song mode)");
+    // Time markers: flags in the ruler's lower half.
+    app.ui.playlist.marker_rects.clear();
+    let markers = app.project().playlist.markers.clone();
+    let flag_h = ruler.height() / 2.0;
+    for m in &markers {
+        let x = view.x(m.tick);
+        if x < ruler.left() - 200.0 || x > ruler.right() {
+            continue;
+        }
+        let galley = painter.layout_no_wrap(m.name.clone(), crate::theme::prop(10.5), t.text);
+        let r = Rect::from_min_size(pos2(x, ruler.bottom() - flag_h), vec2(galley.size().x + 8.0, flag_h));
+        painter.rect_filled(
+            r,
+            CornerRadius {
+                nw: 0,
+                ne: 4,
+                sw: 0,
+                se: 0,
+            },
+            mix(t.raised, t.accent, 0.3),
+        );
+        painter.line_segment(
+            [pos2(x, ruler.top()), pos2(x, ruler.bottom())],
+            Stroke::new(1.0, t.accent),
+        );
+        painter.galley(pos2(x + 4.0, r.center().y - galley.size().y / 2.0), galley, t.text);
+        app.ui.playlist.marker_rects.push((m.id, r));
+    }
+
+    let resp = ui.interact(ruler, ui.id().with("pl_ruler"), Sense::click_and_drag());
+    let mods = ui.input(|i| i.modifiers);
+    let snap = if mods.alt { Snap::None } else { app.ui.snap };
+    let snapped = |p: Pos2| snap.round(view.tick_at(p.x).max(0) as u64, sig);
+    let marker_at = |app: &LimeShotApp, p: Pos2| {
+        app.ui
+            .playlist
+            .marker_rects
+            .iter()
+            .rev()
+            .find(|(_, r)| r.contains(p))
+            .map(|(id, _)| *id)
+    };
+    let pressed =
+        resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary));
+    if pressed && let Some(p) = resp.interact_pointer_pos() {
+        if let Some(id) = marker_at(app, p) {
+            app.doc.begin_gesture();
+            app.ui.playlist.marker_drag = Some((id, false));
+        } else if mods.command {
+            // Ctrl/Cmd+drag: a time selection (observed in FL Studio 2026.1.1).
+            let a = snapped(p);
+            app.ui.playlist.sel_anchor = Some(a);
+            app.ui.playlist.time_sel = None;
+        }
+    }
+    let gesture = app.ui.playlist.marker_drag.is_some() || app.ui.playlist.sel_anchor.is_some();
+    if let Some(p) = resp.interact_pointer_pos() {
+        if let Some((id, moved)) = app.ui.playlist.marker_drag {
+            let tick = snapped(p);
+            let at = markers.iter().find(|m| m.id == id).map(|m| m.tick);
+            if resp.dragged() && at != Some(tick) && (moved || resp.drag_delta().x.abs() > 0.0) {
+                app.exec(Command::MoveMarker { marker: id, tick });
+                app.ui.playlist.marker_drag = Some((id, true));
+            }
+        } else if let Some(a) = app.ui.playlist.sel_anchor {
+            let b = snapped(p);
+            app.ui.playlist.time_sel = Some((a.min(b), a.max(b)));
+        } else if resp.clicked() || resp.dragged() {
+            let tick = Snap::Beat.floor(view.tick_at(p.x).max(0) as u64, sig);
+            app.set_mode(PlayMode::Song);
+            app.locate(tick);
+        }
+    }
+    if gesture && !ui.input(|i| i.pointer.primary_down()) {
+        if let Some((id, moved)) = app.ui.playlist.marker_drag.take() {
+            app.doc.end_gesture();
+            if !moved && let Some(m) = app.project().playlist.markers.iter().find(|m| m.id == id) {
+                // Clicking a marker jumps to it.
+                let tick = m.tick;
+                app.set_mode(PlayMode::Song);
+                app.locate(tick);
+            }
+        }
+        if app.ui.playlist.sel_anchor.take().is_some() {
+            match app.ui.playlist.time_sel {
+                Some((a, b)) if b > a => {
+                    app.set_mode(PlayMode::Song);
+                    app.locate(a);
+                }
+                // A Cmd+click without a drag clears the selection.
+                _ => app.ui.playlist.time_sel = None,
+            }
+        }
+    }
+    if resp.secondary_clicked() {
+        app.ui.playlist.menu_marker = resp.interact_pointer_pos().and_then(|p| marker_at(app, p));
+    }
+    let click_tick = resp.interact_pointer_pos().map(snapped);
+    resp.context_menu(|ui| match app.ui.playlist.menu_marker {
+        Some(id) => {
+            if ui.button("Rename…").clicked() {
+                app.dialog = Some(crate::dialogs::Dialog::rename_marker(app, id));
+                ui.close();
+            }
+            if ui.button("Delete").clicked() {
+                app.exec(Command::RemoveMarker(id));
+                ui.close();
+            }
+        }
+        None => {
+            if ui.button("Add marker here").clicked() {
+                let tick = click_tick.unwrap_or(0);
+                add_marker(app, tick);
+                ui.close();
+            }
+            if app.ui.playlist.time_sel.is_some() && ui.button("Clear time selection").clicked() {
+                app.ui.playlist.time_sel = None;
+                ui.close();
+            }
+        }
+    });
+    if resp.hovered() {
+        app.hint("Ruler: click/drag sets the song position · Cmd+drag: time selection (loops in Song mode) · markers: click to jump, drag to move, right-click for a menu");
+    }
+}
+
+/// Add a time marker named after the number of markers ("Marker 3"); returns its id.
+pub fn add_marker(app: &mut LimeShotApp, tick: Tick) -> Option<MarkerId> {
+    let name = format!("Marker {}", app.project().playlist.markers.len() + 1);
+    app.exec(Command::AddMarker { tick, name }).map(MarkerId)
 }
 
 fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, tracks: u32) {
@@ -1467,6 +1624,21 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     }
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.playlist.selection.clear();
+        app.ui.playlist.time_sel = None;
+    }
+    // Time markers at the song position (FL Studio: Add auto Cmd+T, Add one… Opt+T asks a name).
+    let at = if app.ui.mode == PlayMode::Song {
+        app.player.status().position()
+    } else {
+        app.ui.playlist.time_sel.map_or(0, |s| s.0)
+    };
+    if key(ctx, Modifiers::COMMAND, Key::T) {
+        add_marker(app, at);
+    }
+    if key(ctx, Modifiers::ALT, Key::T)
+        && let Some(id) = add_marker(app, at)
+    {
+        app.dialog = Some(crate::dialogs::Dialog::rename_marker(app, id));
     }
     let cut = key(ctx, Modifiers::COMMAND, Key::X);
     if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {

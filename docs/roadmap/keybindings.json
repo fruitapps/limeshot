@@ -761,18 +761,18 @@
       "limeshot_keys": "Shift+← / Shift+→ / Shift+↑ / Shift+↓",
       "status": "IMPLEMENTED",
       "feature": "PL-002",
-      "notes": "FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. LimeShot used plain arrows before session 7; plain arrows now scroll."
+      "notes": "FL 2026.1.1 Playlist Edit menu (fl-playlist-edit-menu.png). Up/Down move a track. Plain Up/Down scroll a track (observed live)."
     },
     {
       "id": "KB-070",
       "context": "Playlist",
-      "action": "Add time marker",
-      "fl_keys": "Alt+T",
-      "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "action": "Add a time marker (asks its name)",
+      "fl_keys": "Opt+T",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+T",
+      "status": "IMPLEMENTED",
       "feature": "PL-016",
-      "notes": ""
+      "notes": "FL 2026.1.1 Time markers menu: Add one…"
     },
     {
       "id": "KB-071",
@@ -982,6 +982,39 @@
       "status": "IMPLEMENTED",
       "feature": "PR-023",
       "notes": "Cuts at every snap step. FL's Chop… dialog (Opt+U) is not implemented."
+    },
+    {
+      "id": "KB-090",
+      "context": "Playlist",
+      "action": "Add a time marker at the song position",
+      "fl_keys": "Cmd+T",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+T",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "FL 2026.1.1 Time markers menu: Add auto."
+    },
+    {
+      "id": "KB-091",
+      "context": "Playlist",
+      "action": "Time selection",
+      "fl_keys": "Ctrl+drag on the ruler",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+drag on the ruler",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "A mouse binding. Song playback loops the selection."
+    },
+    {
+      "id": "KB-092",
+      "context": "Playlist",
+      "action": "Place loop markers around the selection",
+      "fl_keys": "Shift+T",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": "FL 2026.1.1 Time markers menu."
     }
   ]
 }
