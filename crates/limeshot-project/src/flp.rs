@@ -281,15 +281,18 @@ fn text(d: &[u8]) -> String {
     }
 }
 
-/// Playlist item records grew over FL versions; find the size whose every record carries the
-/// pattern base marker in a pattern item or a small channel index otherwise.
+/// Playlist item records grew over FL versions: 32 bytes (FL 12 and earlier, some FL 20 files),
+/// 60 (FL 20–24), 80 (FL 24–25) and 88 (FL 26), all OBSERVED. Find the size whose every record
+/// carries the pattern base marker (or zero) at offset 4 and a length, and whose positions never
+/// decrease (FL stores items sorted by position). This picks one size for every file FL Studio
+/// ships, including those whose length is also a multiple of another size (240 = 3 × 80).
 fn item_size(d: &[u8]) -> Option<usize> {
-    [240usize, 120, 60, 32].into_iter().find(|&s| {
+    [32usize, 60, 80, 88].into_iter().find(|&s| {
         !d.is_empty()
             && d.len().is_multiple_of(s)
             && d.chunks_exact(s)
-                .all(|r| le16(r, 4).is_some_and(|b| b == PATTERN_BASE || b == 0))
-            && d.chunks_exact(s).any(|r| le16(r, 4) == Some(PATTERN_BASE))
+                .all(|r| le16(r, 4).is_some_and(|b| b == PATTERN_BASE || b == 0) && le32(r, 8) > Some(0))
+            && d.chunks_exact(s).map(|r| le32(r, 0).unwrap_or(0)).is_sorted()
     })
 }
 
@@ -399,8 +402,9 @@ pub fn parse(data: &[u8]) -> Result<FlpFile, FlpError> {
                         track: (TRACKS - 1).saturating_sub(le16(r, 12).unwrap_or(TRACKS - 1)),
                         source,
                         offset,
-                        // INFERRED: bit 12 of the item flags marks a muted clip.
-                        muted: flags & 0x1000 != 0,
+                        // OBSERVED (FL 26, a clip muted with the mute tool): bit 13 of the
+                        // word at offset 18 marks a muted clip.
+                        muted: flags & 0x2000 != 0,
                     });
                 }
             }
@@ -871,7 +875,7 @@ pub fn fixtures() -> Vec<(&'static str, Vec<u8>)> {
         steps.push((s * 24, 0, 2, 60, 64));
     }
     w.pattern(1, Some("Beat"), &steps)
-        .items(240, &[(0, 384, 0, Ok(1), None), (384, 384, 0, Ok(1), None)]);
+        .items(80, &[(0, 384, 0, Ok(1), None), (384, 384, 0, Ok(1), None)]);
     out.push(("steps.flp", w.finish(96)));
 
     // A melody in 3/4 with lengths, velocities, two patterns and a clip that starts inside its
@@ -898,13 +902,14 @@ pub fn fixtures() -> Vec<(&'static str, Vec<u8>)> {
         );
     out.push(("melody.flp", w.finish(96)));
 
-    // An audio clip channel with a clip, and an automation channel whose clip LimeShot skips.
+    // An audio clip channel with a clip, and an automation channel whose clip LimeShot skips, in
+    // FL 26's 88-byte item records.
     let mut w = Writer::new();
     version(&mut w);
     w.tempo(100.0)
         .channel(4, "Vocal", Some("vocal.wav"), 10_000, 6400, 5)
         .channel(5, "Volume Duck", None, 10_000, 6400, 0)
-        .items(240, &[(192, 768, 6, Err(0), None), (0, 1536, 7, Err(1), None)]);
+        .items(88, &[(0, 1536, 7, Err(1), None), (192, 768, 6, Err(0), None)]);
     out.push(("audio_and_automation.flp", w.finish(96)));
 
     // Another time base (192 PPQ) and the 32-byte item records of older versions.
@@ -958,7 +963,7 @@ mod tests {
         w.tempo(128.0)
             .channel(0, "Kick", Some("k.wav"), 10_000, 6400, 1)
             .pattern(1, Some("A"), &[(0, 0, 0, 60, 100)])
-            .items(240, &[(0, 384, 0, Ok(1), None)]);
+            .items(80, &[(0, 384, 0, Ok(1), None)]);
         let good = w.finish(96);
         for n in 0..good.len() {
             let _ = parse(&good[..n]).map(|f| to_project(&f, None));

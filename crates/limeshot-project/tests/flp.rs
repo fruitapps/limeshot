@@ -148,3 +148,88 @@ fn fl26_saved_steps_project() {
             .all(|n| (n.velocity - 100.0 / 128.0).abs() < 1e-6)
     );
 }
+
+/// Piano-roll notes on a 3x Osc channel and a second, named pattern (FL Studio 26.1.1).
+#[test]
+fn fl26_saved_notes_project() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/flp/fl26");
+    let (p, r) = flp::import_file(&dir.join("lime-notes.flp"), None).expect("import");
+    assert_eq!(p.channels[5].name, "3x Osc");
+    assert!(matches!(p.channels[5].instrument, Instrument::Synth(_)));
+    assert!(r.replaced_generators.contains(&"3x Osc".to_string()));
+    let osc = p.channels[5].id;
+    let notes = |i: usize| -> Vec<(u8, Tick, Tick, u8)> {
+        p.patterns[i]
+            .notes
+            .iter()
+            .inspect(|n| assert_eq!(n.channel, osc))
+            .map(|n| (n.key, n.start, n.length, (n.velocity * 128.0).round() as u8))
+            .collect()
+    };
+    // FL shows key 60 as C5 and velocity as a percentage of 128 (34 % = 44).
+    assert_eq!(
+        notes(0),
+        [
+            (60, 0, 960, 44),
+            (64, 960, 480, 100),
+            (67, 1920, 1920, 125),
+            (48, 3840, 3840, 100)
+        ]
+    );
+    assert_eq!(
+        p.patterns[1].name, "Bassline",
+        "the name comes after the channel list, under a second event 65"
+    );
+    assert_eq!(notes(1), [(48, 0, 3840, 125), (46, 960, 3840, 125)]);
+}
+
+/// Playlist clips, an audio clip, an automation clip, a muted clip, 128 BPM and 3/4
+/// (FL Studio 26.1.1, 88-byte playlist item records).
+#[test]
+fn fl26_saved_arrangement_project() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/flp/fl26");
+    let (p, r) = flp::import_file(&dir.join("lime-arrange.flp"), Some(Path::new("/FL"))).expect("import");
+    assert_eq!(
+        (p.tempo, p.time_signature),
+        (Tempo::from_bpm(128.0), TimeSignature::new(3, 4))
+    );
+    assert_eq!(
+        (r.clips, r.skipped_automation_channels, r.skipped_items),
+        (5, 1, 1),
+        "the automation clip is reported"
+    );
+    let breaker = p
+        .channels
+        .iter()
+        .find(|c| c.name == "DL Breaker")
+        .expect("audio channel");
+    match &breaker.instrument {
+        Instrument::Sampler(s) => {
+            assert_eq!(
+                s.sample.as_ref().map(|s| s.path.as_str()),
+                Some("/FL/Data/Patches/Packs/Loops/DL Breaker.wav")
+            );
+            assert!(!s.one_shot, "audio-clip channels play for the clip's length");
+        }
+        o => panic!("{o:?}"),
+    }
+    let (p1, bass) = (p.patterns[0].id, p.patterns[1].id);
+    let clips: Vec<(ClipSource, u32, Tick, Tick, bool)> = p
+        .playlist
+        .clips
+        .iter()
+        .map(|c| (c.source, c.track, c.start, c.length, c.muted))
+        .collect();
+    // Positions were placed at 4/4 bars 1, 3, 5 and 9 (3840 LimeShot ticks per 4/4 bar); FL
+    // stretched the pattern clips to whole 3/4 bars when the signature changed.
+    assert_eq!(
+        clips,
+        [
+            (ClipSource::Pattern(p1), 0, 0, 8640, false),
+            (ClipSource::Audio(breaker.id), 4, 7680, 7680, false),
+            (ClipSource::Pattern(bass), 1, 7680, 5760, false),
+            (ClipSource::Pattern(p1), 0, 15360, 8640, false),
+            (ClipSource::Pattern(bass), 2, 30720, 5760, true),
+        ]
+    );
+}
