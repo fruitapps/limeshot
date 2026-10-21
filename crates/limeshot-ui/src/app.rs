@@ -455,7 +455,10 @@ impl LimeShotApp {
             Pending::New => self.new_project(),
             Pending::Open(Some(p)) => self.open_path(&p),
             Pending::Open(None) => {
-                let dialog = rfd::FileDialog::new().add_filter("LimeShot project", &[limeshot_project::EXTENSION]);
+                let dialog = rfd::FileDialog::new()
+                    .add_filter("LimeShot or FL Studio project", &[limeshot_project::EXTENSION, "flp"])
+                    .add_filter("LimeShot project", &[limeshot_project::EXTENSION])
+                    .add_filter("FL Studio project", &["flp"]);
                 if let Some(p) = dialog.pick_file() {
                     self.open_path(&p);
                 }
@@ -476,7 +479,12 @@ impl LimeShotApp {
         self.compiled = None;
     }
 
+    /// Open a `.lime` project, or import an FL Studio `.flp` as a new unsaved project.
     pub fn open_path(&mut self, path: &Path) {
+        if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("flp")) {
+            self.import_flp(path);
+            return;
+        }
         match limeshot_project::load(path) {
             Ok(project) => {
                 self.send(Msg::Stop);
@@ -571,6 +579,32 @@ impl LimeShotApp {
             }
             Err(e) => {
                 self.toast_error(format!("Could not recover the autosave: {e}"));
+                false
+            }
+        }
+    }
+
+    /// Replace the project with an imported FL Studio project. It has no `.lime` path yet, so
+    /// Save asks where to write it (and it joins the recent list only once saved).
+    pub fn import_flp(&mut self, path: &Path) -> bool {
+        let flp = limeshot_project::flp::import_file(path, limeshot_project::flp::default_factory_dir().as_deref());
+        match flp {
+            Ok((project, report)) => {
+                self.send(Msg::Stop);
+                let project = absolutize_samples(&project, path.parent());
+                self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+                self.doc.replace(project);
+                self.doc.mark_unsaved();
+                self.path = None;
+                self.ui = self.fresh_ui_state();
+                self.ui.mode = PlayMode::Pattern;
+                self.send(Msg::Mode(PlayMode::Pattern));
+                self.compiled = None;
+                self.toast(format!("Imported {}: {}", path.display(), report.summary()));
+                true
+            }
+            Err(e) => {
+                self.toast_error(e.to_string());
                 false
             }
         }

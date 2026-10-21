@@ -629,3 +629,38 @@ fn autosave_survives_a_crash_and_is_removed_once_saved() {
     h.step();
     assert!(h.state().autosave.find().is_none());
 }
+
+#[test]
+fn opening_an_flp_imports_it_as_an_unsaved_project() {
+    let mut h = harness(true);
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../limeshot-project/tests/fixtures/flp/fl26/lime-steps.flp");
+    h.state_mut().perform(limeshot_ui::app::Pending::Open(Some(path)));
+    h.step();
+    let app = h.state();
+    assert_eq!(app.path, None, "Save asks where to write the .lime");
+    assert!(app.doc.is_modified());
+    assert_eq!(app.project().title, "lime-steps");
+    assert!(app.window_title().starts_with("• lime-steps"), "{}", app.window_title());
+    let names: Vec<&str> = app.project().channels.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["808 Kick", "808 Clap", "808 HiHat", "808 Snare", "808 Astronomic"]
+    );
+    let pat = app.current_pattern();
+    let kick = app.project().channels[0].id;
+    let steps: Vec<Tick> = app
+        .project()
+        .pattern(pat)
+        .expect("pattern")
+        .notes_for(kick)
+        .map(|n| n.start / STEP_TICKS)
+        .collect();
+    assert_eq!(steps, [0, 4, 8, 12]);
+    assert!(
+        app.toasts.iter().any(|t| t.text.contains("5 channels")),
+        "the import report is shown"
+    );
+    // The rack shows the imported steps.
+    assert!(app.ui.rack.step_pos(kick, 0).is_some());
+}

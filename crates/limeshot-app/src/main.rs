@@ -1,9 +1,10 @@
 //! The LimeShot desktop application.
 //!
-//! `limeshot [project.lime] [--demo] [--show=WINDOW]… [--detach=WINDOW]…`
+//! `limeshot [project.lime | song.flp] [--demo] [--show=WINDOW]… [--detach=WINDOW]…`
 //!
 //! WINDOW is `playlist`, `rack`, `piano`, `mixer` or `settings` (window layout at start-up;
-//! useful for demos and for checking detached windows).
+//! useful for demos and for checking detached windows). An FL Studio `.flp` is imported as a new
+//! unsaved project.
 
 use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
