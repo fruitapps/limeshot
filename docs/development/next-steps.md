@@ -5,13 +5,10 @@
 1. **Run CI on all platforms.** `.github/workflows/ci.yml` is on `fruitapps/limeshot`, but every run stays "pending"
    with no jobs (session 7): an org admin must check the org's Actions and billing settings. Then push, fix what
    Windows and Linux report, and update PF-002…PF-005 in `features.json`. `gh` is installed and logged in.
-2. **Fix the issues found in the owner's hands-on test (2026-10-21).** Window restore after maximise, Playback tool
-   scrubbing, Piano Roll note resizing, inline Mixer names, route/sidechain options in the track panel's Output, the
-   Mixer scroll bar, send dial range, double-click reset everywhere, the insert fader default, pattern colours,
-   minimum window sizes (Channel Rack, Mixer), snap-dependent grid lines, vertical zoom in the Playlist and Piano Roll,
-   tool cursors, and a once-per-second CPU readout. (The session 7 expansion plan is done: PL-017, MIX-009/010,
-   SEQ-011/012/014.)
-3. **VST support** (required by the project owner, 2026-10-21; postponed until item 2 is done). Host VST3 plugins as instruments (Channel Rack) and
+2. **Done (session 9):** the 16 issues from the owner's hands-on test (2026-10-21) are fixed and tested
+   (`progress.md`, Session 9). Left open: a live FL check of Alt+wheel vertical zoom and a real-input pass over the
+   new gestures in the live app.
+3. **VST support** (required by the project owner, 2026-10-21; next, now that item 2 is done). Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in
