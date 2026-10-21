@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **92** — IMPLEMENTED 61, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 24
+Tracked: **92** — IMPLEMENTED 63, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 22
 
 ## Global
 
@@ -63,7 +63,7 @@ Tracked: **92** — IMPLEMENTED 61, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 24
 | KB-037 | Select previous / next channel | `Up / Down` | OBSERVED | `↑ / ↓` | IMPLEMENTED | SEQ-007 | Observed in FL 2026.1.1: selects the channel after the last (before the first) selected one, on its own. |
 | KB-038 | Move selected channels up / down | `Alt+Up / Alt+Down` | VERIFIED | `Alt+↑ / Alt+↓` | IMPLEMENTED | SEQ-007 | Observed in FL 2026.1.1: each selected channel moves one row; the mixer track stays with the channel. |
 | KB-039 | Copy / cut / paste steps | `Ctrl+C / Ctrl+X / Ctrl+V` | INFERRED | `Cmd+C / Cmd+X / Cmd+V` | IMPLEMENTED | SEQ-015 |  |
-| KB-040 | Shift steps left / right | `Ctrl+Shift+Left / Right` | INFERRED | — | NOT_STARTED | SEQ-014 |  |
+| KB-040 | Rotate steps left / right | `Shift+Cmd+Left / Shift+Cmd+Right` | OBSERVED | `Shift+Cmd+← / Shift+Cmd+→` | IMPLEMENTED | SEQ-014 | FL 2026.1.1 channel menu labels; tried live: one step per press, wrapping round the pattern (session 8). |
 | KB-041 | Rename current pattern | `F2` | OBSERVED | `F2` | IMPLEMENTED | SEQ-018 | With the Channel Rack focused FL 2026.1.1 opens the pattern name dialog, not a channel rename (channels are renamed from the channel button menu). |
 | KB-042 | Solo channel | `Ctrl+click mute` | VERIFIED | `Cmd+click / right-click mute` | IMPLEMENTED | SEQ-003 | A mouse binding, listed for completeness. |
 | KB-077 | Delete selected channels (asks first) | `Alt+Del` | OBSERVED | `Alt+Delete` | IMPLEMENTED | SEQ-007 | Forward delete; Alt+Backspace does nothing in FL 2026.1.1. |
@@ -96,7 +96,7 @@ Tracked: **92** — IMPLEMENTED 61, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 24
 | KB-063 | Edit without snapping | `Alt+drag` | VERIFIED | `Alt+click` | IMPLEMENTED | PR-003 | A mouse modifier. |
 | KB-079 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PR-002 | From FL 2026.1.1's Select menu. |
 | KB-080 | Scroll the view | `Up / Down / Left / Right` | OBSERVED | `↑ / ↓ / ← / →` | IMPLEMENTED | PR-005 | Up/Down move about three rows per press in FL 2026.1.1. |
-| KB-081 | Rotate selection left / right | `Shift+Cmd+Left / Shift+Cmd+Right` | OBSERVED | — | NOT_STARTED | PR-009 | FL 2026.1.1 Edit menu (macOS labels). |
+| KB-081 | Rotate selection left / right | `Shift+Cmd+Left / Shift+Cmd+Right` | OBSERVED | `Shift+Cmd+← / Shift+Cmd+→` | IMPLEMENTED | PR-009 | FL 2026.1.1 Edit menu (macOS labels). LimeShot rotates by the snap; all of the channel's notes when none is selected. |
 | KB-082 | Discard lengths | `Shift+D` | OBSERVED | — | NOT_STARTED | PR-015 | FL 2026.1.1 Edit menu. |
 | KB-083 | Mute / unmute selected notes | `Opt+M / Shift+Opt+M` | OBSERVED | `Alt+M / Shift+Alt+M` | IMPLEMENTED | PR-012 | Selection, or all of the channel's notes when none is selected. |
 | KB-088 | Glue notes | `Cmd+G` | OBSERVED | `Cmd+G` | IMPLEMENTED | PR-023 | FL 2026.1.1 Tools menu. |

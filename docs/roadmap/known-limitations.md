@@ -36,6 +36,7 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
   tool (PR-027), no scale highlighting and no chord or arp tools; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
+* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog.
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
   Playlist-only and not saved with the project. No performance mode.

@@ -433,6 +433,27 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         route_to_free(app, &[ch.id]);
         ui.close();
     }
+    // FL Studio's step tools (the second column of its channel menu).
+    for every in [2, 4, 8] {
+        if ui.button(format!("Fill each {every} steps")).clicked() {
+            fill_steps(app, &[ch.id], every);
+            ui.close();
+        }
+    }
+    if ui
+        .add(egui::Button::new("Rotate left").shortcut_text("Shift+Cmd+←"))
+        .clicked()
+    {
+        rotate_steps(app, &[ch.id], -1);
+        ui.close();
+    }
+    if ui
+        .add(egui::Button::new("Rotate right").shortcut_text("Shift+Cmd+→"))
+        .clicked()
+    {
+        rotate_steps(app, &[ch.id], 1);
+        ui.close();
+    }
     if ui.button("Clear notes in this pattern").clicked() {
         app.exec(Command::ClearChannelNotes {
             pattern: pid,
@@ -468,6 +489,44 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         request_delete(app, vec![ch.id]);
         ui.close();
     }
+}
+
+/// Rotate the notes of `channels` in the current pattern by `by` steps, wrapping round the
+/// pattern (one undo step).
+pub fn rotate_steps(app: &mut LimeShotApp, channels: &[ChannelId], by: i64) {
+    let pid = app.current_pattern();
+    let notes: Vec<NoteId> = app
+        .project()
+        .pattern(pid)
+        .map(|p| {
+            p.notes
+                .iter()
+                .filter(|n| channels.contains(&n.channel))
+                .map(|n| n.id)
+                .collect()
+        })
+        .unwrap_or_default();
+    if !notes.is_empty() {
+        app.exec(Command::RotateNotes {
+            pattern: pid,
+            notes,
+            by: by * STEP_TICKS as i64,
+        });
+    }
+}
+
+/// Fill each of `channels` with a step every `every` steps (FL Studio's Fill each 2/4/8 steps).
+pub fn fill_steps(app: &mut LimeShotApp, channels: &[ChannelId], every: u32) {
+    let pattern = app.current_pattern();
+    let cmds = channels
+        .iter()
+        .map(|&channel| Command::FillSteps {
+            pattern,
+            channel,
+            every,
+        })
+        .collect();
+    app.exec(Command::Batch(cmds));
 }
 
 /// Route each of `channels` to its own free mixer track (adding tracks when none is free), in one
@@ -650,6 +709,13 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::COMMAND, Key::L) {
         let sel = app.selected_channels();
         route_to_free(app, &sel);
+    }
+    // Rotate the selected channels' steps by one, wrapping (FL Studio: Shift+Cmd+Left/Right).
+    for (k, by) in [(Key::ArrowLeft, -1), (Key::ArrowRight, 1)] {
+        if key(ctx, Modifiers::COMMAND | Modifiers::SHIFT, k) {
+            let sel = app.selected_channels();
+            rotate_steps(app, &sel, by);
+        }
     }
     // Copy/cut/paste the selected channel's notes in the current pattern (steps included);
     // pasting replaces the target channel's notes, as in FL Studio.

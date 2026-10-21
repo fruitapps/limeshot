@@ -1111,26 +1111,37 @@
       "category": "Channel Rack",
       "name": "Fill / rotate / advanced fill",
       "description": "Step utilities.",
-      "fl_reference": "Fill each 2/4/8 steps; Shift+Ctrl+arrows rotate.",
-      "limeshot_behavior": "Channel menu fill and rotate commands.",
+      "fl_reference": "Channel button menu: Fill each 2/4/8 steps, Advanced fill…, Rotate left/right (Shift+Cmd+Left/Right).",
+      "limeshot_behavior": "The channel button's menu has Fill each 2/4/8 steps (replaces the channel's steps in the current pattern) and Rotate left/right; Shift+Cmd+Left/Right rotate the selected channels' steps by one step, wrapping round the pattern. The Piano Roll rotates the selection (or the channel) by the snap with the same keys.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core::command (FillSteps, RotateNotes)",
+        "limeshot-ui::channel_rack",
+        "limeshot-ui::piano_roll"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::fill_and_rotate_steps",
+        "ui.rs channel_menu_fills_and_shortcuts_rotate_steps",
+        "ui.rs piano_roll_rotates_notes_with_shift_cmd_arrows"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "docs/research/evidence/screenshots/fl-rack-channel-menu.png",
+          "docs/research/evidence/screenshots/fl-rack-fill-4.png",
+          "docs/research/evidence/screenshots/fl-rack-rotate-left.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 8). Advanced fill… (FL's dialog) is not implemented."
     },
     {
       "id": "SEQ-015",

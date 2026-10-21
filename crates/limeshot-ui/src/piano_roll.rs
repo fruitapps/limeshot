@@ -1500,6 +1500,16 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         sel
     };
     let grid = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS) as i64;
+    // Rotate by the snap, wrapping round the pattern (FL Studio's Edit menu: Shift+Cmd+Left/Right).
+    for (k, by) in [(Key::ArrowLeft, -grid), (Key::ArrowRight, grid)] {
+        if key(ctx, Modifiers::COMMAND | Modifiers::SHIFT, k) && !targets.is_empty() {
+            app.exec(Command::RotateNotes {
+                pattern: pid,
+                notes: targets.clone(),
+                by,
+            });
+        }
+    }
     for (mods, k, dt, dk) in [
         (Modifiers::SHIFT, Key::ArrowUp, 0, 1),
         (Modifiers::SHIFT, Key::ArrowDown, 0, -1),

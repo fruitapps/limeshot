@@ -2080,3 +2080,66 @@ fn mixer_sidechain_route_menu_and_compressor_input() {
     });
     h.state_mut().stop();
 }
+
+#[test]
+fn channel_menu_fills_and_shortcuts_rotate_steps() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let (kick, hat) = (h.state().project().channels[0].id, h.state().project().channels[2].id);
+    let steps = |h: &Harness<'static, LimeShotApp>, c: ChannelId| -> Vec<Tick> {
+        let p = h.state().project().pattern(pat).expect("pattern");
+        p.notes_for(c).map(|n| n.start / STEP_TICKS).collect()
+    };
+    // Right-click the kick's channel button: Fill each 4 steps replaces its steps.
+    let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Secondary);
+    h.get_by_label("Fill each 4 steps").click();
+    h.step();
+    assert_eq!(steps(&h, kick), vec![0, 4, 8, 12]);
+    assert_eq!(h.state().selected_channels(), vec![kick]);
+    // Shift+Cmd+→ rotates the selected channels by a step; ← wraps round the pattern.
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::ArrowRight);
+    h.step();
+    assert_eq!(steps(&h, kick), vec![1, 5, 9, 13]);
+    let hat_before = steps(&h, hat);
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::ArrowLeft);
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::ArrowLeft);
+    h.step();
+    assert_eq!(steps(&h, kick), vec![3, 7, 11, 15]);
+    assert_eq!(steps(&h, hat), hat_before, "only the selection rotates");
+    // The menu's Rotate right does the same; each is one undo step.
+    let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
+    click(&mut h, button, PointerButton::Secondary);
+    h.get_by_label_contains("Rotate right").click();
+    h.step();
+    assert_eq!(steps(&h, kick), vec![0, 4, 8, 12]);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(steps(&h, kick), vec![3, 7, 11, 15]);
+}
+
+#[test]
+fn piano_roll_rotates_notes_with_shift_cmd_arrows() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: [0, 3 * PPQ]
+            .into_iter()
+            .map(|start| NewNote {
+                channel: lead,
+                key: 72,
+                start,
+                length: STEP_TICKS,
+                velocity: 0.8,
+            })
+            .collect(),
+    });
+    h.step();
+    // Nothing selected: every note of the channel rotates left by the snap (a step), wrapping.
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::ArrowLeft);
+    h.step();
+    let starts: Vec<Tick> = notes_by_start(&h, pat, lead).iter().map(|n| n.1).collect();
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    assert_eq!(starts, vec![3 * PPQ - STEP_TICKS, bar - STEP_TICKS]);
+}

@@ -256,3 +256,8 @@ no jobs. Windows/Linux builds stay blocked on the org's GitHub Actions settings 
    compressor card shows a Sidechain picker and a reduction meter; the track panel lists incoming sidechains.
    Tested in the engine (the key ducks the synth by more than 10 dB, an unrouted key is ignored, the reduction is
    reported block by block) and the UI (route menu, picker, live meter during playback). `ui_shot --sidechain`.
+4. **Channel Rack fill and rotate (SEQ-014).** Observed live in FL 2026.1.1: Fill each 4 steps replaces the
+   channel's steps, Shift+Cmd+Left/Right rotate by one step and wrap (two new screenshots). New commands `FillSteps`
+   and `RotateNotes`; the channel button's menu has Fill each 2/4/8 steps and Rotate left/right, Shift+Cmd+Left/Right
+   rotate the selected channels in the Channel Rack and, by the snap, the Piano Roll's selection (KB-040, KB-081).
+   Tested in core and UI. Advanced fill… is not done.

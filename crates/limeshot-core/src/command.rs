@@ -175,6 +175,20 @@ pub enum Command {
         pattern: PatternId,
         channel: ChannelId,
     },
+    /// Replace the channel's notes with a step every `every` steps over the pattern's length
+    /// (FL Studio's Fill each 2/4/8 steps).
+    FillSteps {
+        pattern: PatternId,
+        channel: ChannelId,
+        every: u32,
+    },
+    /// Move the notes by `by` ticks, wrapping around the pattern's length (FL Studio's Rotate
+    /// left/right).
+    RotateNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        by: i64,
+    },
     /// Move note starts towards the nearest multiple of `grid` ticks by `strength` (0–1); with
     /// `lengths`, also round note lengths to the grid (minimum one grid unit).
     Quantize {
@@ -447,6 +461,8 @@ impl Command {
             SliceNotes { .. } => "Slice notes",
             GlueNotes { .. } => "Glue notes",
             ClearChannelNotes { .. } => "Clear channel",
+            FillSteps { .. } => "Fill steps",
+            RotateNotes { .. } => "Rotate",
             Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
             ImportPattern { .. } => "Import MIDI",
@@ -804,6 +820,46 @@ impl Command {
                 pattern: pid,
                 channel: cid,
             } => pattern(p, pid)?.notes.retain(|n| n.channel != cid),
+            FillSteps {
+                pattern: pid,
+                channel: cid,
+                every,
+            } => {
+                if every == 0 {
+                    return Err(CommandError::Invalid("fill needs a step interval".into()));
+                }
+                let root = p.channel(cid).ok_or(CommandError::NoChannel(cid))?.root_key;
+                let sig = p.time_signature;
+                let steps = (pattern(p, pid)?.length(sig) / STEP_TICKS).clamp(1, 512);
+                let ids: Vec<u32> = (0..steps.div_ceil(u64::from(every))).map(|_| p.alloc_id()).collect();
+                let pat = pattern(p, pid)?;
+                pat.notes.retain(|n| n.channel != cid);
+                for (k, id) in ids.into_iter().enumerate() {
+                    pat.notes.push(Note {
+                        id: NoteId(id),
+                        channel: cid,
+                        key: root,
+                        start: k as Tick * u64::from(every) * STEP_TICKS,
+                        length: STEP_TICKS,
+                        velocity: 0.78,
+                        muted: false,
+                    });
+                }
+                sort_notes(pat);
+            }
+            RotateNotes {
+                pattern: pid,
+                notes,
+                by,
+            } => {
+                let sig = p.time_signature;
+                let pat = pattern(p, pid)?;
+                let len = pat.length(sig) as i64;
+                for n in pat.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
+                    n.start = (n.start as i64 + by).rem_euclid(len.max(1)) as Tick;
+                }
+                sort_notes(pat);
+            }
             Quantize {
                 pattern: pid,
                 notes,

@@ -56,6 +56,10 @@ pub const EDITING: &[(&str, &str)] = &[
         "Shift+← / Shift+→",
         "Piano Roll / Playlist: nudge by the snap (Shift+↑/↓ in the Playlist: move clips a track)",
     ),
+    (
+        "Shift+Cmd+← / Shift+Cmd+→",
+        "Channel Rack: rotate the selected channels' steps · Piano Roll: rotate notes by the snap",
+    ),
     ("← / →", "Piano Roll / Playlist: scroll"),
     ("Shift+I", "Piano Roll / Playlist: invert the selection"),
     (

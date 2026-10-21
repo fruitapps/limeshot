@@ -838,6 +838,63 @@ mod tests {
     }
 
     #[test]
+    fn fill_and_rotate_steps() {
+        let (mut d, ch, pat) = doc_with_channel();
+        let steps = |d: &Document| -> Vec<Tick> {
+            d.project().patterns[0]
+                .notes_for(ch)
+                .map(|n| n.start / STEP_TICKS)
+                .collect()
+        };
+        d.execute(Command::SetStep {
+            pattern: pat,
+            channel: ch,
+            step: 1,
+            on: true,
+        })
+        .unwrap();
+        // Fill replaces the channel's steps (observed in FL Studio 2026.1.1).
+        d.execute(Command::FillSteps {
+            pattern: pat,
+            channel: ch,
+            every: 4,
+        })
+        .unwrap();
+        assert_eq!(steps(&d), vec![0, 4, 8, 12]);
+        let ids: Vec<NoteId> = d.project().patterns[0].notes_for(ch).map(|n| n.id).collect();
+        let rotate = |d: &mut Document, by: i64| {
+            d.execute(Command::RotateNotes {
+                pattern: pat,
+                notes: ids.clone(),
+                by: by * STEP_TICKS as i64,
+            })
+            .unwrap();
+        };
+        rotate(&mut d, 1);
+        assert_eq!(steps(&d), vec![1, 5, 9, 13]);
+        // Rotating left wraps the first step round to the end of the pattern.
+        rotate(&mut d, -2);
+        assert_eq!(steps(&d), vec![3, 7, 11, 15]);
+        rotate(&mut d, 1);
+        assert_eq!(steps(&d), vec![0, 4, 8, 12]);
+        d.execute(Command::FillSteps {
+            pattern: pat,
+            channel: ch,
+            every: 2,
+        })
+        .unwrap();
+        assert_eq!(steps(&d).len(), 8);
+        assert!(
+            d.execute(Command::FillSteps {
+                pattern: pat,
+                channel: ch,
+                every: 0
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
     fn slip_and_slice_clips() {
         let (mut d, _, pat) = doc_with_channel();
         let add = |d: &mut Document, track: u32, start: Tick| {

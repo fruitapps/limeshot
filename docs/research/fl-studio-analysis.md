@@ -77,6 +77,10 @@ headers keep the LED at the right.
   Change color…, Random color, Change icon…, Load sample…, Cut itself, Insert, Replace, Clone, Delete…, Assign to new
   instrument track, and a second column with Cut/Copy/Paste, Fill each 2/4/8 steps, Advanced fill…, Rotate left/right
   (Shift+Cmd+Left/Right), MIDI channel through, Receive notes from, Create DirectWave instrument, Burn MIDI to.
+- **OBSERVED live (session 8, `fl-rack-fill-4.png`, `fl-rack-rotate-left.png`):** with step 2 lit, the channel menu's
+  Fill each 4 steps leaves exactly steps 1, 5, 9 and 13 lit (the old step is cleared). Shift+Cmd+Right moves them to 2,
+  6, 10, 14; Shift+Cmd+Left twice to 4, 8, 12, 16 (step 1 wraps round to 16). The rack's top-left dropdown is the
+  channel filter group ("All", "Audio" …): with "Audio" only the audio channel showed.
 - **LimeShot equivalent:** `ChannelRack` window. Rows carry mute/solo, pan knob, volume knob, mixer-target spinner, name button and step buttons. Steps are notes at `step × 240 ticks` with the channel's root key. Left-click toggles a step on, right-click toggles it off. A channel with non-step notes shows a mini preview (clicking it opens the Piano Roll). Pattern length is Auto or a fixed number of steps.
 
 ## 3. Piano Roll

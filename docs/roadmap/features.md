@@ -10,12 +10,12 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 96, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 119, DEFERRED 2
+- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 120, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 16 | 1 | 2 | 6 |
-| Channel Rack | 20 | 14 | 0 | 0 | 6 |
+| Channel Rack | 20 | 15 | 0 | 0 | 5 |
 | Piano Roll | 27 | 18 | 0 | 0 | 9 |
 | Playlist | 28 | 18 | 1 | 2 | 7 |
 | Mixer | 16 | 10 | 1 | 1 | 4 |
@@ -78,7 +78,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | SEQ-011 | Graph editor (per-step properties) | P2 |  | NOT_STARTED | Edit step velocity/pan/release/pitch in the rack. | — |
 | SEQ-012 | Channel filter groups | P2 |  | NOT_STARTED | Named channel groups with a filter selector. | — |
 | SEQ-013 | Zip / unzip channels | P3 |  | NOT_STARTED | Collapse rows. | — |
-| SEQ-014 | Fill / rotate / advanced fill | P2 |  | NOT_STARTED | Channel menu fill and rotate commands. | — |
+| SEQ-014 | Fill / rotate / advanced fill | P2 |  | VERIFIED | The channel button's menu has Fill each 2/4/8 steps (replaces the channel's steps in the current pattern) and Rotate left/right; Shift+Cmd+Left/Right rotate the selected channels' steps by one step, wrapping round the pattern. The Piano Roll rotates the selection (or the channel) by the snap with the same keys.<br>*Observed live in FL 2026.1.1 (session 8). Advanced fill… (FL's dialog) is not implemented.* | `limeshot-core document::tests::fill_and_rotate_steps`<br>`ui.rs channel_menu_fills_and_shortcuts_rotate_steps`<br>`ui.rs piano_roll_rotates_notes_with_shift_cmd_arrows` |
 | SEQ-015 | Copy / paste steps between channels and patterns | P1 |  | VERIFIED | With the Channel Rack focused, Cmd+C/X copy/cut the selected channel's notes in the current pattern; Cmd+V replaces the selected channel's notes. Step patterns are re-pitched to the target channel's root key so they stay steps. | `limeshot-app tests/ui.rs::channel_rack_copies_steps_between_channels` |
 | SEQ-016 | Channel step looping / ghost steps | P3 |  | NOT_STARTED | Per-channel loop length. | — |
 | SEQ-017 | Loop Starter (FL Cloud) | P3 |  | DEFERRED | Out of scope: requires an online service (LimeShot is offline-first). | — |

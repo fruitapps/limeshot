@@ -436,13 +436,13 @@
     {
       "id": "KB-040",
       "context": "Channel Rack",
-      "action": "Shift steps left / right",
-      "fl_keys": "Ctrl+Shift+Left / Right",
-      "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "action": "Rotate steps left / right",
+      "fl_keys": "Shift+Cmd+Left / Shift+Cmd+Right",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+Cmd+← / Shift+Cmd+→",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-014",
-      "notes": ""
+      "notes": "FL 2026.1.1 channel menu labels; tried live: one step per press, wrapping round the pattern (session 8)."
     },
     {
       "id": "KB-041",
@@ -890,10 +890,10 @@
       "action": "Rotate selection left / right",
       "fl_keys": "Shift+Cmd+Left / Shift+Cmd+Right",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Shift+Cmd+← / Shift+Cmd+→",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
-      "notes": "FL 2026.1.1 Edit menu (macOS labels)."
+      "notes": "FL 2026.1.1 Edit menu (macOS labels). LimeShot rotates by the snap; all of the channel's notes when none is selected."
     },
     {
       "id": "KB-082",
