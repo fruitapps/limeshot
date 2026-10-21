@@ -1964,16 +1964,14 @@ fn playlist_paint_mute_delete_select_zoom_and_playback_tools() {
     h.state_mut().ui.playlist.tool = Tool::Delete;
     click(&mut h, g.pos(a.start + bar / 2, 1), PointerButton::Primary);
     assert!(h.state().project().clip(a.id).is_none());
-    // Playback: holding the button plays the song from the pointer; releasing stops.
+    // Playback scrubs instead of starting the transport (`playback_tool_scrubs_what_is_under_the_line`).
     h.state_mut().ui.playlist.tool = Tool::Playback;
     let p = g.pos(2 * bar, 5);
     h.event(Event::PointerMoved(p));
     h.step();
     press(&mut h, p, PointerButton::Primary, true);
-    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Song);
-    wait_for(&mut h, "playback", |a| a.is_playing());
     press(&mut h, p, PointerButton::Primary, false);
-    wait_for(&mut h, "the stop", |a| !a.is_playing());
+    assert!(!h.state().is_playing());
     // Zoom: dragging over a bar fits it to the grid; right-click zooms out.
     h.state_mut().ui.playlist.tool = Tool::Zoom;
     drag(&mut h, g.pos(bar, 4), g.pos(2 * bar, 4));
@@ -2612,4 +2610,79 @@ fn the_grid_follows_the_snap() {
     let pl = 30.0 / PPQ as f32;
     assert_eq!(grid_step(pl, sig, Snap::Beat), sig.ticks_per_beat());
     assert_eq!(grid_step(pl, sig, Snap::Step), STEP_TICKS);
+}
+
+/// Owner's hands-on test: the Playback tool (Y) should scrub, sounding only what is under a line
+/// at the pointer, instead of playing on from there.
+#[test]
+fn playback_tool_scrubs_what_is_under_the_line() {
+    use limeshot_ui::piano_roll::Tool;
+    let (mut h, pat, lead) = melody_piano_roll();
+    let notes = pattern_notes(&h, pat, lead);
+    let g = piano_geometry(&h);
+    h.state_mut().ui.piano.tool = Tool::Playback;
+    let (a, b) = (notes[0], notes[1]);
+    let at = |n: &Note| g.pos(n.start + n.length / 2, a.key.saturating_sub(5));
+    h.event(Event::PointerMoved(at(&a)));
+    h.step();
+    assert!(h.state().ui.scrub.is_empty(), "hovering only shows the line");
+    assert_eq!(h.state().ui.piano.cursor, Some(Tool::Playback), "the tool's cursor");
+    press(&mut h, at(&a), PointerButton::Primary, true);
+    assert_eq!(h.state().ui.scrub, vec![(lead, a.key)]);
+    h.event(Event::PointerMoved(at(&b)));
+    h.step();
+    assert_eq!(
+        h.state().ui.scrub,
+        vec![(lead, b.key)],
+        "the line moved on to the next note"
+    );
+    press(&mut h, at(&b), PointerButton::Primary, false);
+    assert!(h.state().ui.scrub.is_empty(), "releasing stops the notes");
+    assert!(!h.state().is_playing(), "the transport never started");
+    assert!(!h.state().doc.is_modified());
+
+    // The Playlist: the pattern clips' notes under the line.
+    let mut h = playlist_harness();
+    h.state_mut().ui.playlist.tool = Tool::Playback;
+    h.step();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let p = g.pos(10, 0);
+    h.event(Event::PointerMoved(p));
+    h.step();
+    assert_eq!(h.state().ui.playlist.cursor, Some(Tool::Playback));
+    press(&mut h, p, PointerButton::Primary, true);
+    let kick = h.state().project().channels[0].id;
+    assert!(
+        h.state().ui.scrub.iter().any(|s| s.0 == kick),
+        "the beat's first kick sounds: {:?}",
+        h.state().ui.scrub
+    );
+    press(&mut h, p, PointerButton::Primary, false);
+    assert!(h.state().ui.scrub.is_empty());
+    assert!(!h.state().is_playing());
+}
+
+/// Owner's hands-on test: each tool has its icon as the cursor over the grid.
+#[test]
+fn editor_tools_show_their_cursor() {
+    use limeshot_ui::piano_roll::Tool;
+    let (mut h, _, _) = melody_piano_roll();
+    let p = piano_geometry(&h).grid.center();
+    for tool in Tool::ALL {
+        h.state_mut().ui.piano.tool = tool;
+        h.event(Event::PointerMoved(p));
+        h.step();
+        assert_eq!(h.state().ui.piano.cursor, Some(tool));
+    }
+    h.event(Event::PointerMoved(egui::pos2(2.0, 2.0)));
+    h.step();
+    assert_eq!(h.state().ui.piano.cursor, None, "not outside the grid");
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    for tool in Tool::PLAYLIST {
+        h.state_mut().ui.playlist.tool = tool;
+        h.event(Event::PointerMoved(g.grid.center()));
+        h.step();
+        assert_eq!(h.state().ui.playlist.cursor, Some(tool));
+    }
 }

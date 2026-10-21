@@ -307,3 +307,11 @@ covered by a headless UI test unless noted.
    and Opt+pinch now zoom the Piano Roll's key height and the Playlist's track height around the pointer (FL
    Studio's Alt+wheel, KB-094, from FL knowledge: a live check was not possible this session because FL could not
    be brought to the front).
+3. **Playback scrubbing and tool cursors (issues 2, 15).** The Playback tool (Y) started the transport from the
+   pointer (FL Studio's press-to-play, observed in session 7). At the owner's request it now scrubs: over the grid a
+   faint line follows the pointer to show what a press would play; while the button is held the line brightens and
+   the notes it crosses sound (`piano_roll::scrub` diffs the sounding set each frame, so each note stops when the
+   line leaves it), and the transport never starts. In the Playlist the line sounds the notes of the unmuted pattern
+   clips under it (audio clips are not scrubbed). Every tool now paints its toolbar icon next to the pointer over
+   the Piano Roll and Playlist grids, on top of the system cursor egui sets for edges, slicing and zooming (egui has
+   no pencil, eraser or speaker cursors). `ui_shot --scrub` shows the line and the cursor.

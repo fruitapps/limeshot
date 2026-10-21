@@ -12,8 +12,9 @@
 //! Other tools (FL Studio's tool strip and keys, observed in FL Studio 2026.1.1): Paint (B) lays
 //! notes of the last length end to end along a drag; Delete (D) erases; Mute (T) toggles notes'
 //! mute; Slice (C) cuts the notes a drag crosses at its x position; Select (E) selects without
-//! Ctrl; Zoom (Z) zooms to a dragged range (right-click zooms out); Playback (Y) plays from the
-//! pointer while held. Draw (P) also resizes from a note's left edge.
+//! Ctrl; Zoom (Z) zooms to a dragged range (right-click zooms out); Playback (Y) scrubs: a line
+//! follows the pointer and, while held, the notes under it sound. Draw (P) also resizes from a
+//! note's left edge. Each tool's icon follows the pointer over the grid as its cursor.
 
 use crate::app::LimeShotApp;
 use crate::icons::Icon;
@@ -164,7 +165,7 @@ impl Tool {
             Tool::Slice => "Slice (C): drag across notes to cut them",
             Tool::Select => "Select (E): drag to select",
             Tool::Zoom => "Zoom (Z): drag a range to zoom in, right-click to zoom out",
-            Tool::Playback => "Playback (Y): hold to play from the pointer",
+            Tool::Playback => "Playback (Y): hold and drag to hear the notes under the line",
         }
     }
 }
@@ -183,6 +184,8 @@ pub struct State {
     scrolled_once: bool,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
+    /// The tool whose cursor was drawn over the grid in the last frame (for tests).
+    pub cursor: Option<Tool>,
 }
 
 impl Default for State {
@@ -201,6 +204,7 @@ impl Default for State {
             audition: None,
             scrolled_once: false,
             geometry: None,
+            cursor: None,
         }
     }
 }
@@ -744,6 +748,55 @@ fn hit(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, bo
     hit_part(view, notes, cid, p).map(|(n, part)| (n, part == Part::RightEdge))
 }
 
+/// The tool's icon next to the pointer over an editor grid, as FL Studio shows each tool as its
+/// mouse cursor (egui's system cursors have no pencil, eraser or speaker).
+pub fn paint_tool_cursor(ctx: &Context, tool: Tool, at: Pos2) {
+    let t = Theme::current();
+    let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("tool-cursor")));
+    let r = Rect::from_min_size(at + vec2(11.0, 11.0), vec2(14.0, 14.0));
+    painter.rect_filled(r.expand(2.0), CornerRadius::same(3), t.header.gamma_multiply(0.9));
+    crate::icons::paint(&painter, r, tool.icon(), t.accent);
+}
+
+/// The Playback tool's line: faint while hovering (what a press would play), bright while held.
+pub fn playback_line(ui: &Ui, grid: Rect, x: f32, held: bool) {
+    let t = Theme::current();
+    if x < grid.left() || x > grid.right() {
+        return;
+    }
+    let color = if held {
+        t.playhead
+    } else {
+        t.playhead.gamma_multiply(0.45)
+    };
+    ui.painter_at(grid).line_segment(
+        [pos2(x, grid.top()), pos2(x, grid.bottom())],
+        Stroke::new(if held { 1.5 } else { 1.0 }, color),
+    );
+}
+
+/// The Playback tool's scrub: start the notes in `want` that are not sounding yet and stop the
+/// ones the line has left.
+pub fn scrub(app: &mut LimeShotApp, want: &[(ChannelId, u8, f32)]) {
+    let sounding = std::mem::take(&mut app.ui.scrub);
+    for &(c, k) in &sounding {
+        if !want.iter().any(|w| w.0 == c && w.1 == k) {
+            app.preview_off(c, k);
+        }
+    }
+    let mut now = Vec::new();
+    for &(c, k, v) in want {
+        if now.contains(&(c, k)) {
+            continue;
+        }
+        if !sounding.contains(&(c, k)) {
+            app.preview_on(c, k, v);
+        }
+        now.push((c, k));
+    }
+    app.ui.scrub = now;
+}
+
 fn grid_input(
     app: &mut LimeShotApp,
     ui: &mut Ui,
@@ -759,6 +812,7 @@ fn grid_input(
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
     let snap = if mods.alt { Snap::None } else { app.ui.snap };
     let root = app.project().channel(cid).map(|c| c.root_key).unwrap_or(60);
+    app.ui.piano.cursor = None;
 
     // Cursor feedback.
     if let Some(p) = resp.hover_pos() {
@@ -771,6 +825,8 @@ fn grid_input(
             (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
             _ => {}
         }
+        paint_tool_cursor(ui.ctx(), app.ui.piano.tool, p);
+        app.ui.piano.cursor = Some(app.ui.piano.tool);
         let k = view.key_at(p.y).clamp(0, 127) as u8;
         let tk = view.tick_at(p.x).max(0) as u64;
         let help = match app.ui.piano.tool {
@@ -796,7 +852,6 @@ fn grid_input(
         && tool != Tool::Draw
         && tool != Tool::Paint
     {
-        let tick = view.tick_at(p.x).max(0) as u64;
         match tool {
             Tool::Delete => {
                 app.doc.begin_gesture();
@@ -837,14 +892,7 @@ fn grid_input(
                 }
             },
             Tool::Zoom => app.ui.piano.drag = Some(Drag::Zoom { from: p }),
-            Tool::Playback => {
-                app.set_mode(limeshot_engine::PlayMode::Pattern);
-                app.locate(tick);
-                if !app.is_playing() {
-                    app.toggle_play();
-                }
-                app.ui.piano.drag = Some(Drag::Playback);
-            }
+            Tool::Playback => app.ui.piano.drag = Some(Drag::Playback),
             Tool::Draw | Tool::Paint | Tool::Slip => {}
         }
     } else if primary_pressed && let Some(p) = pointer {
@@ -1105,6 +1153,23 @@ fn grid_input(
         }
         app.ui.piano.drag = drag;
     }
+    // The Playback tool: a line at the pointer shows what a press plays; while held, the notes
+    // under it sound (FL Studio scrubs instead of playing on from the pointer).
+    if tool == Tool::Playback
+        && let Some(p) = resp.hover_pos().or(pointer.filter(|_| app.ui.piano.drag.is_some()))
+    {
+        let held = matches!(app.ui.piano.drag, Some(Drag::Playback));
+        playback_line(ui, grid, p.x, held);
+        if held {
+            let tick = view.tick_at(p.x).max(0) as u64;
+            let want: Vec<(ChannelId, u8, f32)> = notes
+                .iter()
+                .filter(|n| n.channel == cid && !n.muted && n.start <= tick && tick < n.end())
+                .map(|n| (cid, n.key, n.velocity))
+                .collect();
+            scrub(app, &want);
+        }
+    }
     // Slice and Zoom act when the button is released.
     if !ui.input(|i| i.pointer.any_down())
         && let Some(p) = pointer
@@ -1134,7 +1199,7 @@ fn grid_input(
             }
             Some(Drag::Playback) => {
                 app.ui.piano.drag = None;
-                app.stop();
+                scrub(app, &[]);
             }
             _ => {}
         }

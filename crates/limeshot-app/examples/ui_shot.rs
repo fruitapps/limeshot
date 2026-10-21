@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -207,6 +207,41 @@ fn main() {
     for _ in 0..12 {
         harness.step();
         std::thread::sleep(std::time::Duration::from_millis(30));
+    }
+    if args.iter().any(|a| a == "--scrub") {
+        // The melody in a maximised Piano Roll with the Playback tool held over its second note:
+        // the scrub line and the tool's cursor.
+        let lead = harness.state().project().channels.get(3).map(|c| c.id);
+        let melody = harness.state().project().patterns.get(1).map(|p| p.id);
+        if let (Some(lead), Some(pat)) = (lead, melody) {
+            let st = harness.state_mut();
+            st.set_current_pattern(pat);
+            st.select_channel(lead);
+            st.show_window(Win::PianoRoll);
+            st.ui.workspace.state_mut(Win::PianoRoll).maximized = true;
+            st.ui.piano.tool = limeshot_ui::piano_roll::Tool::Playback;
+            for _ in 0..4 {
+                harness.step();
+            }
+            let note = harness
+                .state()
+                .project()
+                .pattern(pat)
+                .and_then(|p| p.notes_for(lead).nth(1).copied());
+            if let (Some(g), Some(n)) = (harness.state().ui.piano.geometry, note) {
+                let p = g.pos(n.start + n.length / 2, n.key.saturating_sub(3));
+                harness.event(egui::Event::PointerMoved(p));
+                harness.step();
+                harness.event(egui::Event::PointerButton {
+                    pos: p,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                });
+                harness.step();
+                harness.step();
+            }
+        }
     }
     match harness.render() {
         Ok(img) => match img.save(&out) {

@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-21 (session 7). Everything here is either not implemented or not verified.
+Current as of 2026-10-21 (session 9). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -36,6 +36,10 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
   tool (PR-027), no scale highlighting and no chord or arp tools; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
+* The Playback tool scrubs notes only: the Playlist's line sounds the pattern clips' notes under it, not audio clips
+  (no audio scrubbing). Notes start from their beginning when the line reaches them. FL Studio's Playback tool plays
+  on from the pointer instead; LimeShot scrubs at the owner's request.
+* Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
 * The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog.
 * The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).

@@ -58,6 +58,8 @@ pub struct UiState {
     pub playlist: playlist::State,
     pub mixer: mixer::State,
     pub browser: browser::State,
+    /// Notes the Playback tool's scrub line is sounding: (channel, key).
+    pub scrub: Vec<(ChannelId, u8)>,
 }
 
 impl UiState {
@@ -80,6 +82,7 @@ impl UiState {
             playlist: Default::default(),
             mixer: Default::default(),
             browser: Default::default(),
+            scrub: Vec::new(),
         }
     }
 }

@@ -10,7 +10,8 @@
 //! Other tools (FL Studio's Playlist tool strip and keys, observed in FL Studio 2026.1.1): Paint (B)
 //! lays clips end to end, Delete (D) and Mute (T) act on clips clicked or dragged over, Slip (S)
 //! slides a clip's content inside it, Slice (C) cuts the clips a vertical drag crosses, Select (E),
-//! Zoom (Z) and Playback (Y).
+//! Zoom (Z) and Playback (Y), which scrubs: a line follows the pointer and, while held, the notes
+//! of the pattern clips under it sound. Each tool's icon follows the pointer over the grid.
 
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
@@ -116,6 +117,8 @@ pub struct State {
     peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
+    /// The tool whose cursor was drawn over the grid in the last frame (for tests).
+    pub cursor: Option<Tool>,
 }
 
 impl Default for State {
@@ -136,6 +139,7 @@ impl Default for State {
             menu: None,
             peaks: Default::default(),
             geometry: None,
+            cursor: None,
         }
     }
 }
@@ -215,7 +219,7 @@ fn tool_tip(tool: Tool) -> &'static str {
         Tool::Slice => "Slice (C): drag down across clips to cut them",
         Tool::Select => "Select (E): click or drag to select, drag a selected clip to move",
         Tool::Zoom => "Zoom (Z): drag a range to zoom in, right-click to zoom out",
-        Tool::Playback => "Playback (Y): hold to play the song from the pointer",
+        Tool::Playback => "Playback (Y): hold and drag to hear the pattern notes under the line",
     }
 }
 
@@ -1171,12 +1175,43 @@ fn focus_source(app: &mut LimeShotApp, c: &Clip) {
     }
 }
 
+/// The notes of the (unmuted) pattern clips sounding at song position `tick`, for the Playback
+/// tool's scrub. A pattern clip plays its pattern once from its offset (silent past the end).
+fn notes_under(app: &LimeShotApp, clips: &[Clip], tick: Tick) -> Vec<(ChannelId, u8, f32)> {
+    let p = app.project();
+    let sig = p.time_signature;
+    let mut out = Vec::new();
+    for c in clips.iter().filter(|c| !c.muted && c.start <= tick && tick < c.end()) {
+        if p.playlist.tracks.get(c.track as usize).is_some_and(|t| t.muted) {
+            continue;
+        }
+        let Some(pat) = c.pattern().and_then(|id| p.pattern(id)) else {
+            continue;
+        };
+        let local = tick - c.start + c.offset;
+        if local >= pat.length(sig) {
+            continue;
+        }
+        for n in pat
+            .notes
+            .iter()
+            .filter(|n| !n.muted && n.start <= local && local < n.end())
+        {
+            if p.channel(n.channel).is_some_and(|ch| !ch.muted) {
+                out.push((n.channel, n.key, n.velocity));
+            }
+        }
+    }
+    out
+}
+
 fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips: &[Clip], tracks: u32) {
     let resp = ui.interact(grid, ui.id().with("pl_grid"), Sense::click_and_drag());
     let sig = app.project().time_signature;
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
     let snap = if mods.alt { Snap::None } else { app.ui.snap };
     let tool = app.ui.playlist.tool;
+    app.ui.playlist.cursor = None;
     if let Some(p) = resp.hover_pos() {
         match (tool, hit(view, clips, p).map(|h| h.1)) {
             (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge)) => {
@@ -1191,6 +1226,8 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
             _ => {}
         }
+        crate::piano_roll::paint_tool_cursor(ui.ctx(), tool, p);
+        app.ui.playlist.cursor = Some(tool);
         let tk = view.tick_at(p.x).max(0) as u64;
         let help = match tool {
             Tool::Draw => {
@@ -1298,7 +1335,6 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && !matches!(hit(view, clips, p), Some((_, Part::Menu)))
     {
         primary = false;
-        let tick = view.tick_at(p.x).max(0) as u64;
         match tool {
             Tool::Delete => {
                 app.doc.begin_gesture();
@@ -1359,14 +1395,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 }
             },
             Tool::Zoom => app.ui.playlist.drag = Some(Drag::Zoom { from: p }),
-            Tool::Playback => {
-                app.set_mode(PlayMode::Song);
-                app.locate(tick);
-                if !app.is_playing() {
-                    app.toggle_play();
-                }
-                app.ui.playlist.drag = Some(Drag::Playback);
-            }
+            Tool::Playback => app.ui.playlist.drag = Some(Drag::Playback),
             Tool::Draw | Tool::Paint => {}
         }
     }
@@ -1646,6 +1675,17 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         }
         app.ui.playlist.drag = drag;
     }
+    // The Playback tool's line and scrub (see `piano_roll::scrub`).
+    if tool == Tool::Playback
+        && let Some(p) = resp.hover_pos().or(pointer.filter(|_| app.ui.playlist.drag.is_some()))
+    {
+        let held = matches!(app.ui.playlist.drag, Some(Drag::Playback));
+        crate::piano_roll::playback_line(ui, grid, p.x, held);
+        if held {
+            let want = notes_under(app, clips, view.tick_at(p.x).max(0) as u64);
+            crate::piano_roll::scrub(app, &want);
+        }
+    }
     // Slice and Zoom act when the button is released.
     if !ui.input(|i| i.pointer.any_down())
         && let Some(p) = pointer
@@ -1675,7 +1715,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
             Some(Drag::Playback) => {
                 app.ui.playlist.drag = None;
-                app.stop();
+                crate::piano_roll::scrub(app, &[]);
             }
             _ => {}
         }
