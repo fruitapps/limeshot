@@ -207,3 +207,29 @@ fn an_audition_released_in_the_block_it_started_still_ends() {
         assert_eq!(buf[2 * block - 1], 0.0, "block {block}: nothing is held: {l:?}");
     }
 }
+
+/// Owner's list item 10: Stop while stopped ends held plugin auditions too.
+#[test]
+fn stop_while_stopped_ends_plugin_auditions() {
+    let (doc, ch) = project();
+    let pat = doc.project().patterns[0].id;
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut r = Renderer::new(SR, Arc::new(compile(doc.project(), pat, &NoSamples)));
+    r.adopt_instrument(
+        ch.0,
+        Box::new(Gate {
+            held: 0,
+            frame: 0,
+            log: log.clone(),
+        }),
+    );
+    r.rearrange();
+    let mut buf = vec![0.0f32; 2 * 256];
+    r.preview_note_on(0, 72, 0.8);
+    r.render(&mut buf);
+    assert!(buf[0] > 0.0);
+    r.stop();
+    r.render(&mut buf);
+    assert_eq!(buf[2 * 255], 0.0, "the audition ended");
+    assert_eq!(log.lock().unwrap().last().map(|e| (e.1, e.2)), Some((false, 72)));
+}

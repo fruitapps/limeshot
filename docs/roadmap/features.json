@@ -5699,7 +5699,7 @@
       "name": "Play / pause / stop",
       "description": "Transport.",
       "fl_reference": "Space play/stop, Ctrl+Space pause, stop returns.",
-      "limeshot_behavior": "Toolbar buttons and Space/Cmd+Space; stop returns to where playback started.",
+      "limeshot_behavior": "Toolbar buttons and Space/Cmd+Space; stop returns to where playback started. Stop while stopped silences everything (sample previews, auditions, plugin notes and tails, effect tails); Play starts from silence (earlier tails and auditions are cut, effects start empty).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -5714,7 +5714,9 @@
       ],
       "tests": [
         "limeshot-app tests/ui.rs::space_starts_and_stops_the_transport",
-        "limeshot-engine tests/audio.rs::realtime_transport_loops_pattern_and_reports_position"
+        "limeshot-engine tests/audio.rs::realtime_transport_loops_pattern_and_reports_position",
+        "limeshot-engine tests/audio.rs::stop_while_stopped_and_play_silence_tails_and_previews",
+        "limeshot-engine tests/plugins.rs::stop_while_stopped_ends_plugin_auditions"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5724,7 +5726,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 10). Voices fade over 5 ms; plugins get their note-offs in a one-frame block and are reset (VST3: setProcessing off and on); after Stop the effects are cleared once the fade is over, at Play at once (so the song keeps its first reverb tail)."
     },
     {
       "id": "TR-003",

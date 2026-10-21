@@ -370,7 +370,10 @@ impl LimeShotApp {
         }
     }
 
+    /// Stop; stopping while stopped silences everything (see `Renderer::stop`), including a
+    /// Browser preview still loading.
     pub fn stop(&mut self) {
+        self.ui.browser.cancel_preview();
         self.send(Msg::Stop);
     }
 

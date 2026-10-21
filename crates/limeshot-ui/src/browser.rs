@@ -62,6 +62,11 @@ impl State {
         self.pending_preview.is_some()
     }
 
+    /// Forget a preview that is waiting for its sample to load.
+    pub fn cancel_preview(&mut self) {
+        self.pending_preview = None;
+    }
+
     pub fn refresh(&mut self) {
         self.listings.clear();
     }

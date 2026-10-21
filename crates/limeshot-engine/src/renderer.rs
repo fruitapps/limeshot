@@ -91,6 +91,8 @@ pub struct Renderer {
     reductions: Vec<f32>,
     /// Peak of the last block's output (for detecting when effect tails have died away).
     last_peak: f32,
+    /// Clear the effects' tails at this engine sample (once silenced voices have faded).
+    fx_reset_at: Option<u64>,
     /// Start the audio clips that span the position on the next schedule (after play, locate or
     /// a mode change), part-way through.
     chase: bool,
@@ -131,6 +133,7 @@ impl Renderer {
                 .collect(),
             reductions: vec![0.0; limeshot_core::Mixer::MAX_TRACKS],
             last_peak: 0.0,
+            fx_reset_at: None,
             chase: true,
             chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
             track_mix: vec![(1.0, 0.0); limeshot_core::Mixer::MAX_TRACKS],
@@ -248,6 +251,9 @@ impl Renderer {
 
     pub fn play(&mut self) {
         if !self.playing {
+            // Start from silence: earlier reverb tails and auditions do not ring into the song.
+            self.silence();
+            self.reset_effects();
             self.start_tick = self.position();
             self.playing = true;
             self.finished = false;
@@ -255,8 +261,12 @@ impl Renderer {
         }
     }
 
-    /// Stop and return to where playback started.
+    /// Stop and return to where playback started. Stopping while stopped silences everything
+    /// (sample previews, auditions, effect tails).
     pub fn stop(&mut self) {
+        if !self.playing {
+            self.silence();
+        }
         self.playing = false;
         self.release_sequenced();
         let t = self.start_tick;
@@ -293,6 +303,26 @@ impl Renderer {
             v.release();
         }
         self.instruments.release_sequenced();
+    }
+
+    /// Silence everything: every voice (sequenced notes, auditions, sample previews) fades out
+    /// in 5 ms, plugins get their note-offs and are reset, and the effects' tails are cleared
+    /// once the fade is over (so it does not ring on in a reverb).
+    pub fn silence(&mut self) {
+        for v in self.voices.iter_mut().filter(|v| v.is_active()) {
+            v.env.kill();
+        }
+        let transport = self.transport();
+        self.instruments.silence(&transport);
+        self.fx_reset_at = Some(self.now + u64::from(self.sample_rate) / 100);
+    }
+
+    fn reset_effects(&mut self) {
+        self.fx_reset_at = None;
+        self.fx.reset();
+        for eq in &mut self.eqs {
+            limeshot_dsp::effects::Effect::reset(eq);
+        }
     }
 
     /// Stop every voice immediately (panic button).
@@ -402,6 +432,9 @@ impl Renderer {
             b[..2 * frames].fill(0.0);
         }
 
+        if self.fx_reset_at.is_some_and(|at| self.now >= at) {
+            self.reset_effects();
+        }
         let automate = self.mode == PlayMode::Song && !self.snapshot.automation.is_empty();
         let mut done = 0;
         while done < frames {

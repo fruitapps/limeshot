@@ -1455,3 +1455,59 @@ fn note_pan_adds_to_the_channel_pan() {
     let (l, r) = lr(&f.doc);
     assert!((l - r).abs() < 1e-6 && (l - l0).abs() < 1e-4, "{l} {r} vs {l0}");
 }
+
+/// Owner's list item 10: Stop while stopped silences everything (auditions, sample previews,
+/// effect tails), and Play starts from silence, so a long reverb does not ring into the song.
+#[test]
+fn stop_while_stopped_and_play_silence_tails_and_previews() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::AddEffect {
+            track: 0,
+            kind: EffectKind::Reverb,
+        })
+        .unwrap();
+    let snap = snapshot(&f);
+    let mut r = Renderer::new(SR, snap.clone());
+    for (id, fx) in limeshot_engine::fx::build_all(&snap, SR) {
+        r.adopt_effect(id, fx);
+    }
+    r.rearrange();
+    let mut buf = vec![0.0; 2 * 512];
+    let loud = |b: &[f32]| b.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+    // An audition and a sample preview, released: the reverb rings on.
+    r.preview_note_on(1, 69, 1.0);
+    r.preview_sample(click());
+    for _ in 0..20 {
+        r.render(&mut buf);
+    }
+    r.preview_note_off(1, 69);
+    for _ in 0..4 {
+        r.render(&mut buf);
+    }
+    assert!(loud(&buf) > 1e-3, "a tail before stopping");
+    r.stop();
+    for _ in 0..3 {
+        r.render(&mut buf);
+    }
+    assert_eq!(r.active_voices(), 0);
+    assert_eq!(loud(&buf), 0.0, "Stop while stopped silences the tail");
+
+    // A held audition is cut when Play starts; the reverb starts empty.
+    r.preview_note_on(1, 69, 1.0);
+    for _ in 0..20 {
+        r.render(&mut buf);
+    }
+    r.play();
+    r.render(&mut buf);
+    r.render(&mut buf);
+    assert_eq!(
+        r.active_voices(),
+        0,
+        "the audition faded at Play (the pattern is empty)"
+    );
+    for _ in 0..2 {
+        r.render(&mut buf);
+    }
+    assert!(loud(&buf) < 1e-3, "no tail rings into the song: {}", loud(&buf));
+}

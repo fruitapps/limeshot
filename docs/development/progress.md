@@ -401,3 +401,6 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
 6. **Graph editor overlay (item 9).** As in FL (Cmd+K), the Channel Rack's graph editor is now an overlay right
    under the selected channel's steps, aligned with them, over the channels below and past the window's edge (its
    own layer, kept just above the rack's window).
+7. **Stop and Play silence (item 10).** Stop while stopped now silences everything: voices (notes, auditions,
+   sample previews) fade in 5 ms, plugins get their note-offs in a one-frame block and are reset, and effect tails
+   are cleared once the fade is over. Play starts from the same silence, with the effects cleared at once.

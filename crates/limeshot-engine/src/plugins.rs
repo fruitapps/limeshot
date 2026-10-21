@@ -215,6 +215,30 @@ impl InstrumentRack {
         }
     }
 
+    /// End every note and reset every plugin (its tails, delay lines and voices): each gets its
+    /// note-offs in a one-frame block first, then `reset`. Notes queued for this block are dropped.
+    pub(crate) fn silence(&mut self, transport: &Transport) {
+        for i in 0..self.slots.len() {
+            let Some(slot) = self.slots[i].as_mut() else { continue };
+            let events = &mut self.events[i];
+            events.clear();
+            for h in self.held.iter().filter(|h| h.channel == slot.channel) {
+                if events.len() < MAX_EVENTS {
+                    events.push(NoteEvent {
+                        offset: 0,
+                        kind: NoteEventKind::Off { key: h.key, id: h.id },
+                    });
+                }
+            }
+            if !events.is_empty() {
+                slot.inst.process(&mut self.buf[..2], events, transport);
+                events.clear();
+            }
+            slot.inst.reset();
+        }
+        self.held.clear();
+    }
+
     pub(crate) fn release_all(&mut self) {
         for h in &mut self.held {
             h.off_at = 0;
