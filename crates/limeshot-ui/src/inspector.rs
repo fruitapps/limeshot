@@ -129,8 +129,18 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
             browser::assign_sample(app, cid, &path);
         }
     });
-    // Waveform with start/end markers.
-    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::hover());
+    // Waveform with start/end markers. Pressing it plays the channel (FL Studio's sampler);
+    // the audition ends with the mouse button (`LimeShotApp::auditions`).
+    let (r, wave) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::click());
+    if wave.is_pointer_button_down_on()
+        && ui.input(|i| i.pointer.primary_pressed())
+        && let Some(key) = app.project().channel(cid).map(|c| c.root_key)
+    {
+        app.preview_on(cid, key, 0.78);
+    }
+    if wave.hovered() && p.sample.is_some() {
+        app.hint("Sample: press to hear it through the channel");
+    }
     ui.painter().rect_filled(r, CornerRadius::same(t.radius), t.sunken);
     match &status {
         Some(limeshot_audio::assets::SampleStatus::Ready(s)) => {

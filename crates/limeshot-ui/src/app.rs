@@ -803,6 +803,7 @@ impl LimeShotApp {
             self.send(Msg::LoopRange(range));
             self.loop_sent = Some(range);
         }
+        crate::browser::poll_preview(self, ctx);
         crate::autosave::tick(self);
         dialogs::poll_export(self);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));

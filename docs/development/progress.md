@@ -404,3 +404,7 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
 7. **Stop and Play silence (item 10).** Stop while stopped now silences everything: voices (notes, auditions,
    sample previews) fade in 5 ms, plugins get their note-offs in a one-frame block and are reset, and effect tails
    are cleared once the fade is over. Play starts from the same silence, with the effects cleared at once.
+8. **Sample preview (item 11).** Clicking a sample in the Browser already played it; the Browser now also has FL's
+   preview panel (the selected sample's waveform, the preview's position, rate and length; click to replay).
+   Previews start from the app's frame logic, so the picker's audio clips play when clicked with the Browser
+   hidden, and pressing the waveform in a sampler's Channel Settings plays the channel.

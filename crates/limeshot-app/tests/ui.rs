@@ -3196,3 +3196,60 @@ fn auditions_end_when_the_mouse_button_is_released() {
     h.step();
     assert!(h.state().auditions.is_empty());
 }
+
+/// Owner's list item 11 (FL Studio's Browser preview panel): the selected sample's waveform
+/// with the preview's position; clicking it plays the sample again. Samples also play when
+/// clicked in the Playlist's picker (with the Browser hidden) and when their waveform is
+/// pressed in Channel Settings.
+#[test]
+fn samples_preview_from_the_browser_panel_the_picker_and_channel_settings() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let hat = bundled("Lime Hat Open.wav");
+    let pos = h.state().ui.browser.file_pos(&hat).expect("listed");
+    click(&mut h, pos, PointerButton::Primary);
+    wait_for(&mut h, "the preview", |a| a.ui.browser.preview_started.is_some());
+    assert_eq!(
+        h.state().ui.browser.preview_started.as_ref().map(|p| p.0.clone()),
+        Some(hat.clone())
+    );
+    let panel = h.state().ui.browser.preview_rect.expect("preview panel drawn");
+    assert!(panel.width() > 100.0);
+    // A click on the waveform plays it again.
+    let before = h.state().ui.browser.preview_started.as_ref().map(|p| p.1);
+    click(&mut h, panel.center(), PointerButton::Primary);
+    wait_for(&mut h, "a second preview", |a| {
+        a.ui.browser.preview_started.as_ref().map(|p| p.1) != before
+    });
+
+    // The picker's audio clips play when clicked, with the Browser hidden.
+    h.state_mut().ui.show_browser = false;
+    h.state_mut().ui.browser.preview_started = None;
+    let ch = limeshot_ui::playlist::add_audio_source(h.state_mut(), &hat).expect("added");
+    h.state_mut().ui.playlist.picker_tab = limeshot_ui::playlist::PickerTab::Audio;
+    h.step();
+    let p = picker_row(&h, ClipSource::Audio(ch));
+    click(&mut h, p, PointerButton::Primary);
+    wait_for(&mut h, "the picker's preview", |a| {
+        a.ui.browser.preview_started.is_some()
+    });
+
+    // Channel Settings: pressing the waveform plays the channel until the button is released.
+    h.state_mut().select_channel(ch);
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..3 {
+        h.step();
+    }
+    let key = h.state().project().channel(ch).expect("ch").root_key;
+    // The waveform is the 64 px strip under the sample's name and Load… button.
+    let load = h.get_by_label("Load…").rect();
+    let wave = egui::pos2(load.left(), load.bottom() + 36.0);
+    h.event(Event::PointerMoved(wave));
+    h.step();
+    press(&mut h, wave, PointerButton::Primary, true);
+    assert_eq!(h.state().auditions, vec![(ch, key)]);
+    press(&mut h, wave, PointerButton::Primary, false);
+    h.step();
+    assert!(h.state().auditions.is_empty());
+}

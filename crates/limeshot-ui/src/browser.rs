@@ -2,13 +2,14 @@
 //!
 //! Click a WAV to preview it; double-click (or use its menu) to load it into the selected sampler
 //! channel; drag it onto the Channel Rack to create a channel or onto a channel to replace its
-//! sample.
+//! sample. As in FL Studio, the panel at the bottom shows the selected sample's waveform with the
+//! preview's position; click it (or its play button) to hear the sample again.
 
 use crate::app::LimeShotApp;
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, semibold};
 use crate::widgets::{icon_button, panel_header};
-use egui::{CollapsingHeader, CornerRadius, Rect, RichText, Sense, TextEdit, Ui, vec2};
+use egui::{CollapsingHeader, CornerRadius, Rect, RichText, Sense, Stroke, TextEdit, Ui, pos2, vec2};
 use limeshot_audio::Msg;
 use limeshot_audio::assets::SampleStatus;
 use limeshot_core::{ChannelId, Command, Instrument, SampleRef, SamplerParams};
@@ -27,6 +28,12 @@ pub struct State {
     pub selected: Option<PathBuf>,
     /// Screen rectangles of the files listed in the last frame (for tests and tools).
     pub file_rects: Vec<(PathBuf, Rect)>,
+    /// The preview playing: its file, when it started and how long it lasts (seconds).
+    pub preview_started: Option<(PathBuf, std::time::Instant, f64)>,
+    /// The preview panel's waveform: min/max per column of the selected sample.
+    preview_peaks: Option<(PathBuf, Vec<(f32, f32)>)>,
+    /// The preview panel's waveform rectangle in the last frame (for tests).
+    pub preview_rect: Option<Rect>,
 }
 
 impl State {
@@ -124,19 +131,20 @@ pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<Channel
     Some(ChannelId(id))
 }
 
+/// Play the sample file at `path` (once it has loaded), as the Browser's preview.
 pub fn preview(app: &mut LimeShotApp, path: &Path) {
     app.samples.request_path(path.to_path_buf());
     app.ui.browser.pending_preview = Some(path.to_path_buf());
 }
 
-pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
-    let t = Theme::current();
-    app.ui.browser.file_rects.clear();
-    // Start a requested preview once its sample has loaded.
+/// Start a requested preview once its sample has loaded (every frame, so previews from the
+/// Playlist's picker play with the Browser hidden too).
+pub fn poll_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
     if let Some(p) = app.ui.browser.pending_preview.clone() {
         match app.samples.status_of_path(&p) {
             Some(SampleStatus::Ready(s)) => {
                 let s = s.clone();
+                app.ui.browser.preview_started = Some((p, std::time::Instant::now(), s.duration_secs()));
                 app.send(Msg::PreviewSample(s));
                 app.ui.browser.pending_preview = None;
             }
@@ -145,9 +153,130 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
                 app.toast_error(e);
                 app.ui.browser.pending_preview = None;
             }
-            _ => ui.ctx().request_repaint(),
+            _ => ctx.request_repaint(),
         }
     }
+}
+
+/// FL Studio's preview panel: the selected sample's waveform, the preview's position, its rate
+/// and length. A click on it (or the play button) plays the sample again.
+fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    app.ui.browser.preview_rect = None;
+    let Some(path) = app.ui.browser.selected.clone() else {
+        ui.centered_and_justified(|ui| {
+            ui.label(RichText::new("Click a sample to hear it").small().color(t.text_faint));
+        });
+        return;
+    };
+    let sample = match app.samples.status_of_path(&path) {
+        Some(SampleStatus::Ready(s)) => Some(s.clone()),
+        _ => None,
+    };
+    ui.horizontal(|ui| {
+        if icon_button(ui, Icon::Play, false, 20.0, "Play the sample").clicked() {
+            preview(app, &path);
+        }
+        ui.label(RichText::new(file_label(&path)).font(semibold(11.0)).color(t.text));
+        if let Some(s) = &sample {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    RichText::new(format!(
+                        "{:.1} kHz · {:.2} s",
+                        f64::from(s.sample_rate) / 1000.0,
+                        s.duration_secs()
+                    ))
+                    .font(crate::theme::mono(9.5))
+                    .color(t.text_dim),
+                );
+            });
+        }
+    });
+    let (r, resp) = ui.allocate_exact_size(
+        vec2(ui.available_width(), ui.available_height().max(24.0)),
+        Sense::click(),
+    );
+    app.ui.browser.preview_rect = Some(r);
+    let painter = ui.painter_at(r);
+    painter.rect_filled(r, CornerRadius::same(t.radius_sm), t.sunken);
+    let Some(s) = sample else {
+        painter.text(
+            r.center(),
+            egui::Align2::CENTER_CENTER,
+            "Loading…",
+            crate::theme::mono(10.0),
+            t.text_dim,
+        );
+        return;
+    };
+    let cols = r.width().max(1.0) as usize;
+    if app
+        .ui
+        .browser
+        .preview_peaks
+        .as_ref()
+        .is_none_or(|(p, v)| *p != path || v.len() != cols)
+    {
+        let frames = s.frames().max(1);
+        let peaks = (0..cols)
+            .map(|x| {
+                let (a, b) = (x * frames / cols, ((x + 1) * frames / cols).max(x * frames / cols + 1));
+                (a..b.min(frames))
+                    .step_by(((b - a) / 64).max(1))
+                    .map(|i| {
+                        let (l, r) = s.frame(i);
+                        0.5 * (l + r)
+                    })
+                    .fold((0.0f32, 0.0f32), |(lo, hi), v| (lo.min(v), hi.max(v)))
+            })
+            .collect();
+        app.ui.browser.preview_peaks = Some((path.clone(), peaks));
+    }
+    let mid = r.center().y;
+    let half = r.height() * 0.5 - 2.0;
+    if let Some((_, peaks)) = &app.ui.browser.preview_peaks {
+        for (x, (lo, hi)) in peaks.iter().enumerate() {
+            let xx = r.left() + x as f32 + 0.5;
+            painter.line_segment(
+                [
+                    pos2(xx, mid - hi.clamp(-1.0, 1.0) * half),
+                    pos2(xx, mid - lo.clamp(-1.0, 1.0) * half + 0.5),
+                ],
+                Stroke::new(1.0, t.accent_dim),
+            );
+        }
+    }
+    // The preview's position while it plays.
+    if let Some((p, since, secs)) = &app.ui.browser.preview_started
+        && *p == path
+    {
+        let k = since.elapsed().as_secs_f64() / secs.max(1e-3);
+        if k < 1.0 {
+            let x = r.left() + k as f32 * r.width();
+            painter.line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, t.accent));
+            ui.ctx().request_repaint();
+        }
+    }
+    if resp.clicked() {
+        preview(app, &path);
+    }
+    if resp.hovered() {
+        app.hint(format!("{} — click to hear it", path.display()));
+    }
+}
+
+pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
+    let t = Theme::current();
+    app.ui.browser.file_rects.clear();
+    egui::Panel::bottom("browser_preview")
+        .exact_size(84.0)
+        .frame(
+            egui::Frame::new()
+                .fill(t.surface)
+                .inner_margin(egui::Margin::symmetric(8, 6))
+                .stroke(Stroke::new(1.0, t.border)),
+        )
+        .show(ui, |ui| preview_panel(app, ui));
     panel_header(ui, "Browser", |ui| {
         if ui.small_button("⟳").on_hover_text("Re-read folders").clicked() {
             app.ui.browser.refresh();

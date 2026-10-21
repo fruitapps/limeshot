@@ -4720,7 +4720,7 @@
       "name": "Sample preview",
       "description": "Audition samples.",
       "fl_reference": "Left-click previews.",
-      "limeshot_behavior": "Click a WAV to preview it through the engine (master).",
+      "limeshot_behavior": "Click a WAV to preview it through the engine (master). The Browser's bottom panel shows the selected sample's waveform with the preview's position, its rate and length; clicking it or its play button plays it again. Audio clips in the Playlist's picker play when clicked (also with the Browser hidden), and pressing the sample's waveform in Channel Settings plays it through the channel until the button is released. Stop while stopped ends a preview (TR-002).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -4735,7 +4735,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample"
+        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "limeshot-app tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4744,7 +4745,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": "The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine."
+      "notes": "The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine. Session 11 (owner's list item 11): FL 2026.1.1's Browser shows the clicked sample's waveform and a play button at its bottom (observed live); LimeShot's panel follows it."
     },
     {
       "id": "BR-003",
