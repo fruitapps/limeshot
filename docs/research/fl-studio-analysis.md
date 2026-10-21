@@ -196,3 +196,42 @@ See `basics_shortcuts.htm` (VERIFIED). Every FL shortcut is tracked against Lime
 
 ## 16. Editions
 FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cloud features (Loop Starter, sounds, mastering, AI stem extraction) are online services. **LimeShot will not replicate online/account services** (offline-first). They are recorded in the inventory as `DEFERRED` / out of scope.
+
+## 17. Plugin windows (Fruity Wrapper)
+- **OBSERVED live (session 12, FL Studio 2026.1.1, synthetic input; Vital and Surge XT Effects as VST3):**
+  screenshots `fl-plugin-window-*.png`.
+  - **One window per plugin**, titled with the plugin and where it runs: "Vital (Master)" for a channel (the name of
+    the channel and, in grey, its mixer target), "Surge XT Effects (Insert 1)" for an insert slot. Each is its own
+    floating OS window (window level 3, above FL's main window), and the plugin's native view sits in a separate child
+    window inside it (`CGWindowList` shows two windows: the wrapper and, 5 pt in and below the 26 pt title bar, the
+    plugin's view at exactly the size the plugin asks for).
+  - **Opening:** adding a plugin opens its window. A click on the channel's button in the Channel Rack opens it and a
+    second click closes it; in the Mixer a click on the insert slot's name does the same. Closing (×) destroys the OS
+    window (a new window id each time it opens), but FL reopens it at the same position, size and page.
+  - **Title bar** (left to right): ▸ menu, a gear (Detailed settings) that shows or hides the wrapper's page strip,
+    the title; on the right a keyboard toggle ("Allow the plugin to handle keystrokes before the host does"),
+    Presets ◀ ▶ (previous/next preset; channels only), − (Captionize: shrink to just the title bar, right-aligned;
+    − again restores) and ×. Dragging the title bar or the window's border moves the window.
+  - **Pages** (the gear's strip, 46 pt high, with page icons on the left and the channel's ON, PAN, VOL, PITCH and
+    RANGE knobs and mixer TRACK selector on the right — an effect shows ON and MIX LEVEL instead):
+    1. *Plugin editor* — the plugin's own view (`fl-plugin-window-detailed.png`).
+    2. *Plugin options* — FL's wrapper settings, with Settings / Processing / Troubleshooting sub-tabs: name, format
+       ("VST3 (Apple - native)"), latency, Reload plugin, MIDI ports, preset Load/Save, GUI options, "Notify about
+       parameter changes" (`fl-plugin-window-options.png`).
+    3. *Miscellaneous functions* (channels only) — the channel settings page shared with every FL generator: levels
+       (pan, vol, mod X/Y), polyphony, time (gate, shift, swing), keyboard tracking, group cut, arpeggiator, echo
+       delay, root note and keyboard (`fl-plugin-window-misc.png`).
+    An effect has only pages 1 and 2 (`fl-plugin-window-effect-detailed.png`). The window resizes to the page shown:
+    568×466 pt for Miscellaneous, 571×487 for Plugin options, the plugin's size plus the strip for the editor; on the
+    other pages the plugin's child window is hidden.
+  - **Resizing:** the wrapper has no resize handle of its own. A plugin that resizes itself (Vital's corner handle)
+    resizes the wrapper around it (1344×787 → 1108×649 view, wrapper 10 pt wider and 31 pt taller than the view
+    without the strip). The size is kept when the window is closed and reopened.
+  - **▸ menu** (`fl-plugin-window-menu.png`): Piano roll, Replace, Presets, Browse presets, Save preset as…, Add to
+    plugin database, Display preset name; Spare state (Store, Flip); Parameters (Link all parameters…, Browse
+    parameters); CPU (Allow threaded processing, Smart disable); Make editor thumbnail; Rename, color and icon… (F2),
+    Change color…, Random color, Change icon…, Detached; and for a channel: Save channel state as…, Browse channel
+    states, Route to free mixer track.
+- **LimeShot equivalent (PLG-006):** see `features.json`. Each plugin channel and plugin insert has one wrapper window
+  (its own OS window): a title bar row with Editor and Settings tabs (channels: the LimeShot Channel Settings page;
+  effects: the parameter list), then the plugin's native view on the Editor tab.

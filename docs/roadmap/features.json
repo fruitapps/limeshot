@@ -5157,8 +5157,8 @@
       "id": "PLG-006",
       "category": "Plugins",
       "name": "Plugin editor windows",
-      "description": "Plugin editor windows.",
-      "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
+      "description": "A plugin's own editor (its native view) in a wrapper window, with the host's settings for that channel or insert on a second page.",
+      "fl_reference": "Fruity Wrapper (observed live, session 12): one floating window per plugin titled 'Plugin (mixer target)'; opened by a click on the channel button or the insert slot (a second click closes it); the gear shows a page strip with Plugin editor, Plugin options and (channels) Miscellaneous functions = channel settings, plus ON/PAN/VOL/PITCH/TRACK (effects: ON/MIX LEVEL); the window resizes to the page and follows the plugin's own resizing (no wrapper resize handle); position, size and page are kept when it is closed and reopened; title bar: menu, gear, keyboard-focus toggle, Presets ◀ ▶, captionize, close. Details: docs/research/fl-studio-analysis.md §17.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
       "priority": "P1",
       "status": "NOT_STARTED",
@@ -5176,7 +5176,14 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm",
+          "docs/research/fl-studio-analysis.md#17-plugin-windows-fruity-wrapper",
+          "docs/research/evidence/screenshots/fl-plugin-window-vital.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-detailed.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-options.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-misc.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-menu.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-effect.png",
+          "docs/research/evidence/screenshots/fl-plugin-window-effect-detailed.png",
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
