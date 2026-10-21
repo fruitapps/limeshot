@@ -1,92 +1,141 @@
-# LimeShot
+<h1 align="center">LimeShot</h1>
 
-An open-source, offline-first, pattern-based digital audio workstation written in Rust.
+<p align="center"><strong>The pattern-based DAW, in pure Rust.</strong></p>
 
-LimeShot follows the production workflow of FL Studio (Channel Rack step sequencer, Piano Roll, pattern
-clips on a Playlist, Mixer inserts) with its own implementation, look and name. Everything is Rust: the
-audio engine, the project model and the native egui user interface. No web view, no account, no network.
+<p align="center">
+  <a href="docs/screenshots/live-macos.png"><img src="docs/screenshots/live-macos.png" alt="LimeShot on macOS: Channel Rack, Piano Roll, Playlist and Mixer" width="900"></a>
+</p>
 
-![LimeShot main window](docs/screenshots/main.png)
+<p align="center">
+  <a href="#build-from-source">Build from source</a> ·
+  <a href="docs/roadmap/features.md">Feature inventory</a> ·
+  <a href="docs/roadmap/known-limitations.md">Known limitations</a> ·
+  <a href="AGENTS.md">Contributing</a>
+</p>
 
-## Status
+LimeShot is an open-source, offline-first digital audio workstation built around the pattern workflow of FL Studio:
+program beats in the Channel Rack, write melodies in the Piano Roll, arrange patterns on the Playlist and mix them on
+Mixer inserts. The audio engine, the project model and the native [egui](https://github.com/emilk/egui) interface are
+all Rust. There is no web view, no account and no network.
 
-**Early, but the core workflow works end to end.** You can build drums from WAV samples in the Channel
-Rack, write melodies for the built-in synth in the Piano Roll, arrange several patterns on the Playlist,
-route channels to mixer tracks, set volume and pan, save and reopen `.lime` projects, and export WAV. This
-is checked by an automated end-to-end test (`crates/limeshot-app/tests/mvp_workflow.rs`) and by realtime
-playback on macOS.
+## Make a Beat, Start to Finish
 
-It also has swing, quantize, copy/paste, and insert effects (EQ, filter, delay, reverb, compressor, limiter, utility).
+Every workflow below is covered by automated tests, and the core loop runs end to end in
+[`mvp_workflow.rs`](crates/limeshot-app/tests/mvp_workflow.rs). Click a preview to see it at full size.
 
-Not there yet: sends, automation, recording, MIDI devices, plugin hosting, audio clips, MP3/FLAC export.
-See [docs/roadmap/known-limitations.md](docs/roadmap/known-limitations.md) and the full inventory of
-220 tracked features in [docs/roadmap/features.md](docs/roadmap/features.md).
+| Feature | Preview |
+| --- | --- |
+| **Channel Rack**<br>Program drums from WAV samples on a step grid, with swing, fill and rotate. | <a href="docs/screenshots/main.png"><img src="docs/screenshots/main.png" width="240" alt="Channel Rack and Playlist"></a> |
+| **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/piano-roll.png"><img src="docs/screenshots/piano-roll.png" width="240" alt="Piano Roll"></a> |
+| **Playlist**<br>Arrange pattern, audio and automation clips. Slip, slice, time selection, markers and a clip picker. | <a href="docs/screenshots/live-song-mixer.png"><img src="docs/screenshots/live-song-mixer.png" width="240" alt="Playlist in Song mode with the Mixer"></a> |
+| **Mixer**<br>Route channels to inserts with volume, pan, a built-in EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/mixer.png"><img src="docs/screenshots/mixer.png" width="240" alt="Mixer"></a> |
+| **Workspace windows**<br>Maximise, detach and toggle every editor with F5–F9, as in FL Studio. | <a href="docs/screenshots/live-mixer-detached.png"><img src="docs/screenshots/live-mixer-detached.png" width="240" alt="Detached Mixer window"></a> |
+
+## Sounds, Effects and Plugins
+
+| Kind | What's included |
+| --- | --- |
+| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a WAV Sampler, with bundled Lime samples |
+| **Effects** | Lime EQ, Filter, Delay, Room (reverb), Comp (with sidechain), Limiter and Utility |
+| **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and the plugin's own editor window on macOS |
+| **Automation** | Automation clips for channel and mixer volume and pan and effect parameters, in Song mode |
+| **Files** | `.lime` projects (versioned, atomic save), WAV export, MIDI import and export, and FL Studio `.flp` import |
+
+<details>
+<summary><strong>Not there yet</strong></summary>
+
+Recording and audio input, MIDI devices, tempo and plugin-parameter automation, plugin delay compensation, CLAP and
+Audio Units, MP3/FLAC/OGG, stems and templates. The full list is in
+[known-limitations.md](docs/roadmap/known-limitations.md). The inventory tracks 239 features in
+[features.md](docs/roadmap/features.md), and 130 of them are verified by tests.
+
+</details>
+
+## Platforms
 
 | Platform | State |
-|---|---|
-| macOS Apple Silicon | Built, all tests pass, GUI and realtime audio verified |
-| macOS Intel | Release build runs (Rosetta); headless render bit-identical to arm64; GUI not exercised |
-| Windows x86-64 / ARM64 | Type-checks (`cargo check --target …`); CI jobs defined, not yet run |
+| --- | --- |
+| macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 plugins verified |
+| macOS Intel | Release build runs under Rosetta; headless render is bit-identical to arm64; GUI not exercised |
+| Windows x86-64 / ARM64 | Type-checks; CI jobs defined, not yet run |
 | Linux x86-64 / ARM64 | CI jobs defined, not yet run |
 
-## Build and run
+## Build from Source
 
-Requires a stable Rust toolchain (1.88 or newer). On Linux install ALSA and windowing headers first:
-`sudo apt install libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev libgtk-3-dev`.
+Requires stable Rust 1.88 or newer. On Linux, install the ALSA and windowing headers first:
+
+```bash
+sudo apt install libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev libgtk-3-dev
+```
+
+Run the app, or open the bundled demo song:
 
 ```bash
 cargo run --release -p limeshot-app
-```
-
-```bash
 cargo run --release -p limeshot-app -- --demo
 ```
 
-The second command opens a short demo song made from the bundled samples. Press **Space** to play,
-**L** to switch Pattern/Song mode, **F5–F9** to toggle windows, **F1** for all shortcuts.
+Press **Space** to play, **L** to switch between Pattern and Song mode, **F5–F9** to toggle windows and **F1** to see
+every shortcut.
 
-### Headless CLI
+<details>
+<summary><strong>Headless CLI</strong></summary>
 
 ```bash
 cargo run --release -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
+cargo run --release -p limeshot-app --bin limeshot-cli -- import-flp song.flp out/song.lime
+cargo run --release -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid
 ```
 
-`limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device) and `run`, which
+`limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device), `import-midi` and `run`. `run`
 applies a JSON list of the same typed commands the UI uses:
 
 ```json
 [{"SetTempo": 128000}, {"AddPattern": {"name": "Verse"}}]
 ```
 
-### Tests
+</details>
+
+<details>
+<summary><strong>Tests</strong></summary>
 
 ```bash
 cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-The suite (95 tests) covers musical timing, scheduling across buffer sizes and sample rates,
-synth/sampler behaviour, effects, mixing, project round trips, undo/redo, and the UI driven with synthetic input.
+The suite covers musical timing, scheduling across buffer sizes and sample rates, synth and sampler behaviour,
+effects, mixing, VST3 hosting, project round trips, undo and redo, and the editors driven with synthetic input.
 
-## Layout
+</details>
 
-| Crate | Purpose |
-|---|---|
-| `limeshot-core` | Musical time (960 PPQ ticks), project model, typed commands, undo/redo |
-| `limeshot-project` | `.lime` file format: versioned envelope, migrations, atomic saving |
-| `limeshot-dsp` | Oscillators, envelopes, pan law, WAV I/O, insert effects |
+## Architecture
+
+| Crate | What it does |
+| --- | --- |
+| `limeshot-core` | Musical time (960 PPQ ticks), the project model, typed commands, undo and redo |
+| `limeshot-project` | `.lime` files (versioned envelope, migrations, atomic saving), MIDI, and `.flp` import |
+| `limeshot-dsp` | Oscillators, envelopes, pan law, WAV I/O |
 | `limeshot-sequencer` | Compiles a project into an immutable playback snapshot |
-| `limeshot-engine` | Renderer (voices, scheduling, mixer, transport) shared by playback and export |
-| `limeshot-audio` | cpal device output, lock-free control, background sample loading |
-| `limeshot-ui` | egui interface: toolbar, browser, Channel Rack, Piano Roll, Playlist, Mixer |
+| `limeshot-engine` | The renderer (voices, scheduling, mixer, transport, effects), shared by playback and export |
+| `limeshot-audio` | cpal device output, lock-free control and background sample loading |
+| `limeshot-plugins` | VST3 hosting: loading, scanning, processing, state and editor windows |
+| `limeshot-ui` | The egui interface: toolbar, browser, Channel Rack, Piano Roll, Playlist, Mixer, windows |
 | `limeshot-app` | The `limeshot` desktop app and `limeshot-cli` |
 
-Architecture: [docs/architecture/](docs/architecture/) · decisions: [docs/development/decisions.md](docs/development/decisions.md) ·
-research: [docs/research/](docs/research/) · contributing with agents: [AGENTS.md](AGENTS.md).
+## Documentation
 
-## Legal
+- [Architecture](docs/architecture/): audio engine, project model and UI
+- [Design decisions](docs/development/decisions.md)
+- [Roadmap and feature inventory](docs/roadmap/)
+- [Research](docs/research/): how the reference application was studied
+- [Working on LimeShot with agents](AGENTS.md)
 
-LimeShot is independent and not affiliated with Image-Line. FL Studio is a trademark of Image-Line. No FL
-Studio code, artwork, samples or presets are used; the reference application was studied through its
-documentation, metadata and observable behaviour (see [docs/research/](docs/research/)).
+## License
 
-Licensed under either of Apache-2.0 or MIT at your option. Bundled assets: [ATTRIBUTION.md](ATTRIBUTION.md).
+LimeShot is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. Bundled assets are
+listed in [ATTRIBUTION.md](ATTRIBUTION.md).
+
+LimeShot is independent and not affiliated with Image-Line. FL Studio is a trademark of Image-Line. No FL Studio code,
+artwork, samples or presets are used. The reference application was studied only through its documentation, metadata
+and observable behaviour (see [docs/research/](docs/research/)).
