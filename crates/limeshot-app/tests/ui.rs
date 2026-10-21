@@ -3394,3 +3394,93 @@ fn the_hint_panel_describes_the_control_under_the_pointer() {
     wait_for(&mut h, "playback", |a| a.is_playing());
     assert!(limeshot_ui::toolbar::activity(h.state()).starts_with("Playing"));
 }
+
+/// Press at `from`, hold until egui counts it as a drag, then move by `d` in 1 px steps.
+fn drag_px<S>(h: &mut Harness<'_, S>, from: Pos2, d: egui::Vec2, release: bool) {
+    h.event(Event::PointerMoved(from));
+    h.step();
+    h.event(Event::PointerButton {
+        pos: from,
+        button: PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
+    for _ in 0..4 {
+        h.step();
+    }
+    let n = d.length().round() as i32;
+    for i in 1..=n {
+        h.event(Event::PointerMoved(from + d.normalized() * i as f32));
+        h.step();
+    }
+    if release {
+        h.event(Event::PointerButton {
+            pos: from + d,
+            button: PointerButton::Primary,
+            pressed: false,
+            modifiers: Modifiers::NONE,
+        });
+        h.step();
+    }
+}
+
+/// Owner's list item 19 (FL Studio, observed live: a drag off the centre moves at once, one
+/// across it holds "Centered" for several pixels): dials and sliders catch at their default
+/// and let go after a few pixels; from the default, small moves are free.
+#[test]
+fn dials_and_sliders_catch_at_their_default() {
+    use limeshot_ui::widgets::{DETENT_PX, knob, reset_on_double_click};
+    // A pan knob: −1…1 over 120 px, so 1 px is 1/60. State: (value, the knob's rect).
+    let mut h = Harness::new_ui_state(
+        |ui, s: &mut (f32, egui::Rect)| {
+            s.1 = knob(ui, &mut s.0, -1.0, 1.0, 0.0, 40.0, true, |_| String::new()).rect;
+        },
+        (0.0f32, egui::Rect::NOTHING),
+    );
+    h.step();
+    let at = h.state().1.center();
+    drag_px(&mut h, at, vec2(0.0, -2.0), true);
+    assert!(
+        (h.state().0 - 2.0 / 60.0).abs() < 1e-4,
+        "free from the default: {}",
+        h.state().0
+    );
+    // From 0.2 down across the centre: 12 px reach it, it holds for DETENT_PX more.
+    h.state_mut().0 = 0.2;
+    h.step();
+    drag_px(&mut h, at, vec2(0.0, 12.0 + DETENT_PX - 1.0), true);
+    assert_eq!(h.state().0, 0.0, "caught");
+    h.state_mut().0 = 0.2;
+    h.step();
+    drag_px(&mut h, at, vec2(0.0, 12.0 + DETENT_PX + 3.0), true);
+    assert!(
+        (h.state().0 + 3.0 / 60.0).abs() < 1e-4,
+        "let go past the detent: {}",
+        h.state().0
+    );
+
+    // An egui slider (Channel Settings, the Mixer's panel), default 0.5: its value follows the
+    // pointer, and holds at 0.5 for DETENT_PX past it.
+    let mut h = Harness::new_ui_state(
+        |ui, s: &mut (f32, egui::Rect)| {
+            ui.spacing_mut().slider_width = 200.0;
+            let r = ui.add(egui::Slider::new(&mut s.0, 0.0..=1.0).show_value(false));
+            s.1 = r.rect;
+            reset_on_double_click(r, &mut s.0, 0.5);
+        },
+        (0.2f32, egui::Rect::NOTHING),
+    );
+    h.step();
+    let rail = h.state().1;
+    let from = egui::pos2(rail.left() + 0.2 * rail.width(), rail.center().y);
+    let x_half = rail.left() + 0.5 * rail.width();
+    drag_px(&mut h, from, vec2(x_half - from.x + DETENT_PX - 2.0, 0.0), false);
+    assert_eq!(h.state().0, 0.5, "the slider caught at its default");
+    drag_px(
+        &mut h,
+        from + vec2(x_half - from.x + DETENT_PX - 2.0, 0.0),
+        vec2(12.0, 0.0),
+        true,
+    );
+    assert!(h.state().0 > 0.52, "and lets go further on: {}", h.state().0);
+}

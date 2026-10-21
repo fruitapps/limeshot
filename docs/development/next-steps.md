@@ -8,7 +8,11 @@
 2. **Done (session 9):** the 16 issues from the owner's hands-on test (2026-10-21) are fixed and tested
    (`progress.md`, Session 9). Left open: a live FL check of Alt+wheel vertical zoom and a real-input pass over the
    new gestures in the live app.
-3. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
+3. **Done (session 11):** the owner's 19-item list (Playlist audio clips in the picker, Shift+drag, remembered clip
+   length, drop ghost, plugin settings width, audition note-offs, graph overlay, Stop/Play silence, Browser preview,
+   tool cursors, window raising/pinning, hint panel, detents, 1/3-step snap; `progress.md`, Session 11). Plugin
+   windows (PLG-006) are next once the owner says so.
+4. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
    (loading, scanning, instancing, processing, state, latency; tested with built-in plugins and all 36 bundles
    installed on the dev Mac), plugin channels and plugin inserts in the model, engine and UI, a child-process scan
    into a plugin database, and state in `.lime`. Next: plugin windows (PLG-006), plugin parameter automation

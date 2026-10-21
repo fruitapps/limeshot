@@ -7323,6 +7323,34 @@
           "docs/roadmap/settings.json"
         ]
       }
+    },
+    {
+      "priority": "P1",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-app tests/ui.rs::dials_and_sliders_catch_at_their_default"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": []
+      },
+      "notes": "Session 11 (owner's list item 19).",
+      "id": "UI-012",
+      "category": "UI",
+      "name": "Soft detent at a control's default",
+      "description": "Dials, faders and sliders catch at their default value.",
+      "fl_reference": "FL Studio's knobs: a drag that crosses the default holds it for a few pixels (\"Channel panning: Centered\"); a drag starting at the default moves off it at once (observed live in FL 2026.1.1, session 11).",
+      "limeshot_behavior": "Knobs, faders and the egui sliders (Channel Settings, the Mixer's track panel, effect cards, plugin parameters) stop at their default when a drag crosses it and let go after 6 px more travel; a drag that starts at the default moves freely, so small adjustments near it stay easy. Double-click still resets.",
+      "status": "VERIFIED"
     }
   ]
 }

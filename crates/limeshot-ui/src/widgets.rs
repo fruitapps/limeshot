@@ -148,22 +148,61 @@ pub fn segmented(ui: &mut Ui, labels: &[&str], selected: usize, height: f32, tip
     chosen
 }
 
+/// How far the pointer must travel past a control's default before the value moves on (FL
+/// Studio holds a dial at its default for a few pixels when a drag crosses it, observed live).
+pub const DETENT_PX: f32 = 6.0;
+
 /// Handle drag/wheel/double-click for a value control. Returns true if `v` changed.
+///
+/// A drag that crosses the default stops there until the pointer has moved `DETENT_PX` further;
+/// a drag that starts at the default moves off it at once, so small changes near it stay easy.
 fn drag_value(ui: &Ui, resp: &Response, v: &mut f32, min: f32, max: f32, default: f32, pixels_full: f32) -> bool {
     let old = *v;
+    // Pixels of travel held at the default, while caught.
+    let held_id = resp.id.with("detent");
     if resp.double_clicked() {
         *v = default;
     } else if resp.dragged() {
         let fine = ui.input(|i| i.modifiers.shift);
-        let scale = if fine { 0.1 } else { 1.0 };
+        let per_px = (max - min) / pixels_full * if fine { 0.1 } else { 1.0 };
         let dy = -resp.drag_delta().y;
-        *v = (*v + dy / pixels_full * (max - min) * scale).clamp(min, max);
+        let held = ui.ctx().data(|d| d.get_temp::<f32>(held_id));
+        match held {
+            Some(acc) => {
+                let acc = acc + dy;
+                if acc.abs() > DETENT_PX {
+                    *v = (default + (acc - DETENT_PX * acc.signum()) * per_px).clamp(min, max);
+                    ui.ctx().data_mut(|d| d.remove_temp::<f32>(held_id));
+                } else {
+                    ui.ctx().data_mut(|d| d.insert_temp(held_id, acc));
+                }
+            }
+            None => {
+                let new = (*v + dy * per_px).clamp(min, max);
+                let crossed = old != default && (new - default) * (old - default) <= 0.0;
+                if crossed {
+                    // Caught: the travel past the default counts towards leaving it.
+                    let past = (new - default) / per_px;
+                    if past.abs() > DETENT_PX {
+                        *v = (default + (past - DETENT_PX * past.signum()) * per_px).clamp(min, max);
+                    } else {
+                        *v = default;
+                        ui.ctx().data_mut(|d| d.insert_temp(held_id, past));
+                    }
+                } else {
+                    *v = new;
+                }
+            }
+        }
     } else if resp.hovered() {
         let wheel = ui.input(|i| i.smooth_scroll_delta.y);
         if wheel != 0.0 {
             let step = (max - min) / 50.0 * wheel.signum();
             *v = (*v + step).clamp(min, max);
         }
+    }
+    if !resp.dragged() {
+        ui.ctx().data_mut(|d| d.remove_temp::<f32>(held_id));
     }
     *v != old
 }
@@ -501,7 +540,7 @@ pub fn swatch_picker(ui: &mut Ui, current: limeshot_core::Rgb) -> Option<limesho
 
 /// Double-click resets a standard egui slider to `default` (as the custom knobs and faders do).
 /// egui's sliders only sense drags, so their response never reports a double-click itself.
-pub fn reset_on_double_click<T: Copy + PartialEq>(mut r: Response, v: &mut T, default: T) -> Response {
+pub fn reset_on_double_click<T: Detent>(mut r: Response, v: &mut T, default: T) -> Response {
     let double = r
         .ctx
         .input(|i| i.pointer.button_double_clicked(egui::PointerButton::Primary));
@@ -509,7 +548,65 @@ pub fn reset_on_double_click<T: Copy + PartialEq>(mut r: Response, v: &mut T, de
         *v = default;
         r.mark_changed();
     }
+    slider_detent(&mut r, v, default);
     r
+}
+
+/// Values a slider detent works on (numbers that can lie either side of their default).
+pub trait Detent: Copy + PartialEq + Send + Sync + 'static {
+    fn value(self) -> Option<f64>;
+}
+
+impl Detent for f32 {
+    fn value(self) -> Option<f64> {
+        Some(f64::from(self))
+    }
+}
+
+impl Detent for f64 {
+    fn value(self) -> Option<f64> {
+        Some(self)
+    }
+}
+
+macro_rules! no_detent {
+    ($($t:ty),*) => {$(impl Detent for $t {
+        fn value(self) -> Option<f64> {
+            None
+        }
+    })*};
+}
+no_detent!(i8, i16, i32, i64, u8, u16, u32, u64, usize, bool);
+
+/// The detent for egui sliders, whose value follows the pointer's position: when a drag
+/// carries the value across the default, it stays there until the pointer has moved
+/// `DETENT_PX` from where it was caught (as `drag_value` does for knobs and faders).
+fn slider_detent<T: Detent>(r: &mut Response, v: &mut T, default: T) {
+    let (Some(cur), Some(def)) = (v.value(), default.value()) else {
+        return;
+    };
+    let id = r.id.with("slider-detent");
+    if !r.dragged() {
+        r.ctx.data_mut(|d| d.remove_temp::<(f64, Option<f32>)>(id));
+        return;
+    }
+    let Some(x) = r.interact_pointer_pos().map(|p| p.x) else {
+        return;
+    };
+    // (the value last frame, the pointer's x where the default caught it)
+    let state = r.ctx.data(|d| d.get_temp::<(f64, Option<f32>)>(id));
+    let caught = match state {
+        Some((_, Some(at))) if (x - at).abs() <= DETENT_PX => Some(at),
+        Some((_, Some(_))) => None,
+        Some((last, None)) if last != def && (cur - def) * (last - def) <= 0.0 => Some(x),
+        _ => None,
+    };
+    if caught.is_some() && *v != default {
+        *v = default;
+        r.mark_changed();
+    }
+    let now = v.value().unwrap_or(cur);
+    r.ctx.data_mut(|d| d.insert_temp(id, (now, caught)));
 }
 
 /// Whether a standard egui widget's `changed()` came from the user. egui sliders can report a

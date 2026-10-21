@@ -423,3 +423,13 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
     what the control under the pointer does, its shortcut on the right. Every tooltip feeds it (`widgets::Hint`),
     the editors add their own descriptions, and knob and fader values show while dragged. The status bar no
     longer carries hints. Icon buttons gained accessible labels.
+14. **Detents (item 19).** In FL a drag that crosses a knob's default holds it ("Centered") for several pixels,
+    while a drag starting there moves at once (observed live). Knobs and faders (`drag_value`) and the egui sliders
+    (through `reset_on_double_click`) now do the same with a 6 px hold.
+
+All 19 items are done (see the per-item notes above and in `features.json`). Not done: plugin windows (PLG-006),
+which wait for the owner's go-ahead. Verification: `cargo test --workspace` passes; Clippy (`-D warnings`),
+`cargo fmt --check` and `scripts/features.py check` are clean. Live checks this session: Vital's Channel Settings
+width (item 5), the Browser's preview panel (item 11) and the tool cursor (item 13) in the running app; the other
+items are covered by headless UI tests and engine tests, not by a live pass with real plugins (Serum's stuck
+notes, item 8, were reproduced and fixed in an engine test, not re-checked with Serum itself).

@@ -8,9 +8,9 @@ automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **238**
+- Features tracked: **239**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 87, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 9, VERIFIED 128, DEFERRED 2
+- By status: NOT_STARTED 87, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 9, VERIFIED 129, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -28,7 +28,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Export | 13 | 5 | 0 | 0 | 8 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
 | Workflow | 8 | 0 | 1 | 1 | 6 |
-| UI | 11 | 7 | 1 | 1 | 2 |
+| UI | 12 | 8 | 1 | 1 | 2 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
 ## Application
@@ -337,6 +337,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | UI-009 | Channel Settings window | P1 |  | VERIFIED | Clicking a channel button in the Channel Rack toggles the Channel Settings window for that channel (sampler or LimeSynth parameters with the Sampler/LimeSynth switch, a plugin's parameter list without it, root key, routing).<br>*Was a docked Inspector in session 2 (D19, superseded by D24). Session 11 (owner's list items 5 and 6): plugin channels have no Sampler/LimeSynth switch. Vital's and Serum's settings could not be narrowed: a parameter value wider than the 84 px the row reserved ("1.95312ms") made the row overflow, egui grew the window to fit, the slider grew with it, and the window ended up as wide as the workspace. Fixed in general (every workspace window lays its body out in exactly its own area, so an overwide row is clipped instead of growing the window) and in the parameter rows (the value's measured width is reserved). Checked live with Vital.* | `limeshot-app tests/ui.rs::clicking_a_channel_button_toggles_its_settings_window`<br>`limeshot-app tests/ui.rs::renders_every_panel_without_panicking`<br>`limeshot-app tests/ui.rs::a_wide_row_does_not_stop_a_window_from_being_resized` |
 | UI-010 | Control context menu | P1 |  | IN_PROGRESS | Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.<br>*Observed 2026-10-20 (session 4) on a Channel Rack pan knob.* | — |
 | UI-011 | Customizable keyboard shortcuts | P2 |  | NOT_STARTED | Planned: a shortcuts page in the settings that rebinds the actions in keybindings.json, stored in settings.json, with conflict detection. Today the bindings are fixed and listed in Help › Keyboard shortcuts (F1). | — |
+| UI-012 | Soft detent at a control's default | P1 |  | VERIFIED | Knobs, faders and the egui sliders (Channel Settings, the Mixer's track panel, effect cards, plugin parameters) stop at their default when a drag crosses it and let go after 6 px more travel; a drag that starts at the default moves freely, so small adjustments near it stay easy. Double-click still resets.<br>*Session 11 (owner's list item 19).* | `limeshot-app tests/ui.rs::dials_and_sliders_catch_at_their_default` |
 
 ## Platform
 
