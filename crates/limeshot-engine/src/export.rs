@@ -61,10 +61,28 @@ impl RenderReport {
     }
 }
 
-/// Render to interleaved stereo f32.
+/// Processors the host built for plugin effects (by effect id) and plugin channels (by channel
+/// id), for an offline render. They must be instances of their own, not the realtime ones.
+#[derive(Default)]
+pub struct Processors {
+    pub effects: Vec<(u32, Box<dyn limeshot_dsp::effects::Effect>)>,
+    pub instruments: Vec<(u32, Box<dyn limeshot_dsp::Instrument>)>,
+}
+
+/// Render to interleaved stereo f32 (plugin slots and channels stay silent; see
+/// [`render_offline_with`]).
 pub fn render_offline(
     snapshot: Arc<Snapshot>,
     settings: &RenderSettings,
+) -> Result<(Vec<f32>, RenderReport), ExportError> {
+    render_offline_with(snapshot, settings, Processors::default())
+}
+
+/// Render to interleaved stereo f32 with the host's plugin processors.
+pub fn render_offline_with(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    processors: Processors,
 ) -> Result<(Vec<f32>, RenderReport), ExportError> {
     let length = match settings.range {
         ExportRange::Song => snapshot.song.length,
@@ -78,6 +96,12 @@ pub fn render_offline(
     let sample_rate = r.sample_rate();
     for (id, fx) in crate::fx::build_all(&snapshot, sample_rate) {
         r.adopt_effect(id, fx);
+    }
+    for (id, fx) in processors.effects {
+        r.adopt_effect(id, fx);
+    }
+    for (channel, inst) in processors.instruments {
+        r.adopt_instrument(channel, inst);
     }
     r.rearrange();
     r.set_mode(match settings.range {
@@ -124,7 +148,18 @@ pub fn export_wav(
     depth: BitDepth,
     path: &Path,
 ) -> Result<RenderReport, ExportError> {
-    let (audio, report) = render_offline(snapshot, settings)?;
+    export_wav_with(snapshot, settings, depth, path, Processors::default())
+}
+
+/// Render with the host's plugin processors and write a stereo WAV file.
+pub fn export_wav_with(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    depth: BitDepth,
+    path: &Path,
+    processors: Processors,
+) -> Result<RenderReport, ExportError> {
+    let (audio, report) = render_offline_with(snapshot, settings, processors)?;
     write_wav(path, report.sample_rate, &audio, depth)?;
     Ok(report)
 }

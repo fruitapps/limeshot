@@ -107,7 +107,12 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
         range,
         ..RenderSettings::default()
     };
-    let rep = limeshot_engine::export_wav(snap, &settings, o.depth, out).map_err(|e| e.to_string())?;
+    // Plugin channels and inserts get instances of their own, restored from the saved state.
+    let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
+    let (processors, instances) = plugins.offline(project, o.rate);
+    let rep = limeshot_engine::export_wav_with(snap, &settings, o.depth, out, processors).map_err(|e| e.to_string())?;
+    drop(instances);
+    plugins.poll();
     println!(
         "rendered {} — {:.2} s ({} frames at {} Hz), peak {:.1} dBFS",
         out.display(),
@@ -131,10 +136,16 @@ fn play(project: &Project, o: &Opts) -> Result<(), String> {
     let pattern = project.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
     let snap = Arc::new(limeshot_sequencer::compile(project, pattern, &cache));
     let mut player = Player::start(&AudioConfig::default(), snap.clone());
-    // Effect processors are built here (control thread) and sent before re-sending the snapshot.
+    // Effect processors and plugins are built here (control thread) and sent before re-sending
+    // the snapshot.
     for (id, fx) in limeshot_engine::fx::build_all(&snap, player.sample_rate()) {
         player.send(Msg::Effect(id, fx));
     }
+    let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
+    let sr = player.sample_rate();
+    plugins.sync(project, 0, sr, &mut |m| {
+        player.send(m);
+    });
     player.send(Msg::Snapshot(snap));
     match player.output_description() {
         Ok(name) => println!("output: {name} at {} Hz", player.sample_rate()),

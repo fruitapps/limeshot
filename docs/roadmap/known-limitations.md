@@ -61,8 +61,11 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
-* VST3 plugins can be loaded and processed by `limeshot-plugins`, but not yet added to a project: no plugin
-  instruments in the Channel Rack, no plugins in mixer inserts, no plugin editors, no CLAP or Audio Units.
+* VST3 plugins: no plugin windows (the Editor button is disabled; parameters are set from LimeShot's list), no
+  automation of plugin parameters, parameter changes are not undo steps, no delay compensation for plugin latency,
+  no custom plugin folders, and a plugin that crashes while playing takes LimeShot down (only scanning is isolated).
+  Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
+  channels do not play audio clips. No CLAP or Audio Units. Verified on macOS only.
 * Window positions, sizes and detached/maximised states are not remembered between sessions.
 * Accessibility: custom-painted editors expose no accessibility labels.
 

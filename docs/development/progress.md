@@ -349,5 +349,24 @@ work moved to Mandatory 3, VST3 hosting.
    Vital, Surge XT, M1, Analog Lab V, Guitar Rig 7 and Waves through WaveShell) with no crash or timeout. In the
    test harness (off the main thread) SINE Player trapped, so plugins are created on the main thread.
 
-Next: plugin instruments on Channel Rack channels and plugins in mixer inserts (model, engine, `.lime` state), a
-plugin database filled by a child-process scan, then editor windows (PLG-006).
+4. **Plugins in projects.** `PluginRef` (core) names a plugin and carries its state (base64 in `.lime`, shared
+   between undo copies; a bad blob loads as empty). Channels gained `Instrument::Plugin`, insert slots
+   `EffectKind::Plugin`, and `Command::AddPluginEffect`; `Document::store_plugin_state` copies a running plugin's
+   state in before saving without making an undo step.
+5. **Engine.** `InstrumentRack` gives a plugin channel its notes as events at exact frame offsets and holds each
+   note until its note-off sample, so the output does not depend on the block size (tested at 1, 64, 333 and 1024
+   frames with a fake instrument); stop, locate and loops release held notes; auditions work while stopped.
+   `Msg::Instrument` hands instruments to the audio thread, which returns retired ones as garbage. Offline renders
+   take their own processors (`render_offline_with`, `export_wav_with`).
+6. **App.** `PluginHost` (`limeshot-ui/src/plugins.rs`): Find plugins… scans in child processes
+   (`limeshot --scan-vst3`) into `plugins.json`; the Channel Rack's and the insert chain's Add menus list it under
+   Plugins; plugins are created and destroyed on the main thread as the project changes (undo included); Channel
+   Settings and the insert card list the parameters as sliders with a filter, and a disabled Editor button. Saving,
+   autosave, WAV export and `limeshot-cli render`/`play` include plugins. Headless UI tests drive the menus with the
+   built-in test plugins, save, reopen and render. `ui_shot --plugin` shows the panels.
+7. **Real plugins.** The demo song with its Lead on Surge XT (through an OTT insert) and its Bass on Vital renders
+   (each part alone peaks at −15 and −14 dBFS) and plays in realtime through the speakers (−17.7 and −14.1 dBFS,
+   about 25 % callback load).
+
+Next: plugin windows (PLG-006, native views in their own windows), automation of plugin parameters (PLG-007),
+delay compensation (PLG-009), and a live pass of Find plugins… in the window.

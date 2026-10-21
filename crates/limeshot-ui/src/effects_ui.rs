@@ -27,6 +27,14 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             ui.close();
                         }
                     }
+                    ui.separator();
+                    if let Some(e) = crate::plugins::menu(app, ui, false) {
+                        app.exec(Command::AddPluginEffect {
+                            track,
+                            plugin: e.plugin_ref(),
+                        });
+                        ui.close();
+                    }
                 });
             });
         });
@@ -58,8 +66,9 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             enabled: !e.enabled,
                         });
                     }
+                    let name = e.name();
                     ui.label(
-                        RichText::new(format!("{}. {}", pos + 1, e.kind.label()))
+                        RichText::new(format!("{}. {name}", pos + 1))
                             .font(semibold(12.0))
                             .color(if e.enabled { t.text } else { t.text_dim }),
                     );
@@ -92,6 +101,9 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                     });
                 });
                 ui.add_space(2.0);
+                if e.kind == EffectKind::Plugin {
+                    crate::plugins::effect_card(app, ui, track, e.id, e.plugin.as_ref());
+                }
                 for (i, spec) in e.kind.params().iter().enumerate() {
                     let cur = e.params.get(i).copied().unwrap_or(spec.default);
                     ui.horizontal(|ui| {
@@ -252,6 +264,6 @@ fn format_value(v: f32, unit: &str) -> String {
 pub fn strip_labels(slots: &[EffectSlot]) -> Vec<(String, bool)> {
     slots
         .iter()
-        .map(|e| (e.kind.label().trim_start_matches("Lime ").to_string(), e.enabled))
+        .map(|e| (e.name().trim_start_matches("Lime ").to_string(), e.enabled))
         .collect()
 }

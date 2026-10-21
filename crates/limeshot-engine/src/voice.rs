@@ -226,7 +226,8 @@ impl Voice {
                     ..Self::default()
                 })
             }
-            InstrumentState::Silent => None,
+            // Plugin channels have no voices; the renderer sends them note events.
+            InstrumentState::Plugin { .. } | InstrumentState::Silent => None,
         }
     }
 

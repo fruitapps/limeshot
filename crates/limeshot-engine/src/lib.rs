@@ -12,9 +12,14 @@
 
 pub mod export;
 pub mod fx;
+mod plugins;
 pub mod renderer;
 pub mod voice;
 
-pub use export::{ExportError, ExportRange, RenderReport, RenderSettings, export_wav, render_offline};
+pub use export::{
+    ExportError, ExportRange, Processors, RenderReport, RenderSettings, export_wav, export_wav_with, render_offline,
+    render_offline_with,
+};
 pub use limeshot_dsp::BitDepth;
+pub use plugins::MAX_PLUGIN_CHANNELS;
 pub use renderer::{MAX_BLOCK, MAX_VOICES, Peak, PlayMode, Renderer};

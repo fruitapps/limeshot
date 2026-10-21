@@ -28,6 +28,12 @@ impl eframe::App for App {
 fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // The plugin scanner runs this binary once per bundle (crash isolation).
+    if let [flag, bundle] = args.as_slice()
+        && flag == "--scan-vst3"
+    {
+        std::process::exit(limeshot_ui::plugins::scan_child(bundle));
+    }
     let samples = limeshot_app::bundled_samples_dir();
     let settings = Settings::load();
     let mut app = LimeShotApp::new(settings, samples.clone());

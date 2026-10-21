@@ -126,6 +126,8 @@ pub struct LimeShotApp {
     pub path: Option<PathBuf>,
     pub player: Player,
     pub samples: SampleCache,
+    /// The plugin database and the project's running plugins.
+    pub plugins: crate::plugins::PluginHost,
     pub settings: Settings,
     pub ui: UiState,
     pub dialog: Option<dialogs::Dialog>,
@@ -156,6 +158,7 @@ impl LimeShotApp {
     pub fn new(settings: Settings, bundled_samples: Option<PathBuf>) -> Self {
         let audio = settings.audio.clone();
         let mut app = Self::new_with_player(settings, bundled_samples, |s| Player::start(&audio, s));
+        app.plugins = crate::plugins::PluginHost::new(crate::plugins::PluginHost::default_db_path());
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app
@@ -185,6 +188,7 @@ impl LimeShotApp {
             doc,
             path: None,
             samples: SampleCache::new(),
+            plugins: crate::plugins::PluginHost::new(None),
             settings,
             ui,
             dialog: None,
@@ -452,12 +456,14 @@ impl LimeShotApp {
             self.send(Msg::ClearEffects);
         }
         let sr = self.player.sample_rate();
+        // Plugin slots get their processors from the plugin host below.
         let present: Vec<(u32, limeshot_core::EffectKind, Vec<f32>)> = self
             .project()
             .mixer
             .tracks
             .iter()
             .flat_map(|t| t.effects.iter())
+            .filter(|e| e.kind != limeshot_core::EffectKind::Plugin)
             .map(|e| (e.id, e.kind, e.params.clone()))
             .collect();
         self.sent_effects.retain(|id| present.iter().any(|p| p.0 == *id));
@@ -466,6 +472,14 @@ impl LimeShotApp {
                 self.send(Msg::Effect(id, limeshot_engine::fx::build(kind, sr, &params)));
             }
         }
+        let player = &mut self.player;
+        let mut send = |m: Msg| {
+            if !player.send(m) {
+                log::warn!("audio queue full; plugin processor dropped");
+            }
+        };
+        self.plugins
+            .sync(self.doc.project(), self.doc.generation(), sr, &mut send);
     }
 
     pub fn snapshot(&self) -> &Arc<Snapshot> {
@@ -577,6 +591,7 @@ impl LimeShotApp {
     }
 
     pub fn save_to(&mut self, path: &Path) -> bool {
+        self.plugins.store_states(&mut self.doc);
         match limeshot_project::save(self.doc.project(), path) {
             Ok(()) => {
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
@@ -757,6 +772,15 @@ impl LimeShotApp {
         ctx.set_zoom_factor(self.settings.ui_scale);
         self.player.collect_garbage();
         self.sync_engine();
+        if self.plugins.poll() {
+            self.doc.mark_unsaved();
+        }
+        if let Some(summary) = self.plugins.poll_scan() {
+            self.toast(summary);
+        }
+        if self.plugins.is_scanning() {
+            ctx.request_repaint_after(Duration::from_millis(250));
+        }
         let range = self.ui.playlist.time_sel;
         if self.loop_sent != Some(range) {
             self.send(Msg::LoopRange(range));

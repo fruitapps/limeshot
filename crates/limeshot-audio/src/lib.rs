@@ -64,7 +64,10 @@ pub enum Msg {
     /// A processor for insert effect `id`, built on the control thread
     /// (`limeshot_engine::fx::build`). Send it before the snapshot that uses it.
     Effect(u32, Box<dyn limeshot_dsp::effects::Effect>),
-    /// Retire all effect processors (a different project was opened).
+    /// The plugin instrument of the channel with this id, built on the control thread. Send it
+    /// before the snapshot that uses it.
+    Instrument(u32, Box<dyn limeshot_dsp::Instrument>),
+    /// Retire all effect processors and plugin instruments (a different project was opened).
     ClearEffects,
     StopPreview,
     Panic,
@@ -152,6 +155,7 @@ impl Status {
 enum Garbage {
     Snapshot(#[allow(dead_code)] Arc<Snapshot>),
     Effect(#[allow(dead_code)] Box<dyn limeshot_dsp::effects::Effect>),
+    Instrument(#[allow(dead_code)] Box<dyn limeshot_dsp::Instrument>),
 }
 
 /// What the audio thread owns.
@@ -190,6 +194,7 @@ impl AudioState {
                 Msg::StopPreview => r.stop_sample_preview(),
                 Msg::Panic => r.all_notes_off(),
                 Msg::Effect(id, fx) => r.adopt_effect(id, fx),
+                Msg::Instrument(channel, inst) => r.adopt_instrument(channel, inst),
                 Msg::ClearEffects => r.clear_effects(),
             }
         }
@@ -197,6 +202,14 @@ impl AudioState {
         while let Some(fx) = self.renderer.take_retired_effect() {
             if let Err(rtrb::PushError::Full(Garbage::Effect(fx))) = self.garbage.push(Garbage::Effect(fx)) {
                 self.renderer.keep_retired_effect(fx);
+                break;
+            }
+        }
+        // Plugins are torn down where they were made (the control thread), never here.
+        while let Some(inst) = self.renderer.take_retired_instrument() {
+            if let Err(rtrb::PushError::Full(Garbage::Instrument(inst))) = self.garbage.push(Garbage::Instrument(inst))
+            {
+                self.renderer.keep_retired_instrument(inst);
                 break;
             }
         }
@@ -407,7 +420,8 @@ impl Player {
         }
     }
 
-    /// Drop snapshots the audio thread has finished with. Call regularly (every UI frame).
+    /// Drop snapshots and processors the audio thread has finished with. Call regularly (every UI
+    /// frame) from the thread that created the plugins.
     pub fn collect_garbage(&mut self) {
         while self.garbage.pop().is_ok() {}
     }

@@ -156,6 +156,19 @@ Offline export builds all processors directly (`fx::build_all`) and keeps render
 
 Routing is post-fader only; there are no pre-fader sends or sidechain inputs yet.
 
+### Plugin instruments
+
+A channel whose instrument is a hosted plugin (`InstrumentState::Plugin`) has no voices. When the scheduler starts
+one of its notes, `InstrumentRack` (`plugins.rs`) queues a note-on at the note's frame offset in the block and keeps
+the note as held until its note-off sample; note-offs are queued in the block they fall in, so onsets and releases
+are sample-accurate whatever the block size. Each plugin channel then renders the whole block once (after the
+voices, before mixing) and is added to its mixer bus at the channel's volume and pan. Stop, locate and the loop point
+release held notes at the start of the next block; a retriggered key ends where it is played again. Instruments are
+`limeshot_dsp::Instrument` trait objects built on the control thread (the plugin host in `limeshot-ui`), handed over
+with `Msg::Instrument`, placed by channel id on each snapshot like effects, and returned as garbage so plugins are
+torn down on the thread that made them. Plugin effects are ordinary insert effects (`Vst3Processor` implements
+`Effect`); offline renders take their own instances through `Processors`.
+
 ## Device output
 
 `limeshot_audio::Player::start(config, snapshot)`:

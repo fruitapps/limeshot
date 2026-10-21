@@ -22,17 +22,30 @@ pub fn build(kind: EffectKind, sample_rate: u32, params: &[f32]) -> Box<dyn Effe
         EffectKind::Reverb => Box::new(Reverb::new(sr)),
         EffectKind::Compressor => Box::new(Compressor::new(sr)),
         EffectKind::Limiter => Box::new(Limiter::new(sr)),
+        // The host adopts the real processor; until then the slot passes audio through.
+        EffectKind::Plugin => Box::new(Passthrough),
     };
     e.set_params(params);
     e
 }
 
-/// Processors for every effect in `snapshot` (for offline rendering).
+/// Leaves audio unchanged (a plugin slot whose plugin is not loaded).
+pub struct Passthrough;
+
+impl Effect for Passthrough {
+    fn set_params(&mut self, _params: &[f32]) {}
+    fn process(&mut self, _buf: &mut [f32]) {}
+    fn reset(&mut self) {}
+}
+
+/// Processors for every built-in effect in `snapshot` (for offline rendering). Plugin slots are
+/// left out: the host supplies those.
 pub fn build_all(snapshot: &Snapshot, sample_rate: u32) -> Vec<(u32, Box<dyn Effect>)> {
     snapshot
         .mixer
         .iter()
         .flat_map(|t| t.effects.iter())
+        .filter(|e| e.kind != EffectKind::Plugin)
         .map(|e| (e.id, build(e.kind, sample_rate, &e.params)))
         .collect()
 }

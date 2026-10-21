@@ -16,11 +16,13 @@ pub mod command;
 pub mod document;
 pub mod effects;
 pub mod model;
+pub mod plugin;
 pub mod time;
 
 pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
 pub use command::{Command, CommandError, Created, ImportedChannel, NewNote, NoteProp};
-pub use document::Document;
+pub use document::{Document, PluginTarget};
 pub use effects::{COMPRESSOR_SIDECHAIN, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;
+pub use plugin::{PluginRef, PluginState};
 pub use time::{BarBeatTick, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};

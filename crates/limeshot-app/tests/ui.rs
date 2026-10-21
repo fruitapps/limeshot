@@ -2723,3 +2723,145 @@ fn cpu_readout_updates_once_per_second() {
     assert_eq!(cpu.update(11.5, 0.05), 0.6);
     assert_eq!(cpu.update(12.0, 0.05), 0.05);
 }
+
+/// Open `path` of nested menu labels with clicks, stepping between them. A sub-menu button's
+/// label ends in egui's arrow ("LimeShot ⏵"), which also keeps it apart from other text.
+fn menu_path(h: &mut Harness<'static, LimeShotApp>, path: &[&str]) {
+    for label in path {
+        let sub = format!("{label} ⏵");
+        let node = match h.query_by_label(&sub) {
+            Some(n) => n,
+            None => h.get_all_by_label(label).last().expect("menu entry"),
+        };
+        node.click();
+        h.step();
+        h.step();
+    }
+}
+
+#[test]
+fn a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens() {
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").clone();
+    assert_eq!(ch.name, "Lime Test Tone");
+    assert!(matches!(&ch.instrument, Instrument::Plugin(p) if p.class_id == limeshot_plugins::testing::tone_class()));
+    let target = Target::Channel(ch.id);
+    assert!(
+        h.state().plugins.is_loaded(target),
+        "created on the main thread when added"
+    );
+    assert_eq!(h.state().selected_channel(), Some(ch.id));
+
+    // Channel Settings lists the plugin's parameters.
+    h.state_mut().show_window(Win::ChannelSettings);
+    h.step();
+    h.step();
+    assert!(h.query_by_label("Level").is_some(), "the plugin's parameter is shown");
+    assert!(h.query_all_by_label("Lime Test Tone").next().is_some());
+
+    // A parameter change is not an undo step but marks the project modified, and saving stores
+    // the plugin's state.
+    h.state_mut().doc.mark_saved();
+    let undo = h.state().doc.undo_label();
+    h.state_mut().plugins.set_param(target, 0, 0.25);
+    h.state_mut().doc.mark_unsaved();
+    assert_eq!(h.state().doc.undo_label(), undo);
+    let dir = tempfile::tempdir().expect("dir");
+    let path = dir.path().join("plugin.lime");
+    assert!(h.state_mut().save_to(&path));
+    let Instrument::Plugin(saved) = &h.state().project().channel(ch.id).expect("ch").instrument else {
+        panic!("not a plugin")
+    };
+    assert!(!saved.state.is_empty(), "state captured at save");
+
+    // Reopened, the plugin comes back with that state.
+    let mut h2 = harness(false);
+    h2.state_mut().open_path(&path);
+    h2.step();
+    h2.step();
+    let inst = h2.state().plugins.instance(target).expect("reloaded");
+    assert!((inst.param(0) - 0.25).abs() < 1e-9, "level restored: {}", inst.param(0));
+
+    // Notes on the channel render through a fresh offline instance at that level.
+    let pat = h2.state().current_pattern();
+    h2.state_mut().exec(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: ch.id,
+            key: 69,
+            start: 0,
+            length: 960,
+            velocity: 1.0,
+        },
+    });
+    h2.step();
+    let (processors, _keep) = h2.state().plugins.offline(h2.state().project(), 48_000);
+    assert_eq!(processors.instruments.len(), 1);
+    let snap = h2.state().snapshot().clone();
+    let settings = limeshot_engine::RenderSettings {
+        sample_rate: 48_000,
+        range: limeshot_engine::ExportRange::Pattern,
+        max_tail_secs: 0.0,
+        block: 512,
+    };
+    let (audio, report) = limeshot_engine::render_offline_with(snap, &settings, processors).expect("render");
+    assert!(
+        report.peak > 0.05 && report.peak < 0.3,
+        "level 0.25 through the mix: {}",
+        report.peak
+    );
+    assert!(audio.iter().all(|s| s.is_finite()));
+}
+
+#[test]
+fn a_plugin_effect_from_the_insert_menu_loads_and_unloads() {
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(true);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 1;
+    for _ in 0..3 {
+        h.step();
+    }
+    let before = h.state().project().mixer.tracks[1].effects.len();
+    menu_path(&mut h, &["+ Add effect", "Plugins", "LimeShot", "Lime Test Gain"]);
+    let fx = h.state().project().mixer.tracks[1]
+        .effects
+        .last()
+        .expect("slot")
+        .clone();
+    assert_eq!(h.state().project().mixer.tracks[1].effects.len(), before + 1);
+    assert_eq!(fx.kind, EffectKind::Plugin);
+    assert_eq!(fx.plugin.as_ref().map(|p| p.name.as_str()), Some("Lime Test Gain"));
+    h.step();
+    let target = Target::Effect {
+        track: 1,
+        effect: fx.id,
+    };
+    assert!(h.state().plugins.is_loaded(target));
+    assert!(
+        h.query_by_label("Gain").is_some(),
+        "the card lists the plugin's parameter"
+    );
+    assert!(h.query_all_by_label_contains("Lime Test Gain").next().is_some());
+
+    h.state_mut().exec(Command::RemoveEffect {
+        track: 1,
+        effect: fx.id,
+    });
+    h.step();
+    assert!(
+        !h.state().plugins.is_loaded(target),
+        "removing the slot drops the plugin"
+    );
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    h.step();
+    assert!(h.state().plugins.is_loaded(target), "undo brings it back");
+}

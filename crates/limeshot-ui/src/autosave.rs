@@ -143,6 +143,7 @@ pub fn tick(app: &mut LimeShotApp) {
     let since = *app.autosave.since.get_or_insert_with(Instant::now);
     let revision = app.doc.revision();
     if app.autosave.written != Some(revision) && since.elapsed() >= interval {
+        app.plugins.store_states(&mut app.doc);
         let (project, path) = (app.doc.project().clone(), app.path.clone());
         if let Err(e) = app.autosave.write(&project, path.as_deref(), revision) {
             app.toast_error(format!("Autosave failed: {e}"));

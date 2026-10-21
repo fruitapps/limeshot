@@ -66,7 +66,7 @@ fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         let kind = match ch.instrument {
             Instrument::Sampler(_) => 0,
             Instrument::Synth(_) => 1,
-            Instrument::Unsupported(_) => 2,
+            Instrument::Plugin(_) | Instrument::Unsupported(_) => 2,
         };
         if let Some(kind) = segmented(ui, &["Sampler", "LimeSynth"], kind, 24.0, "Instrument type") {
             let inst = if kind == 0 {
@@ -96,6 +96,7 @@ fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     match &ch.instrument {
         Instrument::Sampler(p) => sampler_settings(app, ui, ch.id, p),
         Instrument::Synth(p) => synth_settings(app, ui, ch.id, p),
+        Instrument::Plugin(p) => crate::plugins::channel_settings(app, ui, ch.id, p),
         Instrument::Unsupported(_) => {
             ui.label(RichText::new("This channel uses an instrument this version of LimeShot does not support. It is kept in the project but stays silent.").color(t.warning));
         }

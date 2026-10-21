@@ -158,6 +158,9 @@ pub struct ExportJob {
     pub path: PathBuf,
     pub started: Instant,
     rx: Receiver<Result<RenderReport, String>>,
+    /// The control halves of the export's own plugin instances, dropped on this thread when the
+    /// job ends.
+    _plugins: Vec<limeshot_plugins::Vst3Instance>,
 }
 
 pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) {
@@ -169,12 +172,13 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
         ..RenderSettings::default()
     };
     let depth = opts.depth;
+    let (processors, plugins) = app.plugins.offline(app.project(), opts.sample_rate);
     let (tx, rx) = channel();
     let p = path.clone();
     let spawned = std::thread::Builder::new()
         .name("limeshot-export".into())
         .spawn(move || {
-            let r = limeshot_engine::export_wav(snap, &settings, depth, &p).map_err(|e| e.to_string());
+            let r = limeshot_engine::export_wav_with(snap, &settings, depth, &p, processors).map_err(|e| e.to_string());
             let _ = tx.send(r);
         });
     match spawned {
@@ -183,6 +187,7 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
                 path,
                 started: Instant::now(),
                 rx,
+                _plugins: plugins,
             })
         }
         Err(e) => app.toast_error(format!("could not start the export: {e}")),

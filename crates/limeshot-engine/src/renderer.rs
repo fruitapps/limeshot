@@ -83,6 +83,8 @@ pub struct Renderer {
     /// Set when Song mode reached its end without looping.
     finished: bool,
     fx: crate::fx::FxRack,
+    /// Plugin instruments, by channel.
+    instruments: crate::plugins::InstrumentRack,
     /// Each mixer track's built-in EQ, after its insert effects.
     eqs: Vec<limeshot_dsp::effects::Eq3>,
     /// Each mixer track's gain reduction in dB in the last block (its compressors).
@@ -123,6 +125,7 @@ impl Renderer {
             start_tick: 0,
             finished: false,
             fx: crate::fx::FxRack::new(),
+            instruments: crate::plugins::InstrumentRack::new(MAX_BLOCK),
             eqs: (0..limeshot_core::Mixer::MAX_TRACKS)
                 .map(|_| limeshot_dsp::effects::Eq3::new(sample_rate as f32))
                 .collect(),
@@ -150,6 +153,7 @@ impl Renderer {
         let channels = snapshot.channels.len();
         let old = std::mem::replace(&mut self.snapshot, snapshot);
         self.fx.arrange(&self.snapshot);
+        self.instruments.arrange(&self.snapshot);
         self.design_eqs();
         if tempo_changed {
             // Keep the musical position; continue at the new tempo from here.
@@ -167,6 +171,8 @@ impl Renderer {
             {
                 v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
             }
+            let tl = self.timeline;
+            self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
         }
         for v in &mut self.voices {
             if v.channel != NO_CHANNEL && usize::from(v.channel) >= channels {
@@ -286,6 +292,7 @@ impl Renderer {
         for v in self.voices.iter_mut().filter(|v| v.sequenced) {
             v.release();
         }
+        self.instruments.release_sequenced();
     }
 
     /// Stop every voice immediately (panic button).
@@ -293,6 +300,7 @@ impl Renderer {
         for v in &mut self.voices {
             v.env.kill();
         }
+        self.instruments.release_all();
     }
 
     fn alloc_voice(&mut self, mut v: Voice) {
@@ -319,6 +327,12 @@ impl Renderer {
         let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
             return;
         };
+        if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
+            let at = (0, self.now);
+            self.instruments
+                .note_on(usize::from(channel), id, key, velocity, at, u64::MAX, 0, false);
+            return;
+        }
         if let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, self.sample_rate as f32)
         {
             v.channel = channel;
@@ -327,6 +341,11 @@ impl Renderer {
     }
 
     pub fn preview_note_off(&mut self, channel: u16, key: u8) {
+        if let Some(limeshot_sequencer::InstrumentState::Plugin { channel: id }) =
+            self.snapshot.channels.get(usize::from(channel)).map(|c| &c.instrument)
+        {
+            self.instruments.preview_off(*id, key);
+        }
         for v in self
             .voices
             .iter_mut()
@@ -376,6 +395,8 @@ impl Renderer {
     /// Render `out.len() / 2` stereo frames (at most [`MAX_BLOCK`]) of interleaved audio.
     pub fn render(&mut self, out: &mut [f32]) {
         let frames = (out.len() / 2).min(MAX_BLOCK);
+        let block_start = self.now;
+        let transport = self.transport();
         let tracks = self.snapshot.mixer.len().clamp(1, self.buses.len());
         for b in &mut self.buses[..tracks] {
             b[..2 * frames].fill(0.0);
@@ -399,7 +420,7 @@ impl Renderer {
                 let offset = offset.min(chunk).max(cursor);
                 self.render_voices(done + cursor, offset - cursor, self.now + cursor as u64);
                 cursor = offset;
-                self.start(action);
+                self.start(action, (done + cursor, self.now + cursor as u64));
             }
             self.render_voices(done + cursor, chunk - cursor, self.now + cursor as u64);
             self.actions = actions;
@@ -414,7 +435,39 @@ impl Renderer {
             }
         }
 
+        self.render_instruments(block_start, frames, tracks, &transport);
         self.mix(tracks, frames, out);
+    }
+
+    /// The transport as plugins see it, at the current position.
+    fn transport(&self) -> limeshot_dsp::Transport {
+        let tick = self.position();
+        let bpm = f64::from(self.snapshot.tempo.milli_bpm()) / 1000.0;
+        let quarters = tick as f64 / limeshot_core::PPQ as f64;
+        let sig = self.snapshot.time_signature;
+        limeshot_dsp::Transport {
+            playing: self.playing,
+            tempo: bpm,
+            sample_pos: (quarters * 60.0 / bpm * f64::from(self.sample_rate)) as i64,
+            ppq_pos: quarters,
+            time_sig: (i32::from(sig.numerator), i32::from(sig.denominator)),
+        }
+    }
+
+    /// Render the plugin channels for the whole block into their mixer buses. Their notes were
+    /// queued at exact frame offsets; volume and pan apply as they stand at the block's end.
+    fn render_instruments(&mut self, start: u64, frames: usize, tracks: usize, transport: &limeshot_dsp::Transport) {
+        let snapshot = &self.snapshot;
+        let chan_mix = &self.chan_mix;
+        self.instruments.render(start, frames, transport, &mut self.buses, |i| {
+            let ch = snapshot.channels.get(i)?;
+            if !ch.audible {
+                return None;
+            }
+            let (volume, pan) = chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
+            let (pl, pr) = pan_gains(pan.clamp(-1.0, 1.0));
+            Some((ch.mixer_track.min(tracks - 1), volume * pl, volume * pr))
+        });
     }
 
     /// Load channel and mixer settings from the snapshot and apply automation at the current
@@ -569,6 +622,7 @@ impl Renderer {
         {
             v.release();
         }
+        self.instruments.release_sequenced();
         let restart = self.active_loop().map_or(0, |r| r.0);
         self.timeline = Timeline {
             origin_tick: restart,
@@ -580,7 +634,8 @@ impl Renderer {
         self.chase = restart > 0;
     }
 
-    fn start(&mut self, action: Action) {
+    /// Start `action` at block frame `at.0`, engine sample `at.1`.
+    fn start(&mut self, action: Action, at: (usize, u64)) {
         let sr = self.sample_rate as f32;
         match action {
             Action::Note {
@@ -595,6 +650,14 @@ impl Renderer {
                 let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
                     return;
                 };
+                if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
+                    if !clip {
+                        let off_at = self.timeline.sample_of_tick(end_tick);
+                        self.instruments
+                            .note_on(usize::from(channel), id, key, velocity, at, off_at, end_tick, true);
+                    }
+                    return;
+                }
                 let one_shot = !clip
                     && matches!(
                         ch.instrument,
@@ -679,15 +742,33 @@ impl Renderer {
         self.fx.adopt(id, fx);
     }
 
-    /// Drop every effect processor (a different project was opened).
+    /// Drop every effect processor and plugin instrument (a different project was opened).
     pub fn clear_effects(&mut self) {
         self.fx.clear();
+        self.instruments.clear();
     }
 
-    /// Re-apply the current snapshot's effect layout (after adopting processors).
+    /// Re-apply the current snapshot's effect and instrument layout (after adopting processors).
     pub fn rearrange(&mut self) {
         let snapshot = self.snapshot.clone();
         self.fx.arrange(&snapshot);
+        self.instruments.arrange(&snapshot);
+    }
+
+    /// Take ownership of the plugin instrument of channel `channel` (its id), built on the
+    /// control thread. It plays from the next snapshot or [`Renderer::rearrange`]; it replaces
+    /// any instrument adopted for the channel before.
+    pub fn adopt_instrument(&mut self, channel: u32, inst: Box<dyn limeshot_dsp::Instrument>) {
+        self.instruments.adopt(channel, inst);
+    }
+
+    /// An instrument that is no longer used; the caller drops it off the audio thread.
+    pub fn take_retired_instrument(&mut self) -> Option<Box<dyn limeshot_dsp::Instrument>> {
+        self.instruments.take_retired()
+    }
+
+    pub fn keep_retired_instrument(&mut self, inst: Box<dyn limeshot_dsp::Instrument>) {
+        self.instruments.keep_retired(inst);
     }
 
     /// A processor that is no longer used; the caller drops it off the audio thread.
@@ -701,7 +782,7 @@ impl Renderer {
 
     /// Whether effects may still be producing sound (delay and reverb tails).
     pub fn is_ringing(&self) -> bool {
-        self.fx.has_effects() && self.last_peak > 1e-4
+        (self.fx.has_effects() || self.instruments.has_instruments()) && self.last_peak > 1e-4
     }
 
     /// Track `i`'s insert effects, then its EQ, over its bus. A sidechained effect reads the

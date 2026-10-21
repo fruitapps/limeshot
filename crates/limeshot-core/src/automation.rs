@@ -149,7 +149,7 @@ impl AutomationTarget {
                     Some(e) => format!(
                         "{} – {}: {}",
                         track(t),
-                        e.kind.label(),
+                        e.name(),
                         e.kind.params().get(index).map_or("?", |s| s.name)
                     ),
                     None => format!("{} – (deleted effect)", track(t)),

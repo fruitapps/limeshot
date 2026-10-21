@@ -25,6 +25,7 @@ pub mod menus;
 pub mod mixer;
 pub mod piano_roll;
 pub mod playlist;
+pub mod plugins;
 pub mod settings;
 pub mod shortcuts;
 pub mod theme;

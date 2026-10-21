@@ -198,6 +198,11 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                             crate::menus::add_synth(app);
                             ui.close();
                         }
+                        ui.separator();
+                        if let Some(e) = crate::plugins::menu(app, ui, true) {
+                            crate::plugins::add_channel(app, &e);
+                            ui.close();
+                        }
                     });
                 });
             });
@@ -476,6 +481,7 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
             None => false,
         },
         Instrument::Unsupported(_) => true,
+        Instrument::Plugin(_) => !app.plugins.is_loaded(crate::plugins::Target::Channel(ch.id)),
         Instrument::Synth(_) => false,
     };
     let name = elide(&ch.name, 16);

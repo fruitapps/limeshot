@@ -13,6 +13,7 @@ limeshot-dsp.workspace = true
 limeshot-sequencer.workspace = true
 limeshot-engine.workspace = true
 limeshot-audio.workspace = true
+limeshot-plugins.workspace = true
 egui.workspace = true
 rfd.workspace = true
 directories.workspace = true

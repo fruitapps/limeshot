@@ -128,6 +128,24 @@ fn main() {
         app.show_window(Win::ChannelSettings);
         app.ui.workspace.state_mut(Win::ChannelSettings).maximized = true;
     }
+    if args.iter().any(|a| a == "--plugin") {
+        // LimeShot's built-in test plugins: a plugin channel and a plugin insert on its track.
+        app.plugins.add_builtin_test_plugins();
+        let entries = app.plugins.db.entries.clone();
+        if let Some(tone) = entries.iter().find(|e| e.instrument) {
+            limeshot_ui::plugins::add_channel(&mut app, tone);
+        }
+        if let Some(gain) = entries.iter().find(|e| !e.instrument) {
+            app.exec(limeshot_core::Command::AddPluginEffect {
+                track: 1,
+                plugin: gain.plugin_ref(),
+            });
+        }
+        app.doc.mark_saved();
+        app.ui.mixer.selected = 1;
+        app.show_window(Win::ChannelSettings);
+        app.show_window(Win::Mixer);
+    }
     if args.iter().any(|a| a == "--melody")
         && let Some(p) = app.project().patterns.get(1).map(|p| p.id)
     {

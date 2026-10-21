@@ -49,6 +49,15 @@ interaction; the ArtCraft apps only for the broad visual style (decision D24).
 Editors are custom-painted (`ui.painter_at`) with a single `interact` region per area, so they stay fast with many notes.
 Hit testing uses each editor's `View` (tick ↔ x, key/track ↔ y).
 
+### Plugins
+
+`plugins.rs` holds the plugin database (`plugins.json`, filled by Find plugins…, which runs `limeshot --scan-vst3`
+once per bundle in a child process) and `PluginHost`, which keeps one `Vst3Instance` per plugin channel and plugin
+insert of the open project. `LimeShotApp::sync_engine` calls `PluginHost::sync` before sending a snapshot, so new
+plugins are created on the main thread and their audio halves reach the audio thread first; removed ones are
+dropped. Saving and autosaving read plugin states into the document first. Exports get fresh instances whose
+processors send themselves back to the main thread when dropped.
+
 ## Interaction conventions
 
 Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):

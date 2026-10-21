@@ -48,6 +48,14 @@ Project
 * **Trimming.** `ResizeClipStart` moves a clip's start while keeping its end; the offset moves with it (never below 0).
 * **Song length** is the end of the last clip rounded up to whole bars.
 
+### Plugins
+
+`PluginRef` (`plugin.rs`) names a hosted plugin: format (`"VST3"`), bundle path, class id, name, vendor, and its
+state, an opaque blob shared between undo copies and saved as base64. A channel uses one as `Instrument::Plugin`; an
+insert slot as `EffectKind::Plugin` with `EffectSlot::plugin`. The running plugin's state is copied in by
+`Document::store_plugin_state` before saving; that is not an edit (no undo step, same revision). A state that is too
+large or not valid base64 loads as empty, so a damaged plugin blob never stops a project from opening.
+
 ## Commands, undo and gestures
 
 Every mutation is a variant of `limeshot_core::Command` (serde-serialisable; about 50 variants, including `Batch`).

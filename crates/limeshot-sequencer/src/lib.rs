@@ -103,6 +103,10 @@ pub enum InstrumentState {
         detune_cents: f32,
         mods: SynthMods,
     },
+    /// A hosted plugin; the engine plays the instrument adopted for this channel id.
+    Plugin {
+        channel: u32,
+    },
     Silent,
 }
 
@@ -343,6 +347,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                         lfo_cutoff: p.lfo_cutoff,
                     },
                 },
+                Instrument::Plugin(_) => InstrumentState::Plugin { channel: c.id.0 },
                 Instrument::Unsupported(_) => InstrumentState::Silent,
             },
             volume: c.volume,

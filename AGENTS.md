@@ -15,7 +15,7 @@ cargo build --workspace
 cargo run --release -p limeshot-app [-- --demo | path/to/song.lime] [--show=piano --detach=mixer]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
 cargo run -p limeshot-app --bin limeshot-cli -- play out/demo.lime --seconds 5     # realtime through the device
-cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth]
+cargo run -p limeshot-app --example ui_shot -- out/ui.png [--piano --mixer --fx --settings --melody --empty --audio --automation --synth --plugin]
 cargo run -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid      # or import-midi in.mid out.lime
 cargo run -p limeshot-app --bin limeshot-cli -- import-flp song.flp out/song.lime    # FL Studio project → .lime
 cargo run -p limeshot-project --example make_flp_fixtures                           # regenerate synthetic .flp fixtures
@@ -80,7 +80,8 @@ features as records.
 ## Immediate next tasks
 See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
 Actions settings), the rest of the session 7 plan (Playlist slip/slice, Mixer EQ + sidechain, Channel Rack depth),
-then **VST3 plugin hosting**.
+then **VST3 plugin hosting** (session 10: hosting, plugin channels and inserts, scanning and state are in; plugin
+windows, parameter automation and delay compensation are next).
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

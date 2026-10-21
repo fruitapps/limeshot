@@ -378,6 +378,11 @@ pub enum Command {
         track: u16,
         kind: crate::effects::EffectKind,
     },
+    /// Append a plugin to a mixer track's insert chain (returns the effect id).
+    AddPluginEffect {
+        track: u16,
+        plugin: crate::PluginRef,
+    },
     RemoveEffect {
         track: u16,
         effect: u32,
@@ -423,6 +428,22 @@ fn channel(p: &mut Project, id: ChannelId) -> Result<&mut Channel, CommandError>
 
 fn pattern(p: &mut Project, id: PatternId) -> Result<&mut Pattern, CommandError> {
     p.pattern_mut(id).ok_or(CommandError::NoPattern(id))
+}
+
+fn add_effect(
+    p: &mut Project,
+    track: u16,
+    slot: impl FnOnce(u32) -> crate::effects::EffectSlot,
+) -> Result<Created, CommandError> {
+    if mixer_track(p, track)?.effects.len() >= crate::effects::MAX_EFFECTS {
+        return Err(CommandError::Invalid(format!(
+            "a mixer track holds at most {} effects",
+            crate::effects::MAX_EFFECTS
+        )));
+    }
+    let id = p.alloc_id();
+    mixer_track(p, track)?.effects.push(slot(id));
+    Ok(Created(Some(id)))
 }
 
 fn mixer_track(p: &mut Project, i: u16) -> Result<&mut MixerTrack, CommandError> {
@@ -524,6 +545,7 @@ impl Command {
             SetRoute { level: None, .. } => "Remove route",
             SetRoute { .. } => "Route mixer track",
             AddEffect { .. } => "Add effect",
+            AddPluginEffect { .. } => "Add plugin",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
             SetEffectEnabled { .. } => "Bypass effect",
@@ -1307,17 +1329,12 @@ impl Command {
                 }
             }
             AddEffect { track, kind } => {
-                if mixer_track(p, track)?.effects.len() >= crate::effects::MAX_EFFECTS {
-                    return Err(CommandError::Invalid(format!(
-                        "a mixer track holds at most {} effects",
-                        crate::effects::MAX_EFFECTS
-                    )));
-                }
-                let id = p.alloc_id();
-                mixer_track(p, track)?
-                    .effects
-                    .push(crate::effects::EffectSlot::new(id, kind));
-                return Ok(Created(Some(id)));
+                let slot = |id| crate::effects::EffectSlot::new(id, kind);
+                return add_effect(p, track, slot);
+            }
+            AddPluginEffect { track, plugin } => {
+                let slot = |id| crate::effects::EffectSlot::plugin(id, plugin);
+                return add_effect(p, track, slot);
             }
             RemoveEffect { track, effect } => {
                 let t = mixer_track(p, track)?;

@@ -10,8 +10,9 @@
    new gestures in the live app.
 3. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
    (loading, scanning, instancing, processing, state, latency; tested with built-in plugins and all 36 bundles
-   installed on the dev Mac). Next: plugin channels and insert slots in the model and engine, state in `.lime`,
-   a child-process scan into a plugin database, the plugin pickers, then editor windows. Host VST3 plugins as instruments (Channel Rack) and
+   installed on the dev Mac), plugin channels and plugin inserts in the model, engine and UI, a child-process scan
+   into a plugin database, and state in `.lime`. Next: plugin windows (PLG-006), plugin parameter automation
+   (PLG-007), delay compensation (PLG-009), crash isolation while playing (PLG-010), a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in

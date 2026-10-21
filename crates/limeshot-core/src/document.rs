@@ -1,7 +1,14 @@
 //! A project plus its undo history and modified state.
 
 use crate::command::{Command, CommandError, Created};
-use crate::model::Project;
+use crate::model::{ChannelId, Project};
+
+/// Where a hosted plugin runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PluginTarget {
+    Channel(ChannelId),
+    Effect { track: u16, effect: u32 },
+}
 
 /// How many undo steps are kept.
 pub const UNDO_LIMIT: usize = 200;
@@ -92,6 +99,37 @@ impl Document {
         self.state = self.new_state();
         self.saved_state = self.state;
         self.gesture_open = false;
+    }
+
+    /// Store the current state of a running plugin (read from the plugin before saving). This is
+    /// not an edit: it makes no undo step and does not change the revision, because the sound
+    /// does not change. Returns false if `target` has no plugin.
+    pub fn store_plugin_state(&mut self, target: PluginTarget, state: crate::PluginState) -> bool {
+        let p = &mut self.project;
+        let plugin = match target {
+            PluginTarget::Channel(id) => {
+                p.channels
+                    .iter_mut()
+                    .find(|c| c.id == id)
+                    .and_then(|c| match &mut c.instrument {
+                        crate::Instrument::Plugin(p) => Some(p),
+                        _ => None,
+                    })
+            }
+            PluginTarget::Effect { track, effect } => p
+                .mixer
+                .tracks
+                .get_mut(usize::from(track))
+                .and_then(|t| t.effects.iter_mut().find(|e| e.id == effect))
+                .and_then(|e| e.plugin.as_mut()),
+        };
+        match plugin {
+            Some(plugin) => {
+                plugin.state = state;
+                true
+            }
+            None => false,
+        }
     }
 
     /// Start a continuous gesture (a drag). Until [`Document::end_gesture`], consecutive commands

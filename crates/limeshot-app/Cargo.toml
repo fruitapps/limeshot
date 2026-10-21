@@ -22,6 +22,7 @@ limeshot-dsp.workspace = true
 limeshot-sequencer.workspace = true
 limeshot-engine.workspace = true
 limeshot-audio.workspace = true
+limeshot-plugins.workspace = true
 limeshot-ui.workspace = true
 eframe.workspace = true
 egui.workspace = true

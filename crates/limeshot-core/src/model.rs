@@ -170,6 +170,8 @@ impl Default for SynthParams {
 pub enum Instrument {
     Sampler(SamplerParams),
     Synth(SynthParams),
+    /// A hosted plugin instrument (VST3).
+    Plugin(crate::PluginRef),
     /// An instrument this version does not know, kept verbatim so saving does not lose it. It is
     /// silent.
     Unsupported(Value),
@@ -180,6 +182,7 @@ impl Instrument {
         match self {
             Instrument::Sampler(_) => "Sampler",
             Instrument::Synth(_) => "LimeSynth",
+            Instrument::Plugin(_) => "Plugin",
             Instrument::Unsupported(_) => "Unsupported",
         }
     }
@@ -190,6 +193,7 @@ impl Instrument {
 enum KnownInstrument {
     Sampler(SamplerParams),
     Synth(SynthParams),
+    Plugin(crate::PluginRef),
 }
 
 impl Serialize for Instrument {
@@ -197,6 +201,7 @@ impl Serialize for Instrument {
         match self {
             Instrument::Sampler(p) => KnownInstrument::Sampler(p.clone()).serialize(s),
             Instrument::Synth(p) => KnownInstrument::Synth(p.clone()).serialize(s),
+            Instrument::Plugin(p) => KnownInstrument::Plugin(p.clone()).serialize(s),
             Instrument::Unsupported(v) => v.serialize(s),
         }
     }
@@ -205,13 +210,17 @@ impl Serialize for Instrument {
 impl<'de> Deserialize<'de> for Instrument {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let v = Value::deserialize(d)?;
-        let known = matches!(v.get("type").and_then(Value::as_str), Some("Sampler" | "Synth"));
+        let known = matches!(
+            v.get("type").and_then(Value::as_str),
+            Some("Sampler" | "Synth" | "Plugin")
+        );
         if !known {
             return Ok(Instrument::Unsupported(v));
         }
         match serde_json::from_value::<KnownInstrument>(v).map_err(serde::de::Error::custom)? {
             KnownInstrument::Sampler(p) => Ok(Instrument::Sampler(p)),
             KnownInstrument::Synth(p) => Ok(Instrument::Synth(p)),
+            KnownInstrument::Plugin(p) => Ok(Instrument::Plugin(p)),
         }
     }
 }
@@ -801,6 +810,7 @@ impl Project {
                     p.vibrato_cents = finite(p.vibrato_cents, 0.0).clamp(0.0, 200.0);
                     p.lfo_cutoff = finite(p.lfo_cutoff, 0.0).clamp(0.0, 4.0);
                 }
+                Instrument::Plugin(p) => p.sanitize(),
                 Instrument::Unsupported(_) => {}
             }
             max_id = max_id.max(c.id.0);

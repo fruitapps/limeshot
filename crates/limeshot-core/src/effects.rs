@@ -21,6 +21,8 @@ pub enum EffectKind {
     Compressor,
     /// Brick-wall peak limiter.
     Limiter,
+    /// A hosted plugin ([`EffectSlot::plugin`]); its parameters are the plugin's own.
+    Plugin,
 }
 
 /// One parameter of an effect.
@@ -145,6 +147,7 @@ impl EffectKind {
             EffectKind::Reverb => "Lime Room",
             EffectKind::Compressor => "Lime Comp",
             EffectKind::Limiter => "Lime Limiter",
+            EffectKind::Plugin => "Plugin",
         }
     }
 
@@ -157,6 +160,7 @@ impl EffectKind {
             EffectKind::Reverb => REVERB,
             EffectKind::Compressor => COMPRESSOR,
             EffectKind::Limiter => LIMITER,
+            EffectKind::Plugin => &[],
         }
     }
 
@@ -175,6 +179,9 @@ pub struct EffectSlot {
     pub enabled: bool,
     /// Parameter values in the units of `kind.params()`.
     pub params: Vec<f32>,
+    /// The plugin of a [`EffectKind::Plugin`] slot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plugin: Option<crate::PluginRef>,
     #[serde(flatten)]
     pub extra: crate::Extra,
 }
@@ -190,12 +197,35 @@ impl EffectSlot {
             kind,
             enabled: true,
             params: kind.defaults(),
+            plugin: None,
             extra: crate::Extra::new(),
+        }
+    }
+
+    /// What the slot is called: the plugin's name, or the built-in effect's.
+    pub fn name(&self) -> &str {
+        match &self.plugin {
+            Some(p) => &p.name,
+            None => self.kind.label(),
+        }
+    }
+
+    /// A slot running `plugin`.
+    pub fn plugin(id: u32, plugin: crate::PluginRef) -> Self {
+        Self {
+            plugin: Some(plugin),
+            ..Self::new(id, EffectKind::Plugin)
         }
     }
 
     /// Bring `params` to the right length and clamp every value to its range.
     pub fn sanitize(&mut self) {
+        if self.kind != EffectKind::Plugin {
+            self.plugin = None;
+        }
+        if let Some(p) = &mut self.plugin {
+            p.sanitize();
+        }
         let specs = self.kind.params();
         self.params.resize(specs.len(), 0.0);
         for (v, s) in self.params.iter_mut().zip(specs) {
