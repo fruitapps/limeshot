@@ -204,3 +204,16 @@ Windows/Linux CI running, then expand, starting with the Piano Roll tools. Each 
    accessibility. New UI tests verify PL-003/006/008/009, MIX-005 (Song playback reaches the master meter),
    APP-001/014 (New asks to save; Cancel / Don't save) and TR-005/006; APP-012 is VERIFIED by its recorded manual
    checks. All MVP features except the platform ones (PF-002…004, waiting for CI) are now VERIFIED.
+
+Not done in this session: Windows/Linux CI. Every run of `.github/workflows/ci.yml` on `fruitapps/limeshot` stays
+"pending" with no jobs, and each new push cancels the pending one (the workflow's concurrency group). The account used
+here is not an org admin, so the org's Actions and billing settings could not be read; the owner has to check them.
+
+5. **Piano Roll tools (expansion).** Observed live in FL 2026.1.1: the Tools menu (Glue Cmd+G, Quick chop Cmd+U,
+   Quick legato Cmd+L, Quick quantize Cmd+Q, Quantize… Opt+Q …), Paint (end-to-end notes of the last length, all
+   selected) and Slice (cut at the line, right piece selected). LimeShot now has FL's eight tools with their keys and
+   painted icons (Draw, Paint, Delete, Mute, Slice, Select, Zoom, Playback), left-edge resizing in Draw/Paint, note
+   mute (`Note::muted`, silent in both modes, dimmed; saved only when set), Glue, Quick chop and Opt+M / Shift+Opt+M.
+   New commands `SliceNotes`, `GlueNotes`, `SetNotesMuted`, `ResizeNotesStart`; a paint stroke, a mute drag and a
+   left-edge drag are each one undo step (merge keys). PR-012, PR-023 and PR-024 are VERIFIED; the Stamp tool is a new
+   record (PR-027). FL's macOS menu binds quick quantize to Cmd+Q; LimeShot keeps Cmd+Q for Quit (KB-059 DIFFERENT).

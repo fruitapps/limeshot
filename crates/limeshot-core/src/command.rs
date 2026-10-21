@@ -135,10 +135,36 @@ pub enum Command {
         notes: Vec<NoteId>,
         dlen: i64,
     },
+    /// Move note starts by `dstart` ticks keeping their ends (resizing from the left edge); each
+    /// note keeps at least one tick and starts at 0 or later.
+    ResizeNotesStart {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        dstart: i64,
+    },
     SetNoteVelocity {
         pattern: PatternId,
         notes: Vec<NoteId>,
         velocity: f32,
+    },
+    /// Mute or unmute notes (they stay in the pattern).
+    SetNotesMuted {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        muted: bool,
+    },
+    /// Split every listed note that spans `at` into two notes meeting there. Returns the id of the
+    /// last new (right-hand) note.
+    SliceNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        at: Tick,
+    },
+    /// Join listed notes of the same channel and key that touch or overlap into one note each
+    /// (FL Studio's Glue).
+    GlueNotes {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
     },
     /// Copy the notes right after the selection's span.
     DuplicateNotes {
@@ -381,9 +407,13 @@ impl Command {
             AddNote { .. } | AddNotes { .. } => "Add note",
             RemoveNotes { .. } => "Delete notes",
             MoveNotes { .. } => "Move notes",
-            ResizeNotes { .. } => "Resize notes",
+            ResizeNotes { .. } | ResizeNotesStart { .. } => "Resize notes",
             SetNoteVelocity { .. } => "Note velocity",
             DuplicateNotes { .. } => "Duplicate notes",
+            SetNotesMuted { muted: true, .. } => "Mute notes",
+            SetNotesMuted { .. } => "Unmute notes",
+            SliceNotes { .. } => "Slice notes",
+            GlueNotes { .. } => "Glue notes",
             ClearChannelNotes { .. } => "Clear channel",
             Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
@@ -447,6 +477,10 @@ impl Command {
             SetMixerPan { track, .. } => format!("mxpan{track}"),
             MoveNotes { pattern, notes, .. } => format!("mvn{}:{notes:?}", pattern.0),
             ResizeNotes { pattern, notes, .. } => format!("rsn{}:{notes:?}", pattern.0),
+            ResizeNotesStart { pattern, notes, .. } => format!("rsns{}:{notes:?}", pattern.0),
+            // A paint stroke or a mute drag is one undo step.
+            AddNote { pattern, note } => format!("addn{}:{}", pattern.0, note.channel.0),
+            SetNotesMuted { pattern, muted, .. } => format!("mute{}:{muted}", pattern.0),
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
@@ -568,6 +602,7 @@ impl Command {
                             start: t,
                             length: STEP_TICKS,
                             velocity: 0.78,
+                            muted: false,
                         });
                         sort_notes(pat);
                     }
@@ -602,6 +637,18 @@ impl Command {
                     n.length = offset(n.length, dlen).max(1);
                 }
             }
+            ResizeNotesStart {
+                pattern: pid,
+                notes,
+                dstart,
+            } => {
+                for n in pattern(p, pid)?.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
+                    let end = n.end();
+                    n.start = offset(n.start, dstart).min(end.saturating_sub(1));
+                    n.length = end - n.start;
+                }
+                sort_notes(pattern(p, pid)?);
+            }
             SetNoteVelocity {
                 pattern: pid,
                 notes,
@@ -610,6 +657,80 @@ impl Command {
                 let v = finite(velocity)?.clamp(0.0, 1.0);
                 for n in pattern(p, pid)?.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
                     n.velocity = v;
+                }
+            }
+            SetNotesMuted {
+                pattern: pid,
+                notes,
+                muted,
+            } => {
+                for n in pattern(p, pid)?.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
+                    n.muted = muted;
+                }
+            }
+            SliceNotes {
+                pattern: pid,
+                notes,
+                at,
+            } => {
+                let pat = pattern(p, pid)?;
+                let cut: Vec<Note> = pat
+                    .notes
+                    .iter()
+                    .filter(|n| notes.contains(&n.id) && n.start < at && at < n.end())
+                    .copied()
+                    .collect();
+                let mut last = None;
+                for n in cut {
+                    let id = NoteId(p.alloc_id());
+                    last = Some(id.0);
+                    let pat = pattern(p, pid)?;
+                    if let Some(left) = pat.notes.iter_mut().find(|m| m.id == n.id) {
+                        left.length = at - n.start;
+                    }
+                    pat.notes.push(Note {
+                        id,
+                        start: at,
+                        length: n.end() - at,
+                        ..n
+                    });
+                }
+                sort_notes(pattern(p, pid)?);
+                return Ok(Created(last));
+            }
+            GlueNotes { pattern: pid, notes } => {
+                let pat = pattern(p, pid)?;
+                let mut sel: Vec<Note> = pat.notes.iter().filter(|n| notes.contains(&n.id)).copied().collect();
+                sel.sort_by_key(|n| (n.channel.0, n.key, n.start));
+                let mut keep: Option<Note> = None;
+                let mut glued: Vec<(NoteId, Tick)> = Vec::new();
+                let mut gone: Vec<NoteId> = Vec::new();
+                for n in sel {
+                    match keep {
+                        Some(k) if k.channel == n.channel && k.key == n.key && n.start <= k.end() => {
+                            let end = k.end().max(n.end());
+                            keep = Some(Note {
+                                length: end - k.start,
+                                ..k
+                            });
+                            gone.push(n.id);
+                        }
+                        _ => {
+                            if let Some(k) = keep {
+                                glued.push((k.id, k.length));
+                            }
+                            keep = Some(n);
+                        }
+                    }
+                }
+                if let Some(k) = keep {
+                    glued.push((k.id, k.length));
+                }
+                pat.notes.retain(|n| !gone.contains(&n.id));
+                for n in &mut pat.notes {
+                    if let Some((_, len)) = glued.iter().find(|(id, _)| *id == n.id) {
+                        n.length = *len;
+                    }
                 }
             }
             DuplicateNotes { pattern: pid, notes } => {
@@ -1099,6 +1220,7 @@ fn add_notes(p: &mut Project, pid: PatternId, notes: Vec<NewNote>) -> R {
             start: n.start,
             length: n.length.max(1),
             velocity: finite(n.velocity)?.clamp(0.0, 1.0),
+            muted: false,
         });
     }
     let pat = pattern(p, pid)?;

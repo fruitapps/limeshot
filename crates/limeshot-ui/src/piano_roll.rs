@@ -8,6 +8,12 @@
 //! * Alt while dragging: no snapping,
 //! * wheel: scroll vertically, Shift+wheel: horizontally, Cmd+wheel: zoom time,
 //! * keyboard on the left: click to audition; the lower lane edits velocity.
+//!
+//! Other tools (FL Studio's tool strip and keys, observed in FL Studio 2026.1.1): Paint (B) lays
+//! notes of the last length end to end along a drag; Delete (D) erases; Mute (T) toggles notes'
+//! mute; Slice (C) cuts the notes a drag crosses at its x position; Select (E) selects without
+//! Ctrl; Zoom (Z) zooms to a dragged range (right-click zooms out); Playback (Y) plays from the
+//! pointer while held. Draw (P) also resizes from a note's left edge.
 
 use crate::app::LimeShotApp;
 use crate::icons::Icon;
@@ -41,11 +47,101 @@ enum Drag {
         grab_tick: i64,
         applied: i64,
     },
+    /// Dragging a note's left edge: the start moves, the end stays.
+    ResizeStart {
+        ids: Vec<NoteId>,
+        anchor_start: Tick,
+        grab_tick: i64,
+        applied: i64,
+    },
     Select {
         from: Pos2,
     },
     Erase,
     Velocity,
+    /// Paint tool: the next note goes at `next`.
+    Paint {
+        next: Tick,
+        len: Tick,
+    },
+    /// Mute tool: notes crossed get `muted`.
+    Mute {
+        muted: bool,
+        done: Vec<NoteId>,
+    },
+    Slice {
+        from: Pos2,
+    },
+    Zoom {
+        from: Pos2,
+    },
+    Playback,
+}
+
+/// The Piano Roll's tools (FL Studio's tool strip, with its single-key shortcuts).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Tool {
+    #[default]
+    Draw,
+    Paint,
+    Delete,
+    Mute,
+    Slice,
+    Select,
+    Zoom,
+    Playback,
+}
+
+impl Tool {
+    pub const ALL: [Tool; 8] = [
+        Tool::Draw,
+        Tool::Paint,
+        Tool::Delete,
+        Tool::Mute,
+        Tool::Slice,
+        Tool::Select,
+        Tool::Zoom,
+        Tool::Playback,
+    ];
+
+    pub fn key(self) -> Key {
+        match self {
+            Tool::Draw => Key::P,
+            Tool::Paint => Key::B,
+            Tool::Delete => Key::D,
+            Tool::Mute => Key::T,
+            Tool::Slice => Key::C,
+            Tool::Select => Key::E,
+            Tool::Zoom => Key::Z,
+            Tool::Playback => Key::Y,
+        }
+    }
+
+    fn icon(self) -> Icon {
+        match self {
+            Tool::Draw => Icon::ToolDraw,
+            Tool::Paint => Icon::ToolPaint,
+            Tool::Delete => Icon::ToolDelete,
+            Tool::Mute => Icon::ToolMute,
+            Tool::Slice => Icon::ToolSlice,
+            Tool::Select => Icon::ToolSelect,
+            Tool::Zoom => Icon::ToolZoom,
+            Tool::Playback => Icon::ToolPlayback,
+        }
+    }
+
+    fn tip(self) -> &'static str {
+        match self {
+            Tool::Draw => "Draw (P): add, move and resize notes",
+            Tool::Paint => "Paint (B): drag to lay notes end to end",
+            Tool::Delete => "Delete (D): click or drag over notes to delete them",
+            Tool::Mute => "Mute (T): click or drag over notes to mute / unmute them",
+            Tool::Slice => "Slice (C): drag across notes to cut them",
+            Tool::Select => "Select (E): drag to select",
+            Tool::Zoom => "Zoom (Z): drag a range to zoom in, right-click to zoom out",
+            Tool::Playback => "Playback (Y): hold to play from the pointer",
+        }
+    }
 }
 
 pub struct State {
@@ -57,6 +153,7 @@ pub struct State {
     drag: Option<Drag>,
     pub last_len: Tick,
     pub last_vel: f32,
+    pub tool: Tool,
     audition: Option<(ChannelId, u8)>,
     scrolled_once: bool,
     /// Geometry of the last drawn frame.
@@ -75,6 +172,7 @@ impl Default for State {
             // length of the last note drawn or resized (observed, fl-studio-analysis.md §3).
             last_len: 2 * STEP_TICKS,
             last_vel: 0.78,
+            tool: Tool::Draw,
             audition: None,
             scrolled_once: false,
             geometry: None,
@@ -171,6 +269,14 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         .inner_margin(egui::Margin::symmetric(10, 5))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 2.0;
+                for tool in Tool::ALL {
+                    if icon_button(ui, tool.icon(), app.ui.piano.tool == tool, 22.0, tool.tip()).clicked() {
+                        app.ui.piano.tool = tool;
+                    }
+                }
+                ui.spacing_mut().item_spacing.x = 8.0;
+                ui.separator();
                 let chans: Vec<(ChannelId, String, Rgb)> = app
                     .project()
                     .channels
@@ -332,6 +438,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             }
             let sel = app.ui.piano.selection.contains(&n.id);
             let base = mix(t.raised, ch_color, 0.45 + 0.55 * n.velocity);
+            let base = if n.muted { mix(t.sunken, base, 0.35) } else { base };
             let fill = if sel { mix(base, Color32::WHITE, 0.35) } else { base };
             painter.rect_filled(r.intersect(grid), CornerRadius::same(2), fill);
             painter.rect_stroke(
@@ -352,13 +459,23 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         }
     }
     // Selection rectangle.
-    if let (Some(Drag::Select { from }), Some(p)) = (&app.ui.piano.drag, ui.input(|i| i.pointer.hover_pos())) {
+    if let (Some(Drag::Select { from } | Drag::Zoom { from }), Some(p)) =
+        (&app.ui.piano.drag, ui.input(|i| i.pointer.hover_pos()))
+    {
         painter.rect(
             Rect::from_two_pos(*from, p),
             0.0,
             t.selection,
             Stroke::new(1.0, t.accent),
             egui::StrokeKind::Inside,
+        );
+    }
+    // The Slice tool's cut line.
+    if let (Some(Drag::Slice { from }), Some(p)) = (&app.ui.piano.drag, ui.input(|i| i.pointer.hover_pos())) {
+        let x = view.x(app.ui.snap.round(view.tick_at(from.x).max(0) as u64, sig));
+        painter.line_segment(
+            [pos2(x, from.y.min(p.y) - 4.0), pos2(x, from.y.max(p.y) + 4.0)],
+            Stroke::new(1.5, t.accent),
         );
     }
     // Playhead.
@@ -559,12 +676,32 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
     }
 }
 
-fn hit(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, bool)> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Part {
+    Body,
+    LeftEdge,
+    RightEdge,
+}
+
+fn hit_part(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, Part)> {
     notes.iter().rev().filter(|n| n.channel == cid).find_map(|n| {
         let r = view.note_rect(n);
-        r.contains(p)
-            .then(|| (*n, p.x >= r.right() - EDGE.min(r.width() * 0.4)))
+        let edge = EDGE.min(r.width() * 0.3);
+        r.contains(p).then(|| {
+            let part = if p.x >= r.right() - edge {
+                Part::RightEdge
+            } else if p.x <= r.left() + edge {
+                Part::LeftEdge
+            } else {
+                Part::Body
+            };
+            (*n, part)
+        })
     })
+}
+
+fn hit(view: &View, notes: &[Note], cid: ChannelId, p: Pos2) -> Option<(Note, bool)> {
+    hit_part(view, notes, cid, p).map(|(n, part)| (n, part == Part::RightEdge))
 }
 
 fn grid_input(
@@ -585,15 +722,23 @@ fn grid_input(
 
     // Cursor feedback.
     if let Some(p) = resp.hover_pos() {
-        match hit(view, notes, cid, p) {
-            Some((_, true)) => ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal),
-            Some(_) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
-            None => {}
+        match (app.ui.piano.tool, hit_part(view, notes, cid, p)) {
+            (Tool::Draw | Tool::Paint, Some((_, Part::LeftEdge | Part::RightEdge))) => {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal)
+            }
+            (Tool::Draw | Tool::Paint | Tool::Select, Some(_)) => ui.ctx().set_cursor_icon(egui::CursorIcon::Grab),
+            (Tool::Slice, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair),
+            (Tool::Zoom, _) => ui.ctx().set_cursor_icon(egui::CursorIcon::ZoomIn),
+            _ => {}
         }
         let k = view.key_at(p.y).clamp(0, 127) as u8;
         let tk = view.tick_at(p.x).max(0) as u64;
+        let help = match app.ui.piano.tool {
+            Tool::Draw => "left: add/move/resize (either edge) · right: delete · Cmd+drag: select · Alt: no snap",
+            tool => tool.tip(),
+        };
         app.hint(format!(
-            "{} · {} — left: add/move/resize · right: delete · Cmd+drag: select · Alt: no snap",
+            "{} · {} — {help}",
             key_name(k),
             BarBeatTick::from_ticks(tk, sig)
         ));
@@ -604,7 +749,65 @@ fn grid_input(
     let secondary_pressed =
         resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary));
 
-    if primary_pressed && let Some(p) = pointer {
+    let tool = app.ui.piano.tool;
+    if primary_pressed
+        && let Some(p) = pointer
+        && !mods.command
+        && tool != Tool::Draw
+        && tool != Tool::Paint
+    {
+        let tick = view.tick_at(p.x).max(0) as u64;
+        match tool {
+            Tool::Delete => {
+                app.doc.begin_gesture();
+                app.ui.piano.drag = Some(Drag::Erase);
+            }
+            Tool::Mute => {
+                if let Some((n, _)) = hit(view, notes, cid, p) {
+                    app.doc.begin_gesture();
+                    app.ui.piano.drag = Some(Drag::Mute {
+                        muted: !n.muted,
+                        done: Vec::new(),
+                    });
+                }
+            }
+            Tool::Slice => app.ui.piano.drag = Some(Drag::Slice { from: p }),
+            Tool::Select => match hit(view, notes, cid, p) {
+                Some((n, _)) => {
+                    let st = &mut app.ui.piano;
+                    if !st.selection.contains(&n.id) {
+                        st.selection = vec![n.id];
+                    }
+                    app.doc.begin_gesture();
+                    app.ui.piano.drag = Some(Drag::Move {
+                        ids: app.ui.piano.selection.clone(),
+                        anchor_start: n.start,
+                        anchor_key: n.key,
+                        grab_tick: view.tick_at(p.x),
+                        grab_key: view.key_at(p.y),
+                        applied_dt: 0,
+                        applied_dk: 0,
+                    });
+                }
+                None => {
+                    if !mods.shift {
+                        app.ui.piano.selection.clear();
+                    }
+                    app.ui.piano.drag = Some(Drag::Select { from: p });
+                }
+            },
+            Tool::Zoom => app.ui.piano.drag = Some(Drag::Zoom { from: p }),
+            Tool::Playback => {
+                app.set_mode(limeshot_engine::PlayMode::Pattern);
+                app.locate(tick);
+                if !app.is_playing() {
+                    app.toggle_play();
+                }
+                app.ui.piano.drag = Some(Drag::Playback);
+            }
+            Tool::Draw | Tool::Paint => {}
+        }
+    } else if primary_pressed && let Some(p) = pointer {
         let st = &mut app.ui.piano;
         if mods.command {
             match hit(view, notes, cid, p) {
@@ -623,8 +826,8 @@ fn grid_input(
                 }
             }
         } else {
-            match hit(view, notes, cid, p) {
-                Some((n, edge)) => {
+            match hit_part(view, notes, cid, p) {
+                Some((n, part)) => {
                     if !st.selection.contains(&n.id) {
                         st.selection = vec![n.id];
                     }
@@ -632,7 +835,14 @@ fn grid_input(
                     st.last_len = n.length;
                     st.last_vel = n.velocity;
                     app.doc.begin_gesture();
-                    if edge {
+                    if part == Part::LeftEdge {
+                        app.ui.piano.drag = Some(Drag::ResizeStart {
+                            ids,
+                            anchor_start: n.start,
+                            grab_tick: view.tick_at(p.x),
+                            applied: 0,
+                        });
+                    } else if part == Part::RightEdge {
                         app.ui.piano.drag = Some(Drag::Resize {
                             ids,
                             anchor_end: n.end(),
@@ -664,17 +874,24 @@ fn grid_input(
                         velocity: st.last_vel,
                     };
                     app.doc.begin_gesture();
-                    if let Some(id) = app.exec(Command::AddNote { pattern: pid, note }) {
-                        let id = NoteId(id);
+                    if let Some(id) = app.exec(Command::AddNote { pattern: pid, note }).map(NoteId) {
                         app.ui.piano.selection = vec![id];
-                        app.ui.piano.drag = Some(Drag::Move {
-                            ids: vec![id],
-                            anchor_start: start,
-                            anchor_key: key,
-                            grab_tick: view.tick_at(p.x),
-                            grab_key: view.key_at(p.y),
-                            applied_dt: 0,
-                            applied_dk: 0,
+                        app.ui.piano.drag = Some(if tool == Tool::Paint {
+                            // Paint: keep laying notes of this length end to end while dragging.
+                            Drag::Paint {
+                                next: start + note.length,
+                                len: note.length,
+                            }
+                        } else {
+                            Drag::Move {
+                                ids: vec![id],
+                                anchor_start: start,
+                                anchor_key: key,
+                                grab_tick: view.tick_at(p.x),
+                                grab_key: view.key_at(p.y),
+                                applied_dt: 0,
+                                applied_dk: 0,
+                            }
                         });
                         app.preview_on(cid, key, note.velocity);
                         app.ui.piano.audition = Some((cid, key));
@@ -683,7 +900,13 @@ fn grid_input(
             }
         }
     }
-    if secondary_pressed {
+    if secondary_pressed && tool == Tool::Zoom {
+        let anchor = pointer.map_or(0.0, |p| p.x - grid.left());
+        let st = &mut app.ui.piano;
+        let old = st.zoom_x;
+        st.zoom_x = (st.zoom_x / 2.0).max(12.0);
+        st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
+    } else if secondary_pressed {
         app.doc.begin_gesture();
         app.ui.piano.drag = Some(Drag::Erase);
     }
@@ -772,9 +995,97 @@ fn grid_input(
                     }
                 }
             }
-            Some(Drag::Velocity) | None => {}
+            Some(Drag::ResizeStart {
+                ids,
+                anchor_start,
+                grab_tick,
+                applied,
+            }) => {
+                let raw = view.tick_at(p.x) - *grab_tick;
+                let target = (*anchor_start as i64 + raw).max(0) as u64;
+                let d = snap.round(target, sig) as i64 - *anchor_start as i64;
+                if d != *applied {
+                    app.exec(Command::ResizeNotesStart {
+                        pattern: pid,
+                        notes: ids.clone(),
+                        dstart: d - *applied,
+                    });
+                    *applied = d;
+                }
+            }
+            Some(Drag::Paint { next, len }) => {
+                let tick = view.tick_at(p.x).max(0) as u64;
+                let key = view.key_at(p.y).clamp(0, 127) as u8;
+                while tick >= *next {
+                    let note = NewNote {
+                        channel: cid,
+                        key,
+                        start: *next,
+                        length: *len,
+                        velocity: app.ui.piano.last_vel,
+                    };
+                    if let Some(id) = app.exec(Command::AddNote { pattern: pid, note }) {
+                        app.ui.piano.selection.push(NoteId(id));
+                    }
+                    *next += *len;
+                }
+            }
+            Some(Drag::Mute { muted, done }) => {
+                let current = app
+                    .project()
+                    .pattern(pid)
+                    .map(|pp| pp.notes.clone())
+                    .unwrap_or_default();
+                if let Some((n, _)) = hit(view, &current, cid, p)
+                    && !done.contains(&n.id)
+                {
+                    done.push(n.id);
+                    if n.muted != *muted {
+                        app.exec(Command::SetNotesMuted {
+                            pattern: pid,
+                            notes: vec![n.id],
+                            muted: *muted,
+                        });
+                    }
+                }
+            }
+            Some(Drag::Velocity | Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback) | None => {}
         }
         app.ui.piano.drag = drag;
+    }
+    // Slice and Zoom act when the button is released.
+    if !ui.input(|i| i.pointer.any_down())
+        && let Some(p) = pointer
+    {
+        match app.ui.piano.drag.clone() {
+            Some(Drag::Slice { from }) => {
+                app.ui.piano.drag = None;
+                slice_at(app, view, notes, pid, cid, from, p, snap, sig);
+            }
+            Some(Drag::Zoom { from }) => {
+                app.ui.piano.drag = None;
+                let (t0, t1) = (
+                    view.tick_at(from.x.min(p.x)).max(0),
+                    view.tick_at(from.x.max(p.x)).max(0),
+                );
+                let st = &mut app.ui.piano;
+                if (p.x - from.x).abs() > 4.0 && t1 > t0 {
+                    // Fit the dragged range to the grid width.
+                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32).clamp(12.0, 800.0);
+                    st.scroll.x = t0 as f32 * st.zoom_x / PPQ as f32;
+                } else {
+                    let anchor = p.x - grid.left();
+                    let old = st.zoom_x;
+                    st.zoom_x = (st.zoom_x * 2.0).min(800.0);
+                    st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
+                }
+            }
+            Some(Drag::Playback) => {
+                app.ui.piano.drag = None;
+                app.stop();
+            }
+            _ => {}
+        }
     }
 
     // End of a drag.
@@ -800,6 +1111,47 @@ fn grid_input(
             .collect();
     }
     let _ = root;
+}
+
+/// The Slice tool: cut the channel's notes that the drag from `from` to `to` crosses, at
+/// `from`'s snapped time. The right-hand pieces end up selected (FL Studio).
+#[allow(clippy::too_many_arguments)]
+fn slice_at(
+    app: &mut LimeShotApp,
+    view: &View,
+    notes: &[Note],
+    pid: PatternId,
+    cid: ChannelId,
+    from: Pos2,
+    to: Pos2,
+    snap: Snap,
+    sig: TimeSignature,
+) {
+    let at = snap.round(view.tick_at(from.x).max(0) as u64, sig);
+    let (k0, k1) = {
+        let (a, b) = (view.key_at(from.y), view.key_at(to.y));
+        (a.min(b), a.max(b))
+    };
+    let crossed: Vec<NoteId> = notes
+        .iter()
+        .filter(|n| n.channel == cid && i32::from(n.key) >= k0 && i32::from(n.key) <= k1)
+        .filter(|n| n.start < at && at < n.end())
+        .map(|n| n.id)
+        .collect();
+    if crossed.is_empty() {
+        return;
+    }
+    let before: Vec<NoteId> = notes.iter().map(|n| n.id).collect();
+    app.exec(Command::SliceNotes {
+        pattern: pid,
+        notes: crossed,
+        at,
+    });
+    app.ui.piano.selection = app
+        .project()
+        .pattern(pid)
+        .map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect())
+        .unwrap_or_default();
 }
 
 fn velocity_lane(
@@ -905,6 +1257,37 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     } else {
         st.scroll.x = (st.scroll.x - delta.x).max(0.0);
         st.scroll.y -= delta.y;
+    }
+}
+
+/// Quick chop: cut `notes` at every multiple of `grid` inside them, in one undo step. Slicing
+/// from the right keeps each original id on its left-most piece, so one id list serves every cut.
+pub fn chop(app: &mut LimeShotApp, pid: PatternId, notes: &[NoteId], grid: Tick) {
+    let grid = grid.max(1);
+    let Some(p) = app.project().pattern(pid) else { return };
+    let mut cuts: Vec<Tick> = p
+        .notes
+        .iter()
+        .filter(|n| notes.contains(&n.id))
+        .flat_map(|n| {
+            (n.start / grid + 1..)
+                .map(move |k| k * grid)
+                .take_while(move |t| *t < n.end())
+        })
+        .collect();
+    cuts.sort_unstable();
+    cuts.dedup();
+    let cmds: Vec<Command> = cuts
+        .into_iter()
+        .rev()
+        .map(|at| Command::SliceNotes {
+            pattern: pid,
+            notes: notes.to_vec(),
+            at,
+        })
+        .collect();
+    if !cmds.is_empty() {
+        app.exec(Command::Batch(cmds));
     }
 }
 
@@ -1037,6 +1420,48 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             .map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect())
             .unwrap_or_default();
     }
+    for tool in Tool::ALL {
+        if key(ctx, Modifiers::NONE, tool.key()) {
+            app.ui.piano.tool = tool;
+        }
+    }
+    let sig = app.project().time_signature;
+    // Glue (Cmd+G), quick chop (Cmd+U) and mute (Opt+M / Shift+Opt+M) act on the selection, or on
+    // every note of the channel when none is selected (FL Studio's Tools and Edit menus).
+    let all_or_sel = |app: &LimeShotApp| -> Vec<NoteId> {
+        if sel.is_empty() {
+            app.project()
+                .pattern(pid)
+                .map(|p| p.notes_for(cid).map(|n| n.id).collect())
+                .unwrap_or_default()
+        } else {
+            sel.clone()
+        }
+    };
+    if key(ctx, Modifiers::COMMAND, Key::G) {
+        let notes = all_or_sel(app);
+        app.exec(Command::GlueNotes { pattern: pid, notes });
+        app.ui.piano.selection.retain(|id| {
+            app.doc
+                .project()
+                .pattern(pid)
+                .is_some_and(|p| p.notes.iter().any(|n| n.id == *id))
+        });
+    }
+    if key(ctx, Modifiers::COMMAND, Key::U) {
+        let notes = all_or_sel(app);
+        chop(app, pid, &notes, app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS));
+    }
+    for (mods, muted) in [(Modifiers::ALT | Modifiers::SHIFT, false), (Modifiers::ALT, true)] {
+        if key(ctx, mods, Key::M) {
+            let notes = all_or_sel(app);
+            app.exec(Command::SetNotesMuted {
+                pattern: pid,
+                notes,
+                muted,
+            });
+        }
+    }
     if key(ctx, Modifiers::SHIFT, Key::I) {
         // Invert selection (FL Studio: Select › Invert selection, Shift+I).
         app.ui.piano.selection = app
@@ -1056,7 +1481,6 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     } else {
         sel
     };
-    let sig = app.project().time_signature;
     let grid = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS) as i64;
     for (mods, k, dt, dk) in [
         (Modifiers::SHIFT, Key::ArrowUp, 0, 1),

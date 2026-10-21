@@ -15,7 +15,7 @@ Project
 │                | Unsupported(raw JSON)    (kept verbatim, silent)
 ├── patterns: [Pattern]
 │     id, name, color, length_steps (None = auto), notes: [Note], extra{}
-│     Note = {id, channel, key, start, length, velocity}   (ticks)
+│     Note = {id, channel, key, start, length, velocity, muted}   (ticks; muted omitted when false)
 ├── playlist
 │     tracks: [{name, muted}]
 │     clips:  [{id, source, track, start, length, offset, muted, extra{}}]

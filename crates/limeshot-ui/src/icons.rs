@@ -33,6 +33,15 @@ pub enum Icon {
     Detach,
     Attach,
     Automation,
+    // Editor tools (FL Studio's Piano Roll and Playlist tool strip).
+    ToolDraw,
+    ToolPaint,
+    ToolDelete,
+    ToolMute,
+    ToolSlice,
+    ToolSelect,
+    ToolZoom,
+    ToolPlayback,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -127,6 +136,99 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
         Icon::Plus => {
             p.line_segment([at(-5.0, 0.0), at(5.0, 0.0)], line);
             p.line_segment([at(0.0, -5.0), at(0.0, 5.0)], line);
+        }
+        Icon::ToolDraw => {
+            // Pencil: a diagonal body with a tip.
+            p.line_segment([at(-3.0, 3.0), at(4.0, -4.0)], Stroke::new(3.0 * u, c));
+            tri(p, [at(-3.9, 1.9), at(-1.9, 3.9), at(-5.5, 5.5)], c);
+        }
+        Icon::ToolPaint => {
+            // Brush: a handle and a wide head.
+            p.line_segment([at(1.0, -1.0), at(5.5, -5.5)], Stroke::new(1.6 * u, c));
+            p.add(Shape::convex_polygon(
+                vec![
+                    at(-1.0, -2.0),
+                    at(2.0, 1.0),
+                    at(-2.0, 5.5),
+                    at(-6.0, 5.5),
+                    at(-5.5, 2.0),
+                ],
+                c,
+                Stroke::NONE,
+            ));
+        }
+        Icon::ToolDelete => {
+            p.circle_stroke(c0, 5.0 * u, line);
+            p.line_segment([at(-3.5, 3.5), at(3.5, -3.5)], line);
+        }
+        Icon::ToolMute => {
+            // Speaker with a cross.
+            p.add(Shape::convex_polygon(
+                vec![
+                    at(-6.0, -2.0),
+                    at(-3.5, -2.0),
+                    at(0.0, -5.0),
+                    at(0.0, 5.0),
+                    at(-3.5, 2.0),
+                    at(-6.0, 2.0),
+                ],
+                c,
+                Stroke::NONE,
+            ));
+            p.line_segment([at(2.0, -2.5), at(6.0, 2.5)], line);
+            p.line_segment([at(2.0, 2.5), at(6.0, -2.5)], line);
+        }
+        Icon::ToolSlice => {
+            // Knife: a handle, a wide blade and a dashed cut line below it.
+            p.rect_filled(Rect::from_min_max(at(-1.2, -7.0), at(1.8, -3.5)), 0.8, c);
+            p.add(Shape::convex_polygon(
+                vec![at(-3.0, -3.0), at(3.5, -3.0), at(3.5, 2.5), at(-3.0, 0.5)],
+                c,
+                Stroke::NONE,
+            ));
+            p.line_segment([at(0.3, 4.0), at(0.3, 7.0)], Stroke::new(1.0 * u, c));
+        }
+        Icon::ToolSelect => {
+            for (a, b) in [
+                ((-5.5, -5.5), (-1.5, -5.5)),
+                ((1.5, -5.5), (5.5, -5.5)),
+                ((-5.5, 5.5), (-1.5, 5.5)),
+                ((1.5, 5.5), (5.5, 5.5)),
+                ((-5.5, -5.5), (-5.5, -1.5)),
+                ((-5.5, 1.5), (-5.5, 5.5)),
+                ((5.5, -5.5), (5.5, -1.5)),
+                ((5.5, 1.5), (5.5, 5.5)),
+            ] {
+                p.line_segment([at(a.0, a.1), at(b.0, b.1)], line);
+            }
+        }
+        Icon::ToolZoom => {
+            p.circle_stroke(at(-1.0, -1.0), 4.0 * u, line);
+            p.line_segment([at(2.0, 2.0), at(6.0, 6.0)], Stroke::new(2.0 * u, c));
+        }
+        Icon::ToolPlayback => {
+            // Speaker with sound waves.
+            p.add(Shape::convex_polygon(
+                vec![
+                    at(-6.0, -2.0),
+                    at(-3.5, -2.0),
+                    at(0.0, -5.0),
+                    at(0.0, 5.0),
+                    at(-3.5, 2.0),
+                    at(-6.0, 2.0),
+                ],
+                c,
+                Stroke::NONE,
+            ));
+            for r in [3.0f32, 5.5] {
+                let pts: Vec<Pos2> = (0..=8)
+                    .map(|i| {
+                        let a = -0.6 + 1.2 * i as f32 / 8.0;
+                        at(r * a.cos(), r * a.sin())
+                    })
+                    .collect();
+                p.add(Shape::line(pts, line));
+            }
         }
         Icon::Minus => {
             p.line_segment([at(-5.0, 0.0), at(5.0, 0.0)], line);

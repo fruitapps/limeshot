@@ -247,6 +247,9 @@ pub struct Note {
     pub length: Tick,
     /// 0–1.
     pub velocity: f32,
+    /// A muted note stays in the pattern but does not play (FL Studio's Mute tool).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub muted: bool,
 }
 
 impl Note {
@@ -795,6 +798,7 @@ mod tests {
             start: 3840,
             length: 10,
             velocity: 1.0,
+            muted: false,
         });
         assert_eq!(p.patterns[0].length(sig), 7680);
         p.patterns[0].length_steps = Some(8);
@@ -835,6 +839,7 @@ mod tests {
             start: 0,
             length: 0,
             velocity: 1.0,
+            muted: false,
         });
         p.sanitize();
         let c = &p.channels[0];

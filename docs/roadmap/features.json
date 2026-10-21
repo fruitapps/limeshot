@@ -1591,28 +1591,42 @@
     {
       "id": "PR-012",
       "category": "Piano Roll",
-      "name": "Paint, slice, mute, stamp, zoom tools",
+      "name": "Tool palette: draw, paint, delete, mute, slice, select, zoom, playback",
       "description": "Additional tools.",
-      "fl_reference": "B/C/T/Stamp/Z tools.",
-      "limeshot_behavior": "Tool selector with paint, slice, mute, chord stamp.",
+      "fl_reference": "Piano Roll tool strip: Draw (P), Paint (B), Delete (D), Mute (T), Slice (C), Select (E), Zoom (Z), Playback (Y).",
+      "limeshot_behavior": "Tool buttons in the Piano Roll header and FL's keys. Paint lays notes of the last length end to end along a drag (selected, one undo step); Delete erases; Mute toggles notes' mute (muted notes are dimmed and silent); Slice cuts crossed notes at the snapped x of the drag and selects the right pieces; Select drags a rectangle without Cmd; Zoom fits a dragged range (click zooms in, right-click out); Playback plays from the pointer while held.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_tool_keys_and_palette",
+        "crates/limeshot-app/tests/ui.rs::paint_tool_lays_notes_end_to_end",
+        "crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools",
+        "crates/limeshot-app/tests/ui.rs::delete_select_zoom_and_draw_left_edge",
+        "limeshot-core document::tests::slice_glue_and_mute_notes",
+        "limeshot-sequencer tests::muted_notes_do_not_play"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/evidence/screenshots/fl-piano-paint.png",
+          "docs/research/evidence/screenshots/fl-piano-slice.png",
+          "docs/research/evidence/screenshots/fl-piano-tools-menu.png"
         ]
       },
-      "notes": ""
+      "notes": "Observed live in FL 2026.1.1 (session 7): Paint lays end-to-end notes of the last length, all selected (fl-piano-paint.png); Slice cuts at the line and selects the right piece (fl-piano-slice.png). Playback is press-to-play, not scrubbing. Not observed live: the Mute, Delete, Zoom and Playback tools' details (taken from the manual). The Stamp tool is PR-027."
     },
     {
       "id": "PR-013",
@@ -1906,18 +1920,24 @@
       "category": "Piano Roll",
       "name": "Glue / slice notes",
       "description": "Join or split notes.",
-      "fl_reference": "Ctrl+G glue, slice tool.",
-      "limeshot_behavior": "Commands to glue touching notes and slice at a time.",
+      "fl_reference": "Tools › Glue (Cmd+G), Quick chop (Cmd+U), Chop… (Opt+U); Slice tool (C).",
+      "limeshot_behavior": "Glue (Cmd+G) joins selected notes of the same key that touch or overlap; Quick chop (Cmd+U) cuts notes at every snap step; the Slice tool cuts at a point. With nothing selected they apply to all of the channel's notes.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools",
+        "limeshot-core document::tests::slice_glue_and_mute_notes"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1925,25 +1945,30 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Shortcuts from FL 2026.1.1's Piano Roll Tools menu (fl-piano-tools-menu.png). The Chop… dialog is not implemented."
     },
     {
       "id": "PR-024",
       "category": "Piano Roll",
       "name": "Resize from the left edge",
       "description": "Trim note starts.",
-      "fl_reference": "Optional menu setting.",
-      "limeshot_behavior": "Drag left edge to change start and length.",
+      "fl_reference": "Edit › Allow resizing from left (Cmd+Opt+Home), on by default in FL 2026.1.1.",
+      "limeshot_behavior": "Draw/Paint tools: dragging a note's left edge (outer 6 px) moves its start and keeps its end (snapped; one undo step). Always on.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::delete_select_zoom_and_draw_left_edge"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1951,7 +1976,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "The option to turn it off is not implemented."
     },
     {
       "id": "PR-025",
@@ -6914,6 +6939,36 @@
         ]
       },
       "notes": ""
+    },
+    {
+      "id": "PR-027",
+      "category": "Piano Roll",
+      "name": "Stamp tool (chords and scales)",
+      "description": "Draw chords or scales with one click.",
+      "fl_reference": "Piano Roll Stamp menu.",
+      "limeshot_behavior": "A Stamp selector: drawing a note adds the chosen chord or scale.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PR-012"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+        ]
+      },
+      "notes": "Split out of PR-012 in session 7."
     },
     {
       "id": "APP-023",

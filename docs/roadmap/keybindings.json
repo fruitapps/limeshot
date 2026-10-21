@@ -472,8 +472,8 @@
       "action": "Draw tool",
       "fl_keys": "P",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "P",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -483,8 +483,8 @@
       "action": "Paint tool",
       "fl_keys": "B",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "B",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -494,8 +494,8 @@
       "action": "Delete tool",
       "fl_keys": "D",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "D",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -505,8 +505,8 @@
       "action": "Mute tool",
       "fl_keys": "T",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "T",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -516,10 +516,10 @@
       "action": "Slice tool",
       "fl_keys": "C",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "C",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
-      "notes": ""
+      "notes": "Observed: the hint bar labels these keys (Draw P, Slice C, Select E, Zoom Z, Playback Y; Paint B)."
     },
     {
       "id": "KB-048",
@@ -527,8 +527,8 @@
       "action": "Select tool",
       "fl_keys": "E",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "E",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -538,8 +538,8 @@
       "action": "Zoom tool",
       "fl_keys": "Z",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Z",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -549,8 +549,8 @@
       "action": "Playback tool",
       "fl_keys": "Y",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Y",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -646,34 +646,34 @@
       "id": "KB-059",
       "context": "Piano Roll",
       "action": "Quick quantize",
-      "fl_keys": "Alt+Q",
-      "confidence": "VERIFIED",
+      "fl_keys": "Cmd+Q (macOS menu)",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Alt+Q",
-      "status": "IMPLEMENTED",
+      "status": "DIFFERENT",
       "feature": "PR-014",
-      "notes": ""
+      "notes": "FL 2026.1.1's macOS Tools menu: Quick quantize Cmd+Q, Quick quantize start times Shift+Q, Quantize… Opt+Q. LimeShot keeps Cmd+Q for Quit and uses Alt+Q for quick quantize."
     },
     {
       "id": "KB-060",
       "context": "Piano Roll",
       "action": "Quantize dialog",
-      "fl_keys": "Ctrl+Q",
-      "confidence": "INFERRED",
+      "fl_keys": "Opt+Q (macOS menu)",
+      "confidence": "OBSERVED",
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "PR-014",
-      "notes": ""
+      "notes": "FL 2026.1.1 Tools menu."
     },
     {
       "id": "KB-061",
       "context": "Piano Roll",
       "action": "Legato",
-      "fl_keys": "Ctrl+L",
-      "confidence": "VERIFIED",
+      "fl_keys": "Cmd+L (macOS menu)",
+      "confidence": "OBSERVED",
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Quick legato in FL 2026.1.1's Tools menu."
     },
     {
       "id": "KB-062",
@@ -912,10 +912,10 @@
       "action": "Mute / unmute selected notes",
       "fl_keys": "Opt+M / Shift+Opt+M",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Alt+M / Shift+Alt+M",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
-      "notes": "FL 2026.1.1 Edit menu (macOS labels)."
+      "notes": "Selection, or all of the channel's notes when none is selected."
     },
     {
       "id": "KB-084",
@@ -960,6 +960,28 @@
       "status": "NOT_STARTED",
       "feature": "PL-022",
       "notes": "FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G."
+    },
+    {
+      "id": "KB-088",
+      "context": "Piano Roll",
+      "action": "Glue notes",
+      "fl_keys": "Cmd+G",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+G",
+      "status": "IMPLEMENTED",
+      "feature": "PR-023",
+      "notes": "FL 2026.1.1 Tools menu."
+    },
+    {
+      "id": "KB-089",
+      "context": "Piano Roll",
+      "action": "Quick chop",
+      "fl_keys": "Cmd+U",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+U",
+      "status": "IMPLEMENTED",
+      "feature": "PR-023",
+      "notes": "Cuts at every snap step. FL's Chop… dialog (Opt+U) is not implemented."
     }
   ]
 }

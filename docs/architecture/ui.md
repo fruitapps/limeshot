@@ -115,6 +115,6 @@ Manual test procedure for what automation does not cover: see `docs/development/
 
 ## Known UI gaps
 
-Window positions and the detached state are not saved with the project or settings; no tool palette (Draw-tool
-semantics only); right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
+Window positions and the detached state are not saved with the project or settings; the Piano Roll has FL's tool strip
+(`piano_roll::Tool`, keys P B D T C E Z Y) but the Playlist has the Draw tool only; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
 custom-painted editors expose no accessibility labels.

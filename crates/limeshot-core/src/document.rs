@@ -287,6 +287,72 @@ mod tests {
     }
 
     #[test]
+    fn slice_glue_and_mute_notes() {
+        let (mut d, ch, pat) = doc_with_channel();
+        let add = |d: &mut Document, key: u8, start: Tick, length: Tick| {
+            NoteId(
+                d.execute(Command::AddNote {
+                    pattern: pat,
+                    note: NewNote {
+                        channel: ch,
+                        key,
+                        start,
+                        length,
+                        velocity: 0.5,
+                    },
+                })
+                .unwrap()
+                .0
+                .unwrap(),
+            )
+        };
+        let a = add(&mut d, 60, 0, 960);
+        let other = add(&mut d, 64, 0, 240);
+        // Slice at 480: `a` splits, the short note (ending at 240) is untouched.
+        let right = d
+            .execute(Command::SliceNotes {
+                pattern: pat,
+                notes: vec![a, other],
+                at: 480,
+            })
+            .unwrap()
+            .0
+            .map(NoteId)
+            .unwrap();
+        let notes = |d: &Document| d.project().patterns[0].notes.clone();
+        let spans: Vec<(u8, Tick, Tick)> = notes(&d).iter().map(|n| (n.key, n.start, n.length)).collect();
+        assert_eq!(spans, vec![(60, 0, 480), (64, 0, 240), (60, 480, 480)]);
+        assert_eq!(notes(&d).iter().find(|n| n.id == right).unwrap().start, 480);
+        // Glue joins the touching pieces again into the first one; other keys stay apart.
+        d.execute(Command::GlueNotes {
+            pattern: pat,
+            notes: vec![a, right, other],
+        })
+        .unwrap();
+        let spans: Vec<(u8, Tick, Tick)> = notes(&d).iter().map(|n| (n.key, n.start, n.length)).collect();
+        assert_eq!(spans, vec![(60, 0, 960), (64, 0, 240)]);
+        assert_eq!(notes(&d)[0].id, a);
+        // Notes that do not touch are not glued.
+        let far = add(&mut d, 60, 2000, 100);
+        d.execute(Command::GlueNotes {
+            pattern: pat,
+            notes: vec![a, far],
+        })
+        .unwrap();
+        assert_eq!(notes(&d).len(), 3);
+        d.execute(Command::SetNotesMuted {
+            pattern: pat,
+            notes: vec![far],
+            muted: true,
+        })
+        .unwrap();
+        assert!(notes(&d).iter().find(|n| n.id == far).unwrap().muted);
+        assert!(!notes(&d).iter().find(|n| n.id == a).unwrap().muted);
+        d.undo();
+        assert!(notes(&d).iter().all(|n| !n.muted));
+    }
+
+    #[test]
     fn notes_move_resize_and_duplicate() {
         let (mut d, ch, pat) = doc_with_channel();
         let id = d

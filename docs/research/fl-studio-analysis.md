@@ -91,6 +91,13 @@ headers keep the LED at the right.
   Shift+Opt+M, Insert/Delete space Cmd+Ins/Del; Select: Deselect Cmd+D, Select all Cmd+A, one/more at random Shift+R/M,
   by color Shift+C, odd Shift+O, Invert Shift+I, time around selection Cmd+Enter. Plain Up/Down scroll the view (about
   three rows per press). With nothing selected, Shift+Up transposes every note of the channel.
+- **OBSERVED live (session 7, `fl-piano-tools-menu.png`, `fl-piano-paint.png`, `fl-piano-slice.png`):** Tools menu:
+  Riff machine Opt+E, chord progression Opt+P, Quick legato Cmd+L, Articulate Opt+L, Quick quantize Cmd+Q, start times
+  Shift+Q, Quantize… Opt+Q, Quick chop Cmd+U, Chop… Opt+U, Glue Cmd+G, Arpeggiate Opt+A, Strum Opt+S, Flam Opt+F, Claw
+  machine Opt+W, Limit Opt+K, Flip Opt+Y, Randomize Opt+R, Scale levels Opt+X, LFO Opt+O. The hint bar labels the tools
+  Draw P, Paint B, Slice C, Select E, Zoom Z, Playback Y. A Paint drag lays notes of the last length end to end, all
+  selected; a Slice drag across a note cuts it at the line and selects the right piece. "Allow resizing from left" is
+  ticked by default.
 - **LimeShot equivalent:** custom-painted Piano Roll. Draw-tool semantics (left add/move/resize, right delete, Ctrl rectangle select, Alt no-snap), a velocity lane, keyboard auditioning, horizontal and vertical zoom and scroll, a playhead, Delete, Ctrl+A, Ctrl+B duplicate, Shift+Up/Down transpose by a semitone, Ctrl+Up/Down by an octave. Ghost notes, slice and paint tools are tracked (P1).
 
 ## 4. Playlist and arrangement

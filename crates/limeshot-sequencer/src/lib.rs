@@ -381,7 +381,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             let mut events: Vec<NoteEvent> = p
                 .notes
                 .iter()
-                .filter(|n| n.start < length)
+                .filter(|n| n.start < length && !n.muted)
                 .filter_map(|n| {
                     let tick = n.start + swing(n.start);
                     Some(NoteEvent::note(
@@ -426,7 +426,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         };
         let window_end = clip.offset.saturating_add(clip.length);
         for n in &p.notes {
-            if n.start < clip.offset || n.start >= window_end {
+            if n.muted || n.start < clip.offset || n.start >= window_end {
                 continue;
             }
             let Some(channel) = channel_index(n.channel) else {
@@ -643,6 +643,45 @@ mod tests {
         let ticks: Vec<Tick> = snap.song.events.iter().map(|e| e.tick).collect();
         assert_eq!(ticks, vec![0, 7680]);
         assert_eq!(snap.song.length, 3 * 3840);
+    }
+
+    #[test]
+    fn muted_notes_do_not_play() {
+        let (mut d, _, b, pat) = setup();
+        let id = d
+            .execute(Command::AddNote {
+                pattern: pat,
+                note: NewNote {
+                    channel: b,
+                    key: 60,
+                    start: 0,
+                    length: 480,
+                    velocity: 1.0,
+                },
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        d.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 0,
+            length: None,
+        })
+        .unwrap();
+        let count = |d: &Document| {
+            let snap = compile(d.project(), pat, &NoSamples);
+            (snap.pattern.events.len(), snap.song.events.len())
+        };
+        let before = count(&d);
+        d.execute(Command::SetNotesMuted {
+            pattern: pat,
+            notes: vec![NoteId(id)],
+            muted: true,
+        })
+        .unwrap();
+        let after = count(&d);
+        assert_eq!((after.0 + 1, after.1 + 1), before, "silent in Pattern and Song mode");
     }
 
     #[test]

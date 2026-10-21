@@ -58,6 +58,13 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("← / →", "Piano Roll / Playlist: scroll"),
     ("Shift+I", "Piano Roll / Playlist: invert the selection"),
+    (
+        "P / B / D / T / C / E / Z / Y",
+        "Piano Roll tools: draw, paint, delete, mute, slice, select, zoom, playback",
+    ),
+    ("Cmd+G", "Piano Roll: glue touching notes"),
+    ("Cmd+U", "Piano Roll: chop notes at the snap"),
+    ("Alt+M / Shift+Alt+M", "Piano Roll: mute / unmute notes"),
     ("Home", "Playlist: song position to the start"),
     (
         "Cmd+L",

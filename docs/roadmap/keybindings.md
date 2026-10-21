@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **87** — IMPLEMENTED 47, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 34
+Tracked: **89** — IMPLEMENTED 57, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 25
 
 ## Global
 
@@ -73,14 +73,14 @@ Tracked: **87** — IMPLEMENTED 47, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 34
 
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
-| KB-043 | Draw tool | `P` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-044 | Paint tool | `B` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-045 | Delete tool | `D` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-046 | Mute tool | `T` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-047 | Slice tool | `C` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-048 | Select tool | `E` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-049 | Zoom tool | `Z` | VERIFIED | — | NOT_STARTED | PR-012 |  |
-| KB-050 | Playback tool | `Y` | VERIFIED | — | NOT_STARTED | PR-012 |  |
+| KB-043 | Draw tool | `P` | VERIFIED | `P` | IMPLEMENTED | PR-012 |  |
+| KB-044 | Paint tool | `B` | VERIFIED | `B` | IMPLEMENTED | PR-012 |  |
+| KB-045 | Delete tool | `D` | VERIFIED | `D` | IMPLEMENTED | PR-012 |  |
+| KB-046 | Mute tool | `T` | VERIFIED | `T` | IMPLEMENTED | PR-012 |  |
+| KB-047 | Slice tool | `C` | VERIFIED | `C` | IMPLEMENTED | PR-012 | Observed: the hint bar labels these keys (Draw P, Slice C, Select E, Zoom Z, Playback Y; Paint B). |
+| KB-048 | Select tool | `E` | VERIFIED | `E` | IMPLEMENTED | PR-012 |  |
+| KB-049 | Zoom tool | `Z` | VERIFIED | `Z` | IMPLEMENTED | PR-012 |  |
+| KB-050 | Playback tool | `Y` | VERIFIED | `Y` | IMPLEMENTED | PR-012 |  |
 | KB-051 | Select all | `Ctrl+A` | VERIFIED | `Cmd+A` | IMPLEMENTED | PR-002 |  |
 | KB-052 | Deselect | `Ctrl+D` | OBSERVED | `Cmd+D` | IMPLEMENTED | PR-002 | Listed in FL 2026.1.1's Piano Roll Select menu. |
 | KB-053 | Delete selection | `Delete` | VERIFIED | `Delete / Backspace` | IMPLEMENTED | PR-001 |  |
@@ -89,16 +89,18 @@ Tracked: **87** — IMPLEMENTED 47, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 34
 | KB-056 | Transpose an octave | `Ctrl+Up / Ctrl+Down` | VERIFIED | `Cmd+↑ / Cmd+↓` | IMPLEMENTED | PR-009 |  |
 | KB-057 | Transpose a semitone | `Shift+Up / Shift+Down` | OBSERVED | `Shift+↑ / Shift+↓` | IMPLEMENTED | PR-009 | Applies to every note of the channel when none is selected (observed). Plain arrows scroll. |
 | KB-058 | Nudge the selection | `Shift+Left / Shift+Right` | OBSERVED | `Shift+← / Shift+→` | IMPLEMENTED | PR-009 | FL calls it Shift left/right (moves by the snap). |
-| KB-059 | Quick quantize | `Alt+Q` | VERIFIED | `Alt+Q` | IMPLEMENTED | PR-014 |  |
-| KB-060 | Quantize dialog | `Ctrl+Q` | INFERRED | — | NOT_STARTED | PR-014 |  |
-| KB-061 | Legato | `Ctrl+L` | VERIFIED | — | NOT_STARTED | PR-015 |  |
+| KB-059 | Quick quantize | `Cmd+Q (macOS menu)` | OBSERVED | `Alt+Q` | DIFFERENT | PR-014 | FL 2026.1.1's macOS Tools menu: Quick quantize Cmd+Q, Quick quantize start times Shift+Q, Quantize… Opt+Q. LimeShot keeps Cmd+Q for Quit and uses Alt+Q for quick quantize. |
+| KB-060 | Quantize dialog | `Opt+Q (macOS menu)` | OBSERVED | — | NOT_STARTED | PR-014 | FL 2026.1.1 Tools menu. |
+| KB-061 | Legato | `Cmd+L (macOS menu)` | OBSERVED | — | NOT_STARTED | PR-015 | Quick legato in FL 2026.1.1's Tools menu. |
 | KB-062 | Arpeggiate / strum / randomize | `Alt+A / Alt+S / Alt+R` | INFERRED | — | NOT_STARTED | PR-015 |  |
 | KB-063 | Edit without snapping | `Alt+drag` | VERIFIED | `Alt+click` | IMPLEMENTED | PR-003 | A mouse modifier. |
 | KB-079 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PR-002 | From FL 2026.1.1's Select menu. |
 | KB-080 | Scroll the view | `Up / Down / Left / Right` | OBSERVED | `↑ / ↓ / ← / →` | IMPLEMENTED | PR-005 | Up/Down move about three rows per press in FL 2026.1.1. |
 | KB-081 | Rotate selection left / right | `Shift+Cmd+Left / Shift+Cmd+Right` | OBSERVED | — | NOT_STARTED | PR-009 | FL 2026.1.1 Edit menu (macOS labels). |
 | KB-082 | Discard lengths | `Shift+D` | OBSERVED | — | NOT_STARTED | PR-015 | FL 2026.1.1 Edit menu. |
-| KB-083 | Mute / unmute selected notes | `Opt+M / Shift+Opt+M` | OBSERVED | — | NOT_STARTED | PR-012 | FL 2026.1.1 Edit menu (macOS labels). |
+| KB-083 | Mute / unmute selected notes | `Opt+M / Shift+Opt+M` | OBSERVED | `Alt+M / Shift+Alt+M` | IMPLEMENTED | PR-012 | Selection, or all of the channel's notes when none is selected. |
+| KB-088 | Glue notes | `Cmd+G` | OBSERVED | `Cmd+G` | IMPLEMENTED | PR-023 | FL 2026.1.1 Tools menu. |
+| KB-089 | Quick chop | `Cmd+U` | OBSERVED | `Cmd+U` | IMPLEMENTED | PR-023 | Cuts at every snap step. FL's Chop… dialog (Opt+U) is not implemented. |
 
 ## Playlist
 

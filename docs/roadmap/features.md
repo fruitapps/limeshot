@@ -8,15 +8,15 @@ automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **237**
+- Features tracked: **238**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 112, DEFERRED 2
+- By status: NOT_STARTED 100, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 10, VERIFIED 115, DEFERRED 2
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 25 | 16 | 1 | 2 | 6 |
 | Channel Rack | 20 | 14 | 0 | 0 | 6 |
-| Piano Roll | 26 | 15 | 0 | 0 | 11 |
+| Piano Roll | 27 | 18 | 0 | 0 | 9 |
 | Playlist | 28 | 16 | 1 | 2 | 9 |
 | Mixer | 16 | 8 | 1 | 1 | 6 |
 | Instruments | 14 | 6 | 0 | 0 | 8 |
@@ -101,7 +101,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-009 | Transpose and nudge with keys | P1 |  | VERIFIED | Shift+↑/↓ semitone, Cmd+↑/↓ octave, Shift+←/→ by the snap; the selection, or every note of the channel when nothing is selected.<br>*Observed in FL 2026.1.1 (fl-piano-edit-menu.png): Shift+Up/Down transpose, Cmd+Up/Down an octave, Shift+Left/Right shift; with nothing selected they apply to all of the channel's notes. Plain arrows scroll. Rotate (Shift+Cmd+Left/Right) and Discard lengths (Shift+D) are not implemented.* | `crates/limeshot-app/tests/ui.rs::piano_roll_shift_arrows_transpose_and_nudge` |
 | PR-010 | Ghost notes | P1 |  | VERIFIED | Notes of other channels in the same pattern are drawn as ghosts (not editable).<br>*Ghosts from overlapping playlist clips not implemented. The UI test checks ghosts cannot be deleted and that clicking on one adds a note to the edited channel.* | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
 | PR-011 | Channel target selector | P0 | ✓ | VERIFIED | Channel combo box in the header. | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector` |
-| PR-012 | Paint, slice, mute, stamp, zoom tools | P1 |  | NOT_STARTED | Tool selector with paint, slice, mute, chord stamp. | — |
+| PR-012 | Tool palette: draw, paint, delete, mute, slice, select, zoom, playback | P1 |  | VERIFIED | Tool buttons in the Piano Roll header and FL's keys. Paint lays notes of the last length end to end along a drag (selected, one undo step); Delete erases; Mute toggles notes' mute (muted notes are dimmed and silent); Slice cuts crossed notes at the snapped x of the drag and selects the right pieces; Select drags a rectangle without Cmd; Zoom fits a dragged range (click zooms in, right-click out); Playback plays from the pointer while held.<br>*Observed live in FL 2026.1.1 (session 7): Paint lays end-to-end notes of the last length, all selected (fl-piano-paint.png); Slice cuts at the line and selects the right piece (fl-piano-slice.png). Playback is press-to-play, not scrubbing. Not observed live: the Mute, Delete, Zoom and Playback tools' details (taken from the manual). The Stamp tool is PR-027.* | `crates/limeshot-app/tests/ui.rs::piano_roll_tool_keys_and_palette`<br>`crates/limeshot-app/tests/ui.rs::paint_tool_lays_notes_end_to_end`<br>`crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools`<br>`crates/limeshot-app/tests/ui.rs::delete_select_zoom_and_draw_left_edge`<br>`limeshot-core document::tests::slice_glue_and_mute_notes`<br>`limeshot-sequencer tests::muted_notes_do_not_play` |
 | PR-013 | Scale highlighting / snap to scale | P2 |  | NOT_STARTED | Scale selector, shading rows out of key, optional snapping. | — |
 | PR-014 | Quantize | P1 |  | VERIFIED | Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only.<br>*No quantize dialog (strength, lengths, swing template) yet.* | `limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths`<br>`limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
 | PR-015 | Chords, arpeggiator, strum, humanize, legato | P2 |  | NOT_STARTED | Tools menu with these transforms as commands. | — |
@@ -112,10 +112,11 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-020 | MIDI file import / export | P1 |  | VERIFIED | Own Standard MIDI File reader/writer (format 0/1, running status, note-on velocity 0, tempo, time signature, track names; SMPTE and format 2 refused; hostile input bounded). File › Import MIDI file… adds one pattern named after the file with a LimeSynth channel per MIDI track (and per MIDI channel within a track), in one undo step; an empty project also takes the file's tempo. CLI: limeshot-cli import-midi in.mid out.lime.<br>*Exported files were read back by LimeShot's own reader only; not yet checked in another program. Controller events, pitch bend and program changes are ignored on import.* | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-project midi::tests::reads_running_status_other_resolutions_and_note_on_zero`<br>`limeshot-project midi::tests::hostile_input_is_refused_not_panicked_on`<br>`limeshot-project midi::tests::import_command_builds_one_channel_per_track`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
 | PR-021 | MIDI recording into the Piano Roll | P1 |  | NOT_STARTED | Record from MIDI devices/typing keyboard. | — |
 | PR-022 | Time signature per pattern / time markers | P3 |  | NOT_STARTED | Project-wide signature only for now. | — |
-| PR-023 | Glue / slice notes | P2 |  | NOT_STARTED | Commands to glue touching notes and slice at a time. | — |
-| PR-024 | Resize from the left edge | P2 |  | NOT_STARTED | Drag left edge to change start and length. | — |
+| PR-023 | Glue / slice notes | P2 |  | VERIFIED | Glue (Cmd+G) joins selected notes of the same key that touch or overlap; Quick chop (Cmd+U) cuts notes at every snap step; the Slice tool cuts at a point. With nothing selected they apply to all of the channel's notes.<br>*Shortcuts from FL 2026.1.1's Piano Roll Tools menu (fl-piano-tools-menu.png). The Chop… dialog is not implemented.* | `crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools`<br>`limeshot-core document::tests::slice_glue_and_mute_notes` |
+| PR-024 | Resize from the left edge | P2 |  | VERIFIED | Draw/Paint tools: dragging a note's left edge (outer 6 px) moves its start and keeps its end (snapped; one undo step). Always on.<br>*The option to turn it off is not implemented.* | `crates/limeshot-app/tests/ui.rs::delete_select_zoom_and_draw_left_edge` |
 | PR-025 | Waveform helper background | P3 |  | NOT_STARTED | Show a sample waveform behind the grid. | — |
 | PR-026 | New notes take the last note's length | P1 |  | VERIFIED | Identical: first note two steps, then the length of the last drawn or resized note. | `limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes` |
+| PR-027 | Stamp tool (chords and scales) | P2 |  | NOT_STARTED | A Stamp selector: drawing a note adds the chosen chord or scale.<br>*Split out of PR-012 in session 7.* | — |
 
 ## Playlist
 

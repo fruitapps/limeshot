@@ -29,7 +29,9 @@ Current as of 2026-10-21 (session 7). Everything here is either not implemented 
 
 ## Editing
 * Clipboard is app-internal (not the system clipboard). Quantize has no dialog (100% starts only from the UI). Swing is
-  global only (no per-channel mix). No tool palette (draw-tool semantics only), no scale highlighting, no chord or arp tools.
+  global only (no per-channel mix). The Piano Roll has FL's eight tools but no Stamp
+  tool (PR-027), no scale highlighting and no chord or arp tools; the Playlist has the Draw tool only. Resizing notes
+  from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * No markers, loop regions or time selections; no performance mode.

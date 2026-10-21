@@ -354,8 +354,8 @@ fn piano_roll_click_adds_drag_moves_delete_removes() {
         (STEP_TICKS, 2 * STEP_TICKS, 72),
         "snapped to the step grid; FL's first note is two steps long"
     );
-    // Drag it two beats to the right.
-    let from = g.pos(STEP_TICKS + 40, 72);
+    // Drag it two beats to the right, grabbing its body (the outer 6 px are resize edges).
+    let from = g.pos(STEP_TICKS + 120, 72);
     drag(&mut h, from, from + vec2(2.0 * PPQ as f32 * g.ppt, 0.0));
     let n = notes(&h);
     assert_eq!(n.len(), 1);
@@ -1423,4 +1423,218 @@ fn toolbar_time_signature_and_position_readout() {
     let readout = readout.expect("readout shows 2:02:000");
     click(&mut h, readout, PointerButton::Primary);
     wait_for(&mut h, "the return to the start", |a| a.player.status().position() == 0);
+}
+
+fn notes_by_start(h: &Harness<'static, LimeShotApp>, pat: PatternId, ch: ChannelId) -> Vec<(u8, Tick, Tick, bool)> {
+    let mut v: Vec<(u8, Tick, Tick, bool)> = pattern_notes(h, pat, ch)
+        .iter()
+        .map(|n| (n.key, n.start, n.length, n.muted))
+        .collect();
+    v.sort_by_key(|n| (n.1, n.0));
+    v
+}
+
+/// An empty pattern for the Lead channel in a maximised Piano Roll.
+fn empty_piano_roll() -> (Harness<'static, LimeShotApp>, PatternId, ChannelId) {
+    let (mut h, _, lead) = melody_piano_roll();
+    let pat = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Tools".into() })
+            .expect("pattern"),
+    );
+    h.state_mut().set_current_pattern(pat);
+    for _ in 0..3 {
+        h.step();
+    }
+    (h, pat, lead)
+}
+
+#[test]
+fn piano_roll_tool_keys_and_palette() {
+    let (mut h, _, _) = empty_piano_roll();
+    let history = h.state().doc.history().len();
+    use limeshot_ui::piano_roll::Tool;
+    for (k, tool) in [
+        (Key::B, Tool::Paint),
+        (Key::D, Tool::Delete),
+        (Key::T, Tool::Mute),
+        (Key::C, Tool::Slice),
+        (Key::E, Tool::Select),
+        (Key::Z, Tool::Zoom),
+        (Key::Y, Tool::Playback),
+        (Key::P, Tool::Draw),
+    ] {
+        h.key_press(k);
+        h.step();
+        assert_eq!(h.state().ui.piano.tool, tool, "{k:?}");
+    }
+    assert_eq!(h.state().doc.history().len(), history, "switching tools edits nothing");
+}
+
+#[test]
+fn paint_tool_lays_notes_end_to_end() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    h.state_mut().ui.piano.tool = limeshot_ui::piano_roll::Tool::Paint;
+    let g = piano_geometry(&h);
+    let len = h.state().ui.piano.last_len;
+    assert_eq!(len, 2 * STEP_TICKS);
+    // From the first step to inside the fourth note.
+    drag(&mut h, g.pos(10, 72), g.pos(3 * len + 20, 72));
+    h.step();
+    let notes = notes_by_start(&h, pat, lead);
+    assert_eq!(
+        notes,
+        (0..4).map(|i| (72, i * len, len, false)).collect::<Vec<_>>(),
+        "notes of the last length, end to end"
+    );
+    assert_eq!(h.state().ui.piano.selection.len(), 4, "painted notes are selected");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert!(pattern_notes(&h, pat, lead).is_empty(), "one undo step");
+}
+
+#[test]
+fn slice_glue_chop_and_mute_tools() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: vec![
+            NewNote {
+                channel: lead,
+                key: 72,
+                start: 0,
+                length: bar,
+                velocity: 0.8,
+            },
+            NewNote {
+                channel: lead,
+                key: 67,
+                start: 0,
+                length: bar,
+                velocity: 0.8,
+            },
+        ],
+    });
+    h.step();
+    let g = piano_geometry(&h);
+    // Slice: a vertical drag across the top note at beat 2 cuts only that note.
+    h.state_mut().ui.piano.tool = limeshot_ui::piano_roll::Tool::Slice;
+    drag(&mut h, g.pos(PPQ, 74), g.pos(PPQ, 71));
+    h.step();
+    assert_eq!(
+        notes_by_start(&h, pat, lead),
+        vec![(67, 0, bar, false), (72, 0, PPQ, false), (72, PPQ, bar - PPQ, false)]
+    );
+    let right = pattern_notes(&h, pat, lead)
+        .into_iter()
+        .find(|n| n.start == PPQ)
+        .expect("piece");
+    assert_eq!(
+        h.state().ui.piano.selection,
+        vec![right.id],
+        "the right piece is selected"
+    );
+    // Glue (Cmd+G) on everything: the pieces join again.
+    h.state_mut().ui.piano.selection.clear();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::G);
+    h.step();
+    assert_eq!(
+        notes_by_start(&h, pat, lead),
+        vec![(67, 0, bar, false), (72, 0, bar, false)]
+    );
+    // Quick chop (Cmd+U) the low note at the snap (a step).
+    let low = pattern_notes(&h, pat, lead)
+        .into_iter()
+        .find(|n| n.key == 67)
+        .expect("low");
+    h.state_mut().ui.piano.selection = vec![low.id];
+    h.key_press_modifiers(Modifiers::COMMAND, Key::U);
+    h.step();
+    let lows: Vec<_> = notes_by_start(&h, pat, lead)
+        .into_iter()
+        .filter(|n| n.0 == 67)
+        .collect();
+    assert_eq!(
+        lows,
+        (0..16)
+            .map(|i| (67, i * STEP_TICKS, STEP_TICKS, false))
+            .collect::<Vec<_>>()
+    );
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(notes_by_start(&h, pat, lead).len(), 2, "chop is one undo step");
+    // Mute tool: a click toggles the note; Opt+M / Shift+Opt+M mute and unmute everything.
+    h.state_mut().ui.piano.tool = limeshot_ui::piano_roll::Tool::Mute;
+    h.state_mut().ui.piano.selection.clear();
+    click(&mut h, g.pos(bar / 2, 72), PointerButton::Primary);
+    assert_eq!(
+        notes_by_start(&h, pat, lead),
+        vec![(67, 0, bar, false), (72, 0, bar, true)]
+    );
+    h.key_press_modifiers(Modifiers::ALT, Key::M);
+    h.step();
+    assert!(notes_by_start(&h, pat, lead).iter().all(|n| n.3));
+    h.key_press_modifiers(Modifiers::ALT | Modifiers::SHIFT, Key::M);
+    h.step();
+    assert!(notes_by_start(&h, pat, lead).iter().all(|n| !n.3));
+}
+
+#[test]
+fn delete_select_zoom_and_draw_left_edge() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    use limeshot_ui::piano_roll::Tool;
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: (0..4)
+            .map(|i| NewNote {
+                channel: lead,
+                key: 70 + i as u8,
+                start: i * PPQ,
+                length: PPQ / 2,
+                velocity: 0.8,
+            })
+            .collect(),
+    });
+    h.step();
+    let g = piano_geometry(&h);
+    // Select tool: a plain drag selects (no Cmd needed).
+    h.state_mut().ui.piano.tool = Tool::Select;
+    drag(&mut h, g.pos(0, 74) + vec2(1.0, 0.0), g.pos(2 * PPQ - 10, 70));
+    let notes = pattern_notes(&h, pat, lead);
+    let mut want: Vec<NoteId> = notes.iter().filter(|n| n.start < 2 * PPQ).map(|n| n.id).collect();
+    want.sort();
+    let mut got = h.state().ui.piano.selection.clone();
+    got.sort();
+    assert_eq!(got, want);
+    // Delete tool: a click deletes the note under the pointer.
+    h.state_mut().ui.piano.tool = Tool::Delete;
+    click(&mut h, g.pos(3 * PPQ + PPQ / 4, 73), PointerButton::Primary);
+    assert_eq!(pattern_notes(&h, pat, lead).len(), 3);
+    // Draw tool: dragging a note's left edge moves its start and keeps its end.
+    h.state_mut().ui.piano.tool = Tool::Draw;
+    let n = pattern_notes(&h, pat, lead)
+        .into_iter()
+        .find(|n| n.key == 72)
+        .expect("note");
+    let edge = g.pos(n.start, 72) + vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(n.start + STEP_TICKS + 20, 72));
+    h.step();
+    let m = pattern_notes(&h, pat, lead)
+        .into_iter()
+        .find(|x| x.id == n.id)
+        .expect("note");
+    assert_eq!((m.start, m.end()), (n.start + STEP_TICKS, n.end()));
+    // Zoom tool: dragging over a bar fits it to the grid; right-click zooms out.
+    h.state_mut().ui.piano.tool = Tool::Zoom;
+    drag(&mut h, g.pos(bar, 60), g.pos(2 * bar, 60));
+    h.step();
+    let zoom = h.state().ui.piano.zoom_x;
+    let fitted = piano_geometry(&h).grid.width() / (bar as f32 / PPQ as f32);
+    assert!((zoom - fitted).abs() < fitted * 0.1, "{zoom} vs {fitted}");
+    let g2 = piano_geometry(&h);
+    click(&mut h, g2.grid.center(), PointerButton::Secondary);
+    assert!(h.state().ui.piano.zoom_x < zoom * 0.6);
+    assert_eq!(pattern_notes(&h, pat, lead).len(), 3, "zooming does not delete");
 }

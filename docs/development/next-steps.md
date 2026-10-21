@@ -15,7 +15,8 @@
 6. **Audio and automation follow-ups:** more decoders (INS-008, symphonia), clip fades, automated controls moving on
    screen (AUT-013), point modes (AUT-012), tempo automation (AUT-008), taller tracks or a curve editor for automation.
 7. **MIDI input** (WF-003, `midir`) and MIDI recording (REC-002). Open an exported `.mid` in another program once.
-8. **Piano Roll tools:** paint/slice/select tool palette (PR-012), scale highlighting (PR-013), quantize dialog.
+8. **Piano Roll:** stamp tool (PR-027), scale highlighting (PR-013), quantize and chop dialogs; the same tool strip for
+   the Playlist (KB-064).
 9. **Detachable panels** (UI-007) so the Channel Rack and Piano Roll can be seen together.
 10. **Packaging** (PF-006).
     Also: `.flp` import follow-ups (APP-022, `docs/research/flp-format.md`): automation clip curves into LimeShot
