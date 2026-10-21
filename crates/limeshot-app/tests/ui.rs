@@ -2210,6 +2210,40 @@ fn graph_editor_draws_step_velocity_and_pan() {
     h.step();
     assert_eq!(h.state().ui.rack.graph, Some(NoteProp::Velocity));
     let g = h.state().ui.rack.graph_rect.expect("graph drawn");
+    // An overlay right under the channel's steps, aligned with them, over the channels below
+    // (owner's list item 9, as in FL Studio 2026.1.1).
+    let strip = h
+        .state()
+        .ui
+        .rack
+        .step_strips
+        .iter()
+        .find(|s| s.0 == kick)
+        .expect("strip")
+        .1;
+    assert!((g.left() - strip.left()).abs() < 0.5 && (g.right() - strip.right()).abs() < 0.5);
+    assert!(
+        g.top() > strip.bottom() && g.top() - strip.bottom() < 10.0,
+        "{g:?} under {strip:?}"
+    );
+    let clap = h.state().project().channels[1].id;
+    let below = h
+        .state()
+        .ui
+        .rack
+        .step_strips
+        .iter()
+        .find(|s| s.0 == clap)
+        .expect("strip")
+        .1;
+    assert!(g.intersects(below), "covers the next channel");
+    let clap_steps = h
+        .state()
+        .project()
+        .pattern(pat)
+        .expect("pattern")
+        .notes_for(clap)
+        .count();
     let x = |step: f32| g.left() + (step + 0.5) * 22.0;
     let history = h.state().doc.history().len();
     // A drag from step 1 near the top to step 13 near the bottom draws a falling line.
@@ -2229,6 +2263,12 @@ fn graph_editor_draws_step_velocity_and_pan() {
     click(&mut h, egui::pos2(x(4.0), g.top() + 2.0), PointerButton::Primary);
     let n = notes(&h);
     assert!(n[1].2 > 0.9 && n[0].2 == 0.0, "{n:?}");
+    let p = h.state().project().pattern(pat).expect("pattern");
+    assert_eq!(
+        p.notes_for(clap).count(),
+        clap_steps,
+        "the steps under the overlay were not touched"
+    );
     // The header button closes it.
     h.state_mut().ui.rack.graph = None;
     h.step();

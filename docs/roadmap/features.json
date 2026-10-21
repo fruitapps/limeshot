@@ -1034,7 +1034,7 @@
       "name": "Graph editor (per-step properties)",
       "description": "Per-step velocity, pan, pitch…",
       "fl_reference": "Graph editor (channel menu, or the Channel Rack's graph button): lanes Note, Vel, Rel, Fine, Pan, X, Y, Shift, Rep under the steps.",
-      "limeshot_behavior": "The graph editor (the Channel Rack header's graph button, or Graph editor in the channel menu) shows the selected channel's lit steps as bars under its step strip, in a Velocity or a Pan lane. A drag draws a line across the steps (one undo step). Notes have their own pan, added to the channel's (saved only when set).",
+      "limeshot_behavior": "The graph editor (the Channel Rack header's graph button, or Graph editor in the channel menu) shows the selected channel's lit steps as bars under its step strip, in a Velocity or a Pan lane. A drag draws a line across the steps (one undo step). Notes have their own pan, added to the channel's (saved only when set). It is an overlay right under the selected channel's step strip, aligned with the steps, covering the channels below and reaching past the rack window when needed (FL Studio).",
       "priority": "P2",
       "status": "VERIFIED",
       "mvp": false,
@@ -1062,7 +1062,7 @@
           "docs/research/evidence/screenshots/fl-rack-graph-editor.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8). LimeShot has the Velocity and Pan lanes; Note (pitch) would turn a step into a piano-roll note in LimeShot's model, and release, fine pitch, Mod X/Y, shift and repeat are not modelled yet."
+      "notes": "Observed live in FL 2026.1.1 (session 8). LimeShot has the Velocity and Pan lanes; Note (pitch) would turn a step into a piano-roll note in LimeShot's model, and release, fine pitch, Mod X/Y, shift and repeat are not modelled yet. Session 11 (owner's list item 9): observed live in FL 2026.1.1 (Cmd+K opens it under the selected channel's steps, over the rack's lower rows and beyond the window). LimeShot draws it as its own layer kept just above the rack (egui sublayer); it hides while the channel's row is scrolled out of view."
     },
     {
       "id": "SEQ-012",

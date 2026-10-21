@@ -398,3 +398,6 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
    so a plugin such as Serum got the off before the on and held the note until Play/Pause. A note-off now goes out
    at least one frame after its own note-on (engine test reproduces it at 1, 64 and 512-frame blocks), and the app
    releases any audition still sounding once no mouse button is down.
+6. **Graph editor overlay (item 9).** As in FL (Cmd+K), the Channel Rack's graph editor is now an overlay right
+   under the selected channel's steps, aligned with them, over the channels below and past the window's edge (its
+   own layer, kept just above the rack's window).

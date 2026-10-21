@@ -13,7 +13,9 @@
 //! channels.
 //!
 //! The graph editor (FL Studio's, toggled from the header or the channel menu) shows the selected
-//! channel's step velocities or pans under the rack, one bar per step; drag across it to draw.
+//! channel's step velocities or pans, one bar per step; drag across it to draw. As in FL Studio it
+//! is an overlay right under the selected channel's steps, over the channels below and past the
+//! rack's edge.
 
 use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
@@ -303,11 +305,11 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             });
         }
         content_w = app.ui.rack.step_strips.first().map(|s| s.1.right() - content_left);
-        app.ui.rack.graph_rect = None;
-        if let (Some(prop), Some(ch)) = (app.ui.rack.graph, sel.and_then(|c| channels.iter().find(|x| x.id == c))) {
-            graph_editor(app, ui, ch, pid, prop);
-        }
     });
+    app.ui.rack.graph_rect = None;
+    if let (Some(prop), Some(ch)) = (app.ui.rack.graph, sel.and_then(|c| channels.iter().find(|x| x.id == c))) {
+        graph_overlay(app, ui, ch, pid, prop);
+    }
     // The window always shows every step and at least five channels (owner's hands-on test).
     let row_pitch = ROW_H + ui.spacing().item_spacing.y;
     let w = content_w.map_or(Win::ChannelRack.min_size().x, |w| w + 18.0);
@@ -323,21 +325,65 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
 
 const GRAPH_H: f32 = 96.0;
 
-/// FL Studio's graph editor for the selected channel: a bar per lit step, under the step strip.
-fn graph_editor(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, prop: NoteProp) {
+/// Width of the graph overlay's lane tabs, left of the graph (under the channel button).
+const GRAPH_TABS_W: f32 = 150.0;
+const GRAPH_PAD: f32 = 6.0;
+
+/// The graph editor as an overlay directly under the selected channel's step strip (FL Studio).
+/// It is its own layer, kept just above the rack's window, so it covers the channels below and
+/// may reach past the window.
+fn graph_overlay(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, prop: NoteProp) {
     let t = Theme::current();
     let Some((_, strip, steps)) = app.ui.rack.step_strips.iter().find(|s| s.0 == ch.id).copied() else {
         return;
     };
-    ui.add_space(4.0);
-    let (row, _) = ui.allocate_exact_size(vec2(ui.available_width().max(strip.right()), GRAPH_H), Sense::hover());
-    let graph = Rect::from_min_max(pos2(strip.left(), row.top()), pos2(strip.right(), row.bottom()));
+    // Only while the channel's row is in view.
+    if !ui.clip_rect().contains(strip.center()) {
+        return;
+    }
+    let origin = pos2(strip.left() - GRAPH_TABS_W - GRAPH_PAD, strip.bottom() + 1.0);
+    let size = vec2(
+        GRAPH_TABS_W + strip.width() + 2.0 * GRAPH_PAD,
+        GRAPH_H + 2.0 * GRAPH_PAD,
+    );
+    let id = ui.id().with("graph-overlay");
+    let area = egui::Area::new(id)
+        .order(egui::Order::Middle)
+        .fixed_pos(origin)
+        .constrain(false)
+        .show(ui.ctx(), |ui| {
+            let (r, _) = ui.allocate_exact_size(size, Sense::hover());
+            ui.painter().rect(
+                r,
+                CornerRadius::same(t.radius),
+                t.surface,
+                Stroke::new(1.0, mix(t.border, t.text_faint, 0.3)),
+                egui::StrokeKind::Inside,
+            );
+            let graph = Rect::from_min_size(pos2(strip.left(), r.top() + GRAPH_PAD), vec2(strip.width(), GRAPH_H));
+            graph_editor(app, ui, ch, pid, prop, graph, steps);
+        });
+    ui.ctx().set_sublayer(ui.layer_id(), area.response.layer_id);
+}
+
+/// FL Studio's graph editor for the selected channel: a bar per lit step in `graph`.
+fn graph_editor(
+    app: &mut LimeShotApp,
+    ui: &mut Ui,
+    ch: &Channel,
+    pid: PatternId,
+    prop: NoteProp,
+    graph: Rect,
+    steps: u32,
+) {
+    let t = Theme::current();
+    let row = graph;
     app.ui.rack.graph_rect = Some(graph);
     // Lane tabs, right-aligned under the channel button.
     let mut tab_ui = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(Rect::from_min_max(
-                pos2(graph.left() - 150.0, row.top()),
+                pos2(graph.left() - GRAPH_TABS_W, row.top()),
                 pos2(graph.left() - 8.0, row.bottom()),
             ))
             .layout(egui::Layout::top_down(egui::Align::Max)),
