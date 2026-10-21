@@ -619,19 +619,10 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         ui.close();
     }
     ui.menu_button("Color", |ui| {
-        ui.horizontal_wrapped(|ui| {
-            for c in PALETTE {
-                let (r, resp) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::click());
-                ui.painter().rect_filled(r, 3.0, rgb(c));
-                if resp.clicked() {
-                    app.exec(Command::SetChannelColor {
-                        channel: ch.id,
-                        color: c,
-                    });
-                    ui.close();
-                }
-            }
-        });
+        if let Some(color) = crate::widgets::swatch_picker(ui, ch.color) {
+            app.exec(Command::SetChannelColor { channel: ch.id, color });
+            ui.close();
+        }
     });
     if matches!(ch.instrument, Instrument::Sampler(_)) && ui.button("Load sample…").clicked() {
         if let Some(p) = rfd::FileDialog::new()

@@ -315,3 +315,13 @@ covered by a headless UI test unless noted.
    clips under it (audio clips are not scrubbed). Every tool now paints its toolbar icon next to the pointer over
    the Piano Roll and Playlist grids, on top of the system cursor egui sets for edges, slicing and zooming (egui has
    no pencil, eraser or speaker cursors). `ui_shot --scrub` shows the line and the cursor.
+4. **Pattern colours and the CPU readout (issues 10, 16).** New `Command::SetPatternColor` (one undo step) and a
+   shared palette swatch picker (`widgets::swatch_picker`, the current colour outlined, each swatch labelled for
+   accessibility) under Color in the Patterns menu, the Playlist's pattern picker and its pattern clip menus; the
+   channel menu's colour row uses the same picker. The toolbar's CPU readout used to repaint the instantaneous load
+   every frame; `toolbar::CpuReadout` now changes it once per second and shows the highest load of that second, and
+   the toolbar asks for a repaint after a second so the value settles after a stop.
+
+All 16 issues are fixed. Not done: a live FL Studio check for Alt+wheel vertical zoom (FL could not be brought to
+the front over the Claude window, and live input was stopped when focus moved back to it), and a real-input pass
+in the live LimeShot window for the new gestures (the headless tests drive them with synthetic egui events).

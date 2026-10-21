@@ -228,6 +228,10 @@ pub enum Command {
         pattern: PatternId,
         name: String,
     },
+    SetPatternColor {
+        pattern: PatternId,
+        color: Rgb,
+    },
     SetPatternLength {
         pattern: PatternId,
         steps: Option<u32>,
@@ -487,6 +491,7 @@ impl Command {
             ClonePattern(_) => "Clone pattern",
             RemovePattern(_) => "Delete pattern",
             RenamePattern { .. } => "Rename pattern",
+            SetPatternColor { .. } => "Recolor pattern",
             SetPatternLength { .. } => "Pattern length",
             AddClip { .. } | PlaceClip { .. } => "Add clip",
             AddAudioClip { .. } => "Add audio clip",
@@ -992,6 +997,7 @@ impl Command {
                 p.playlist.clips.retain(|c| c.pattern() != Some(id));
             }
             RenamePattern { pattern: id, name } => pattern(p, id)?.name = name,
+            SetPatternColor { pattern: id, color } => pattern(p, id)?.color = color,
             SetPatternLength { pattern: id, steps } => pattern(p, id)?.length_steps = steps.map(|s| s.clamp(1, 512)),
 
             AddClip {

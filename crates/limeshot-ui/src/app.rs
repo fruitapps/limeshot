@@ -147,6 +147,8 @@ pub struct LimeShotApp {
     themed_frames: u32,
     pub meter_hold: Vec<(f32, f32)>,
     pub clip_until: Option<Instant>,
+    /// The toolbar's CPU readout, updated once per second.
+    pub cpu: crate::toolbar::CpuReadout,
     pub autosave: crate::autosave::Autosave,
 }
 
@@ -200,6 +202,7 @@ impl LimeShotApp {
             themed_frames: 0,
             meter_hold: Vec::new(),
             clip_until: None,
+            cpu: Default::default(),
             autosave: Default::default(),
         }
     }

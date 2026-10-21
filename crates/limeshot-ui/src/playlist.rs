@@ -356,6 +356,7 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                             app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, id));
                             ui.close();
                         }
+                        pattern_color_menu(app, ui, id);
                         if ui.button("Clone").clicked() {
                             if let Some(n) = app.exec(Command::ClonePattern(id)) {
                                 app.set_current_pattern(PatternId(n));
@@ -1175,6 +1176,24 @@ fn focus_source(app: &mut LimeShotApp, c: &Clip) {
     }
 }
 
+/// A "Color" submenu with the palette swatches for pattern `id`. Returns whether one was picked.
+pub fn pattern_color_menu(app: &mut LimeShotApp, ui: &mut Ui, id: PatternId) -> bool {
+    let current = app
+        .project()
+        .pattern(id)
+        .map(|p| p.color)
+        .unwrap_or(limeshot_core::PALETTE[0]);
+    let mut picked = false;
+    ui.menu_button("Color", |ui| {
+        if let Some(color) = crate::widgets::swatch_picker(ui, current) {
+            app.exec(Command::SetPatternColor { pattern: id, color });
+            picked = true;
+            ui.close();
+        }
+    });
+    picked
+}
+
 /// The notes of the (unmuted) pattern clips sounding at song position `tick`, for the Playback
 /// tool's scrub. A pattern clip plays its pattern once from its offset (silent past the end).
 fn notes_under(app: &LimeShotApp, clips: &[Clip], tick: Tick) -> Vec<(ChannelId, u8, f32)> {
@@ -1820,6 +1839,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                             app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, pid));
                             close = true;
                         }
+                        close |= pattern_color_menu(app, ui, pid);
                     }
                     ClipSource::Audio(ch) => {
                         if ui.button("Channel settings").clicked() {

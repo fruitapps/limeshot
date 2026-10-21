@@ -438,6 +438,35 @@ pub fn vrule(ui: &mut Ui, height: f32) {
     );
 }
 
+/// A swatch grid of the project palette (channel and pattern colours); the current colour is
+/// outlined. Returns the swatch clicked. Each swatch is labelled "Color N" for accessibility.
+pub fn swatch_picker(ui: &mut Ui, current: limeshot_core::Rgb) -> Option<limeshot_core::Rgb> {
+    let t = Theme::current();
+    let mut picked = None;
+    ui.horizontal_wrapped(|ui| {
+        ui.set_max_width(5.0 * 24.0);
+        ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
+        for (i, c) in limeshot_core::PALETTE.into_iter().enumerate() {
+            let (r, resp) = ui.allocate_exact_size(vec2(20.0, 20.0), Sense::click());
+            ui.painter().rect_filled(r, CornerRadius::same(3), crate::theme::rgb(c));
+            if c == current || resp.hovered() {
+                ui.painter().rect_stroke(
+                    r.expand(1.5),
+                    CornerRadius::same(4),
+                    Stroke::new(1.5, if c == current { t.text } else { t.text_dim }),
+                    StrokeKind::Outside,
+                );
+            }
+            let label = format!("Color {}", i + 1);
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label));
+            if resp.clicked() {
+                picked = Some(c);
+            }
+        }
+    });
+    picked
+}
+
 /// Double-click resets a standard egui slider to `default` (as the custom knobs and faders do).
 /// egui's sliders only sense drags, so their response never reports a double-click itself.
 pub fn reset_on_double_click<T: Copy + PartialEq>(mut r: Response, v: &mut T, default: T) -> Response {

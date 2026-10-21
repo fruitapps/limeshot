@@ -1266,7 +1266,9 @@
       ],
       "tests": [
         "limeshot-engine tests/audio.rs::song_mode_plays_the_arrangement",
-        "limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo"
+        "limeshot-app tests/ui.rs::pattern_and_mode_shortcuts_with_undo",
+        "limeshot-core document::tests::pattern_color_changes_in_one_undo_step",
+        "limeshot-app tests/ui.rs::pattern_color_is_picked_from_swatches"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1275,7 +1277,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: patterns can be recoloured from a palette swatch picker (Patterns menu, the Playlist's pattern picker and pattern clip menus; Command::SetPatternColor). The channel menu's Color uses the same picker."
     },
     {
       "id": "PR-001",
@@ -5957,7 +5959,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::cpu_readout_updates_once_per_second"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5966,7 +5970,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 9: the CPU readout changes once per second and shows the highest load of that second."
     },
     {
       "id": "TR-012",

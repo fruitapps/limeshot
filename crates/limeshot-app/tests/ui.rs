@@ -2686,3 +2686,40 @@ fn editor_tools_show_their_cursor() {
         assert_eq!(h.state().ui.playlist.cursor, Some(tool));
     }
 }
+
+/// Owner's hands-on test: pattern colours could not be changed. The Patterns menu (and the
+/// Playlist's pattern picker and clip menus) has a Color swatch picker.
+#[test]
+fn pattern_color_is_picked_from_swatches() {
+    let mut h = harness(true);
+    let pat = h.state().current_pattern();
+    let color = |h: &Harness<'static, LimeShotApp>| h.state().project().pattern(pat).expect("pattern").color;
+    let before = color(&h);
+    h.get_by_label("Patterns").click();
+    h.step();
+    h.step();
+    h.get_by_label("Color ⏵").hover();
+    h.step();
+    h.step();
+    h.step();
+    let k = PALETTE.iter().position(|c| *c != before).expect("another colour");
+    h.get_by_label(&format!("Color {}", k + 1)).click();
+    h.step();
+    assert_eq!(color(&h), PALETTE[k]);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.step();
+    assert_eq!(color(&h), before, "one undo step");
+}
+
+/// Owner's hands-on test: the CPU readout changes at most once per second, showing the highest
+/// load of that second.
+#[test]
+fn cpu_readout_updates_once_per_second() {
+    let mut cpu = limeshot_ui::toolbar::CpuReadout::default();
+    assert_eq!(cpu.update(10.0, 0.2), 0.2, "the first frame shows the load");
+    assert_eq!(cpu.update(10.3, 0.6), 0.2, "held within the second");
+    assert_eq!(cpu.update(10.7, 0.3), 0.2);
+    assert_eq!(cpu.update(11.0, 0.1), 0.6, "a second later: that second's peak");
+    assert_eq!(cpu.update(11.5, 0.05), 0.6);
+    assert_eq!(cpu.update(12.0, 0.05), 0.05);
+}

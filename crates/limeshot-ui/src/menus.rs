@@ -174,6 +174,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) {
             if item(ui, "Rename pattern…", "") {
                 app.dialog = Some(Dialog::rename_pattern(app, cur));
             }
+            crate::playlist::pattern_color_menu(app, ui, cur);
             let can_delete = app.project().patterns.len() > 1;
             if ui.add_enabled(can_delete, Button::new("Delete pattern")).clicked() {
                 app.exec(Command::RemovePattern(cur));

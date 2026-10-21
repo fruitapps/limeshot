@@ -394,6 +394,17 @@ mod tests {
     }
 
     #[test]
+    fn pattern_color_changes_in_one_undo_step() {
+        let (mut d, _, pat) = doc_with_channel();
+        let before = d.project().pattern(pat).unwrap().color;
+        let color = PALETTE.iter().copied().find(|c| *c != before).unwrap();
+        d.execute(Command::SetPatternColor { pattern: pat, color }).unwrap();
+        assert_eq!(d.project().pattern(pat).unwrap().color, color);
+        assert!(d.undo());
+        assert_eq!(d.project().pattern(pat).unwrap().color, before);
+    }
+
+    #[test]
     fn notes_move_resize_and_duplicate() {
         let (mut d, ch, pat) = doc_with_channel();
         let id = d

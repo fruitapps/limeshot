@@ -264,9 +264,43 @@ fn edit_buttons(app: &mut LimeShotApp, ui: &mut Ui) {
     }
 }
 
+/// The CPU readout changes once per second (owner's hands-on test: a value redrawn every frame
+/// was visual clutter). It shows the highest load of the last second, so short spikes still show.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct CpuReadout {
+    shown: f32,
+    peak: f32,
+    /// When `shown` was last updated (egui time in seconds); `None` before the first frame.
+    since: Option<f64>,
+}
+
+impl CpuReadout {
+    /// Feed the current load at time `now`; returns the value to display.
+    pub fn update(&mut self, now: f64, load: f32) -> f32 {
+        self.peak = self.peak.max(load);
+        match self.since {
+            None => {
+                self.shown = load;
+                self.peak = 0.0;
+                self.since = Some(now);
+            }
+            Some(t) if now - t >= 1.0 => {
+                self.shown = self.peak;
+                self.peak = 0.0;
+                self.since = Some(now);
+            }
+            Some(_) => {}
+        }
+        self.shown
+    }
+}
+
 fn output(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    let load = app.player.status().load();
+    let now = ui.input(|i| i.time);
+    let load = app.cpu.update(now, app.player.status().load());
+    // Keep the readout current when nothing else repaints (it drops back to idle after a stop).
+    ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
     let (rect, resp) = ui.allocate_exact_size(vec2(46.0, B), Sense::hover());
     ui.painter().rect_filled(rect, CornerRadius::same(t.radius), t.sunken);
     let f = load.clamp(0.0, 1.0);
