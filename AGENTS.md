@@ -67,21 +67,19 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-21, session 6)
-* Milestones 0–5 done; milestone 6 mostly done (MVP workflow passes as an automated test on macOS; Windows/Linux CI not
-  yet run). Parts of milestones 7 (swing, quantize, clipboard) and 8 (insert effects) are done. Session 5 added audio
-  clips, automation clips, MIDI file import/export, the LimeSynth filter/LFO and autosave/recovery. Session 6 added
-  FL Studio `.flp` import (File › Open, command line, CLI), tested on projects saved by FL 26.1.1 and on all 164
-  projects FL ships.
+## Current state (2026-10-21, session 7)
+* Milestones 0–6 done on macOS: every MVP feature is VERIFIED except the platform builds (PF-002…004), which wait for
+  CI. Session 7 verified the MVP editors with headless UI tests (FL behaviour observed live first), then added FL's
+  Piano Roll tools, Playlist time selection (looped in Song mode) and time markers.
 * UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
   decision D24). **FL Studio is the source for UI/UX; ArtCraft only for the broad visual style.**
-* 236 features tracked: 87 verified, 34 implemented, 10 in progress, 102 not started, 1 researched, 2 deferred.
-  76 FL shortcuts and 27 FL settings tracked in their own inventories.
+* Feature, shortcut and settings counts: see `docs/roadmap/features.md`, `keybindings.md`, `settings.md`.
 * Known problems: see `docs/roadmap/known-limitations.md`.
 
 ## Immediate next tasks
-See `docs/development/next-steps.md`: run CI on Windows and Linux, more live FL observation, keybindings/settings
-follow-ups, then mixer sidechain and effects polish.
+See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
+Actions settings), the rest of the session 7 plan (Playlist slip/slice, Mixer EQ + sidechain, Channel Rack depth),
+then **VST3 plugin hosting**.
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

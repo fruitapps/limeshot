@@ -4922,7 +4922,7 @@
       "description": "VST3 hosting.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [
@@ -4942,7 +4942,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-003",
@@ -4980,7 +4980,7 @@
       "description": "Plugin scanning.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [],
@@ -4998,7 +4998,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-005",
@@ -5007,7 +5007,7 @@
       "description": "Plugin state persistence.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [
@@ -5027,7 +5027,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-006",
@@ -5036,7 +5036,7 @@
       "description": "Plugin editor windows.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [
@@ -5056,7 +5056,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-007",
@@ -5065,7 +5065,7 @@
       "description": "Plugin parameter automation.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [
@@ -5085,7 +5085,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-008",
@@ -5123,7 +5123,7 @@
       "description": "Plugin latency reporting.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
       "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
-      "priority": "P2",
+      "priority": "P1",
       "status": "NOT_STARTED",
       "mvp": false,
       "dependencies": [
@@ -5143,7 +5143,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": ""
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
     },
     {
       "id": "PLG-010",

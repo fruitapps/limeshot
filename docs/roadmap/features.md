@@ -263,14 +263,14 @@ automated tests or recorded manual verification. Everything else is not done.
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
 | PLG-001 | CLAP hosting | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-002 | VST3 hosting | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
+| PLG-002 | VST3 hosting | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-003 | Audio Unit hosting (macOS) | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-004 | Plugin scanning | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-005 | Plugin state persistence | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-006 | Plugin editor windows | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-007 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
+| PLG-004 | Plugin scanning | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-005 | Plugin state persistence | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-006 | Plugin editor windows | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
+| PLG-007 | Plugin parameter automation | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-008 | Plugin preset management | P3 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
-| PLG-009 | Plugin latency reporting | P2 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
+| PLG-009 | Plugin latency reporting | P1 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.<br>*VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md).* | — |
 | PLG-010 | Plugin crash isolation | P3 |  | NOT_STARTED | Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started. | — |
 
 ## Export
