@@ -164,3 +164,46 @@ fn stopping_releases_plugin_notes_and_previews_play_without_transport() {
     r.set_snapshot(Arc::new(limeshot_sequencer::Snapshot::default()));
     assert!(r.take_retired_instrument().is_some());
 }
+
+/// Owner's list item 8: Serum kept playing a note drawn in the Piano Roll. An audition whose
+/// note-off arrived in the block its note-on started in sent the off first (both at offset 0,
+/// note-offs sort first), so the plugin never released it. Every audition now ends.
+#[test]
+fn an_audition_released_in_the_block_it_started_still_ends() {
+    let (doc, ch) = project();
+    let pat = doc.project().patterns[0].id;
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut r = Renderer::new(SR, snap);
+    r.adopt_instrument(
+        ch.0,
+        Box::new(Gate {
+            held: 0,
+            frame: 0,
+            log: log.clone(),
+        }),
+    );
+    r.rearrange();
+    for block in [1usize, 64, 512] {
+        let mut buf = vec![0.0f32; 2 * block];
+        log.lock().unwrap().clear();
+        // On and off before the next block, then a quick retrigger of another key.
+        r.preview_note_on(0, 72, 0.8);
+        r.preview_note_off(0, 72);
+        r.preview_note_on(0, 74, 0.8);
+        r.preview_note_on(0, 74, 0.8);
+        r.preview_note_off(0, 74);
+        for _ in 0..3 {
+            r.render(&mut buf);
+        }
+        let l = log.lock().unwrap().clone();
+        let ends = |key: u8| {
+            let on = l.iter().position(|e| e.1 && e.2 == key).expect("on");
+            let off = l.iter().rposition(|e| !e.1 && e.2 == key).expect("off");
+            assert!(off > on, "block {block}: the off of {key} after its on: {l:?}");
+        };
+        ends(72);
+        ends(74);
+        assert_eq!(buf[2 * block - 1], 0.0, "block {block}: nothing is held: {l:?}");
+    }
+}

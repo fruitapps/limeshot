@@ -3130,3 +3130,29 @@ fn a_wide_row_does_not_stop_a_window_from_being_resized() {
     // A plugin channel has no Sampler/LimeSynth switch (owner's list item 6).
     assert!(h.query_by_label("LimeSynth").is_none());
 }
+
+/// Owner's list item 8: every audition note-on gets its note-off. Drawing, moving and the
+/// keyboard end their audition on release, and any audition left once no mouse button is down
+/// is released by the app (the engine side: `limeshot-engine` tests/plugins.rs).
+#[test]
+fn auditions_end_when_the_mouse_button_is_released() {
+    let (mut h, pat, ch) = empty_piano_roll();
+    let g = piano_geometry(&h);
+    let p = g.pos(STEP_TICKS * 2, 60);
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    assert_eq!(h.state().auditions, vec![(ch, 60)], "drawing auditions the note");
+    // Dragged up two keys: the first audition ends, the new key sounds.
+    h.event(Event::PointerMoved(g.pos(STEP_TICKS * 2, 62)));
+    h.step();
+    assert_eq!(h.state().auditions, vec![(ch, 62)]);
+    press(&mut h, g.pos(STEP_TICKS * 2, 62), PointerButton::Primary, false);
+    h.step();
+    assert!(h.state().auditions.is_empty());
+    assert_eq!(notes_by_start(&h, pat, ch).len(), 1);
+    // An audition nobody ends is released once no button is down.
+    h.state_mut().preview_on(ch, 70, 0.8);
+    h.step();
+    assert!(h.state().auditions.is_empty());
+}

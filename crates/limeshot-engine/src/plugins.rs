@@ -27,6 +27,9 @@ struct Held {
     channel: u32,
     key: u8,
     id: i32,
+    /// Engine sample of the note-on: its note-off goes out at least one frame later, so the
+    /// plugin never gets the off before the on (an audition released in the block it started).
+    on_at: u64,
     /// Engine sample of the note-off; `u64::MAX` until released.
     off_at: u64,
     end_tick: Tick,
@@ -153,6 +156,14 @@ impl InstrumentRack {
         if self.slots.get(index).and_then(Option::as_ref).is_none() {
             return;
         }
+        // The same key started at the same sample already sounds.
+        if self
+            .held
+            .iter()
+            .any(|h| h.channel == channel && h.key == key && h.on_at == at)
+        {
+            return;
+        }
         // A key that is still held ends where it is played again, as on a keyboard.
         for h in self.held.iter_mut().filter(|h| h.channel == channel && h.key == key) {
             h.off_at = h.off_at.min(at);
@@ -178,6 +189,7 @@ impl InstrumentRack {
                 channel,
                 key,
                 id,
+                on_at: at,
                 off_at,
                 end_tick,
                 sequenced,
@@ -241,8 +253,9 @@ impl InstrumentRack {
             let mut k = 0;
             while k < self.held.len() {
                 let h = self.held[k];
-                if h.channel == channel && h.off_at < end && self.events[i].len() < MAX_EVENTS {
-                    let offset = h.off_at.saturating_sub(start).min(frames.saturating_sub(1) as u64) as u32;
+                let due = h.off_at.max(h.on_at + 1);
+                if h.channel == channel && due < end && self.events[i].len() < MAX_EVENTS {
+                    let offset = due.saturating_sub(start).min(frames.saturating_sub(1) as u64) as u32;
                     self.events[i].push(NoteEvent {
                         offset,
                         kind: NoteEventKind::Off { key: h.key, id: h.id },

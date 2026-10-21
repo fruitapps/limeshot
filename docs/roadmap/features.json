@@ -1461,7 +1461,9 @@
       ],
       "tests": [
         "limeshot-engine tests/audio.rs::preview_plays_without_transport",
-        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector",
+        "limeshot-app tests/ui.rs::auditions_end_when_the_mouse_button_is_released",
+        "limeshot-engine tests/plugins.rs::an_audition_released_in_the_block_it_started_still_ends"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1470,7 +1472,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 8): Serum kept playing notes drawn in the Piano Roll until Play/Pause. When an audition's note-off reached the audio thread in the block its note-on started in (a quick click, or a drag across keys), both events had offset 0 and note-offs sort first, so the plugin got the off before the on. A note-off now goes out at least one frame after its note-on (a second on of the same key at the same sample is dropped). The app also tracks every audition and releases any still sounding once no mouse button is down, whichever editor started it."
     },
     {
       "id": "PR-007",

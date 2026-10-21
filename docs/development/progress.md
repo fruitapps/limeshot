@@ -393,3 +393,8 @@ checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); dif
    now lays its body out in exactly its own area (overwide rows are clipped, the window stays resizable), and the
    parameter rows reserve the value's measured width. Checked live with Vital. Plugin channels no longer show the
    Sampler/LimeSynth switch.
+5. **Auditions always end (item 8).** When an audition's note-off reached the audio thread in the block its note-on
+   started in (a quick click, a drag across keys, large buffers), both events had offset 0 and note-offs sort first,
+   so a plugin such as Serum got the off before the on and held the note until Play/Pause. A note-off now goes out
+   at least one frame after its own note-on (engine test reproduces it at 1, 64 and 512-frame blocks), and the app
+   releases any audition still sounding once no mouse button is down.

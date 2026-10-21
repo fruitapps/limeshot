@@ -152,6 +152,9 @@ pub struct LimeShotApp {
     /// The toolbar's CPU readout, updated once per second.
     pub cpu: crate::toolbar::CpuReadout,
     pub autosave: crate::autosave::Autosave,
+    /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
+    /// button, so any left once no button is down are released (`logic`).
+    pub auditions: Vec<(ChannelId, u8)>,
 }
 
 impl LimeShotApp {
@@ -208,6 +211,7 @@ impl LimeShotApp {
             clip_until: None,
             cpu: Default::default(),
             autosave: Default::default(),
+            auditions: Vec::new(),
         }
     }
 
@@ -413,10 +417,14 @@ impl LimeShotApp {
                 key,
                 velocity,
             });
+            if !self.auditions.contains(&(channel, key)) {
+                self.auditions.push((channel, key));
+            }
         }
     }
 
     pub fn preview_off(&mut self, channel: ChannelId, key: u8) {
+        self.auditions.retain(|a| *a != (channel, key));
         if let Some(i) = self
             .project()
             .channel_index(channel)
@@ -771,6 +779,12 @@ impl LimeShotApp {
         }
         ctx.set_zoom_factor(self.settings.ui_scale);
         self.player.collect_garbage();
+        // A safety net: auditions end with their mouse button, whichever editor started them.
+        if !self.auditions.is_empty() && !ctx.input(|i| i.pointer.any_down()) {
+            for (c, k) in std::mem::take(&mut self.auditions) {
+                self.preview_off(c, k);
+            }
+        }
         self.sync_engine();
         if self.plugins.poll() {
             self.doc.mark_unsaved();

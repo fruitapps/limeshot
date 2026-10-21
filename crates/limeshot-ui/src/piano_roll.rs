@@ -703,11 +703,8 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
         .map(|p| view.key_at(p.y).clamp(0, 127) as u8);
     match (down, key, app.ui.piano.audition) {
         (true, Some(k), prev) if prev != Some((cid, k)) => {
-            if let Some((c, pk)) = prev {
-                app.preview_off(c, pk);
-            }
-            app.preview_on(cid, k, app.ui.piano.last_vel);
-            app.ui.piano.audition = Some((cid, k));
+            let v = app.ui.piano.last_vel;
+            audition(app, cid, k, v);
         }
         (false, _, Some((c, pk))) => {
             app.preview_off(c, pk);
@@ -773,6 +770,15 @@ pub fn playback_line(ui: &Ui, grid: Rect, x: f32, held: bool) {
         [pos2(x, grid.top()), pos2(x, grid.bottom())],
         Stroke::new(if held { 1.5 } else { 1.0 }, color),
     );
+}
+
+/// Sound `key` on `channel` as the Piano Roll's audition, ending the one before.
+fn audition(app: &mut LimeShotApp, channel: ChannelId, key: u8, velocity: f32) {
+    if let Some((c, k)) = app.ui.piano.audition.take() {
+        app.preview_off(c, k);
+    }
+    app.preview_on(channel, key, velocity);
+    app.ui.piano.audition = Some((channel, key));
 }
 
 /// The Playback tool's scrub: start the notes in `want` that are not sounding yet and stop the
@@ -953,8 +959,7 @@ fn grid_input(
                             applied_dt: 0,
                             applied_dk: 0,
                         });
-                        app.preview_on(cid, n.key, n.velocity);
-                        app.ui.piano.audition = Some((cid, n.key));
+                        audition(app, cid, n.key, n.velocity);
                     }
                 }
                 None => {
@@ -987,8 +992,7 @@ fn grid_input(
                                 applied_dk: 0,
                             }
                         });
-                        app.preview_on(cid, key, note.velocity);
-                        app.ui.piano.audition = Some((cid, key));
+                        audition(app, cid, key, note.velocity);
                     }
                 }
             }
@@ -1031,11 +1035,8 @@ fn grid_input(
                     });
                     if dk != *applied_dk {
                         let k = (i32::from(*anchor_key) + dk) as u8;
-                        if let Some((c, old)) = app.ui.piano.audition {
-                            app.preview_off(c, old);
-                        }
-                        app.preview_on(cid, k, app.ui.piano.last_vel);
-                        app.ui.piano.audition = Some((cid, k));
+                        let v = app.ui.piano.last_vel;
+                        audition(app, cid, k, v);
                     }
                     *applied_dt = dt;
                     *applied_dk = dk;
