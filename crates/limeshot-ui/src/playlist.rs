@@ -5,7 +5,12 @@
 //! trim the start; right-click/drag deletes; Cmd+drag selects; double-click a pattern clip opens
 //! the Piano Roll, an audio clip its channel settings; the ▾ marker on a clip opens its menu.
 //! Alt disables snapping. Click the ruler to move the song position. Samples dragged in from the
-//! Browser become audio clips (FL Studio).
+//! Browser become audio clips (FL Studio), shown as a ghost clip while dragged over the grid.
+//! Shift+drag a clip moves a copy; right-click on empty space clears the selection.
+//!
+//! The clip picker has FL Studio's three tabs (patterns, audio clips, automation clips); the
+//! Draw and Paint tools place the picked entry, with the length of the clip of that source last
+//! placed, resized or clicked.
 //!
 //! Other tools (FL Studio's Playlist tool strip and keys, observed in FL Studio 2026.1.1): Paint (B)
 //! lays clips end to end, Delete (D) and Mute (T) act on clips clicked or dragged over, Slip (S)
@@ -17,7 +22,7 @@ use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
 use crate::piano_roll::{TimeAxis, Tool, draw_ruler, draw_time_grid};
 use crate::theme::{Theme, mix, mono, rgb};
-use crate::widgets::{icon_button, panel_header, section};
+use crate::widgets::{icon_button, panel_header};
 use egui::{
     Align2, Color32, Context, CornerRadius, Key, Modifiers, PointerButton, Pos2, Rect, RichText, Sense, Stroke, Ui,
     Vec2, pos2, vec2,
@@ -39,6 +44,8 @@ enum Drag {
         grab_track: i32,
         applied_dt: i64,
         applied_dtrack: i32,
+        /// Shift+drag: the first movement swaps `ids` for copies, which move instead.
+        duplicate: bool,
     },
     Resize {
         id: ClipId,
@@ -119,6 +126,27 @@ pub struct State {
     pub geometry: Option<Geometry>,
     /// The tool whose cursor was drawn over the grid in the last frame (for tests).
     pub cursor: Option<Tool>,
+    /// The clip picker's tab (FL Studio: patterns, audio clips, automation clips).
+    pub picker_tab: PickerTab,
+    /// Screen rectangles of the picker's tabs and rows in the last frame (for tests).
+    pub picker_tab_rects: Vec<(PickerTab, Rect)>,
+    pub picker_rows: Vec<(ClipSource, Rect)>,
+    /// The length the Draw tool gives the next clip of a source: that of the clip of that source
+    /// last placed, resized or clicked (FL Studio).
+    pub last_len: Option<(ClipSource, Tick)>,
+    /// Where a sample dragged over the grid would land (track, start, length), shown as a ghost.
+    pub drop_ghost: Option<(u32, Tick, Tick)>,
+    /// The length of the sample being dragged, by path (decoded once per drag).
+    drop_len: Option<(std::path::PathBuf, Option<Tick>)>,
+}
+
+/// The clip picker's tabs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PickerTab {
+    #[default]
+    Patterns,
+    Audio,
+    Automation,
 }
 
 impl Default for State {
@@ -140,6 +168,12 @@ impl Default for State {
             peaks: Default::default(),
             geometry: None,
             cursor: None,
+            picker_tab: PickerTab::Patterns,
+            picker_tab_rects: Vec::new(),
+            picker_rows: Vec::new(),
+            last_len: None,
+            drop_ghost: None,
+            drop_len: None,
         }
     }
 }
@@ -275,174 +309,325 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     clip_menu(app, &ctx);
 }
 
-/// FL Studio's clip picker: the patterns of the project. Click to choose what the Playlist
-/// places; double-click to edit in the Piano Roll.
+/// FL Studio's clip picker, with its three tabs: the project's patterns, audio clips and
+/// automation clips. Click an entry to choose what the Playlist's Draw and Paint tools place;
+/// double-click a pattern to edit it in the Piano Roll (an audio clip: its channel settings).
+/// Samples dropped on the picker become audio clips without being placed.
 fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
+    let area = ui.max_rect();
+    app.ui.playlist.picker_tab_rects.clear();
+    app.ui.playlist.picker_rows.clear();
     ui.add_space(6.0);
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        section(ui, "Patterns");
+        ui.add_space(8.0);
+        ui.spacing_mut().item_spacing.x = 2.0;
+        for (tab, icon, tip) in [
+            (PickerTab::Patterns, Icon::PianoRoll, "Patterns"),
+            (PickerTab::Audio, Icon::Wave, "Audio clips"),
+            (PickerTab::Automation, Icon::Automation, "Automation clips"),
+        ] {
+            let resp = icon_button(ui, icon, app.ui.playlist.picker_tab == tab, 22.0, tip);
+            app.ui.playlist.picker_tab_rects.push((tab, resp.rect));
+            if resp.clicked() {
+                app.ui.playlist.picker_tab = tab;
+            }
+        }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(6.0);
-            if icon_button(ui, Icon::Plus, false, 20.0, "New pattern (F4)").clicked() {
-                crate::menus::add_pattern(app);
+            match app.ui.playlist.picker_tab {
+                PickerTab::Patterns => {
+                    if icon_button(ui, Icon::Plus, false, 20.0, "New pattern (F4)").clicked() {
+                        crate::menus::add_pattern(app);
+                    }
+                }
+                PickerTab::Audio => {
+                    if icon_button(ui, Icon::Plus, false, 20.0, "Add a sample as an audio clip").clicked()
+                        && let Some(path) = rfd::FileDialog::new().add_filter("WAV audio", &["wav"]).pick_file()
+                    {
+                        add_audio_source(app, &path);
+                    }
+                }
+                PickerTab::Automation => {}
             }
         });
     });
     ui.add_space(2.0);
-    let cur = app.current_pattern();
-    let pats: Vec<(PatternId, String, Rgb, usize)> = app
-        .project()
-        .patterns
-        .iter()
-        .map(|p| {
-            (
-                p.id,
-                p.name.clone(),
-                p.color,
-                app.project()
-                    .playlist
-                    .clips
-                    .iter()
-                    .filter(|c| c.pattern() == Some(p.id))
-                    .count(),
-            )
-        })
-        .collect();
+    let rows = picker_entries(app, app.ui.playlist.picker_tab);
     egui::ScrollArea::vertical()
         .id_salt("picker")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            for (id, name, color, uses) in pats {
-                let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
-                let on = id == cur && app.ui.place.is_none();
-                if on {
-                    ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
-                } else if resp.hovered() {
-                    ui.painter().rect_filled(r, 0.0, t.raised);
-                }
-                ui.painter().rect_filled(
-                    Rect::from_min_size(r.min + vec2(10.0, 8.0), vec2(10.0, 10.0)),
-                    CornerRadius::same(2),
-                    rgb(color),
-                );
-                ui.painter().text(
-                    r.left_center() + vec2(28.0, 0.0),
-                    Align2::LEFT_CENTER,
-                    &name,
-                    crate::theme::prop(12.0),
-                    if on { t.text } else { mix(t.text_dim, t.text, 0.5) },
-                );
-                if uses > 0 {
-                    ui.painter().text(
-                        r.right_center() - vec2(10.0, 0.0),
-                        Align2::RIGHT_CENTER,
-                        format!("×{uses}"),
-                        mono(10.0),
-                        t.text_faint,
-                    );
-                }
-                if resp.clicked() {
-                    app.set_current_pattern(id);
-                    app.ui.place = None;
-                }
-                if resp.double_clicked() {
-                    app.show_window(crate::workspace::Win::PianoRoll);
-                }
-                resp.on_hover_text("Click: place this pattern · double-click: edit in the Piano Roll")
-                    .context_menu(|ui| {
-                        if ui.button("Rename…").clicked() {
-                            app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, id));
-                            ui.close();
-                        }
-                        pattern_color_menu(app, ui, id);
-                        if ui.button("Clone").clicked() {
-                            if let Some(n) = app.exec(Command::ClonePattern(id)) {
-                                app.set_current_pattern(PatternId(n));
-                            }
-                            ui.close();
-                        }
-                        if ui
-                            .add_enabled(app.project().patterns.len() > 1, egui::Button::new("Delete"))
-                            .clicked()
-                        {
-                            app.exec(Command::RemovePattern(id));
-                            ui.close();
-                        }
-                    });
+            if rows.is_empty() {
+                let empty = match app.ui.playlist.picker_tab {
+                    PickerTab::Patterns => "No patterns",
+                    PickerTab::Audio => "Drop samples here or on the Playlist",
+                    PickerTab::Automation => "Right-click a control: Create automation clip",
+                };
+                ui.add_space(6.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.add_space(10.0);
+                    ui.label(RichText::new(empty).small().color(t.text_faint));
+                });
             }
-            automation_picker(app, ui);
+            for (source, name, color, uses) in rows {
+                picker_row(app, ui, source, &name, color, uses);
+            }
         });
+    // Samples dropped on the picker join the Audio tab.
+    let resp = ui.interact(area, ui.id().with("picker_drop"), Sense::hover());
+    if resp.dnd_hover_payload::<crate::browser::DraggedSample>().is_some() {
+        app.hint("Drop to add the sample to the audio clips");
+    }
+    if let Some(payload) = resp.dnd_release_payload::<crate::browser::DraggedSample>() {
+        add_audio_source(app, &payload.0);
+    }
 }
 
-/// The automation clips in the picker (FL Studio lists them with the patterns): click to place.
-fn automation_picker(app: &mut LimeShotApp, ui: &mut Ui) {
-    let t = Theme::current();
-    let autos: Vec<(AutomationId, String, Rgb, usize)> = app
-        .project()
-        .automations
-        .iter()
-        .map(|a| {
-            let uses = app
-                .project()
-                .playlist
-                .clips
-                .iter()
-                .filter(|c| c.automation() == Some(a.id))
-                .count();
-            (a.id, a.name.clone(), a.color, uses)
-        })
-        .collect();
-    if autos.is_empty() {
-        return;
+/// The picker's entries on `tab`: (source, name, colour, clips using it).
+fn picker_entries(app: &LimeShotApp, tab: PickerTab) -> Vec<(ClipSource, String, Rgb, usize)> {
+    let p = app.project();
+    let uses = |s: ClipSource| p.playlist.clips.iter().filter(|c| c.source == s).count();
+    match tab {
+        PickerTab::Patterns => p
+            .patterns
+            .iter()
+            .map(|x| {
+                (
+                    ClipSource::Pattern(x.id),
+                    x.name.clone(),
+                    x.color,
+                    uses(ClipSource::Pattern(x.id)),
+                )
+            })
+            .collect(),
+        PickerTab::Audio => audio_channels(p)
+            .into_iter()
+            .filter_map(|id| p.channel(id))
+            .map(|c| {
+                (
+                    ClipSource::Audio(c.id),
+                    c.name.clone(),
+                    c.color,
+                    uses(ClipSource::Audio(c.id)),
+                )
+            })
+            .collect(),
+        PickerTab::Automation => p
+            .automations
+            .iter()
+            .map(|a| {
+                let s = ClipSource::Automation(a.id);
+                (s, a.name.clone(), a.color, uses(s))
+            })
+            .collect(),
     }
-    ui.add_space(8.0);
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        section(ui, "Automation");
-    });
-    for (id, name, color, uses) in autos {
-        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
-        let on = app.ui.place == Some(ClipSource::Automation(id));
-        if on {
-            ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
-        } else if resp.hovered() {
-            ui.painter().rect_filled(r, 0.0, t.raised);
-        }
-        let icon = Rect::from_min_size(r.min + vec2(8.0, 6.0), vec2(14.0, 14.0));
-        crate::icons::paint(ui.painter(), icon, Icon::Automation, rgb(color));
-        ui.painter().with_clip_rect(r.shrink2(vec2(0.0, 0.0))).text(
-            r.left_center() + vec2(28.0, 0.0),
-            Align2::LEFT_CENTER,
-            &name,
-            crate::theme::prop(12.0),
-            if on { t.text } else { mix(t.text_dim, t.text, 0.5) },
-        );
-        if uses > 0 {
-            ui.painter().text(
-                r.right_center() - vec2(10.0, 0.0),
-                Align2::RIGHT_CENTER,
-                format!("×{uses}"),
-                mono(10.0),
-                t.text_faint,
+}
+
+/// The channels listed as audio clips: samplers with a sample that play audio clips or were added
+/// as audio clips (filed under the "Audio" group, as FL Studio files its audio clip channels).
+pub fn audio_channels(p: &Project) -> Vec<ChannelId> {
+    p.channels
+        .iter()
+        .filter(|c| matches!(&c.instrument, Instrument::Sampler(s) if s.sample.is_some()))
+        .filter(|c| {
+            c.group.as_deref() == Some("Audio") || p.playlist.clips.iter().any(|x| x.audio_channel() == Some(c.id))
+        })
+        .map(|c| c.id)
+        .collect()
+}
+
+fn picker_row(app: &mut LimeShotApp, ui: &mut Ui, source: ClipSource, name: &str, color: Rgb, uses: usize) {
+    let t = Theme::current();
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+    app.ui.playlist.picker_rows.push((source, r));
+    let on = place_source(app) == source;
+    if on {
+        ui.painter().rect_filled(r, 0.0, mix(t.surface, rgb(color), 0.18));
+    } else if resp.hovered() {
+        ui.painter().rect_filled(r, 0.0, t.raised);
+    }
+    match source {
+        ClipSource::Pattern(_) => {
+            ui.painter().rect_filled(
+                Rect::from_min_size(r.min + vec2(10.0, 8.0), vec2(10.0, 10.0)),
+                CornerRadius::same(2),
+                rgb(color),
             );
         }
-        if resp.clicked() {
-            app.ui.place = Some(ClipSource::Automation(id));
+        ClipSource::Audio(_) => {
+            let icon = Rect::from_min_size(r.min + vec2(8.0, 6.0), vec2(14.0, 14.0));
+            crate::icons::paint(ui.painter(), icon, Icon::Wave, rgb(color));
         }
-        resp.on_hover_text(format!("{name}\nClick: place this automation clip"))
-            .context_menu(|ui| {
-                if ui.button("Rename…").clicked() {
-                    app.dialog = Some(crate::dialogs::Dialog::rename_automation(app, id));
-                    ui.close();
-                }
-                if ui.button("Delete").clicked() {
-                    app.exec(Command::RemoveAutomation(id));
-                    ui.close();
-                }
-            });
+        ClipSource::Automation(_) => {
+            let icon = Rect::from_min_size(r.min + vec2(8.0, 6.0), vec2(14.0, 14.0));
+            crate::icons::paint(ui.painter(), icon, Icon::Automation, rgb(color));
+        }
     }
+    ui.painter().with_clip_rect(r).text(
+        r.left_center() + vec2(28.0, 0.0),
+        Align2::LEFT_CENTER,
+        name,
+        crate::theme::prop(12.0),
+        if on { t.text } else { mix(t.text_dim, t.text, 0.5) },
+    );
+    if uses > 0 {
+        ui.painter().text(
+            r.right_center() - vec2(10.0, 0.0),
+            Align2::RIGHT_CENTER,
+            format!("×{uses}"),
+            mono(10.0),
+            t.text_faint,
+        );
+    }
+    if resp.clicked() {
+        pick_source(app, source);
+        if let ClipSource::Audio(ch) = source {
+            preview_audio_source(app, ch);
+        }
+    }
+    if resp.double_clicked() {
+        match source {
+            ClipSource::Pattern(_) => app.show_window(crate::workspace::Win::PianoRoll),
+            ClipSource::Audio(_) => app.show_window(crate::workspace::Win::ChannelSettings),
+            ClipSource::Automation(_) => {}
+        }
+    }
+    let tip = match source {
+        ClipSource::Pattern(_) => "Click: place this pattern · double-click: edit in the Piano Roll",
+        ClipSource::Audio(_) => "Click: place this audio clip (and hear it) · double-click: channel settings",
+        ClipSource::Automation(_) => "Click: place this automation clip",
+    };
+    if resp.hovered() {
+        app.hint(format!("{name} — {tip}"));
+    }
+    resp.on_hover_text(tip).context_menu(|ui| match source {
+        ClipSource::Pattern(id) => {
+            if ui.button("Rename…").clicked() {
+                app.dialog = Some(crate::dialogs::Dialog::rename_pattern(app, id));
+                ui.close();
+            }
+            pattern_color_menu(app, ui, id);
+            if ui.button("Clone").clicked() {
+                if let Some(n) = app.exec(Command::ClonePattern(id)) {
+                    app.set_current_pattern(PatternId(n));
+                }
+                ui.close();
+            }
+            if ui
+                .add_enabled(app.project().patterns.len() > 1, egui::Button::new("Delete"))
+                .clicked()
+            {
+                app.exec(Command::RemovePattern(id));
+                ui.close();
+            }
+        }
+        ClipSource::Audio(ch) => {
+            if ui.button("Channel settings").clicked() {
+                app.select_channel(ch);
+                app.show_window(crate::workspace::Win::ChannelSettings);
+                ui.close();
+            }
+            if ui
+                .button("Delete")
+                .on_hover_text("Delete the channel and its audio clips")
+                .clicked()
+            {
+                app.exec(Command::RemoveChannel(ch));
+                ui.close();
+            }
+        }
+        ClipSource::Automation(id) => {
+            if ui.button("Rename…").clicked() {
+                app.dialog = Some(crate::dialogs::Dialog::rename_automation(app, id));
+                ui.close();
+            }
+            if ui.button("Delete").clicked() {
+                app.exec(Command::RemoveAutomation(id));
+                ui.close();
+            }
+        }
+    });
+}
+
+/// What a click on empty Playlist space places: the picked audio or automation clip, otherwise
+/// the current pattern.
+pub fn place_source(app: &LimeShotApp) -> ClipSource {
+    match app.ui.place {
+        Some(s @ ClipSource::Audio(ch)) if app.project().channel(ch).is_some() => s,
+        Some(s @ ClipSource::Automation(a)) if app.project().automation(a).is_some() => s,
+        _ => ClipSource::Pattern(app.current_pattern()),
+    }
+}
+
+/// Make `source` what the Playlist places (and the picker shows): a pattern becomes the current
+/// pattern, an audio clip's channel the selected channel.
+pub fn pick_source(app: &mut LimeShotApp, source: ClipSource) {
+    match source {
+        ClipSource::Pattern(p) => {
+            app.set_current_pattern(p);
+            app.ui.place = None;
+            app.ui.playlist.picker_tab = PickerTab::Patterns;
+        }
+        ClipSource::Audio(ch) => {
+            app.select_channel(ch);
+            app.ui.place = Some(source);
+            app.ui.playlist.picker_tab = PickerTab::Audio;
+        }
+        ClipSource::Automation(_) => {
+            app.ui.place = Some(source);
+            app.ui.playlist.picker_tab = PickerTab::Automation;
+        }
+    }
+}
+
+/// Play an audio clip channel's sample, as the Browser previews files.
+fn preview_audio_source(app: &mut LimeShotApp, ch: ChannelId) {
+    if let Some(Instrument::Sampler(s)) = app.project().channel(ch).map(|c| &c.instrument)
+        && let Some(r) = &s.sample
+    {
+        let path = std::path::PathBuf::from(&r.path);
+        crate::browser::preview(app, &path);
+    }
+}
+
+/// Add the sample at `path` to the picker's audio clips without placing it: a sampler channel
+/// with the sample loaded, filed under "Audio" (reused when the sample is already there).
+pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
+    let stored = path.to_string_lossy().into_owned();
+    let existing = audio_channels(app.project()).into_iter().find(|id| {
+        matches!(app.project().channel(*id).map(|c| &c.instrument),
+            Some(Instrument::Sampler(s)) if s.sample.as_ref().is_some_and(|r| r.path == stored))
+    });
+    let ch = match existing {
+        Some(c) => c,
+        None => {
+            if let Err(e) = app.samples.load_blocking(&stored) {
+                app.toast_error(format!("Could not load {}: {e}", path.display()));
+                return None;
+            }
+            app.doc.begin_gesture();
+            let id = app.exec(Command::AddChannel {
+                name: crate::browser::file_label(path),
+                instrument: Instrument::Sampler(SamplerParams {
+                    sample: Some(SampleRef { path: stored }),
+                    // An audio clip plays for the clip's length, not the whole sample.
+                    one_shot: false,
+                    ..SamplerParams::default()
+                }),
+            });
+            if let Some(id) = id {
+                app.exec(Command::SetChannelGroup {
+                    channels: vec![ChannelId(id)],
+                    group: Some("Audio".into()),
+                });
+            }
+            app.doc.end_gesture();
+            ChannelId(id?)
+        }
+    };
+    pick_source(app, ClipSource::Audio(ch));
+    Some(ch)
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -784,21 +969,62 @@ fn sample_ticks(app: &LimeShotApp, s: &limeshot_dsp::SampleData) -> Tick {
     ((beats * PPQ as f64).round() as Tick).max(1)
 }
 
-/// Samples dragged from the Browser become audio clips where they are dropped.
+/// Samples dragged from the Browser become audio clips where they are dropped. While one is
+/// dragged over the grid, a ghost clip shows where it will land and how long it will be.
 fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, tracks: u32) {
     let resp = ui.interact(grid, ui.id().with("pl_drop"), Sense::hover());
-    if resp.dnd_hover_payload::<crate::browser::DraggedSample>().is_some() {
+    app.ui.playlist.drop_ghost = None;
+    let sig = app.project().time_signature;
+    let target = |app: &LimeShotApp, pos: Pos2| {
+        let track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
+        (track, app.ui.snap.floor(view.tick_at(pos.x).max(0) as u64, sig))
+    };
+    if let Some(payload) = resp.dnd_hover_payload::<crate::browser::DraggedSample>()
+        && let Some(pos) = ui.input(|i| i.pointer.hover_pos())
+        && grid.contains(pos)
+    {
         app.hint("Drop to place the sample as an audio clip");
+        if app.ui.playlist.drop_len.as_ref().is_none_or(|(p, _)| *p != payload.0) {
+            let stored = payload.0.to_string_lossy().into_owned();
+            let len = app.samples.load_blocking(&stored).ok().map(|s| sample_ticks(app, &s));
+            app.ui.playlist.drop_len = Some((payload.0.clone(), len));
+        }
+        let (track, start) = target(app, pos);
+        if let Some((_, Some(len))) = app.ui.playlist.drop_len {
+            app.ui.playlist.drop_ghost = Some((track, start, len));
+            let t = Theme::current();
+            let r = Rect::from_min_max(
+                pos2(view.x(start), view.y(track) + 1.0),
+                pos2(
+                    view.x(start + len).max(view.x(start) + 4.0),
+                    view.y(track) + view.track_h - 1.0,
+                ),
+            );
+            let painter = ui.painter_at(grid);
+            painter.rect(
+                r,
+                CornerRadius::same(t.radius_sm),
+                t.accent.gamma_multiply(0.25),
+                Stroke::new(1.0, t.accent),
+                egui::StrokeKind::Inside,
+            );
+            painter.with_clip_rect(r.intersect(grid)).text(
+                r.min + vec2(5.0, 1.0),
+                Align2::LEFT_TOP,
+                crate::browser::file_label(&payload.0),
+                crate::theme::semibold(10.5),
+                t.text,
+            );
+        }
     }
     let Some(payload) = resp.dnd_release_payload::<crate::browser::DraggedSample>() else {
         return;
     };
+    app.ui.playlist.drop_len = None;
     let Some(pos) = ui.input(|i| i.pointer.interact_pos().or(i.pointer.hover_pos())) else {
         return;
     };
-    let track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
-    let sig = app.project().time_signature;
-    let start = app.ui.snap.floor(view.tick_at(pos.x).max(0) as u64, sig);
+    let (track, start) = target(app, pos);
     if let Some(id) = add_audio_clip(app, &payload.0, track, start) {
         app.ui.playlist.selection = vec![id];
     }
@@ -826,8 +1052,9 @@ pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32,
         start,
         length,
     })?;
-    if let Some(ch) = app.project().clip(ClipId(id)).and_then(Clip::audio_channel) {
-        app.select_channel(ch);
+    if let Some(c) = app.project().clip(ClipId(id)).cloned() {
+        // The picker shows the new audio clip, ready to be drawn elsewhere (FL Studio).
+        focus_source(app, &c);
     }
     Some(ClipId(id))
 }
@@ -1164,16 +1391,11 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
     })
 }
 
-/// Make a clicked clip's source the thing being edited: its pattern, or its audio channel.
+/// Make a clicked clip's source the thing being edited and placed (FL Studio selects it in the
+/// picker), and remember its length for the next clip of that source.
 fn focus_source(app: &mut LimeShotApp, c: &Clip) {
-    match c.source {
-        ClipSource::Pattern(p) => {
-            app.set_current_pattern(p);
-            app.ui.place = None;
-        }
-        ClipSource::Audio(ch) => app.select_channel(ch),
-        ClipSource::Automation(_) => app.ui.place = Some(c.source),
-    }
+    pick_source(app, c.source);
+    app.ui.playlist.last_len = Some((c.source, c.length));
 }
 
 /// A "Color" submenu with the palette swatches for pattern `id`. Returns whether one was picked.
@@ -1403,6 +1625,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                             grab_track: view.track_at(p.y),
                             applied_dt: 0,
                             applied_dtrack: 0,
+                            duplicate: false,
                         });
                     }
                 }
@@ -1447,7 +1670,13 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     }
                     let ids = st.selection.clone();
                     focus_source(app, &c);
-                    app.doc.begin_gesture();
+                    // Shift+drag moves copies and leaves the originals (FL Studio).
+                    let duplicate = mods.shift && part == Part::Body;
+                    if duplicate {
+                        app.doc.begin_compound_gesture();
+                    } else {
+                        app.doc.begin_gesture();
+                    }
                     app.ui.playlist.drag = Some(match part {
                         Part::RightEdge => Drag::Resize {
                             id: c.id,
@@ -1461,6 +1690,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                             grab_track: view.track_at(p.y),
                             applied_dt: 0,
                             applied_dtrack: 0,
+                            duplicate,
                         },
                     });
                 }
@@ -1468,31 +1698,35 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     let track = view.track_at(p.y);
                     if track >= 0 && (track as u32) < tracks {
                         let start = snap.floor(view.tick_at(p.x).max(0) as u64, sig);
-                        let pattern = app.current_pattern();
-                        let automation = match app.ui.place {
-                            Some(ClipSource::Automation(a)) => app.project().automation(a).map(|a| (a.id, a.length)),
-                            _ => None,
+                        let source = place_source(app);
+                        // The length of the clip of this source last placed, resized or clicked.
+                        let length = match app.ui.playlist.last_len {
+                            Some((s, l)) if s == source => Some(l),
+                            _ => full_length(app, source),
                         };
-                        app.doc.begin_gesture();
-                        let cmd = match automation {
-                            Some((a, length)) => Command::PlaceClip {
-                                source: ClipSource::Automation(a),
+                        let cmd = match (source, length) {
+                            (ClipSource::Pattern(pattern), length) => Some(Command::AddClip {
+                                pattern,
+                                track: track as u32,
+                                start,
+                                length,
+                            }),
+                            (source, Some(length)) => Some(Command::PlaceClip {
+                                source,
                                 track: track as u32,
                                 start,
                                 length,
                                 offset: 0,
-                            },
-                            None => Command::AddClip {
-                                pattern,
-                                track: track as u32,
-                                start,
-                                length: None,
-                            },
+                            }),
+                            (_, None) => None,
                         };
-                        if let Some(id) = app.exec(cmd) {
+                        // Placing and dragging the new clip is one undo step.
+                        app.doc.begin_compound_gesture();
+                        if let Some(id) = cmd.and_then(|cmd| app.exec(cmd)) {
                             let id = ClipId(id);
                             app.ui.playlist.selection = vec![id];
                             let placed = app.project().clip(id).cloned();
+                            app.ui.playlist.last_len = placed.as_ref().map(|c| (c.source, c.length));
                             app.ui.playlist.drag = Some(match placed {
                                 // Paint: keep laying clips of this length end to end while dragging.
                                 Some(c) if tool == Tool::Paint => Drag::Paint {
@@ -1509,8 +1743,11 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                                     grab_track: track,
                                     applied_dt: 0,
                                     applied_dtrack: 0,
+                                    duplicate: false,
                                 },
                             });
+                        } else {
+                            app.doc.end_gesture();
                         }
                     }
                 }
@@ -1524,6 +1761,11 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         st.zoom_x = (st.zoom_x / 2.0).max(3.0);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
     } else if secondary {
+        // Right-click deletes the clip under the pointer; on empty space it clears the
+        // selection (FL Studio).
+        if pointer.is_some_and(|p| hit(view, clips, p).is_none()) {
+            app.ui.playlist.selection.clear();
+        }
         app.doc.begin_gesture();
         app.ui.playlist.drag = Some(Drag::Erase);
     }
@@ -1537,11 +1779,16 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 grab_track,
                 applied_dt,
                 applied_dtrack,
+                duplicate,
             }) => {
                 let target = (*anchor_start as i64 + view.tick_at(p.x) - *grab_tick).max(0) as u64;
                 let dt = snap.round(target, sig) as i64 - *anchor_start as i64;
                 let dtrack = view.track_at(p.y) - *grab_track;
                 if dt != *applied_dt || dtrack != *applied_dtrack {
+                    if std::mem::take(duplicate) {
+                        *ids = duplicate_in_place(app, ids);
+                        app.ui.playlist.selection = ids.clone();
+                    }
                     app.exec(Command::MoveClips {
                         clips: ids.clone(),
                         dt: dt - *applied_dt,
@@ -1557,6 +1804,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 let len = end.saturating_sub(*start).max(min);
                 if app.project().clip(*id).is_some_and(|c| c.length != len) {
                     app.exec(Command::ResizeClip { clip: *id, length: len });
+                    app.ui.playlist.last_len = app.project().clip(*id).map(|c| (c.source, c.length));
                 }
             }
             Some(Drag::AutoPoint {
@@ -1622,6 +1870,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 let start = snap.round(view.tick_at(p.x).max(0) as u64, sig);
                 if app.project().clip(*id).is_some_and(|c| c.start != start) {
                     app.exec(Command::ResizeClipStart { clip: *id, start });
+                    app.ui.playlist.last_len = app.project().clip(*id).map(|c| (c.source, c.length));
                 }
             }
             Some(Drag::Erase) => {
@@ -1757,6 +2006,33 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             ClipSource::Automation(_) => {}
         }
     }
+}
+
+/// Copies of `ids` at the same places (FL Studio's Shift+drag); returns the copies' ids.
+fn duplicate_in_place(app: &mut LimeShotApp, ids: &[ClipId]) -> Vec<ClipId> {
+    let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
+    let cmds = app
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| ids.contains(&c.id))
+        .map(|c| Command::PlaceClip {
+            source: c.source,
+            track: c.track,
+            start: c.start,
+            length: c.length,
+            offset: c.offset,
+        })
+        .collect();
+    app.exec(Command::Batch(cmds));
+    app.project()
+        .playlist
+        .clips
+        .iter()
+        .map(|c| c.id)
+        .filter(|id| !before.contains(id))
+        .collect()
 }
 
 /// The Slice tool: cut the clips on the tracks the drag from `from` to `to` crosses, at `from`'s
@@ -1930,7 +2206,12 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
 
 /// The full length of a clip's source in ticks: its pattern, or its whole sample.
 fn source_length(app: &LimeShotApp, c: &Clip) -> Option<Tick> {
-    match c.source {
+    full_length(app, c.source)
+}
+
+/// The full length of `source` in ticks (for a new clip of it).
+fn full_length(app: &LimeShotApp, source: ClipSource) -> Option<Tick> {
+    match source {
         ClipSource::Pattern(p) => {
             let sig = app.project().time_signature;
             app.project().pattern(p).map(|p| p.length(sig))

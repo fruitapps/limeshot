@@ -119,7 +119,7 @@ pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<Channel
     Some(ChannelId(id))
 }
 
-fn preview(app: &mut LimeShotApp, path: &Path) {
+pub fn preview(app: &mut LimeShotApp, path: &Path) {
     app.samples.request_path(path.to_path_buf());
     app.ui.browser.pending_preview = Some(path.to_path_buf());
 }

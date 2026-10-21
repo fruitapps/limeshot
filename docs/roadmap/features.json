@@ -2048,7 +2048,7 @@
       "name": "Pattern clips (linked instances)",
       "description": "Place patterns on the timeline.",
       "fl_reference": "Pattern clips reference a pattern; Make unique clones it.",
-      "limeshot_behavior": "Left-click empty space places the current pattern; every clip of a pattern plays the same data.",
+      "limeshot_behavior": "Left-click empty space places the picked source (pattern, audio or automation clip) with the length of the clip of that source last placed, resized or clicked (its full length otherwise); placing and dragging the new clip is one undo step. Every clip of a pattern plays the same data.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2066,7 +2066,8 @@
         "limeshot-core document::tests::clips_are_linked_until_made_unique",
         "limeshot-sequencer tests::playlist_flattens_linked_clips",
         "limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern",
-        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place"
+        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place",
+        "limeshot-app tests/ui.rs::the_draw_tool_reuses_the_length_of_the_last_clip"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2075,7 +2076,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 4): remembered length observed live in FL 2026.1.1 (a clip resized to 4 bars made the next one 4 bars)."
     },
     {
       "id": "PL-002",
@@ -2083,7 +2084,7 @@
       "name": "Move clips (time and track)",
       "description": "Drag clips.",
       "fl_reference": "Drag; Shift+wheel move track.",
-      "limeshot_behavior": "Drag moves the selection with snap; arrows nudge.",
+      "limeshot_behavior": "Drag moves the selection with snap; Shift+arrows nudge. Shift+drag moves copies and leaves the originals (one undo step; a Shift+click without moving copies nothing).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2097,7 +2098,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-core document::tests::clip_duplicate_and_move"
+        "limeshot-core document::tests::clip_duplicate_and_move",
+        "limeshot-app tests/ui.rs::shift_drag_duplicates_and_right_click_on_empty_space_deselects"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2106,7 +2108,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 2): Shift+drag duplicates, observed live in FL 2026.1.1."
     },
     {
       "id": "PL-003",
@@ -2148,7 +2150,7 @@
       "name": "Delete clips",
       "description": "Remove clips.",
       "fl_reference": "Right-click / Delete tool.",
-      "limeshot_behavior": "Right-click or right-drag deletes; Delete key removes the selection.",
+      "limeshot_behavior": "Right-click or right-drag deletes the clips under the pointer (the rest of the selection stays); right-click on empty space clears the selection; Delete removes the selection.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2162,7 +2164,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern"
+        "limeshot-app tests/ui.rs::clicking_the_playlist_places_the_current_pattern",
+        "limeshot-app tests/ui.rs::shift_drag_duplicates_and_right_click_on_empty_space_deselects"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2171,7 +2174,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 3): observed live in FL 2026.1.1 — right-clicking a selected clip deletes only it, right-clicking empty space deselects."
     },
     {
       "id": "PL-005",
@@ -2689,17 +2692,21 @@
       "name": "Picker panel",
       "description": "List of clip sources.",
       "fl_reference": "Alt+P.",
-      "limeshot_behavior": "Panel listing patterns to drag in.",
+      "limeshot_behavior": "The picker column in the Playlist window (see PL-025 and PL-027): patterns, audio and automation clips in three tabs.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2707,7 +2714,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11: covered by PL-025/PL-027. FL's Alt+P floating picker is not implemented."
     },
     {
       "id": "PL-022",
@@ -4938,7 +4945,7 @@
       "name": "Drag samples to the Playlist (audio clips)",
       "description": "Place audio directly.",
       "fl_reference": "Drag samples to Playlist.",
-      "limeshot_behavior": "Drag a sample from the Browser onto the Playlist: it is decoded, placed at the snapped drop position as an audio clip as long as the sample, and its audio-clip channel is reused when the same sample is dropped again.",
+      "limeshot_behavior": "Drag a sample from the Browser onto the Playlist: while it is over the grid a ghost clip shows where it lands and how long it is; on release it is decoded, placed at the snapped position as an audio clip as long as the sample, and picked in the picker's Audio tab. Its audio-clip channel is reused when the same sample is dropped again.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -4954,7 +4961,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
+        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge",
+        "limeshot-app tests/ui.rs::a_sample_dragged_over_the_playlist_shows_where_it_lands"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4963,7 +4971,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 12). Differs from FL: FL 2026.1.1 labels the pointer with the file name and highlights the target grid cell; LimeShot draws the whole clip ghost."
     },
     {
       "id": "PLG-001",
@@ -6924,10 +6932,10 @@
       "category": "Playlist",
       "name": "Picker lists audio and automation clips",
       "description": "All clip sources in the clip picker.",
-      "fl_reference": "The Playlist picker lists patterns, audio clips and automation clips (automation observed); the header icons filter which types it shows.",
-      "limeshot_behavior": "Patterns and automation clips are listed and can be picked to place; audio clips are placed by dropping samples.",
+      "fl_reference": "The Playlist picker has three tabs: patterns, audio clips and automation clips (observed live in FL 2026.1.1, session 11). Dropping a sample on the Playlist selects the Audio tab and the new clip; clicking empty space then places that audio clip.",
+      "limeshot_behavior": "The picker has Patterns, Audio and Automation tabs. The Audio tab lists the audio clip channels (samplers with a sample that play audio clips or were added to the picker, filed under \"Audio\"); + or dropping a sample on the picker adds one (a sampler channel with the sample loaded, reused for the same file). Clicking an entry (or a clip of it) picks it — an audio entry also plays its sample — and the Draw and Paint tools place it like a pattern; double-click opens the Piano Roll or the channel settings.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PL-014",
@@ -6940,7 +6948,9 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6948,7 +6958,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": ""
+      "notes": "Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'."
     },
     {
       "id": "PL-028",

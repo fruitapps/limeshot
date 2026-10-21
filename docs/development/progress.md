@@ -370,3 +370,20 @@ work moved to Mandatory 3, VST3 hosting.
 
 Next: plugin windows (PLG-006, native views in their own windows), automation of plugin parameters (PLG-007),
 delay compensation (PLG-009), and a live pass of Find plugins… in the window.
+
+## 2026-10-21 — Session 11: the owner's list before plugin windows
+
+The owner listed 19 items (10 issues, 9 features) to finish before plugin editor windows (PLG-006). Each was
+checked in the live FL Studio 2026.1.1 first (synthetic CoreGraphics input); differences are noted per item.
+
+1. **Samples in the Playlist like patterns (item 1).** FL's picker has Patterns, Audio and Automation tabs; a sample
+   dropped on the Playlist selects the Audio tab and the new clip, and clicking empty space draws it. LimeShot's
+   picker now has the three tabs; the Audio tab lists the audio-clip channels (samplers with a sample, filed under
+   "Audio"), + or a drop on the picker adds one, and the Draw/Paint tools place audio clips like patterns. Differs:
+   FL's audio clip channels are a special generator; LimeShot's are Sampler channels.
+2. **Playlist gestures (items 2–4, 12).** Shift+drag moves copies (FL); right-click on empty space clears the
+   selection (FL deletes only the clicked clip and keeps the rest selected, as LimeShot already did); the Draw tool
+   gives a new clip the length of the clip of that source last placed, resized or clicked (FL). `Document` gained
+   compound gestures, so placing and dragging a clip, or duplicating and moving, is one undo step. A sample dragged
+   over the grid shows a ghost clip (FL labels the pointer and highlights the target cell instead).
+3. **1/3-step snap (item 7)**, as in FL's snap menu.

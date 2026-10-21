@@ -35,6 +35,9 @@ pub struct Document {
     saved_state: u64,
     /// While a gesture is open, commands with the same merge key share one undo step.
     gesture_open: bool,
+    /// A compound gesture (`Some`): every command joins one undo step, whatever its merge key.
+    /// `true` once that step exists.
+    compound: Option<bool>,
 }
 
 impl Default for Document {
@@ -55,6 +58,7 @@ impl Document {
             next_state: 1,
             saved_state: 0,
             gesture_open: false,
+            compound: None,
         }
     }
 
@@ -99,6 +103,7 @@ impl Document {
         self.state = self.new_state();
         self.saved_state = self.state;
         self.gesture_open = false;
+        self.compound = None;
     }
 
     /// Store the current state of a running plugin (read from the plugin before saving). This is
@@ -136,10 +141,19 @@ impl Document {
     /// with equal merge keys become one undo step.
     pub fn begin_gesture(&mut self) {
         self.gesture_open = true;
+        self.compound = None;
+    }
+
+    /// Start a gesture whose commands all become one undo step, of whatever kind (placing a clip
+    /// and dragging it, duplicating clips and moving the copies). Ends with `end_gesture`.
+    pub fn begin_compound_gesture(&mut self) {
+        self.gesture_open = true;
+        self.compound = Some(false);
     }
 
     pub fn end_gesture(&mut self) {
         self.gesture_open = false;
+        self.compound = None;
         if let Some(s) = self.undo.last_mut() {
             s.merge = None;
         }
@@ -154,12 +168,16 @@ impl Document {
         if next == self.project {
             return Ok(out);
         }
-        let merges = self.gesture_open
-            && merge.is_some()
-            && self
-                .undo
-                .last()
-                .is_some_and(|s| s.merge == merge && self.redo.is_empty());
+        let merges = (self.compound == Some(true) && !self.undo.is_empty() && self.redo.is_empty())
+            || self.gesture_open
+                && merge.is_some()
+                && self
+                    .undo
+                    .last()
+                    .is_some_and(|s| s.merge == merge && self.redo.is_empty());
+        if self.compound.is_some() {
+            self.compound = Some(true);
+        }
         let before = std::mem::replace(&mut self.project, next);
         let before_state = std::mem::replace(&mut self.state, 0);
         self.state = self.new_state();
@@ -194,6 +212,7 @@ impl Document {
         self.redo.push((step.label, after, after_state));
         self.revision += 1;
         self.gesture_open = false;
+        self.compound = None;
         true
     }
 
@@ -290,6 +309,29 @@ mod tests {
         assert_eq!(d.history().len(), steps + 1);
         d.undo();
         assert_eq!(d.project().channels[0].volume, 0.78);
+    }
+
+    #[test]
+    fn a_compound_gesture_is_one_undo_step() {
+        let (mut d, ch, _) = doc_with_channel();
+        let steps = d.history().len();
+        d.begin_compound_gesture();
+        d.execute(Command::SetChannelVolume {
+            channel: ch,
+            volume: 0.1,
+        })
+        .unwrap();
+        d.execute(Command::SetChannelPan { channel: ch, pan: 0.5 }).unwrap();
+        d.end_gesture();
+        assert_eq!(d.history().len(), steps + 1);
+        d.execute(Command::SetChannelPan { channel: ch, pan: -0.5 }).unwrap();
+        assert_eq!(d.history().len(), steps + 2, "later commands make their own steps");
+        d.undo();
+        d.undo();
+        assert_eq!(
+            (d.project().channels[0].volume, d.project().channels[0].pan),
+            (0.78, 0.0)
+        );
     }
 
     #[test]

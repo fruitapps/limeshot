@@ -312,17 +312,25 @@ fn clicking_the_playlist_places_the_current_pattern() {
     );
 }
 
+/// Centre of the picker row of `source`, as last drawn.
+fn picker_row(h: &Harness<'static, LimeShotApp>, source: ClipSource) -> Pos2 {
+    h.state()
+        .ui
+        .playlist
+        .picker_rows
+        .iter()
+        .find(|(s, _)| *s == source)
+        .map(|(_, r)| r.center())
+        .expect("listed in the picker")
+}
+
 #[test]
 fn picker_selects_the_pattern_to_place() {
     let mut h = harness(true);
     h.state_mut().ui.workspace.close(Win::ChannelRack);
     h.step();
     let melody = h.state().project().patterns[1].id;
-    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
-    // The picker column sits left of the track headers; the second row is the Melody pattern.
-    // Rows are laid out from the panel top, which is the 32 px ruler above the grid.
-    let top = g.grid.top() - 32.0;
-    let p = egui::pos2(g.grid.left() - 118.0 - 150.0 + 40.0, top + 20.0 + 26.0 + 28.0 + 13.0);
+    let p = picker_row(&h, ClipSource::Pattern(melody));
     click(&mut h, p, PointerButton::Primary);
     assert_eq!(h.state().current_pattern(), melody);
 }
@@ -2866,4 +2874,215 @@ fn a_plugin_effect_from_the_insert_menu_loads_and_unloads() {
     h.step();
     h.step();
     assert!(h.state().plugins.is_loaded(target), "undo brings it back");
+}
+
+/// A Playlist track without clips in the demo (from `from` on).
+fn empty_track(h: &Harness<'static, LimeShotApp>, from: u32) -> u32 {
+    let p = h.state().project();
+    (from..p.playlist.tracks.len() as u32)
+        .find(|t| p.playlist.clips.iter().all(|c| c.track != *t))
+        .expect("an empty track")
+}
+
+fn last_clip(h: &Harness<'static, LimeShotApp>) -> Clip {
+    h.state().project().playlist.clips.last().expect("a clip").clone()
+}
+
+/// The length of `path` at the project tempo, in ticks.
+fn sample_len(h: &Harness<'static, LimeShotApp>, path: &std::path::Path) -> Tick {
+    let secs = limeshot_dsp::load_wav(path).expect("wav").duration_secs();
+    (secs * h.state().project().tempo.bpm() / 60.0 * PPQ as f64).round() as Tick
+}
+
+/// Owner's list item 1 (observed in FL Studio 2026.1.1): the picker has Patterns, Audio and
+/// Automation tabs; a sample added there (or dropped on the Playlist) is a sampler channel with
+/// the sample loaded, and the Draw tool places it like a pattern.
+#[test]
+fn samples_are_picked_and_drawn_in_the_playlist_like_patterns() {
+    use limeshot_ui::playlist::PickerTab;
+    let mut h = playlist_harness();
+    let kick = bundled("Lime Kick.wav");
+    let n = h.state().project().channels.len();
+    let ch = limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick).expect("added");
+    h.step();
+    assert_eq!(h.state().project().channels.len(), n + 1);
+    match &h.state().project().channel(ch).expect("channel").instrument {
+        Instrument::Sampler(s) => assert_eq!(
+            s.sample.as_ref().map(|r| std::path::PathBuf::from(&r.path)),
+            Some(kick.clone())
+        ),
+        other => panic!("not a sampler: {other:?}"),
+    }
+    assert_eq!(
+        h.state().ui.playlist.picker_tab,
+        PickerTab::Audio,
+        "the picker shows it"
+    );
+    assert_eq!(limeshot_ui::playlist::place_source(h.state()), ClipSource::Audio(ch));
+    picker_row(&h, ClipSource::Audio(ch));
+
+    // A click on empty space draws it, as long as the sample.
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let tr = empty_track(&h, 3);
+    click(&mut h, g.pos(2 * bar + 10, tr), PointerButton::Primary);
+    let c = last_clip(&h);
+    assert_eq!((c.source, c.track, c.start), (ClipSource::Audio(ch), tr, 2 * bar));
+    assert!(c.length.abs_diff(sample_len(&h, &kick)) <= 1);
+
+    // The same sample again (in the picker or dropped on the Playlist) keeps its one channel.
+    assert_eq!(limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick), Some(ch));
+    let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &kick, tr, 6 * bar).expect("placed");
+    assert_eq!(h.state().project().clip(id).and_then(Clip::audio_channel), Some(ch));
+    assert_eq!(h.state().project().channels.len(), n + 1);
+
+    // The tabs switch the list; picking a pattern places patterns again.
+    h.step();
+    let tab = |h: &Harness<'static, LimeShotApp>, t: PickerTab| {
+        h.state()
+            .ui
+            .playlist
+            .picker_tab_rects
+            .iter()
+            .find(|(x, _)| *x == t)
+            .expect("tab")
+            .1
+            .center()
+    };
+    let p = tab(&h, PickerTab::Patterns);
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(h.state().ui.playlist.picker_tab, PickerTab::Patterns);
+    let melody = h.state().project().patterns[1].id;
+    let p = picker_row(&h, ClipSource::Pattern(melody));
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(
+        limeshot_ui::playlist::place_source(h.state()),
+        ClipSource::Pattern(melody)
+    );
+    // Clicking an audio clip picks its sample again.
+    click(&mut h, g.pos(2 * bar + 20, tr), PointerButton::Primary);
+    assert_eq!(limeshot_ui::playlist::place_source(h.state()), ClipSource::Audio(ch));
+    assert_eq!(h.state().ui.playlist.picker_tab, PickerTab::Audio);
+}
+
+/// Owner's list item 4 (FL Studio): the Draw tool gives a new clip the length of the clip of the
+/// same source last placed, resized or clicked.
+#[test]
+fn the_draw_tool_reuses_the_length_of_the_last_clip() {
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let tr = empty_track(&h, 3);
+    click(&mut h, g.pos(10, tr), PointerButton::Primary);
+    let a = last_clip(&h);
+    // Resize it to twice its length, then place another: it is as long.
+    let edge = g.pos(a.length, tr) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(2 * a.length, tr));
+    h.step();
+    assert_eq!(h.state().project().clip(a.id).expect("clip").length, 2 * a.length);
+    click(&mut h, g.pos(8 * bar + 10, tr), PointerButton::Primary);
+    assert_eq!(last_clip(&h).length, 2 * a.length, "the resized length");
+    // A clicked clip of the same pattern with another length sets the length.
+    let tr2 = empty_track(&h, tr + 1);
+    let pattern = a.pattern().expect("pattern clip");
+    h.state_mut().exec(Command::AddClip {
+        pattern,
+        track: tr2,
+        start: 0,
+        length: Some(3 * bar),
+    });
+    h.step();
+    click(&mut h, g.pos(bar, tr2), PointerButton::Primary);
+    click(&mut h, g.pos(16 * bar + 10, tr), PointerButton::Primary);
+    assert_eq!(last_clip(&h).length, 3 * bar, "the clicked clip's length");
+    // Samples too.
+    let kick = bundled("Lime Kick.wav");
+    limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick).expect("added");
+    h.state_mut().ui.playlist.zoom_x = 200.0;
+    h.step();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let tr3 = empty_track(&h, tr2 + 1);
+    click(&mut h, g.pos(2, tr3), PointerButton::Primary);
+    let s = last_clip(&h);
+    let edge = g.pos(s.length, tr3) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(s.length + STEP_TICKS, tr3));
+    h.step();
+    let resized = h.state().project().clip(s.id).expect("clip").length;
+    assert_ne!(resized, s.length);
+    click(&mut h, g.pos(2 * bar + 2, tr3), PointerButton::Primary);
+    assert_eq!(last_clip(&h).length, resized);
+    assert_eq!(last_clip(&h).source, s.source);
+}
+
+/// Owner's list items 2 and 3 (observed in FL Studio 2026.1.1): Shift+drag moves a copy and
+/// leaves the original; right-click deletes only the clip under it, and on empty space clears
+/// the selection.
+#[test]
+fn shift_drag_duplicates_and_right_click_on_empty_space_deselects() {
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let a = h.state().project().playlist.clips[0].clone();
+    let n = h.state().project().playlist.clips.len();
+    let tr = empty_track(&h, 3);
+    let undo = h.state().doc.history().len();
+    let from = g.pos(a.start + a.length / 2, a.track);
+    drag_with(
+        &mut h,
+        from,
+        g.pos(a.start + a.length / 2 + 8 * bar, tr),
+        Modifiers::SHIFT,
+    );
+    let clips = h.state().project().playlist.clips.clone();
+    assert_eq!(clips.len(), n + 1, "a copy");
+    assert_eq!(h.state().project().clip(a.id), Some(&a), "the original stays");
+    let copy = clips.last().expect("copy");
+    assert_eq!((copy.source, copy.track, copy.start), (a.source, tr, a.start + 8 * bar));
+    assert_eq!(h.state().ui.playlist.selection, vec![copy.id], "the copy is selected");
+    assert_eq!(h.state().doc.history().len(), undo + 1, "one undo step");
+    // A Shift+click that does not move leaves no copy.
+    click_with(&mut h, from, PointerButton::Primary, Modifiers::SHIFT);
+    assert_eq!(h.state().project().playlist.clips.len(), n + 1);
+
+    // Right-click another clip: only it goes, the selection stays.
+    let b = h.state().project().playlist.clips[1].clone();
+    h.state_mut().ui.playlist.selection = vec![copy.id];
+    click(&mut h, g.pos(b.start + b.length / 2, b.track), PointerButton::Secondary);
+    assert!(h.state().project().clip(b.id).is_none());
+    assert_eq!(h.state().ui.playlist.selection, vec![copy.id]);
+    // Right-click on empty space clears it.
+    let empty = g.pos(5 * bar, empty_track(&h, tr + 1));
+    click(&mut h, empty, PointerButton::Secondary);
+    assert!(h.state().ui.playlist.selection.is_empty());
+    assert!(h.state().project().clip(copy.id).is_some());
+}
+
+/// Owner's list item 12: a sample dragged over the Playlist shows a ghost clip where it lands,
+/// as long as the sample (FL Studio highlights the target cell and labels the pointer).
+#[test]
+fn a_sample_dragged_over_the_playlist_shows_where_it_lands() {
+    let mut h = playlist_harness();
+    let kick = bundled("Lime Kick.wav");
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let tr = empty_track(&h, 3);
+    let from = h.state().ui.browser.file_pos(&kick).expect("listed");
+    let to = g.pos(4 * bar + 30, tr);
+    h.event(Event::PointerMoved(from));
+    h.step();
+    press(&mut h, from, PointerButton::Primary, true);
+    for i in 1..=8 {
+        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
+        h.step();
+    }
+    h.step();
+    let len = sample_len(&h, &kick);
+    let ghost = h.state().ui.playlist.drop_ghost.expect("a ghost while dragging");
+    assert_eq!((ghost.0, ghost.1), (tr, 4 * bar));
+    assert!(ghost.2.abs_diff(len) <= 1);
+    press(&mut h, to, PointerButton::Primary, false);
+    h.step();
+    assert!(h.state().ui.playlist.drop_ghost.is_none());
+    let c = last_clip(&h);
+    assert_eq!((c.track, c.start), (tr, 4 * bar));
 }

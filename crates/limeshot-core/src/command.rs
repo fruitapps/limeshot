@@ -1066,7 +1066,8 @@ impl Command {
                     .channels
                     .iter()
                     .find(|c| {
-                        audio_channels.contains(&c.id)
+                        // Audio clip channels: used by an audio clip, or added to the picker.
+                        (audio_channels.contains(&c.id) || c.group.as_deref() == Some("Audio"))
                             && matches!(&c.instrument, Instrument::Sampler(s) if s.sample.as_ref() == Some(&sample))
                     })
                     .map(|c| c.id);
