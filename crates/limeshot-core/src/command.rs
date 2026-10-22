@@ -457,6 +457,12 @@ pub enum Command {
         to: u16,
         level: Option<f32>,
     },
+    /// Set all of an effect's parameters at once (a preset); they are brought to its ranges.
+    SetEffectParams {
+        track: u16,
+        effect: u32,
+        params: Vec<f32>,
+    },
     /// Make the route `from` → `to` a pre-fader send (before the fader and pan) or post-fader.
     SetRoutePre {
         from: u16,
@@ -693,6 +699,7 @@ impl Command {
             SetMixerTrackColor { .. } => "Mixer track color",
             SetRoute { level: None, .. } => "Remove route",
             SetRoute { .. } => "Route mixer track",
+            SetEffectParams { .. } => "Load preset",
             SetRoutePre { pre: true, .. } => "Pre-fader send",
             SetRoutePre { .. } => "Post-fader send",
             AddEffect { .. } => "Add effect",
@@ -1719,6 +1726,18 @@ impl Command {
                 }
             }
             SetMixerTrackColor { track, color } => mixer_track(p, track)?.color = color,
+            SetEffectParams { track, effect, params } => {
+                let e = mixer_track(p, track)?
+                    .effects
+                    .iter_mut()
+                    .find(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?;
+                if params.len() != e.kind.params().len() || params.iter().any(|v| !v.is_finite()) {
+                    return Err(CommandError::Invalid("the preset does not fit this effect".into()));
+                }
+                e.params = params;
+                e.sanitize();
+            }
             SetRoutePre { from, to, pre } => {
                 let r = mixer_track(p, from)?
                     .routes

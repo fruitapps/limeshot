@@ -104,6 +104,7 @@ fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
                 app.exec(Command::SetChannelRootKey { channel: ch.id, key });
             }
             ui.label(RichText::new("Root").color(t.text_dim));
+            crate::presets_ui::menu(app, ui, crate::presets_ui::Target::Channel(ch.id));
         });
     });
     ui.add_space(6.0);

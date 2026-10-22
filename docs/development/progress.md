@@ -742,3 +742,12 @@ load with Sync off (sanitize pads parameters).
 engine now records each track's pre-fader signal for delay compensation and applies the fader and pan per route
 (`Pdc::route` takes left/right gains), then scales the bus in place so meters and sidechain keys still read the
 post-fader signal. A muted track sends nothing, pre or post. Engine test with the fader at half and at zero.
+
+### Session 16, part 9: presets for built-in effects and instruments (FX-014, INS-010; next-steps Then 7)
+
+`limeshot_project::preset`: `.limepreset` JSON files in `<config>/presets/<Effect|LimeSynth|Sampler>/`, factory
+presets in code (by parameter name), `list` / `open` / `save` / `load` with sanitising and size limits. Effect cards
+and Channel Settings have a Presets menu (factory, then the user's, then Save preset as… through the name dialog).
+`Command::SetEffectParams` makes loading one undo step; a sampler preset keeps the channel's sample. Headless apps
+have no presets folder (`presets_dir`), so tests use a temporary one. Test lesson: an egui popup's first frame is a
+sizing pass, so a test must step twice after opening a menu before clicking in it.

@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 104, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 16, VERIFIED 136, DEFERRED 4
+- By status: NOT_STARTED 102, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 18, VERIFIED 136, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -19,8 +19,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | Piano Roll | 29 | 18 | 3 | 0 | 8 |
 | Playlist | 29 | 20 | 1 | 2 | 6 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
-| Instruments | 14 | 6 | 0 | 0 | 8 |
-| Effects | 15 | 8 | 0 | 0 | 7 |
+| Instruments | 14 | 6 | 1 | 0 | 7 |
+| Effects | 15 | 8 | 1 | 0 | 6 |
 | Automation | 13 | 3 | 0 | 0 | 10 |
 | Recording | 11 | 0 | 0 | 0 | 11 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
@@ -198,7 +198,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | INS-007 | Sampler loop points, time stretch, filter | P1 |  | NOT_STARTED | Loop region, ping-pong, filter. | — |
 | INS-008 | Additional audio formats (MP3, FLAC, OGG, AIFF) | P1 |  | NOT_STARTED | Decoder crate (e.g. symphonia) behind the SampleData interface. | — |
 | INS-009 | Multi-sample / drum kit instrument | P2 |  | NOT_STARTED | Key zones mapping samples. | — |
-| INS-010 | Instrument presets | P2 |  | NOT_STARTED | Preset files for sampler/synth parameters. | — |
+| INS-010 | Instrument presets | P2 |  | IMPLEMENTED | Channel Settings has a Presets menu for LimeSynth (factory: Saw lead, Soft pad, Pluck, Sub bass) and the Sampler (one-shot, sustained, reversed), plus the user's own and Save preset as…. A sampler preset keeps the channel's sample.<br>*Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008).* | `limeshot-project preset::tests::factory_presets_are_valid_for_their_slot`<br>`limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back`<br>`crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save` |
 | INS-011 | Per-channel polyphony limit / mono / porta | P2 |  | NOT_STARTED | Max voices, mono mode, glide. | — |
 | INS-012 | Drum synthesizer | P3 |  | NOT_STARTED | — | — |
 | INS-013 | LimeSynth filter modes and key tracking | P2 |  | NOT_STARTED | Planned (after INS-006). | — |
@@ -221,7 +221,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | FX-011 | Pitch shifting | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-012 | Stereo processing | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-013 | Utility (gain, phase, balance, mono) | P2 |  | VERIFIED | Utility: gain, stereo width (M/S), polarity. | `limeshot-dsp effects::tests::utility_gain_width_polarity` |
-| FX-014 | Effect presets | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-014 | Effect presets | P2 |  | IMPLEMENTED | Each built-in effect's card has a Presets menu: LimeShot's factory presets (2–3 per effect), then the user's own (.limepreset files in the settings folder's presets/<Effect>/), and Save preset as…. Loading is one undo step (Command::SetEffectParams).<br>*Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet.* | `limeshot-project preset::tests::factory_presets_are_valid_for_their_slot`<br>`limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back`<br>`crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save` |
 | FX-015 | Analysers (spectrum, oscilloscope) | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 
 ## Automation

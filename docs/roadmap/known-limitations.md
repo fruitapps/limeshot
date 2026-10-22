@@ -15,6 +15,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
 * Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). A route is pre- or
   post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input
   (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
+* Presets for the built-in effects and instruments are LimeShot's own JSON files (no FL .fst import), and only
+  plugin windows step through presets with ◀ ▶.
 * Each mixer track's built-in EQ (MIX-010) cannot be automated, and its width-to-Q mapping is LimeShot's own (FL
   Studio's exact curve shapes were not measured).
 * Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song

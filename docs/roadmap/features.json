@@ -3670,17 +3670,24 @@
       "name": "Instrument presets",
       "description": "Save/load instrument settings.",
       "fl_reference": ".fst presets.",
-      "limeshot_behavior": "Preset files for sampler/synth parameters.",
+      "limeshot_behavior": "Channel Settings has a Presets menu for LimeSynth (factory: Saw lead, Soft pad, Pluck, Sub bass) and the Sampler (one-shot, sustained, reversed), plus the user's own and Save preset as…. A sampler preset keeps the channel's sample.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-project preset::tests::factory_presets_are_valid_for_their_slot",
+        "limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back",
+        "crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3689,7 +3696,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008)."
     },
     {
       "id": "INS-011",
@@ -4168,19 +4175,27 @@
       "name": "Effect presets",
       "description": "Effect presets.",
       "fl_reference": ".fst presets",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Each built-in effect's card has a Presets menu: LimeShot's factory presets (2–3 per effect), then the user's own (.limepreset files in the settings folder's presets/<Effect>/), and Save preset as…. Loading is one undo step (Command::SetEffectParams).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-project",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-project preset::tests::factory_presets_are_valid_for_their_slot",
+        "limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back",
+        "crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4189,7 +4204,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet."
     },
     {
       "id": "FX-015",

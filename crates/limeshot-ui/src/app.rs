@@ -176,6 +176,8 @@ pub struct LimeShotApp {
     /// Write settings changes to the config folder (off for headless apps, so tests leave the
     /// user's settings alone).
     pub persist_settings: bool,
+    /// Where users' effect and instrument presets live (`None` in headless apps: saving is off).
+    pub presets_dir: Option<PathBuf>,
     /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
     /// button, so any left once no button is down are released (`logic`).
     pub auditions: Vec<(ChannelId, u8)>,
@@ -189,6 +191,7 @@ impl LimeShotApp {
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app.persist_settings = true;
+        app.presets_dir = crate::settings::config_dir().map(|d| d.join("presets"));
         app
     }
 
@@ -237,6 +240,7 @@ impl LimeShotApp {
             cpu: Default::default(),
             autosave: Default::default(),
             persist_settings: false,
+            presets_dir: None,
             auditions: Vec::new(),
         }
     }

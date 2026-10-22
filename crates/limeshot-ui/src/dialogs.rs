@@ -20,6 +20,8 @@ pub enum RenameTarget {
     /// Name the Channel Rack filter group for these channels (FL Studio's Group selected…).
     ChannelGroup(Vec<ChannelId>),
     Project,
+    /// Save preset as…: the name for this preset in the user's presets folder.
+    Preset(Box<limeshot_project::preset::Preset>),
 }
 
 pub struct ExportOptions {
@@ -392,10 +394,10 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
         }
         Dialog::Rename { target, text } => {
             let target = target.clone();
-            let title = if matches!(target, RenameTarget::ChannelGroup(_)) {
-                "Filter group name"
-            } else {
-                "Rename"
+            let title = match target {
+                RenameTarget::ChannelGroup(_) => "Filter group name",
+                RenameTarget::Preset(_) => "Save preset as",
+                _ => "Rename",
             };
             modal(ctx, title, |ui| {
                 let r = ui.add(egui::TextEdit::singleline(text).desired_width(300.0));
@@ -415,6 +417,8 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 Some(g) => crate::channel_rack::RackFilter::Group(g),
                                 None => crate::channel_rack::RackFilter::Unsorted,
                             };
+                        } else if let RenameTarget::Preset(preset) = &target {
+                            crate::presets_ui::save(app, preset, &name);
                         } else if !name.is_empty() {
                             app.exec(match target {
                                 RenameTarget::Pattern(pattern) => Command::RenamePattern { pattern, name },
@@ -424,7 +428,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },
                                 RenameTarget::Marker(marker) => Command::RenameMarker { marker, name },
                                 RenameTarget::Project => Command::SetTitle(name),
-                                RenameTarget::ChannelGroup(_) => return,
+                                RenameTarget::ChannelGroup(_) | RenameTarget::Preset(_) => return,
                             });
                         }
                         keep = false;

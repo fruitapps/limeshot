@@ -24,6 +24,7 @@
 
 pub mod flp;
 pub mod midi;
+pub mod preset;
 
 use limeshot_core::{Instrument, Project};
 use serde_json::{Value, json};

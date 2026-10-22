@@ -4779,3 +4779,86 @@ fn piano_roll_stamp_places_chords_and_scale_highlighting() {
     h.step();
     assert_eq!(h.state().ui.piano.scale, Some((0, Scale::Dorian)));
 }
+
+/// FX-014 / INS-010: an effect card's Presets menu loads a factory preset in one undo step and
+/// saves the user's own; an instrument preset keeps the sampler's sample.
+#[test]
+fn effect_and_instrument_presets_load_and_save() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let mut h = harness(true);
+    h.state_mut().presets_dir = Some(dir.path().to_path_buf());
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    let track = h
+        .state()
+        .project()
+        .mixer
+        .tracks
+        .iter()
+        .position(|t| t.effects.iter().any(|e| e.kind == EffectKind::Delay))
+        .expect("a delay in the demo") as u16;
+    h.state_mut().ui.mixer.selected = track;
+    for _ in 0..3 {
+        h.step();
+    }
+    let delay = |h: &Harness<'static, LimeShotApp>| {
+        h.state().project().mixer.tracks[usize::from(track)]
+            .effects
+            .iter()
+            .find(|e| e.kind == EffectKind::Delay)
+            .cloned()
+            .expect("delay")
+    };
+    let before = delay(&h).params;
+    h.get_by_label("Presets").click();
+    h.step();
+    h.step();
+    h.get_by_label("Slapback").click();
+    h.step();
+    assert_eq!((delay(&h).params[0], delay(&h).params[1]), (90.0, 0.1));
+    assert_eq!(h.state().doc.undo_label(), Some("Load preset"));
+    // Save preset as…: named, stored, then listed after the factory presets.
+    h.get_by_label("Presets").click();
+    h.step();
+    h.step();
+    h.get_by_label("Save preset as…").click();
+    h.step();
+    if let Some(limeshot_ui::dialogs::Dialog::Rename { text, .. }) = &mut h.state_mut().dialog {
+        *text = "My slap".into();
+    } else {
+        panic!("the name dialog");
+    }
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    assert!(dir.path().join("Delay/My slap.limepreset").exists());
+    h.state_mut().doc.undo();
+    assert_eq!(delay(&h).params, before);
+    h.get_by_label("Presets").click();
+    h.step();
+    h.step();
+    h.get_by_label("My slap").click();
+    h.step();
+    assert_eq!(delay(&h).params[0], 90.0, "the user's preset loads");
+    // An instrument preset: the sampler keeps its sample.
+    use limeshot_project::preset::{Slot, factory};
+    let kick = h.state().project().channels[0].clone();
+    let Instrument::Sampler(was) = kick.instrument.clone() else {
+        panic!("kick is a sampler")
+    };
+    let reversed = factory(Slot::Sampler)
+        .into_iter()
+        .find(|p| p.name == "Reversed")
+        .expect("factory");
+    limeshot_ui::presets_ui::apply(
+        h.state_mut(),
+        limeshot_ui::presets_ui::Target::Channel(kick.id),
+        reversed.content,
+    );
+    let Some(Instrument::Sampler(now)) = h.state().project().channel(kick.id).map(|c| c.instrument.clone()) else {
+        panic!()
+    };
+    assert!(now.reverse);
+    assert_eq!(now.sample, was.sample);
+}
