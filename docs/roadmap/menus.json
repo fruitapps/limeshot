@@ -766,10 +766,10 @@
       "fl_keys": "Opt+1 … Opt+9",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "File › Open recent",
-      "status": "DIFFERENT",
+      "limeshot": "File › Recent projects",
+      "status": "IMPLEMENTED",
       "feature": "APP-010",
-      "notes": "FL lists recent projects inline under a 'Recent projects' header with Opt+number keys; LimeShot uses a submenu without keys."
+      "notes": "Listed in the File menu under a 'Recent projects' header, as in FL (up to 10; the full path on hover). LimeShot has no Opt+number keys for them."
     },
     {
       "id": "MENU-044",
@@ -3100,10 +3100,10 @@
       "fl_keys": "Cmd+F",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Browser › search field",
-      "status": "DIFFERENT",
+      "limeshot": "Tools › Browser find…",
+      "status": "IMPLEMENTED",
       "feature": "BR-004",
-      "notes": ""
+      "notes": "Shows the Browser and puts the keyboard in its search field."
     },
     {
       "id": "MENU-180",
@@ -3640,10 +3640,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "control › context menu",
+      "limeshot": "Tools › Last tweaked",
       "status": "DIFFERENT",
       "feature": "UI-010",
-      "notes": "The same menu a control's right-click opens; first line names the parameter ('No parameter' when none). LimeShot has the menu on controls only."
+      "notes": "LimeShot remembers plugin parameters (changed in the plugin's editor or parameter list); the submenu has Create automation clip. Other controls offer their menu on right-click."
     },
     {
       "id": "MENU-211",
@@ -3748,10 +3748,10 @@
       "fl_keys": "",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "AUT-003",
-      "notes": "Sections: Automation, Remote control, Value. Disabled without a tweaked parameter."
+      "limeshot": "Tools › Last tweaked › Create automation clip",
+      "status": "DIFFERENT",
+      "feature": "PLG-007",
+      "notes": "For the last tweaked plugin parameter."
     },
     {
       "id": "MENU-217",
@@ -4178,10 +4178,10 @@
       "fl_keys": "Cmd+H",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "shortcut Cmd+H",
-      "status": "DIFFERENT",
+      "limeshot": "Tools › Stop sound",
+      "status": "IMPLEMENTED",
       "feature": "TR-010",
-      "notes": "LimeShot has the key and no menu item."
+      "notes": "Cmd+H, as before."
     },
     {
       "id": "MENU-241",
@@ -4246,10 +4246,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Select unused channels",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
-      "notes": ""
+      "notes": "Selects the channels no pattern and no audio clip uses and shows the Channel Rack."
     },
     {
       "id": "MENU-245",
@@ -4263,10 +4263,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Purge unused audio clips",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
-      "notes": ""
+      "notes": "Deletes the audio clip channels (the Audio filter group) no Playlist clip plays and no pattern uses; one undo step."
     },
     {
       "id": "MENU-246",
@@ -4331,10 +4331,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Reset empty playlist tracks",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
-      "notes": ""
+      "notes": "Tracks without clips get their default name back and are unmuted; one undo step. LimeShot tracks have no colour or height of their own yet."
     },
     {
       "id": "MENU-250",
@@ -4469,10 +4469,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Set keyboard focus for all plugins to",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
-      "notes": ""
+      "notes": "Sets every plugin window's keyboard toggle (PLG-006), open or closed."
     },
     {
       "id": "MENU-258",
@@ -4487,8 +4487,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Set keyboard focus for all plugins to › Enabled",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
       "notes": ""
     },
@@ -4505,8 +4505,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Tools › Set keyboard focus for all plugins to › Disabled",
+      "status": "IMPLEMENTED",
       "feature": "WF-009",
       "notes": ""
     },

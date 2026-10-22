@@ -24,6 +24,8 @@ pub struct DraggedSample(pub PathBuf);
 #[derive(Default)]
 pub struct State {
     pub filter: String,
+    /// Put the keyboard in the search field on the next frame (Tools › Browser find…).
+    pub focus_search: bool,
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
     pending_preview: Option<PathBuf>,
     pub selected: Option<PathBuf>,
@@ -293,11 +295,14 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     egui::Frame::new()
         .inner_margin(egui::Margin::symmetric(8, 6))
         .show(ui, |ui| {
-            ui.add(
+            let r = ui.add(
                 TextEdit::singleline(&mut app.ui.browser.filter)
                     .hint_text("Search samples")
                     .desired_width(f32::INFINITY),
             );
+            if std::mem::take(&mut app.ui.browser.focus_search) {
+                r.request_focus();
+            }
         });
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         ui.spacing_mut().indent = 12.0;

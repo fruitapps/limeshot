@@ -2811,6 +2811,63 @@ fn the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor() {
     assert!(!h.state().can_clipboard(limeshot_ui::app::ClipOp::Paste));
 }
 
+/// APP-026: the Tools menu's macros that LimeShot has (FL Studio's Tools › Macros).
+#[test]
+fn tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks() {
+    let mut h = harness(true);
+    let tools = |h: &mut Harness<'static, LimeShotApp>, label: &str| {
+        h.get_by_label("Tools").click();
+        h.step();
+        h.get_by_label_contains(label).click();
+        h.step();
+    };
+    // An unused sampler channel.
+    let spare = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Spare".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .expect("channel"),
+    );
+    tools(&mut h, "Select unused channels");
+    assert_eq!(h.state().ui.channel_selection, vec![spare]);
+
+    // An audio clip whose clip was deleted leaves its channel behind; the purge removes it.
+    let dir = limeshot_app::bundled_samples_dir().expect("samples");
+    limeshot_ui::playlist::add_audio_clip(h.state_mut(), &dir.join("Lime Snare.wav"), 7, 0);
+    let clip = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .find(|c| c.audio_channel().is_some())
+        .map(|c| c.id)
+        .expect("clip");
+    h.state_mut().exec(Command::RemoveClips(vec![clip]));
+    let channels = h.state().project().channels.len();
+    tools(&mut h, "Purge unused audio clips");
+    assert_eq!(h.state().project().channels.len(), channels - 1);
+    assert!(
+        h.state().project().channels.iter().any(|c| c.id == spare),
+        "other unused channels stay"
+    );
+
+    // Reset empty playlist tracks: an empty, renamed, muted track gets its default back.
+    h.state_mut().exec(Command::RenamePlaylistTrack {
+        track: 12,
+        name: "Old".into(),
+    });
+    h.state_mut()
+        .exec(Command::SetPlaylistTrackMute { track: 12, muted: true });
+    tools(&mut h, "Reset empty playlist tracks");
+    let t = &h.state().project().playlist.tracks[12];
+    assert_eq!((t.name.as_str(), t.muted), ("Track 13", false));
+    assert!(h.state_mut().doc.undo(), "one undo step");
+    assert_eq!(h.state().project().playlist.tracks[12].name, "Old");
+}
+
 /// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
 #[test]
 fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {

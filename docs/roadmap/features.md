@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 111, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 10, VERIFIED 135, DEFERRED 4
+- By status: NOT_STARTED 110, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 10, VERIFIED 135, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -27,7 +27,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Plugins | 11 | 6 | 2 | 0 | 3 |
 | Export | 18 | 5 | 0 | 0 | 13 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
-| Workflow | 13 | 0 | 1 | 1 | 11 |
+| Workflow | 13 | 0 | 1 | 2 | 10 |
 | UI | 18 | 8 | 1 | 1 | 8 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
@@ -60,7 +60,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-023 | Welcome window | P3 |  | NOT_STARTED | Planned (offline parts only: templates, recent files, demo song). | — |
 | APP-024 | Autosave interval setting | P2 |  | VERIFIED | Options › Autosave: off, 1, 2, 5 (default) or 10 minutes; stored in the settings. | `limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved` |
 | APP-025 | Settings window | P2 |  | IN_PROGRESS | Audio settings have a dialog; UI scale, autosave and browser folders are set from menus and the Browser. A single window with pages is planned; settings.json tracks every setting. | — |
-| APP-026 | Main menu bar in FL's layout | P1 |  | IN_PROGRESS | File, Edit, Add, Patterns, View, Options and Help exist with a subset of FL's items (see menus.md); no Tools menu and no section headers.<br>*Track each item in docs/roadmap/menus.json.* | — |
+| APP-026 | Main menu bar in FL's layout | P1 |  | IN_PROGRESS | File, Edit, Add, Patterns, View, Options, Tools and Help in FL's order, with grey section headers as in FL (File › Recent projects listed inline; View › Windows, Layout, Zoom; Options › System, Switches; Tools › Last tweaked parameters, Macros). Edit has FL 2026's Undo <action> / Redo <action> (Cmd+Z / Cmd+Opt+Z) and Cut / Copy / Paste on the focused editor; Patterns has FL's commands and keys (SEQ-021); Tools has Browser find…, Last tweaked › Create automation clip and the macros LimeShot supports (WF-009). Items LimeShot lacks are left out; status per item in menus.json.<br>*Session 15: Edit, Patterns and Tools menus, section headers. Still open: View › Layout commands (UI-013) and most of View, Options and Help (menus.md).* | `crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor`<br>`crates/limeshot-app/tests/ui.rs::the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns`<br>`crates/limeshot-app/tests/ui.rs::tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks` |
 | APP-027 | Revert to last backup | P2 |  | NOT_STARTED | Not implemented. | — |
 | APP-028 | Save to new project folder | P3 |  | NOT_STARTED | Not implemented. | — |
 | APP-029 | Delete unused files and save project | P3 |  | NOT_STARTED | Not implemented. | — |
@@ -343,7 +343,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | WF-006 | Multichannel / surround output | P3 |  | NOT_STARTED | Stereo only; extra device channels receive silence. | — |
 | WF-007 | Accessibility (screen readers, keyboard nav) | P2 |  | IN_PROGRESS | eframe AccessKit enabled; standard egui widgets are exposed; custom-painted editors are not yet labelled. | — |
 | WF-008 | Python-style scripting API | P3 |  | NOT_STARTED | Possible future scripting over the typed command set. | — |
-| WF-009 | Project macros | P3 |  | NOT_STARTED | Not implemented. | — |
+| WF-009 | Project macros | P3 |  | IN_PROGRESS | Tools › Macros: Stop sound (Cmd+H), Select unused channels (no pattern or audio clip uses them; selects them and shows the Channel Rack, with a toast saying how many), Purge unused audio clips (deletes the Audio-group channels no clip plays; one undo step; toast), Reset empty playlist tracks (default name, unmuted; one undo step), Set keyboard focus for all plugins to › Enabled / Disabled (every plugin window's keyboard toggle). Not done: smart disable, lock/unlock tracks to content, switching plugin editors, declicking.<br>*Session 15.* | `crates/limeshot-app/tests/ui.rs::tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks` |
 | WF-010 | Score logger | P2 |  | NOT_STARTED | Not implemented. | — |
 | WF-011 | Touch controller | P3 |  | NOT_STARTED | Not implemented. | — |
 | WF-012 | MIDI clock sync | P3 |  | NOT_STARTED | Not implemented. | — |

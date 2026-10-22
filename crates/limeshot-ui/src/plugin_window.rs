@@ -279,6 +279,20 @@ impl PluginHost {
         }
     }
 
+    /// FL Studio's Tools › Macros › Set keyboard focus for all plugins to: the keyboard toggle of
+    /// every plugin window, open or closed.
+    pub fn set_keyboard_for_all(&mut self, to_plugin: bool) {
+        let targets: Vec<Target> = self.live_targets();
+        for t in targets {
+            match self.windows.get_mut(&t) {
+                Some(w) => w.keyboard_to_plugin = to_plugin,
+                None => {
+                    self.window_memory.entry(t).or_default().keyboard_to_plugin = to_plugin;
+                }
+            }
+        }
+    }
+
     /// Step through the presets menu (FL's Presets ◀ ▶), wrapping at the ends. Returns true when
     /// a preset was loaded.
     pub fn step_preset(&mut self, target: Target, by: isize) -> bool {

@@ -6,19 +6,19 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 25, DIFFERENT 35, LIMESHOT_ONLY 9, NOT_STARTED 181, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 34, DIFFERENT 33, LIMESHOT_ONLY 9, NOT_STARTED 174, NOT_PLANNED 27
 
 ## Summary
 
 | Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |
 |---|---|---|---|---|---|---|
-| File | 45 | 3 | 8 | 31 | 3 | 0 |
+| File | 45 | 4 | 7 | 31 | 3 | 0 |
 | Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 5 | 3 | 35 | 5 | 4 |
 | Options | 24 | 2 | 0 | 20 | 2 | 2 |
-| Tools | 82 | 0 | 4 | 71 | 7 | 0 |
+| Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 
 ## Open work by feature
@@ -28,7 +28,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | Feature | Pri | Status | Name | Menu items |
 |---|---|---|---|---|
 | APP-020 | P1 | NOT_STARTED | MIDI settings | MENU-153 Options › MIDI settings |
-| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-216 Tools › Last tweaked › Create automation clip<br>MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
+| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
@@ -86,7 +86,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | UI-017 | P3 | DEFERRED | Control creator | MENU-186 Tools › Control creator |
 | UI-018 | P3 | NOT_STARTED | Plugin picker | MENU-067 Add › Plugin picker<br>MENU-107 View › Plugin picker |
 | WF-008 | P3 | NOT_STARTED | Python-style scripting API | MENU-110 View › Script output |
-| WF-009 | P3 | NOT_STARTED | Project macros | MENU-244 Tools › Select unused channels<br>MENU-245 Tools › Purge unused audio clips<br>MENU-246 Tools › Switch smart disable for all plugins<br>MENU-247 Tools › Lock all playlist tracks to content<br>MENU-248 Tools › Unlock all playlist tracks from content<br>MENU-249 Tools › Reset empty playlist tracks<br>MENU-254 Tools › Switch all plugin editors to<br>MENU-255 Tools › Switch all plugin editors to › Attached<br>MENU-256 Tools › Switch all plugin editors to › Detached<br>MENU-257 Tools › Set keyboard focus for all plugins to<br>MENU-258 Tools › Set keyboard focus for all plugins to › Enabled<br>MENU-259 Tools › Set keyboard focus for all plugins to › Disabled<br>MENU-260 Tools › Change declicking for selected channels to |
+| WF-009 | P3 | IN_PROGRESS | Project macros | MENU-246 Tools › Switch smart disable for all plugins<br>MENU-247 Tools › Lock all playlist tracks to content<br>MENU-248 Tools › Unlock all playlist tracks from content<br>MENU-254 Tools › Switch all plugin editors to<br>MENU-255 Tools › Switch all plugin editors to › Attached<br>MENU-256 Tools › Switch all plugin editors to › Detached<br>MENU-260 Tools › Change declicking for selected channels to |
 | WF-011 | P3 | NOT_STARTED | Touch controller | MENU-109 View › Touch controller |
 | WF-012 | P3 | NOT_STARTED | MIDI clock sync | MENU-165 Options › Enable MIDI master sync |
 | WF-013 | P3 | NOT_STARTED | Item groups | MENU-174 Options › Enable groups |
@@ -137,7 +137,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-040 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zipped loop package... | Project | dialog |  |  | — | NOT_STARTED | APP-019 | Project plus every sample it uses, zipped. |
 | MENU-041 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Project bones... | Project | dialog |  |  | — | NOT_STARTED | EXP-017 | A copy of the project without audio data. |
 | MENU-042 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Project data files... | Project | dialog |  |  | — | NOT_STARTED | EXP-017 | Copies the project's samples into its folder. |
-| MENU-043 | <recent project> | Recent projects | list | `Opt+1 … Opt+9` |  | File › Open recent | DIFFERENT | APP-010 | FL lists recent projects inline under a 'Recent projects' header with Opt+number keys; LimeShot uses a submenu without keys. |
+| MENU-043 | <recent project> | Recent projects | list | `Opt+1 … Opt+9` |  | File › Recent projects | IMPLEMENTED | APP-010 | Listed in the File menu under a 'Recent projects' header, as in FL (up to 10; the full path on hover). LimeShot has no Opt+number keys for them. |
 | MENU-044 | Revert to last backup |  | action |  |  | — | NOT_STARTED | APP-027 | Opens the newest autosave/backup of this project. |
 | MENU-045 | Exit |  | action | `Cmd+Q` |  | File › Quit | DIFFERENT | APP-014 | LimeShot says Quit (macOS wording). |
 
@@ -303,7 +303,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| MENU-179 | Browser find... |  | dialog | `Cmd+F` |  | Browser › search field | DIFFERENT | BR-004 |  |
+| MENU-179 | Browser find... |  | dialog | `Cmd+F` |  | Tools › Browser find… | IMPLEMENTED | BR-004 | Shows the Browser and puts the keyboard in its search field. |
 | MENU-180 | One-click audio recording |  | submenu |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-181 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Into Edison audio editor/recorder |  | action |  |  | — | NOT_PLANNED |  | Edison is an FL plugin. |
 | MENU-182 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Into playlist as an audio clip |  | action |  |  | — | NOT_STARTED | REC-001 |  |
@@ -334,13 +334,13 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-207 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Pre effects | Audio logger (memory used: 22MB) | radio |  |  | — | NOT_STARTED | REC-011 | Section 'Recording position'. |
 | MENU-208 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Post effects, pre fader | Audio logger (memory used: 22MB) | radio |  | selected | — | NOT_STARTED | REC-011 | Section 'Recording position'. |
 | MENU-209 | Dump to audio editor | Audio logger (memory used: 22MB) | action |  |  | — | NOT_STARTED | REC-011 |  |
-| MENU-210 | Last tweaked | Last tweaked parameters | submenu |  |  | control › context menu | DIFFERENT | UI-010 | The same menu a control's right-click opens; first line names the parameter ('No parameter' when none). LimeShot has the menu on controls only. |
+| MENU-210 | Last tweaked | Last tweaked parameters | submenu |  |  | Tools › Last tweaked | DIFFERENT | UI-010 | LimeShot remembers plugin parameters (changed in the plugin's editor or parameter list); the submenu has Create automation clip. Other controls offer their menu on right-click. |
 | MENU-211 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Edit events | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-005 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-212 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Edit events in new window | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-005 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-213 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Edit events in piano roll | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-005 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-214 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Init song with this position | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-011 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-215 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Delete initial value | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-011 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
-| MENU-216 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create automation clip | Last tweaked parameters | action |  | disabled | — | NOT_STARTED | AUT-003 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
+| MENU-216 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create automation clip | Last tweaked parameters | action |  | disabled | Tools › Last tweaked › Create automation clip | DIFFERENT | PLG-007 | For the last tweaked plugin parameter. |
 | MENU-217 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Edit automation clip... | Last tweaked parameters | dialog |  | disabled | — | NOT_STARTED | AUT-003 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-218 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Link to controller... | Last tweaked parameters | dialog |  | disabled | — | NOT_STARTED | WF-004 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-219 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Override global link... | Last tweaked parameters | dialog |  | disabled | — | NOT_STARTED | WF-004 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
@@ -364,16 +364,16 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-237 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Type in value... | Last tweaked parameters | dialog |  | disabled | — | NOT_STARTED | UI-010 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-238 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set... | Last tweaked parameters | dialog |  | disabled | — | NOT_STARTED | UI-010 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
 | MENU-239 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Override volatile link... | Last tweaked parameters | dialog |  |  | — | NOT_STARTED | WF-004 | Sections: Automation, Remote control, Value. Disabled without a tweaked parameter. |
-| MENU-240 | Stop sound | Macros | action | `Cmd+H` |  | shortcut Cmd+H | DIFFERENT | TR-010 | LimeShot has the key and no menu item. |
+| MENU-240 | Stop sound | Macros | action | `Cmd+H` |  | Tools › Stop sound | IMPLEMENTED | TR-010 | Cmd+H, as before. |
 | MENU-241 | Cancel recording | Macros | action |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-242 | Prepare for performance mode | Macros | action |  |  | — | NOT_STARTED | PL-019 |  |
 | MENU-243 | Prepare for MIDI export | Macros | action |  |  | — | NOT_STARTED | EXP-012 | Converts the project into one MIDI channel per instrument before export. |
-| MENU-244 | Select unused channels | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-245 | Purge unused audio clips | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-244 | Select unused channels | Macros | action |  |  | Tools › Select unused channels | IMPLEMENTED | WF-009 | Selects the channels no pattern and no audio clip uses and shows the Channel Rack. |
+| MENU-245 | Purge unused audio clips | Macros | action |  |  | Tools › Purge unused audio clips | IMPLEMENTED | WF-009 | Deletes the audio clip channels (the Audio filter group) no Playlist clip plays and no pattern uses; one undo step. |
 | MENU-246 | Switch smart disable for all plugins | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-247 | Lock all playlist tracks to content | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-248 | Unlock all playlist tracks from content | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-249 | Reset empty playlist tracks | Macros | action |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-249 | Reset empty playlist tracks | Macros | action |  |  | Tools › Reset empty playlist tracks | IMPLEMENTED | WF-009 | Tracks without clips get their default name back and are unmuted; one undo step. LimeShot tracks have no colour or height of their own yet. |
 | MENU-250 | Switch all audio clip channels to | Macros | submenu |  |  | — | NOT_STARTED | PL-023 | Time-stretch mode; options in lists.stretch_modes. |
 | MENU-251 | Switch selected audio clip channels to | Macros | submenu |  |  | — | NOT_STARTED | PL-023 | Time-stretch mode; options in lists.stretch_modes. |
 | MENU-252 | Remove all Edison instances | Macros | action |  |  | — | NOT_PLANNED |  | Edison is an FL plugin. |
@@ -381,9 +381,9 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-254 | Switch all plugin editors to | Macros | submenu |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-255 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Attached | Macros | radio |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-256 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Detached | Macros | radio |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-257 | Set keyboard focus for all plugins to | Macros | submenu |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-258 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Enabled | Macros | radio |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-259 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Disabled | Macros | radio |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-257 | Set keyboard focus for all plugins to | Macros | submenu |  |  | Tools › Set keyboard focus for all plugins to | IMPLEMENTED | WF-009 | Sets every plugin window's keyboard toggle (PLG-006), open or closed. |
+| MENU-258 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Enabled | Macros | radio |  |  | Tools › Set keyboard focus for all plugins to › Enabled | IMPLEMENTED | WF-009 |  |
+| MENU-259 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Disabled | Macros | radio |  |  | Tools › Set keyboard focus for all plugins to › Disabled | IMPLEMENTED | WF-009 |  |
 | MENU-260 | Change declicking for selected channels to | Macros | submenu |  |  | — | NOT_STARTED | WF-009 | Options in lists.declicking. |
 
 ## Help

@@ -454,6 +454,11 @@ impl PluginHost {
         self.reopen.retain(|t, _| !errors.contains_key(t));
     }
 
+    /// Every running plugin.
+    pub fn live_targets(&self) -> Vec<Target> {
+        self.live.keys().copied().collect()
+    }
+
     pub fn is_loaded(&self, target: Target) -> bool {
         self.live.contains_key(&target)
     }

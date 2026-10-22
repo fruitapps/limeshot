@@ -15,6 +15,16 @@ fn item(ui: &mut Ui, text: &str, shortcut: &str) -> bool {
     clicked
 }
 
+/// A grey section header inside a menu, as FL Studio's menus have ("Windows", "Macros").
+fn section(ui: &mut Ui, text: &str) {
+    ui.add_space(2.0);
+    ui.label(
+        egui::RichText::new(text)
+            .small()
+            .color(crate::theme::Theme::current().text_faint),
+    );
+}
+
 fn toggle(ui: &mut Ui, on: bool, text: &str, shortcut: &str) -> bool {
     let clicked = ui.add(Button::selectable(on, text).shortcut_text(shortcut)).clicked();
     if clicked {
@@ -49,6 +59,78 @@ pub fn add_pattern(app: &mut LimeShotApp) {
         name: format!("Pattern {n}"),
     }) {
         app.set_current_pattern(PatternId(id));
+    }
+}
+
+// ----- FL Studio's Tools › Macros (APP-026) -----
+
+/// Select the channels no pattern and no audio clip uses (Tools › Macros › Select unused
+/// channels) and show the Channel Rack.
+pub fn select_unused_channels(app: &mut LimeShotApp) {
+    let p = app.project();
+    let used: std::collections::HashSet<_> = p
+        .patterns
+        .iter()
+        .flat_map(|pat| pat.notes.iter().map(|n| n.channel))
+        .chain(p.playlist.clips.iter().filter_map(|c| c.audio_channel()))
+        .collect();
+    let unused: Vec<_> = p.channels.iter().map(|c| c.id).filter(|c| !used.contains(c)).collect();
+    let n = unused.len();
+    app.ui.channel_selection = unused;
+    app.show_window(crate::workspace::Win::ChannelRack);
+    app.toast(match n {
+        0 => "Every channel is used".to_string(),
+        1 => "1 unused channel selected".to_string(),
+        n => format!("{n} unused channels selected"),
+    });
+}
+
+/// Delete the audio clip channels (the "Audio" group) that no Playlist clip plays (Tools ›
+/// Macros › Purge unused audio clips). One undo step.
+pub fn purge_unused_audio_clips(app: &mut LimeShotApp) {
+    let p = app.project();
+    let used: Vec<_> = p.playlist.clips.iter().filter_map(|c| c.audio_channel()).collect();
+    let noted: std::collections::HashSet<_> = p
+        .patterns
+        .iter()
+        .flat_map(|pat| pat.notes.iter().map(|n| n.channel))
+        .collect();
+    let purge: Vec<Command> = p
+        .channels
+        .iter()
+        .filter(|c| c.group.as_deref() == Some("Audio") && !used.contains(&c.id) && !noted.contains(&c.id))
+        .map(|c| Command::RemoveChannel(c.id))
+        .collect();
+    let n = purge.len();
+    if n > 0 {
+        app.exec(Command::Batch(purge));
+    }
+    app.toast(match n {
+        0 => "No unused audio clips".to_string(),
+        n => format!("Removed {n} unused audio clip{}", if n == 1 { "" } else { "s" }),
+    });
+}
+
+/// Give Playlist tracks without clips their default name back and unmute them (Tools › Macros
+/// › Reset empty playlist tracks). One undo step.
+pub fn reset_empty_playlist_tracks(app: &mut LimeShotApp) {
+    let p = &app.project().playlist;
+    let mut cmds = Vec::new();
+    for (i, t) in p.tracks.iter().enumerate() {
+        let track = i as u32;
+        if p.clips.iter().any(|c| c.track == track) {
+            continue;
+        }
+        let name = format!("Track {}", i + 1);
+        if t.name != name {
+            cmds.push(Command::RenamePlaylistTrack { track, name });
+        }
+        if t.muted {
+            cmds.push(Command::SetPlaylistTrackMute { track, muted: false });
+        }
+    }
+    if !cmds.is_empty() {
+        app.exec(Command::Batch(cmds));
     }
 }
 
@@ -158,17 +240,26 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if item(ui, "Open…", &key("Cmd+O")) {
                     app.request(Pending::Open(None));
                 }
-                ui.menu_button("Open recent", |ui| {
-                    let recent = app.settings.recent.clone();
-                    if recent.is_empty() {
-                        ui.label("No recent projects");
-                    }
-                    for p in recent {
-                        if item(ui, &p.display().to_string(), "") {
+                // FL Studio lists recent projects in the File menu itself, under a header.
+                let recent = app.settings.recent.clone();
+                if !recent.is_empty() {
+                    ui.separator();
+                    section(ui, "Recent projects");
+                    for p in recent.into_iter().take(10) {
+                        let name = p
+                            .file_name()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| p.display().to_string());
+                        if ui
+                            .add(Button::new(name))
+                            .on_hover_text(p.display().to_string())
+                            .clicked()
+                        {
+                            ui.close();
                             app.request(Pending::Open(Some(p)));
                         }
                     }
-                });
+                }
                 ui.separator();
                 if item(ui, "Save", &key("Cmd+S")) {
                     app.save();
@@ -377,6 +468,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
             });
             ui.menu_button("View", |ui| {
                 use crate::workspace::Win;
+                section(ui, "Windows");
                 for w in [
                     Win::Playlist,
                     Win::ChannelRack,
@@ -392,10 +484,12 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     app.ui.show_browser ^= true;
                 }
                 ui.separator();
+                section(ui, "Layout");
                 if item(ui, "Arrange windows", &key("Cmd+Shift+H")) {
                     app.ui.workspace.reset_layout = true;
                 }
                 ui.separator();
+                section(ui, "Zoom");
                 if item(ui, "Zoom in", &key("Cmd+=")) {
                     app.settings.ui_scale = (app.settings.ui_scale + 0.1).min(3.0);
                 }
@@ -407,9 +501,12 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
             });
             ui.menu_button("Options", |ui| {
+                section(ui, "System");
                 if item(ui, "Audio settings…", "") {
                     app.dialog = Some(Dialog::audio(app));
                 }
+                ui.separator();
+                section(ui, "Switches");
                 if toggle(ui, app.ui.metronome, "Metronome", &key("Cmd+M")) {
                     let m = !app.ui.metronome;
                     app.set_metronome(m);
@@ -430,6 +527,51 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                             app.settings.autosave_minutes = m;
                             app.settings.save();
                         }
+                    }
+                });
+            });
+            ui.menu_button("Tools", |ui| {
+                if item(ui, "Browser find…", "") {
+                    app.ui.show_browser = true;
+                    app.ui.browser.focus_search = true;
+                }
+                ui.separator();
+                section(ui, "Last tweaked parameters");
+                let last = app.plugins.last_tweaked.filter(|&(t, id)| {
+                    app.plugins
+                        .instance(t)
+                        .is_some_and(|i| i.params().iter().any(|p| p.id == id && p.automatable()))
+                });
+                ui.add_enabled_ui(last.is_some(), |ui| {
+                    ui.menu_button("Last tweaked", |ui| {
+                        if item(ui, "Create automation clip", "")
+                            && let Some((t, id)) = last
+                        {
+                            crate::plugins::create_automation(app, t, id);
+                        }
+                    });
+                });
+                ui.separator();
+                section(ui, "Macros");
+                if item(ui, "Stop sound", &key("Cmd+H")) {
+                    app.send(limeshot_audio::Msg::Panic);
+                }
+                if item(ui, "Select unused channels", "") {
+                    select_unused_channels(app);
+                }
+                if item(ui, "Purge unused audio clips", "") {
+                    purge_unused_audio_clips(app);
+                }
+                if item(ui, "Reset empty playlist tracks", "") {
+                    reset_empty_playlist_tracks(app);
+                }
+                ui.menu_button("Set keyboard focus for all plugins to", |ui| {
+                    // Enabled: plugins take keystrokes before LimeShot (each window's toggle).
+                    if item(ui, "Enabled", "") {
+                        app.plugins.set_keyboard_for_all(true);
+                    }
+                    if item(ui, "Disabled", "") {
+                        app.plugins.set_keyboard_for_all(false);
                     }
                 });
             });

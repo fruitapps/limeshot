@@ -605,3 +605,11 @@ LimeShot's Edit menu now matches: "Undo <action>", "Redo <action>" when availabl
 Cmd+Y stay), and Cut / Copy / Paste routed to the focused editor through one `clipboard(app, op)` per editor (the
 editors' Cmd+X/C/V use the same functions), disabled when there is nothing to act on. UI test added.
 
+### Session 15, part 7: Tools menu and section headers (APP-026, WF-009)
+
+A Tools menu between Options and Help: Browser find… (shows the Browser, keyboard in its search field), Last tweaked
+› Create automation clip, and Macros: Stop sound, Select unused channels, Purge unused audio clips, Reset empty
+playlist tracks, Set keyboard focus for all plugins to › Enabled / Disabled. FL's grey section headers now appear in
+File (Recent projects, listed inline as in FL), View (Windows, Layout, Zoom), Options (System, Switches) and Tools.
+`ui_shot --menu=<name>` opens a menu for a screenshot. UI test for the macros.
+

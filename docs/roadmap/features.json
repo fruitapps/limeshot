@@ -7418,7 +7418,7 @@
       "name": "Main menu bar in FL's layout",
       "description": "The menu bar has FL's eight menus in FL's order, with section headers, shortcuts and check marks.",
       "fl_reference": "FILE EDIT ADD PATTERNS VIEW OPTIONS TOOLS HELP at the left of the toolbar; grey section headers inside menus (e.g. View › Windows, Layout, Browser).",
-      "limeshot_behavior": "File, Edit, Add, Patterns, View, Options and Help exist with a subset of FL's items (see menus.md); no Tools menu and no section headers.",
+      "limeshot_behavior": "File, Edit, Add, Patterns, View, Options, Tools and Help in FL's order, with grey section headers as in FL (File › Recent projects listed inline; View › Windows, Layout, Zoom; Options › System, Switches; Tools › Last tweaked parameters, Macros). Edit has FL 2026's Undo <action> / Redo <action> (Cmd+Z / Cmd+Opt+Z) and Cut / Copy / Paste on the focused editor; Patterns has FL's commands and keys (SEQ-021); Tools has Browser find…, Last tweaked › Create automation clip and the macros LimeShot supports (WF-009). Items LimeShot lacks are left out; status per item in menus.json.",
       "priority": "P1",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -7431,7 +7431,11 @@
         "Every implemented item of docs/roadmap/menus.json appears at FL's path with FL's shortcut.",
         "Items that are not implemented are left out or shown disabled."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor",
+        "crates/limeshot-app/tests/ui.rs::the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns",
+        "crates/limeshot-app/tests/ui.rs::tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7441,7 +7445,7 @@
           "docs/research/evidence/screenshots/fl-menu-view.png"
         ]
       },
-      "notes": "Track each item in docs/roadmap/menus.json."
+      "notes": "Session 15: Edit, Patterns and Tools menus, section headers. Still open: View › Layout commands (UI-013) and most of View, Options and Help (menus.md)."
     },
     {
       "id": "APP-027",
@@ -8037,19 +8041,20 @@
       "name": "Project macros",
       "description": "Bulk commands: select unused channels, purge unused audio clips, smart-disable all plugins, lock/unlock playlist tracks to content, reset empty playlist tracks, switch all plugin editors attached/detached, plugin keyboard focus, declicking for selected channels.",
       "fl_reference": "Tools › Macros.",
-      "limeshot_behavior": "Not implemented.",
+      "limeshot_behavior": "Tools › Macros: Stop sound (Cmd+H), Select unused channels (no pattern or audio clip uses them; selects them and shows the Channel Rack, with a toast saying how many), Purge unused audio clips (deletes the Audio-group channels no clip plays; one undo step; toast), Reset empty playlist tracks (default name, unmuted; one undo step), Set keyboard focus for all plugins to › Enabled / Disabled (every plugin window's keyboard toggle). Not done: smart disable, lock/unlock tracks to content, switching plugin editors, declicking.",
       "priority": "P3",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
       "modules": [
-        "limeshot-core",
         "limeshot-ui"
       ],
       "acceptance_criteria": [
         "Each macro is one undoable step and says what it changed."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -8058,7 +8063,7 @@
           "docs/research/evidence/screenshots/fl-menu-tools.png"
         ]
       },
-      "notes": ""
+      "notes": "Session 15."
     },
     {
       "id": "WF-010",

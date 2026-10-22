@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -275,6 +275,14 @@ fn main() {
             for _ in 0..4 {
                 harness.step();
             }
+        }
+    }
+    if let Some(menu) = args.iter().find_map(|a| a.strip_prefix("--menu=")) {
+        // Open a main menu, to look at its items.
+        use egui_kittest::kittest::Queryable;
+        harness.get_by_label(menu).click();
+        for _ in 0..3 {
+            harness.step();
         }
     }
     match harness.render() {
