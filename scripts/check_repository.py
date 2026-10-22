@@ -24,7 +24,7 @@ def check():
         if name.endswith(".md"):
             # The repository uses inline Markdown and HTML links. Exclude code fences, whose
             # examples can contain placeholder paths or HTML that is not a document link.
-            text = re.sub(r"^```.*?^```[^\n]*", "", path.read_text(), flags=re.M | re.S)
+            text = re.sub(r"^```.*?^```[^\n]*", "", path.read_text(encoding="utf-8"), flags=re.M | re.S)
             for md, html in re.findall(r'\]\(([^)]+)\)|(?:src|href)="([^"]+)"', text):
                 target = (md or html).strip().removeprefix("<").removesuffix(">")
                 url = urlsplit(target)
@@ -34,12 +34,12 @@ def check():
                 if not (path.parent / unquote(url.path)).exists():
                     errors.append(f"{name}: missing link target {target}")
         if name.endswith(".rs"):
-            for target in re.findall(r'include_(?:bytes|str)!\(\s*"([^"]+)"', path.read_text()):
+            for target in re.findall(r'include_(?:bytes|str)!\(\s*"([^"]+)"', path.read_text(encoding="utf-8")):
                 assets += 1
                 if not (path.parent / target).is_file():
                     errors.append(f"{name}: missing embedded asset {target}")
 
-    features = json.loads((ROOT / "docs/roadmap/features.json").read_text())["features"]
+    features = json.loads((ROOT / "docs/roadmap/features.json").read_text(encoding="utf-8"))["features"]
     for feature in features:
         for entry in feature["tests"]:
             file, _, symbol = entry.partition("::")
@@ -50,7 +50,7 @@ def check():
             if not path.exists():
                 errors.append(f"{feature['id']}: missing evidence {entry}")
             elif path.suffix == ".rs" and re.fullmatch(r"\w+", symbol):
-                if not re.search(rf"\bfn\s+{re.escape(symbol)}\b", path.read_text()):
+                if not re.search(rf"\bfn\s+{re.escape(symbol)}\b", path.read_text(encoding="utf-8")):
                     errors.append(f"{feature['id']}: missing test function {entry}")
     for error in errors:
         print(error)
