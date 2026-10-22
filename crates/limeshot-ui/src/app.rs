@@ -447,6 +447,9 @@ impl LimeShotApp {
         }
     }
 
+    /// Select the pattern for editing and clear the Piano Roll's note selection.
+    /// When enabled, auto zip recomputes compact rows on a change to a valid pattern.
+    /// Invalid IDs are stored; [`Self::current_pattern`] supplies the editing fallback.
     pub fn set_current_pattern(&mut self, id: PatternId) {
         if self.settings.auto_zip_empty_channels && id != self.ui.current_pattern {
             crate::channel_rack::auto_zip(self, id);
@@ -500,6 +503,7 @@ impl LimeShotApp {
         }
     }
 
+    /// Set playback following for the editors and save settings when persistence is enabled.
     pub fn set_auto_scroll(&mut self, on: bool) {
         self.settings.auto_scroll = on;
         self.save_settings();
@@ -811,6 +815,9 @@ impl LimeShotApp {
     }
 
     /// Save a numbered sibling, or choose the first path for a project not saved yet.
+    /// Captures running plugin states before writing. On success, makes the saved path active
+    /// and marks the document saved without clearing undo history.
+    /// Returns `false` on cancellation or a save failure; save errors become an error toast.
     pub fn save_new_version(&mut self) -> bool {
         let Some(current) = self.path.clone() else {
             return self.save_as();
@@ -828,6 +835,8 @@ impl LimeShotApp {
         }
     }
 
+    /// Record a successful save: update the sample base folder and active path, mark the
+    /// document saved, and add the path to recent files, persisting settings when enabled.
     fn saved_to(&mut self, path: &Path) {
         self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
         self.doc.mark_saved();
@@ -837,6 +846,10 @@ impl LimeShotApp {
         self.toast(format!("Saved {}", path.display()));
     }
 
+    /// Capture running plugin states and save the project, replacing `path` if it exists.
+    /// Returns `true` after making the path active and marking the document saved.
+    /// Save failures become an error toast and return `false`, retaining the active path
+    /// and saved marker.
     pub fn save_to(&mut self, path: &Path) -> bool {
         self.plugins.store_states(&mut self.doc);
         match limeshot_project::save(self.doc.project(), path) {

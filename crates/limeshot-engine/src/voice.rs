@@ -175,8 +175,9 @@ impl Voice {
         !matches!(self.source, Source::Off)
     }
 
-    /// Set up a voice for `instrument`. Returns `None` when the instrument makes no sound (no
-    /// sample loaded, unsupported instrument).
+    /// Set up a sampler or synth voice with its volume envelope and clamped note velocity.
+    /// Returns `None` for plugin or silent instruments, missing samples, samples shorter than
+    /// two frames, or a playback window shorter than one source frame.
     pub fn for_instrument(
         instrument: &InstrumentState,
         root_key: u8,
@@ -342,8 +343,10 @@ impl Voice {
     }
 
     /// Start `secs` (of output time) into the source: audio clips trimmed at the start, or
-    /// playback starting inside a clip. Advance its envelope by the elapsed output samples;
-    /// only samplers move, and a voice skipped past its end stops.
+    /// playback starting inside a clip. Negative durations are treated as zero. `sample_rate`
+    /// is the output rate in Hz; elapsed whole output samples advance every voice's envelope.
+    /// Only sampler playback positions move; crossing the playback window or finishing the
+    /// envelope turns the voice off, including for looping samples.
     pub fn skip(&mut self, secs: f64, sample_rate: f32) {
         let output_samples = secs.max(0.0) * f64::from(sample_rate);
         self.env.advance(output_samples as u64);

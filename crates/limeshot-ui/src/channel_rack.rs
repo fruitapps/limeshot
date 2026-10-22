@@ -104,6 +104,7 @@ impl State {
     }
 }
 
+/// Collapse the selected channels into compact rows without editing the project.
 /// Finish edits before hiding their input surfaces, including a stroke held during Alt+Z.
 pub fn zip_selected(app: &mut LimeShotApp) {
     let selected = app.selected_channels();
@@ -111,6 +112,7 @@ pub fn zip_selected(app: &mut LimeShotApp) {
     app.ui.rack.zipped.extend(selected);
 }
 
+/// End active step or graph gestures for `hidden` channels and release a step's preview note.
 fn finish_hidden_edits(app: &mut LimeShotApp, hidden: &[ChannelId]) {
     if let Some((channel, _)) = app.ui.rack.paint
         && hidden.contains(&channel)
@@ -126,7 +128,9 @@ fn finish_hidden_edits(app: &mut LimeShotApp, hidden: &[ChannelId]) {
     }
 }
 
-/// Pattern changes recompute the compact view once; manual restoration then remains usable.
+/// Replace the compact-row set with channels that have no notes in `pattern`, including
+/// filtered-out channels. Muted notes count as data. Finish active rack edits before switching;
+/// an unknown pattern leaves the view unchanged. Manual restoration remains until the next call.
 pub(crate) fn auto_zip(app: &mut LimeShotApp, pattern: PatternId) {
     let Some(pattern) = app.project().pattern(pattern) else {
         return;

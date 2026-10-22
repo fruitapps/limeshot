@@ -170,6 +170,14 @@ pub fn save(project: &Project, path: &Path) -> Result<(), ProjectError> {
 /// `song_2.lime`; `song_2.lime` becomes `song_3.lime`, skipping occupied names.
 /// The complete, synced temporary file is published with a no-clobber operation so concurrent
 /// saves cannot overwrite one another. Sample paths remain relative to the same folder.
+/// Returns the path of the new file, preserving `current`'s extension or using `.lime` if absent.
+///
+/// # Errors
+///
+/// Returns [`ProjectError::Corrupt`] if JSON serialization fails, or [`ProjectError::Io`] if
+/// creating, writing, syncing, or publishing the file fails. A missing file stem or a version
+/// number that cannot be incremented within `u64` produces an I/O error with `InvalidInput`.
+/// Occupied names are retried; directory sync errors after publishing are ignored.
 pub fn save_new_version(project: &Project, current: &Path) -> Result<PathBuf, ProjectError> {
     let dir = current
         .parent()

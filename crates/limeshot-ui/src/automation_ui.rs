@@ -53,6 +53,8 @@ pub fn menu(app: &mut LimeShotApp, resp: &Response, target: AutomationTarget) {
     });
 }
 
+/// Return the reset value in the control's own units, or `None` for an unavailable target
+/// or a plugin parameter.
 fn default_value(app: &LimeShotApp, target: AutomationTarget) -> Option<f32> {
     use AutomationTarget::*;
     target.current_value(app.project())?;
@@ -76,7 +78,9 @@ fn default_value(app: &LimeShotApp, target: AutomationTarget) -> Option<f32> {
     }
 }
 
-/// Apply a finite value through the same commands as dragging the control.
+/// Apply a finite value in the control's own units through undoable commands, which clamp
+/// it to the control's range. Non-finite values, unavailable targets, and plugin parameters
+/// are ignored; command failures become an error toast.
 pub(crate) fn set_value(app: &mut LimeShotApp, target: AutomationTarget, value: f32) {
     use AutomationTarget::*;
     if !value.is_finite() || target.current_value(app.project()).is_none() {
@@ -98,7 +102,10 @@ pub(crate) fn set_value(app: &mut LimeShotApp, target: AutomationTarget, value: 
     app.exec(command);
 }
 
-/// Use the control's displayed units for typing; copied values use normalised travel instead.
+/// Return editable text and its unit label, using the playing automation value when available
+/// and the stored value otherwise. Channel volume and pan use percent, mixer volume uses dB
+/// (`-inf` for silence), and effects use their parameter units. Copied values use normalized
+/// control travel instead. Returns `None` for unavailable controls or plugin parameters.
 pub(crate) fn input_value(app: &LimeShotApp, target: AutomationTarget) -> Option<(String, &'static str)> {
     use AutomationTarget::*;
     let v = app.automated(target).or_else(|| target.current_value(app.project()))?;
@@ -130,6 +137,11 @@ pub(crate) fn input_value(app: &LimeShotApp, target: AutomationTarget) -> Option
     }
 }
 
+/// Parse a number in the control's displayed units into its stored units without editing it.
+/// Channel volume and pan use percent, mixer volume uses dB, and effects use parameter units.
+/// Surrounding whitespace is ignored; `-inf` means silence only for mixer volume.
+/// Returns `None` for unavailable targets, plugin parameters, invalid or non-finite numbers,
+/// or converted values outside the control's inclusive range.
 pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &str) -> Option<f32> {
     use AutomationTarget::*;
     let mapping = target.mapping(app.project())?;

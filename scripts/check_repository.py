@@ -54,6 +54,12 @@ def link_targets(text):
 
 
 def check():
+    """Print missing local links, embedded assets, and feature evidence in tracked files.
+
+    Return True if any reference is missing, otherwise False. Markdown code fences,
+    anchors, and external URLs are excluded. Git, file access, JSON parsing, and URL
+    parsing errors propagate to the caller.
+    """
     files = subprocess.check_output(
         ["git", "ls-files", "-z"], cwd=ROOT
     ).decode().split("\0")[:-1]

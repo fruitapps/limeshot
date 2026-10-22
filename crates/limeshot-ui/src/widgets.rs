@@ -651,8 +651,10 @@ pub fn clickable(r: &Response) -> Response {
     r.interact(egui::Sense::click())
 }
 
-/// Page horizontally only when the playhead leaves the visible span; returning to the loop
-/// start brings the view back too. Leave room ahead without moving content every frame.
+/// Page horizontally when the playhead is left of the view or past its right edge minus four
+/// pixels. `scroll` and `playhead` are content offsets in pixels; `width` is the viewport width.
+/// Place the playhead 10% into the view, clamping scroll to zero. Widths at most eight pixels
+/// leave scroll unchanged, as does a playhead exactly on either threshold.
 pub(crate) fn follow_playhead(scroll: &mut f32, playhead: f32, width: f32) {
     if width > 8.0 && (playhead < *scroll || playhead > *scroll + width - 4.0) {
         *scroll = (playhead - width * 0.1).max(0.0);
