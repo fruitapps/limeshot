@@ -598,6 +598,35 @@ impl LimeShotApp {
         &self.snapshot
     }
 
+    /// The value an automation is giving `target` right now (Song mode, playing), in the
+    /// parameter's own units, so automated knobs and faders move with it (FL Studio).
+    pub fn automated(&self, target: limeshot_core::AutomationTarget) -> Option<f32> {
+        use limeshot_core::AutomationTarget as A;
+        use limeshot_sequencer::LaneTarget as L;
+        if self.ui.mode != PlayMode::Song || !self.is_playing() {
+            return None;
+        }
+        let p = self.project();
+        let lane = match target {
+            A::ChannelVolume(c) => L::ChannelVolume(p.channel_index(c)?),
+            A::ChannelPan(c) => L::ChannelPan(p.channel_index(c)?),
+            A::MixerVolume(t) => L::MixerVolume(usize::from(t)),
+            A::MixerPan(t) => L::MixerPan(usize::from(t)),
+            A::EffectParam { track, effect, index } => L::EffectParam {
+                track: usize::from(track),
+                effect,
+                index,
+            },
+            A::PluginParam { .. } => return None,
+        };
+        let pos = self.player.status().position();
+        self.snapshot
+            .automation
+            .iter()
+            .find(|l| l.target == lane)
+            .and_then(|l| l.value_at(pos))
+    }
+
     // ----- files -----
 
     pub fn window_title(&self) -> String {

@@ -288,7 +288,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     {
         select(app, i);
     }
-    let mut pan = track.pan;
+    let mut pan = app.automated(AutomationTarget::MixerPan(i)).unwrap_or(track.pan);
     let r = knob(ui, &mut pan, -1.0, 1.0, 0.0, 30.0, true, |v| {
         if v.abs() < 0.005 {
             "Pan: centre".into()
@@ -308,14 +308,14 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         let clipped = i == 0 && app.clip_until.is_some_and(|u| u > std::time::Instant::now());
         let meter = meter(ui, vec2(12.0, fader_h), l, r, clipped);
         app.ui.mixer.meter_rects.push((i, meter.rect));
-        let mut v = track.volume;
+        let mut v = app.automated(AutomationTarget::MixerVolume(i)).unwrap_or(track.volume);
         // Every track defaults to 0 dB, as in FL Studio's Mixer.
         let r = fader(ui, &mut v, MAX_GAIN, 1.0, vec2(24.0, fader_h), "Volume");
         let cmd = r.changed().then_some(Command::SetMixerVolume { track: i, volume: v });
         app.exec_gesture(&r, cmd);
         crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
     });
-    let db = limeshot_dsp::gain_to_db(track.volume);
+    let db = limeshot_dsp::gain_to_db(app.automated(AutomationTarget::MixerVolume(i)).unwrap_or(track.volume));
     ui.label(
         RichText::new(if db.is_finite() {
             format!("{db:+.1}")
@@ -578,7 +578,8 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             }
             ui.add_space(8.0);
             section(ui, "Level");
-            let mut db = limeshot_dsp::gain_to_db(track.volume).max(-60.0);
+            let volume = app.automated(AutomationTarget::MixerVolume(i)).unwrap_or(track.volume);
+            let mut db = limeshot_dsp::gain_to_db(volume).max(-60.0);
             let r = reset(
                 ui.add(
                     egui::Slider::new(&mut db, -60.0..=6.0)
@@ -595,7 +596,7 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             });
             app.exec_gesture(&r, cmd);
             crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
-            let mut pan = track.pan;
+            let mut pan = app.automated(AutomationTarget::MixerPan(i)).unwrap_or(track.pan);
             let r = reset(
                 ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan")),
                 &mut pan,

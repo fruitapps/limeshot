@@ -5127,3 +5127,69 @@ fn stopping_twice_returns_to_song_or_selection_start() {
     h.state_mut().stop();
     wait_for(&mut h, "selection rewind", |a| a.player.status().position() == PPQ * 4);
 }
+
+/// AUT-013: while the song plays, an automated fader shows the automation's value; stopped, it
+/// shows its own setting again.
+#[test]
+fn automated_controls_follow_the_song() {
+    let mut h = harness(true);
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let clip = h.state_mut().exec(Command::AddAutomationClip {
+        target: AutomationTarget::MixerPan(1),
+        track: 10,
+        start: 0,
+        length: 8 * bar,
+        value: None,
+        name: None,
+    });
+    assert!(clip.is_some());
+    let id = h
+        .state()
+        .project()
+        .automations
+        .last()
+        .map(|a| a.id)
+        .expect("automation");
+    h.state_mut().exec(Command::SetAutomationPoints {
+        automation: id,
+        points: vec![
+            AutomationPoint {
+                tick: 0,
+                value: 0.0,
+                tension: 0.0,
+            },
+            AutomationPoint {
+                tick: 8 * bar,
+                value: 1.0,
+                tension: 0.0,
+            },
+        ],
+    });
+    h.step();
+    let pan = h.state().project().mixer.tracks[1].pan;
+    assert_eq!(
+        h.state().automated(AutomationTarget::MixerPan(1)),
+        None,
+        "stopped: no automated value"
+    );
+    h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+    h.state_mut().locate(4 * bar);
+    h.state_mut().toggle_play();
+    wait_for(&mut h, "playback", |a| {
+        a.is_playing() && a.player.status().position() > 4 * bar
+    });
+    let v = h
+        .state()
+        .automated(AutomationTarget::MixerPan(1))
+        .expect("automated while playing");
+    let pos = h.state().player.status().position() as f32 / (8 * bar) as f32;
+    assert!((v - (pos * 2.0 - 1.0)).abs() < 0.1, "pan {v} at {pos}");
+    assert_eq!(
+        h.state().project().mixer.tracks[1].pan,
+        pan,
+        "the stored value is untouched"
+    );
+    h.state_mut().stop();
+    wait_for(&mut h, "the stop", |a| !a.is_playing());
+    assert_eq!(h.state().automated(AutomationTarget::MixerPan(1)), None);
+}

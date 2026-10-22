@@ -121,7 +121,14 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                     crate::plugins::effect_card(app, ui, track, e.id, e.plugin.as_ref());
                 }
                 for (i, spec) in e.kind.params().iter().enumerate() {
-                    let cur = e.params.get(i).copied().unwrap_or(spec.default);
+                    let cur = app
+                        .automated(AutomationTarget::EffectParam {
+                            track,
+                            effect: e.id,
+                            index: i,
+                        })
+                        .or_else(|| e.params.get(i).copied())
+                        .unwrap_or(spec.default);
                     ui.horizontal(|ui| {
                         ui.add_sized(
                             vec2(64.0, 20.0),

@@ -836,3 +836,10 @@ no production status behavior changed and no sleep or retry was added to hide th
 
 Validation: the focused test passed 30 consecutive runs, all 111 headless UI tests passed, and workspace Clippy,
 rustfmt, inventory validation and `git diff --check` passed. Remote Windows confirmation remains pending.
+### Session 16, part 10: automated controls follow the song (AUT-013; next-steps Then 8)
+
+From here on session 16 works in a separate worktree (`../limeshot-s16`, branch `s16-automation`, pushed to `main`):
+the main checkout holds a Codex session's uncommitted changes, which go in through their own PR.
+`LimeShotApp::automated(target)` evaluates the snapshot's automation lane at the song position while the song plays;
+the Channel Rack's volume/pan knobs, the Mixer's faders, pan knobs and track panel sliders, and built-in effect
+parameters display it. Stored values are untouched.

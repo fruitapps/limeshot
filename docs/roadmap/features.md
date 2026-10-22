@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 101, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 19, VERIFIED 136, DEFERRED 4
+- By status: NOT_STARTED 100, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 19, VERIFIED 137, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 6 | 1 | 0 | 7 |
 | Effects | 15 | 8 | 1 | 0 | 6 |
-| Automation | 13 | 3 | 0 | 0 | 10 |
+| Automation | 13 | 4 | 0 | 0 | 9 |
 | Recording | 11 | 0 | 0 | 0 | 11 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
@@ -240,7 +240,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | AUT-010 | Automation clip channels in the Channel Rack | P2 |  | NOT_STARTED | Planned. Automations are listed in the Playlist picker instead. | — |
 | AUT-011 | Init song with this position | P3 |  | NOT_STARTED | Planned. | — |
 | AUT-012 | Automation point modes | P2 |  | NOT_STARTED | Planned: LimeShot has single-curve tension only (AUT-002). | — |
-| AUT-013 | Automated controls follow their automation | P2 |  | NOT_STARTED | Planned: the engine applies automation but the UI shows the set value. | — |
+| AUT-013 | Automated controls follow their automation | P2 |  | VERIFIED | While the song plays, automated channel volume/pan knobs, mixer faders, pan knobs and track panel sliders and built-in effect parameters show the automation's current value (LimeShotApp::automated reads the playback snapshot's lanes at the song position); stopped, they show their own setting. Dragging an automated control still edits the stored value.<br>*Session 16 (next-steps Then 8). Plugin parameters are not shown moving (their editors show the plugin's own values).* | `crates/limeshot-app/tests/ui.rs::automated_controls_follow_the_song` |
 
 ## Recording
 

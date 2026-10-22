@@ -7067,25 +7067,29 @@
       "name": "Automated controls follow their automation",
       "description": "Knobs and faders move during playback.",
       "fl_reference": "Automated controls display the automated value while the song plays.",
-      "limeshot_behavior": "Planned: the engine applies automation but the UI shows the set value.",
+      "limeshot_behavior": "While the song plays, automated channel volume/pan knobs, mixer faders, pan knobs and track panel sliders and built-in effect parameters show the automation's current value (LimeShotApp::automated reads the playback snapshot's lanes at the song position); stopped, they show their own setting. Dragging an automated control still edits the stored value.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "AUT-003"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::automated_controls_follow_the_song"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 8). Plugin parameters are not shown moving (their editors show the plugin's own values)."
     },
     {
       "id": "PL-027",

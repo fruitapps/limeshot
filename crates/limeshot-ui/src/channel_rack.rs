@@ -281,12 +281,14 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         muted: !ch.muted,
                     });
                 }
-                let mut pan = ch.pan;
+                let mut pan = app.automated(AutomationTarget::ChannelPan(ch.id)).unwrap_or(ch.pan);
                 let r = knob(ui, &mut pan, -1.0, 1.0, 0.0, 24.0, true, pan_text);
                 let cmd = r.changed().then_some(Command::SetChannelPan { channel: ch.id, pan });
                 app.exec_gesture(&r, cmd);
                 crate::automation_ui::menu(app, &r, AutomationTarget::ChannelPan(ch.id));
-                let mut vol = ch.volume;
+                let mut vol = app
+                    .automated(AutomationTarget::ChannelVolume(ch.id))
+                    .unwrap_or(ch.volume);
                 let r = knob(ui, &mut vol, 0.0, 1.25, 0.78, 24.0, false, |v| {
                     format!("Volume {:.0}%", v * 100.0)
                 });
