@@ -38,6 +38,17 @@ Next, in order:
    built-in effect kinds from the engine and UI. Keep `limeshot-dsp` and `limeshot-engine::voice`, because the
    plugins link them, and keep the deserialization of the old enums for conversion. Move the DSP assertions into
    native-plugins or DSP-level tests.
+   Experiment (2026-10-23): installing the normalizer in `new_silent` as well, with the bundles built, makes
+   13 of the 134 tests in `crates/limeshot-app/tests/ui.rs` fail. All of them use the built-in panels:
+   `clicking_a_channel_button_toggles_its_settings_window`,
+   `browser_click_previews_and_double_click_loads_a_sample`,
+   `samples_preview_from_the_browser_panel_the_picker_and_channel_settings`,
+   `samples_are_picked_and_drawn_in_the_playlist_like_patterns`, `the_draw_tool_reuses_the_length_of_the_last_clip`,
+   `sampler_envelope_controls_reset_and_undo`, `right_click_on_an_effect_slider_offers_automation_without_moving_it`,
+   `piano_roll_keyboard_ruler_ghosts_and_channel_selector`, `midi_input_notes_play_the_selected_channel`,
+   `compressed_samples_list_load_and_play`, `mixer_sidechain_route_menu_and_compressor_input`,
+   `effect_and_instrument_presets_load_and_save` and `double_click_resets_sliders_and_knobs`. Each of them needs
+   rewriting for Lime plugin channels and slots, or becomes a P0 gap. The experiment was reverted.
    Scope at handoff: about 37 `Instrument::Synth`, 69 `Instrument::Sampler` and 77 built-in `EffectKind` uses in
    25 files (`crates/*/src`, `crates/*/tests`, plus `crates/limeshot-app/src/demo.rs`, the FLP and MIDI importers
    and the inspector, rack, browser and preset UIs). The importers can keep producing built-ins, because the
