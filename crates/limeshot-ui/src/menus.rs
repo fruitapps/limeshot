@@ -523,6 +523,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if toggle(ui, app.ui.show_browser, "Browser", &key("Alt+F8")) {
                     app.ui.show_browser ^= true;
                 }
+                if item(ui, "Tempo tapper", &key("Cmd+F5")) {
+                    app.ui.toolbar.tapper = Some(crate::toolbar::Tapper::default());
+                }
                 ui.separator();
                 section(ui, "Layout");
                 if item(ui, "Close all windows", &key("F12")) {

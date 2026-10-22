@@ -80,6 +80,7 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
 
 fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
     let song = app.ui.mode == PlayMode::Song;
+    let start = ui.cursor().min;
     if segmented(
         ui,
         &["PAT", "SONG"],
@@ -90,6 +91,11 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
     .is_some()
     {
         app.toggle_mode();
+    }
+    // FL Studio: a right-click shows the Channel Rack (pattern mode) or the Playlist (song).
+    let area = egui::Rect::from_min_max(start, egui::pos2(ui.cursor().min.x, start.y + B));
+    if right_clicked(ui, area) {
+        app.show_window(if song { Win::Playlist } else { Win::ChannelRack });
     }
     ui.add_space(4.0);
     let playing = app.is_playing();
@@ -124,6 +130,21 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
         .hint("Tempo in BPM: drag or type (10–522)");
     let cmd = crate::widgets::user_changed(&r).then(|| Command::SetTempo(Tempo::from_bpm(bpm)));
     app.exec_gesture(&r, cmd);
+    // FL Studio's tempo menu: the tempo tapper and presets from 80 BPM in steps of 10.
+    crate::widgets::clickable(&r).context_menu(|ui| {
+        if ui.button("Tempo tapper").clicked() {
+            app.ui.toolbar.tapper = Some(Tapper::default());
+            ui.close();
+        }
+        ui.separator();
+        for preset in (80..=180).step_by(10) {
+            let on = (app.project().tempo.bpm() - f64::from(preset)).abs() < 1e-6;
+            if ui.selectable_label(on, format!("{preset} BPM")).clicked() {
+                app.exec(Command::SetTempo(Tempo::from_bpm(f64::from(preset))));
+                ui.close();
+            }
+        }
+    });
     ui.label(RichText::new("BPM").font(semibold(9.5)).color(t.text_dim));
     ui.add_space(4.0);
     let mut sig = app.project().time_signature;
@@ -144,17 +165,69 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let sig = app.project().time_signature;
     let bbt = BarBeatTick::from_ticks(pos, sig);
     let secs = Timeline::new(app.project().tempo, 48_000).seconds(pos);
-    let caption = format!("B:B:T   {}:{:05.2}", (secs / 60.0) as u32, secs % 60.0);
-    if readout(
+    let mss = format!("{}:{:05.2}", (secs / 60.0) as u32, secs % 60.0);
+    let (main, caption) = if app.ui.toolbar.time_in_seconds {
+        (mss, format!("M:S:CS   {bbt}"))
+    } else {
+        (bbt.to_string(), format!("B:B:T   {mss}"))
+    };
+    let r = readout(
         ui,
         vec2(118.0, B + 6.0),
-        &bbt.to_string(),
+        &main,
         &caption,
-        "Song position (bar:beat:tick, minutes:seconds). Click to return to the start.",
-    )
-    .clicked()
-    {
+        "Song position (bar:beat:tick, minutes:seconds). Click to return to the start; right-click for the format.",
+    );
+    if r.clicked() {
         app.locate(0);
+    }
+    // FL Studio's Mode menu (LimeShot has two of its formats).
+    r.context_menu(|ui| {
+        ui.label(RichText::new("Mode").small().color(t.text_faint));
+        let s = &mut app.ui.toolbar.time_in_seconds;
+        if ui.radio(!*s, "Bar : Beat : Tick").clicked() {
+            *s = false;
+            ui.close();
+        }
+        if ui.radio(*s, "Minute : Second : Centisecond").clicked() {
+            *s = true;
+            ui.close();
+        }
+    });
+}
+
+/// Whether the secondary button was clicked inside `area` this frame.
+fn right_clicked(ui: &Ui, area: egui::Rect) -> bool {
+    ui.input(|i| i.pointer.secondary_clicked() && i.pointer.interact_pos().is_some_and(|p| area.contains(p)))
+}
+
+/// The tempo tapper window: tap and the project's tempo follows (one undo step while it is
+/// open).
+pub fn tapper(app: &mut LimeShotApp, ctx: &egui::Context) {
+    if app.ui.toolbar.tapper.is_none() {
+        return;
+    }
+    let mut open = true;
+    let now = ctx.input(|i| i.time);
+    egui::Window::new("Tempo tapper")
+        .id(egui::Id::new("limeshot-tempo-tapper"))
+        .open(&mut open)
+        .collapsible(false)
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.label(format!("{:.3} BPM", app.project().tempo.bpm()));
+            let tap = ui.add_sized(vec2(160.0, 60.0), egui::Button::new(RichText::new("Tap").size(20.0)));
+            ui.label(RichText::new("Click in time; a two-second pause starts over.").small());
+            if tap.clicked()
+                && let Some(bpm) = app.ui.toolbar.tapper.as_mut().and_then(|t| t.tap(now))
+            {
+                app.doc.begin_gesture();
+                app.exec(Command::SetTempo(Tempo::from_bpm(bpm)));
+            }
+        });
+    if !open {
+        app.ui.toolbar.tapper = None;
+        app.doc.end_gesture();
     }
 }
 
@@ -229,8 +302,14 @@ fn panels(app: &mut LimeShotApp, ui: &mut Ui) {
         (Win::Mixer, Icon::Mixer),
     ] {
         let tip = format!("{} ({})", w.label(), w.shortcut());
-        if icon_button(ui, icon, app.is_window_open(w), B, &tip).clicked() {
+        let r = icon_button(ui, icon, app.is_window_open(w), B, &tip);
+        if r.clicked() {
             app.toggle_window(w);
+        }
+        // FL Studio: a right-click on the Playlist and Piano Roll icons maximises the window.
+        if r.secondary_clicked() && matches!(w, Win::Playlist | Win::PianoRoll) {
+            app.show_window(w);
+            app.ui.workspace.state_mut(w).maximized = true;
         }
     }
 }
@@ -261,10 +340,47 @@ fn edit_buttons(app: &mut LimeShotApp, ui: &mut Ui) {
     }
 }
 
+/// Toolbar choices made from its right-click menus (FL Studio's, observed in session 15).
+#[derive(Debug, Default)]
+pub struct State {
+    /// The song position shows minutes:seconds:centiseconds first (FL's Mode menu).
+    pub time_in_seconds: bool,
+    /// The CPU panel shows the voice count instead of "CPU" (FL's View voice count).
+    pub show_voices: bool,
+    /// The tempo tapper window, while open.
+    pub tapper: Option<Tapper>,
+}
+
+/// FL Studio's tempo tapper (View › Tempo tapper, Cmd+F5): tap along and the tempo follows.
+#[derive(Debug, Default)]
+pub struct Tapper {
+    /// Times of the recent taps (seconds).
+    taps: Vec<f64>,
+}
+
+impl Tapper {
+    /// A tap at `now`; returns the tempo the taps so far give (two taps or more). A pause of
+    /// two seconds starts over.
+    pub fn tap(&mut self, now: f64) -> Option<f64> {
+        if self.taps.last().is_some_and(|&t| now - t > 2.0) {
+            self.taps.clear();
+        }
+        self.taps.push(now);
+        if self.taps.len() > 9 {
+            self.taps.remove(0);
+        }
+        let (first, last) = (*self.taps.first()?, *self.taps.last()?);
+        let n = self.taps.len() - 1;
+        (n > 0 && last > first).then(|| (60.0 * n as f64 / (last - first)).clamp(10.0, 522.0))
+    }
+}
+
 /// The CPU readout changes once per second (owner's hands-on test: a value redrawn every frame
 /// was visual clutter). It shows the highest load of the last second, so short spikes still show.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CpuReadout {
+    /// Seconds between updates (FL's Refresh: Slow 1 s, Medium 0.5 s, Fast 0.2 s); 0 means 1 s.
+    pub interval: f64,
     shown: f32,
     peak: f32,
     /// When `shown` was last updated (egui time in seconds); `None` before the first frame.
@@ -281,7 +397,7 @@ impl CpuReadout {
                 self.peak = 0.0;
                 self.since = Some(now);
             }
-            Some(t) if now - t >= 1.0 => {
+            Some(t) if now - t >= if self.interval > 0.0 { self.interval } else { 1.0 } => {
                 self.shown = self.peak;
                 self.peak = 0.0;
                 self.since = Some(now);
@@ -296,6 +412,7 @@ fn output(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let now = ui.input(|i| i.time);
     let load = app.cpu.update(now, app.player.status().load());
+    let voices = app.player.status().voices();
     // Keep the readout current when nothing else repaints (it drops back to idle after a stop).
     ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
     let (rect, resp) = ui.allocate_exact_size(vec2(46.0, B), Sense::hover());
@@ -318,14 +435,39 @@ fn output(app: &mut LimeShotApp, ui: &mut Ui) {
         mono(10.5),
         t.text,
     );
+    let caption = if app.ui.toolbar.show_voices {
+        format!("{voices} V")
+    } else {
+        "CPU".to_string()
+    };
     ui.painter().text(
         rect.center() + vec2(0.0, 7.0),
         Align2::CENTER_CENTER,
-        "CPU",
+        caption,
         semibold(8.0),
         t.text_dim,
     );
-    resp.hint("Audio load: time spent rendering per buffer");
+    let resp = resp
+        .interact(Sense::click())
+        .hint("Audio load: time spent rendering per buffer; right-click for options");
+    // FL Studio's CPU panel menu.
+    resp.context_menu(|ui| {
+        ui.label(RichText::new("Refresh").small().color(t.text_faint));
+        for (label, secs) in [("Slow", 1.0), ("Medium", 0.5), ("Fast", 0.2)] {
+            let cur = if app.cpu.interval > 0.0 { app.cpu.interval } else { 1.0 };
+            if ui.radio((cur - secs).abs() < 1e-9, label).clicked() {
+                app.cpu.interval = secs;
+                ui.close();
+            }
+        }
+        ui.label(RichText::new("Misc").small().color(t.text_faint));
+        if ui
+            .checkbox(&mut app.ui.toolbar.show_voices, "View voice count")
+            .clicked()
+        {
+            ui.close();
+        }
+    });
     let (l, r) = app.player.status().peak(0);
     if app.player.status().take_clipped() {
         app.clip_until = Some(std::time::Instant::now() + std::time::Duration::from_secs(2));

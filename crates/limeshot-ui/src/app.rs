@@ -67,12 +67,15 @@ pub struct UiState {
     pub scrub: Vec<(ChannelId, u8)>,
     /// The settings window, while open.
     pub settings: Option<crate::settings_window::State>,
+    /// Choices from the toolbar's right-click menus, and the tempo tapper.
+    pub toolbar: crate::toolbar::State,
 }
 
 impl UiState {
     fn new(project: &Project) -> Self {
         Self {
             settings: None,
+            toolbar: Default::default(),
             show_browser: true,
             workspace: Default::default(),
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
@@ -942,6 +945,7 @@ impl LimeShotApp {
         // Last, when every control has described itself.
         toolbar::hint_panel(self, ui);
         crate::settings_window::show(self, &ctx);
+        crate::toolbar::tapper(self, &ctx);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
     }

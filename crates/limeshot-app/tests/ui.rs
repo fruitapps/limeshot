@@ -2994,6 +2994,56 @@ fn the_settings_window_opens_on_its_page_and_edits_project_info_in_one_undo_step
     assert_eq!(page(&h), Some(Page::About));
 }
 
+/// The toolbar's right-click menus as in FL Studio (observed in session 15): tempo presets and
+/// the tempo tapper, the song position's format, PAT/SONG showing its window, and the snap list.
+#[test]
+fn toolbar_menus_set_tempo_presets_time_format_and_show_windows() {
+    let mut h = harness(true);
+    // Tempo: right-click → 120 BPM.
+    let bpm_label = h.get_by_label("BPM").rect();
+    click(
+        &mut h,
+        bpm_label.left_center() - vec2(30.0, 0.0),
+        PointerButton::Secondary,
+    );
+    h.step();
+    h.get_by_label("120 BPM").click();
+    h.step();
+    assert!((h.state().project().tempo.bpm() - 120.0).abs() < 1e-9);
+    // The tempo tapper: four taps half a second apart give 120 BPM.
+    let mut tapper = limeshot_ui::toolbar::Tapper::default();
+    let bpm = [10.0, 10.5, 11.0, 11.5].map(|t| tapper.tap(t));
+    assert_eq!(bpm[0], None);
+    assert!((bpm[3].expect("bpm") - 120.0).abs() < 1e-9);
+    assert_eq!(tapper.tap(20.0), None, "a long pause starts over");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::F5);
+    h.step();
+    assert!(h.state().ui.toolbar.tapper.is_some());
+
+    // Song position: right-click → minutes first.
+    let pos = h.get_by_label_contains("B:B:T").rect();
+    click(&mut h, pos.center(), PointerButton::Secondary);
+    h.step();
+    h.get_by_label("Minute : Second : Centisecond").click();
+    h.step();
+    assert!(h.state().ui.toolbar.time_in_seconds);
+    h.step();
+    assert!(h.query_by_label_contains("M:S:CS").is_some());
+
+    // PAT/SONG: a right-click shows the Channel Rack in pattern mode.
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    // PAT is the toolbar's first control, at its left end.
+    click(&mut h, egui::pos2(34.0, bpm_label.center().y), PointerButton::Secondary);
+    assert!(h.state().is_window_open(Win::ChannelRack));
+
+    // FL's snap values, in FL's order.
+    let labels: Vec<_> = Snap::ALL.iter().map(|s| s.label()).collect();
+    assert_eq!(labels[..3], ["(none)", "1/6 step", "1/4 step"]);
+    assert_eq!(labels.last(), Some(&"Bar"));
+    assert_eq!(Snap::SixthStep.ticks(TimeSignature::default()), Some(STEP_TICKS / 6));
+}
+
 /// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
 #[test]
 fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {

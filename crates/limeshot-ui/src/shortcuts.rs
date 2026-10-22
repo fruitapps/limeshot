@@ -33,6 +33,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Shift+F12", "Align all channel editors (plugin windows)"),
     ("F1", "This list"),
     ("F11", "Project info (settings window)"),
+    ("Cmd+F5", "Tempo tapper"),
     (
         "Cmd+Z / Cmd+Alt+Z / Cmd+Shift+Z",
         "Undo / redo (FL Studio: Cmd+Opt+Z; Cmd+Shift+Z and Cmd+Y also redo)",
@@ -191,6 +192,9 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         crate::menus::find_empty_pattern(app, false, false);
     } else if pressed(ctx, Modifiers::NONE, Key::F4) {
         crate::menus::find_empty_pattern(app, false, true);
+    }
+    if pressed(ctx, cmd, Key::F5) {
+        app.ui.toolbar.tapper = Some(crate::toolbar::Tapper::default());
     }
     use crate::workspace::Win;
     for (k, w) in [

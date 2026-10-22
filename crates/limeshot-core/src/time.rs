@@ -151,18 +151,28 @@ pub enum Snap {
     /// Triplets: three per step (FL Studio's "1/3 step").
     ThirdStep,
     QuarterStep,
+    SixthStep,
+    ThirdBeat,
+    QuarterBeat,
+    SixthBeat,
 }
 
 impl Snap {
-    pub const ALL: [Snap; 8] = [
-        Snap::Bar,
-        Snap::Beat,
-        Snap::HalfBeat,
-        Snap::Step,
-        Snap::HalfStep,
-        Snap::ThirdStep,
-        Snap::QuarterStep,
+    /// In the order of FL Studio's snap menu (observed, session 15). FL's Line and Cell (the
+    /// Piano Roll's own grid modes) are not offered.
+    pub const ALL: [Snap; 12] = [
         Snap::None,
+        Snap::SixthStep,
+        Snap::QuarterStep,
+        Snap::ThirdStep,
+        Snap::HalfStep,
+        Snap::Step,
+        Snap::SixthBeat,
+        Snap::QuarterBeat,
+        Snap::ThirdBeat,
+        Snap::HalfBeat,
+        Snap::Beat,
+        Snap::Bar,
     ];
 
     /// Grid size in ticks, or `None` for no snapping.
@@ -176,12 +186,16 @@ impl Snap {
             Snap::HalfStep => Some(STEP_TICKS / 2),
             Snap::ThirdStep => Some(STEP_TICKS / 3),
             Snap::QuarterStep => Some(STEP_TICKS / 4),
+            Snap::SixthStep => Some(STEP_TICKS / 6),
+            Snap::ThirdBeat => Some((sig.ticks_per_beat() / 3).max(1)),
+            Snap::QuarterBeat => Some((sig.ticks_per_beat() / 4).max(1)),
+            Snap::SixthBeat => Some((sig.ticks_per_beat() / 6).max(1)),
         }
     }
 
     pub fn label(self) -> &'static str {
         match self {
-            Snap::None => "None",
+            Snap::None => "(none)",
             Snap::Bar => "Bar",
             Snap::Beat => "Beat",
             Snap::HalfBeat => "1/2 beat",
@@ -189,6 +203,10 @@ impl Snap {
             Snap::HalfStep => "1/2 step",
             Snap::ThirdStep => "1/3 step",
             Snap::QuarterStep => "1/4 step",
+            Snap::SixthStep => "1/6 step",
+            Snap::ThirdBeat => "1/3 beat",
+            Snap::QuarterBeat => "1/4 beat",
+            Snap::SixthBeat => "1/6 beat",
         }
     }
 

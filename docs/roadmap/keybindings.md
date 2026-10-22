@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 78, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 32, NOT_PLANNED 2
+Tracked: **118** — IMPLEMENTED 79, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 31, NOT_PLANNED 2
 
 ## Global
 
@@ -50,7 +50,7 @@ Tracked: **118** — IMPLEMENTED 78, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-104 | Move pattern up | `Ctrl+Shift+Up` | OBSERVED | `Cmd+Shift+↑` | IMPLEMENTED | SEQ-021 | Patterns › Move up (MENU-095). |
 | KB-105 | Move pattern down | `Ctrl+Shift+Down` | OBSERVED | `Cmd+Shift+↓` | IMPLEMENTED | SEQ-021 | Patterns › Move down (MENU-096). |
 | KB-106 | Project picker | `Ctrl+F8` | OBSERVED | — | NOT_STARTED | BR-005 | View › Project picker (MENU-106). |
-| KB-107 | Tempo tapper | `Ctrl+F5` | OBSERVED | — | NOT_STARTED | TR-012 | View › Tempo tapper (MENU-108). |
+| KB-107 | Tempo tapper | `Ctrl+F5` | OBSERVED | `Cmd+F5` | IMPLEMENTED | TR-012 | View › Tempo tapper (MENU-108). |
 | KB-108 | Touch controller | `Alt+F7` | OBSERVED | — | NOT_STARTED | WF-011 | View › Touch controller (MENU-109). |
 | KB-109 | Hide toolbars | `Ctrl+F11` | OBSERVED | — | NOT_STARTED | UI-014 | View › Toolbars › Hide (MENU-118). |
 | KB-110 | Close all plugin windows | `Alt+F12` | OBSERVED | `Alt+F12` | IMPLEMENTED | UI-013 | View › Close all plugin windows (MENU-124). |

@@ -6092,17 +6092,21 @@
       "name": "Tap tempo",
       "description": "Set tempo by tapping.",
       "fl_reference": "Tempo right-click › Tap.",
-      "limeshot_behavior": "—",
+      "limeshot_behavior": "View › Tempo tapper (Cmd+F5) or the tempo field's right-click menu opens a small window with a Tap button: the project tempo follows the average of the last taps (up to eight intervals; a two-second pause starts over), as one undo step while the window is open.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::toolbar_menus_set_tempo_presets_time_format_and_show_windows"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6111,7 +6115,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 15."
     },
     {
       "id": "TR-013",

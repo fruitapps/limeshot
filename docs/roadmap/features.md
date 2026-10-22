@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 109, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 13, VERIFIED 135, DEFERRED 4
+- By status: NOT_STARTED 108, RESEARCHED 1, IN_PROGRESS 10, IMPLEMENTED 13, VERIFIED 136, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -26,7 +26,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 6 | 2 | 0 | 3 |
 | Export | 18 | 5 | 0 | 0 | 13 |
-| Transport & Time | 13 | 9 | 2 | 0 | 2 |
+| Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 0 | 1 | 2 | 10 |
 | UI | 18 | 8 | 2 | 1 | 7 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
@@ -328,7 +328,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | TR-009 | Song loop toggle | P1 |  | VERIFIED | Toolbar loop toggle. | `limeshot-engine tests/audio.rs::song_stops_at_the_end_without_loop` |
 | TR-010 | Panic (all notes off) | P1 |  | IMPLEMENTED | Cmd+H kills every voice. | — |
 | TR-011 | Audio load and voice count display | P1 |  | IMPLEMENTED | Toolbar load meter (callback time / buffer time) and status-bar voice count.<br>*Session 9: the CPU readout changes once per second and shows the highest load of that second.* | `limeshot-app tests/ui.rs::cpu_readout_updates_once_per_second` |
-| TR-012 | Tap tempo | P2 |  | NOT_STARTED | — | — |
+| TR-012 | Tap tempo | P2 |  | VERIFIED | View › Tempo tapper (Cmd+F5) or the tempo field's right-click menu opens a small window with a Tap button: the project tempo follows the average of the last taps (up to eight intervals; a two-second pause starts over), as one undo step while the window is open.<br>*Session 15.* | `crates/limeshot-app/tests/ui.rs::toolbar_menus_set_tempo_presets_time_format_and_show_windows` |
 | TR-013 | Master pitch | P3 |  | NOT_STARTED | — | — |
 
 ## Workflow

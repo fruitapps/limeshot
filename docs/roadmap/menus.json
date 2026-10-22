@@ -1874,10 +1874,10 @@
       "fl_keys": "Cmd+F5",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Tempo tapper",
+      "status": "IMPLEMENTED",
       "feature": "TR-012",
-      "notes": ""
+      "notes": "Opens the tempo tapper window (Cmd+F5)."
     },
     {
       "id": "MENU-109",
@@ -4831,9 +4831,9 @@
       "fl_state": "",
       "confidence": "OBSERVED",
       "limeshot": "Toolbar › PAT / SONG",
-      "status": "DIFFERENT",
+      "status": "IMPLEMENTED",
       "feature": "TR-004",
-      "notes": "FL's hint: 'Pattern or song mode / Show channel rack or playlist' (a right-click shows the matching window). LimeShot switches the mode only."
+      "notes": "A click switches the mode; a right-click shows the Channel Rack (pattern mode) or the Playlist (song mode), as FL's hint says."
     },
     {
       "id": "MENU-279",
@@ -5129,7 +5129,7 @@
       "limeshot": "Toolbar › tempo field",
       "status": "DIFFERENT",
       "feature": "TR-002",
-      "notes": "Drag or type, as in FL. FL's right-click menu has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…) and tempo presets: Tempo tapper (Cmd+F5), 80 BPM, 90 BPM … in steps of 10 (partly hidden in the capture). LimeShot has no tempo menu or automation (AUT-008)."
+      "notes": "Drag or type, as in FL. Right-click: Tempo tapper and BPM presets 80–180 (LimeShot). FL's menu also has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…); LimeShot has no tempo automation (AUT-008)."
     },
     {
       "id": "MENU-295",
@@ -5144,10 +5144,10 @@
       "fl_keys": "Cmd+F5",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › Tempo tapper",
+      "status": "IMPLEMENTED",
       "feature": "TR-012",
-      "notes": ""
+      "notes": "Also View › Tempo tapper and Cmd+F5. Tapping sets the project tempo from the last taps (one undo step while the window is open); a two-second pause starts over."
     },
     {
       "id": "MENU-296",
@@ -5162,10 +5162,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › tempo menu presets",
+      "status": "IMPLEMENTED",
       "feature": "TR-002",
-      "notes": "80, 90, 100, 110, 120, 130, 140 BPM and more (cut off by a system prompt in the capture)."
+      "notes": "LimeShot: 80 to 180 BPM in steps of 10; FL's list continues past the capture."
     },
     {
       "id": "MENU-297",
@@ -5182,7 +5182,7 @@
       "limeshot": "Toolbar › song position",
       "status": "DIFFERENT",
       "feature": "TR-008",
-      "notes": "FL shows one format chosen with the right-click menu (Mode: Bar:Beat/Step:Tick, Minute:Second:Centisecond, SMPTE 23.976 … 120 fps; Middle unit: Step / Beat). LimeShot shows bar:beat:tick and minutes:seconds together; a click returns to the start."
+      "notes": "A right-click chooses which format is large (Bar : Beat : Tick or Minute : Second : Centisecond); the other is shown small below, as before. A click returns to the start. No SMPTE."
     },
     {
       "id": "MENU-298",
@@ -5197,10 +5197,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › Bar : Beat : Tick / Minute : Second : Centisecond",
+      "status": "DIFFERENT",
       "feature": "TR-008",
-      "notes": "Bar : Beat/Step : Tick (selected), Minute : Second : Centisecond, SMPTE 23.976, 24, 25, 29.97 drop, 29.97 non-drop, 30, 48, 50, 59.94 drop/non-drop, 60, 72, 120 fps."
+      "notes": "LimeShot has two of FL's modes; no SMPTE."
     },
     {
       "id": "MENU-299",
@@ -5354,7 +5354,7 @@
       "limeshot": "Toolbar › audio load readout",
       "status": "DIFFERENT",
       "feature": "UI-004",
-      "notes": "LimeShot shows the audio load once per second. FL's right-click menu: Refresh (Slow, Medium, Fast) and Misc (View voice count, View FPS); FL also shows memory use."
+      "notes": "LimeShot shows the audio load; right-click: Refresh Slow/Medium/Fast and View voice count, as in FL. No memory readout or View FPS."
     },
     {
       "id": "MENU-308",
@@ -5369,10 +5369,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › CPU menu › Slow / Medium / Fast",
+      "status": "IMPLEMENTED",
       "feature": "",
-      "notes": "Slow (selected), Medium, Fast."
+      "notes": "Every 1, 0.5 or 0.2 seconds; the readout shows that interval's peak."
     },
     {
       "id": "MENU-309",
@@ -5387,10 +5387,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › CPU menu › View voice count",
+      "status": "IMPLEMENTED",
       "feature": "",
-      "notes": ""
+      "notes": "The panel's caption shows the sounding voices instead of 'CPU'."
     },
     {
       "id": "MENU-310",
@@ -5491,9 +5491,9 @@
       "fl_state": "",
       "confidence": "OBSERVED",
       "limeshot": "Toolbar › Piano Roll",
-      "status": "DIFFERENT",
+      "status": "IMPLEMENTED",
       "feature": "UI-002",
-      "notes": "FL: a right-click maximises it; LimeShot toggles it."
+      "notes": "A click toggles it; a right-click shows it maximised, as in FL."
     },
     {
       "id": "MENU-316",
@@ -5508,7 +5508,7 @@
       "fl_state": "",
       "confidence": "OBSERVED",
       "limeshot": "Toolbar › Playlist",
-      "status": "DIFFERENT",
+      "status": "IMPLEMENTED",
       "feature": "UI-002",
       "notes": "As Piano roll."
     },
@@ -5578,7 +5578,7 @@
       "limeshot": "Toolbar › snap selector",
       "status": "DIFFERENT",
       "feature": "PR-005",
-      "notes": "FL's list: Line, Cell, (none), 1/6 step, 1/4 step, 1/3 step, 1/2 step, Step, 1/6 beat, 1/4 beat, 1/3 beat, 1/2 beat, Beat, Bar; the hint also names BkSp. LimeShot offers Bar, Beat, 1/2 beat, Step, 1/2 step, 1/3 step, 1/4 step and None."
+      "notes": "LimeShot has FL's list in FL's order: (none), 1/6, 1/4, 1/3, 1/2 step, Step, 1/6, 1/4, 1/3, 1/2 beat, Beat, Bar; not FL's Line and Cell (the Piano Roll's own grid modes) or the BkSp key."
     },
     {
       "id": "MENU-321",

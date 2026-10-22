@@ -1176,8 +1176,8 @@
       "action": "Tempo tapper",
       "fl_keys": "Ctrl+F5",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+F5",
+      "status": "IMPLEMENTED",
       "feature": "TR-012",
       "notes": "View › Tempo tapper (MENU-108)."
     },

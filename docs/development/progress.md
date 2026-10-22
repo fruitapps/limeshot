@@ -639,3 +639,11 @@ pseudo-menu "Toolbar" (54 records; new kinds control and display), so `menus.md`
 the menus'. LimeShot has 9 of FL's 52 toolbar items as in FL and 9 differently, plus 2 of its own; 31 are not started, 3 not planned.
 A macOS screen-capture permission prompt appeared during the capture and was left for the owner.
 
+### Session 15, part 11: toolbar menus from the research (TR-012 and toolbar records)
+
+From the toolbar capture: PAT/SONG's right-click shows the Channel Rack or Playlist; the Piano Roll and Playlist icons'
+right-click maximises them; the tempo field's menu has the tempo tapper (also View › Tempo tapper, Cmd+F5) and BPM
+presets; the song position's menu picks which format is large; the CPU panel's menu sets the refresh rate and shows
+the voice count; the snap list has FL's values in FL's order (1/6 step, 1/4, 1/3, 1/6 beat added; "(none)").
+UI test plus the tapper's arithmetic.
+
