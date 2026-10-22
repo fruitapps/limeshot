@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 73, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 37, NOT_PLANNED 2
+Tracked: **118** — IMPLEMENTED 77, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 33, NOT_PLANNED 2
 
 ## Global
 
@@ -30,7 +30,7 @@ Tracked: **118** — IMPLEMENTED 73, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-014 | Browser | `Alt+F8` | VERIFIED | `Alt+F8` | IMPLEMENTED | UI-001 |  |
 | KB-015 | MIDI settings | `F10` | OBSERVED | — | NOT_STARTED | APP-020 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-016 | Project info | `F11` | OBSERVED | — | NOT_STARTED | APP-017 | Seen in the main menu on macOS (session 13, menus.json). |
-| KB-017 | Close all windows | `F12` | VERIFIED | — | NOT_STARTED | UI-002 |  |
+| KB-017 | Close all windows | `F12` | VERIFIED | `F12` | IMPLEMENTED | UI-013 | View › Close all windows (MENU-123): the editors and the plugin windows. |
 | KB-018 | Close the focused window | `Esc` | VERIFIED | — | NOT_STARTED | UI-002 | Esc closes menus and dialogs only. |
 | KB-019 | Maximise the Playlist | `Enter` | VERIFIED | — | NOT_STARTED | UI-002 |  |
 | KB-020 | Arrange windows | `Ctrl+Shift+H` | OBSERVED | `Cmd+Shift+H` | IMPLEMENTED | UI-002 | Seen in the main menu on macOS (session 13, menus.json). |
@@ -53,9 +53,9 @@ Tracked: **118** — IMPLEMENTED 73, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-107 | Tempo tapper | `Ctrl+F5` | OBSERVED | — | NOT_STARTED | TR-012 | View › Tempo tapper (MENU-108). |
 | KB-108 | Touch controller | `Alt+F7` | OBSERVED | — | NOT_STARTED | WF-011 | View › Touch controller (MENU-109). |
 | KB-109 | Hide toolbars | `Ctrl+F11` | OBSERVED | — | NOT_STARTED | UI-014 | View › Toolbars › Hide (MENU-118). |
-| KB-110 | Close all plugin windows | `Alt+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Close all plugin windows (MENU-124). |
-| KB-111 | Close all unfocused windows | `Ctrl+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Close all unfocused windows (MENU-125). |
-| KB-112 | Align all channel editors | `Shift+F12` | OBSERVED | — | NOT_STARTED | UI-013 | View › Align all channel editors (MENU-126). |
+| KB-110 | Close all plugin windows | `Alt+F12` | OBSERVED | `Alt+F12` | IMPLEMENTED | UI-013 | View › Close all plugin windows (MENU-124). |
+| KB-111 | Close all unfocused windows | `Ctrl+F12` | OBSERVED | `Cmd+F12` | IMPLEMENTED | UI-013 | View › Close all unfocused windows (MENU-125): keeps the focused editor; closes the plugin windows too. |
+| KB-112 | Align all channel editors | `Shift+F12` | OBSERVED | `Shift+F12` | IMPLEMENTED | UI-013 | View › Align all channel editors (MENU-126): LimeShot stacks the open plugin windows at the main window's top left. |
 | KB-113 | Recording precount | `Ctrl+P` | OBSERVED | — | NOT_STARTED | REC-007 | Options › Recording precount (MENU-168). |
 | KB-114 | Start on input | `Ctrl+I` | OBSERVED | — | NOT_STARTED | REC-010 | Options › Start on input (MENU-169). |
 | KB-115 | Enable groups | `Alt+Shift+G` | OBSERVED | — | NOT_STARTED | WF-013 | Options › Enable groups (MENU-174). |

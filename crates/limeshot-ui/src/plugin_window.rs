@@ -154,6 +154,8 @@ pub struct Wrapper {
     presets: Option<Vec<Preset>>,
     /// The preset last chosen in this window, an index into `presets`.
     preset: Option<usize>,
+    /// Move the window here on the next frame (View › Align all channel editors).
+    move_to: Option<Pos2>,
 }
 
 impl Wrapper {
@@ -175,6 +177,7 @@ impl Wrapper {
             keyboard_to_plugin: m.keyboard_to_plugin,
             presets: None,
             preset: None,
+            move_to: None,
         }
     }
 
@@ -275,6 +278,28 @@ impl PluginHost {
             self.window_memory.insert(target, Memory::from_project(w));
             if w.open {
                 self.open_window(target, None);
+            }
+        }
+    }
+
+    /// View › Close all plugin windows (FL: Opt+F12). Returns true when a plugin changed while
+    /// its window was open.
+    pub fn close_all_windows(&mut self) -> bool {
+        let open: Vec<Target> = self.windows.keys().copied().collect();
+        open.into_iter()
+            .fold(false, |changed, t| self.close_window(t) | changed)
+    }
+
+    /// View › Align all channel editors (FL: Shift+F12): stack the open plugin windows from
+    /// `origin`, each a title bar lower and to the right.
+    pub fn align_windows(&mut self, origin: Pos2) {
+        let mut open: Vec<Target> = self.windows.keys().copied().collect();
+        open.sort_by_key(order);
+        for (i, t) in open.into_iter().enumerate() {
+            if let Some(w) = self.windows.get_mut(&t) {
+                let at = origin + vec2(28.0, 28.0) * i as f32;
+                w.move_to = Some(at);
+                w.position = Some(at);
             }
         }
     }
@@ -485,11 +510,15 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     let wanted = (size, !fits_editor);
     let resize = w.applied.is_some_and(|a| a != wanted);
     let id = ViewportId::from_hash_of(("limeshot-plugin", order(&target)));
+    let move_to = app.plugins.windows.get_mut(&target).and_then(|w| w.move_to.take());
     let frame = ctx.show_viewport_immediate(id, builder, |ui, class| {
         let vctx = ui.ctx().clone();
         if resize {
             vctx.send_viewport_cmd(egui::ViewportCommand::Resizable(wanted.1));
             vctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(wanted.0));
+        }
+        if let Some(p) = move_to {
+            vctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(p));
         }
         if class != ViewportClass::EmbeddedWindow && !keys_to_plugin(app, &vctx, target) {
             crate::shortcuts::handle(app, &vctx);

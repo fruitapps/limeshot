@@ -167,6 +167,9 @@ pub struct LimeShotApp {
     /// The toolbar's CPU readout, updated once per second.
     pub cpu: crate::toolbar::CpuReadout,
     pub autosave: crate::autosave::Autosave,
+    /// Write settings changes to the config folder (off for headless apps, so tests leave the
+    /// user's settings alone).
+    pub persist_settings: bool,
     /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
     /// button, so any left once no button is down are released (`logic`).
     pub auditions: Vec<(ChannelId, u8)>,
@@ -179,6 +182,7 @@ impl LimeShotApp {
         app.plugins = crate::plugins::PluginHost::new(crate::plugins::PluginHost::default_db_path());
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
+        app.persist_settings = true;
         app
     }
 
@@ -226,6 +230,7 @@ impl LimeShotApp {
             clip_until: None,
             cpu: Default::default(),
             autosave: Default::default(),
+            persist_settings: false,
             auditions: Vec::new(),
         }
     }
@@ -394,6 +399,13 @@ impl LimeShotApp {
             (Focus::Playlist, _) => !self.ui.playlist.selection.is_empty(),
             (Focus::ChannelRack, _) => self.selected_channel().is_some(),
             (Focus::Mixer | Focus::None, _) => false,
+        }
+    }
+
+    /// Save the settings to the config folder (only for the real app, see `persist_settings`).
+    pub fn save_settings(&self) {
+        if self.persist_settings {
+            self.settings.save();
         }
     }
 
@@ -607,7 +619,7 @@ impl LimeShotApp {
                 self.send(Msg::Mode(PlayMode::Pattern));
                 self.compiled = None;
                 self.settings.add_recent(path);
-                self.settings.save();
+                self.save_settings();
                 self.toast(format!("Opened {}", path.display()));
             }
             Err(e) => self.toast_error(e.to_string()),
@@ -650,7 +662,7 @@ impl LimeShotApp {
                 self.doc.mark_saved();
                 self.path = Some(path.to_path_buf());
                 self.settings.add_recent(path);
-                self.settings.save();
+                self.save_settings();
                 self.toast(format!("Saved {}", path.display()));
                 true
             }
@@ -809,7 +821,7 @@ impl LimeShotApp {
         self.send(Msg::SongLoop(lp));
         self.send(Msg::Metronome(met));
         self.compiled = None;
-        self.settings.save();
+        self.save_settings();
     }
 
     // ----- frame -----

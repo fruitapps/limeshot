@@ -2868,6 +2868,75 @@ fn tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks() {
     assert_eq!(h.state().project().playlist.tracks[12].name, "Old");
 }
 
+/// UI-013: View › Layout — close all / plugin / unfocused windows, align channel editors, and
+/// Arrange windows (into workspace, default and custom layouts).
+#[test]
+fn view_layout_commands_close_align_and_restore_windows() {
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(true);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let tone = Target::Channel(h.state().project().channels.last().expect("channel").id);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().plugins.open_window(tone, None);
+    for _ in 0..3 {
+        h.step();
+    }
+    // Shift+F12 stacks the plugin windows.
+    h.key_press_modifiers(Modifiers::SHIFT, Key::F12);
+    h.step();
+    assert!(h.state().plugins.is_window_open(tone));
+    // Opt+F12 closes the plugin windows only.
+    h.key_press_modifiers(Modifiers::ALT, Key::F12);
+    h.step();
+    assert!(!h.state().plugins.is_window_open(tone));
+    assert!(h.state().is_window_open(Win::Mixer));
+    // Cmd+F12 keeps only the focused editor.
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Mixer;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::F12);
+    h.step();
+    assert!(h.state().is_window_open(Win::Mixer));
+    assert!(!h.state().is_window_open(Win::Playlist) && !h.state().is_window_open(Win::ChannelRack));
+    // F12 closes everything.
+    h.key_press(Key::F12);
+    h.step();
+    assert!(Win::ALL.iter().all(|w| !h.state().is_window_open(*w)));
+
+    // Arrange windows › Desktop (default): FL's new-project layout.
+    h.get_by_label("View").click();
+    h.step();
+    h.get_by_label("Arrange windows ⏵").hover();
+    for _ in 0..3 {
+        h.step();
+    }
+    h.get_by_label_contains("Desktop (default)").click();
+    for _ in 0..2 {
+        h.step();
+    }
+    assert!(h.state().is_window_open(Win::Playlist) && h.state().is_window_open(Win::ChannelRack));
+    assert!(h.state().ui.workspace.state(Win::Playlist).maximized);
+
+    // A saved layout comes back: the Mixer open and detached windows put back by Into workspace.
+    h.state_mut().show_window(Win::Mixer);
+    h.step();
+    let saved = h.state().ui.workspace.save_layout();
+    h.state_mut().ui.workspace.close_all();
+    h.state_mut().ui.workspace.state_mut(Win::PianoRoll).detached = true;
+    h.state_mut().ui.workspace.into_workspace();
+    assert!(!h.state().ui.workspace.state(Win::PianoRoll).detached);
+    h.state_mut().ui.workspace.apply_layout(&saved);
+    for _ in 0..2 {
+        h.step();
+    }
+    assert!(h.state().is_window_open(Win::Mixer) && h.state().is_window_open(Win::Playlist));
+    let json = serde_json::to_string(&saved).expect("json");
+    assert_eq!(
+        serde_json::from_str::<limeshot_ui::workspace::SavedLayout>(&json).expect("back"),
+        saved
+    );
+}
+
 /// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
 #[test]
 fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {

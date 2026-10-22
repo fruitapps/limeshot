@@ -20,6 +20,8 @@ pub struct Settings {
     pub autosave_minutes: u32,
     /// Ask before deleting channels (turned off by "Remember my choice").
     pub confirm_channel_delete: bool,
+    /// View › Arrange windows › Save custom layout.
+    pub custom_layout: Option<crate::workspace::SavedLayout>,
 }
 
 impl Default for Settings {
@@ -31,6 +33,7 @@ impl Default for Settings {
             ui_scale: 1.0,
             autosave_minutes: 5,
             confirm_channel_delete: true,
+            custom_layout: None,
         }
     }
 }

@@ -613,3 +613,11 @@ playlist tracks, Set keyboard focus for all plugins to › Enabled / Disabled. F
 File (Recent projects, listed inline as in FL), View (Windows, Layout, Zoom), Options (System, Switches) and Tools.
 `ui_shot --menu=<name>` opens a menu for a screenshot. UI test for the macros.
 
+### Session 15, part 8: View › Layout (UI-013)
+
+FL's Layout section in View: Close all windows (F12), Close all plugin windows (Opt+F12), Close all unfocused windows
+(Cmd+F12), Align all channel editors (Shift+F12, stacks plugin windows), and Arrange windows › Realign, Into
+workspace, Desktop (default), Custom and Save custom layout (kept in settings). Also: headless apps no longer write
+the user's settings (`persist_settings`; before, a test that saved a project added it to the real recent list).
+UI test for the commands and a saved layout.
+

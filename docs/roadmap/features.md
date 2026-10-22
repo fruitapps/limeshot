@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 110, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 10, VERIFIED 135, DEFERRED 4
+- By status: NOT_STARTED 109, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 11, VERIFIED 135, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -28,7 +28,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Export | 18 | 5 | 0 | 0 | 13 |
 | Transport & Time | 13 | 9 | 2 | 0 | 2 |
 | Workflow | 13 | 0 | 1 | 2 | 10 |
-| UI | 18 | 8 | 1 | 1 | 8 |
+| UI | 18 | 8 | 2 | 1 | 7 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
 ## Application
@@ -365,7 +365,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | UI-010 | Control context menu | P1 |  | IN_PROGRESS | Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.<br>*Observed 2026-10-20 (session 4) on a Channel Rack pan knob.* | — |
 | UI-011 | Customizable keyboard shortcuts | P2 |  | NOT_STARTED | Planned: a shortcuts page in the settings that rebinds the actions in keybindings.json, stored in settings.json, with conflict detection. Today the bindings are fixed and listed in Help › Keyboard shortcuts (F1). | — |
 | UI-012 | Soft detent at a control's default | P1 |  | VERIFIED | Knobs, faders and the egui sliders (Channel Settings, the Mixer's track panel, effect cards, plugin parameters) stop at their default when a drag crosses it and let go after 6 px more travel; a drag that starts at the default moves freely, so small adjustments near it stay easy. Double-click still resets.<br>*Session 11 (owner's list item 19).* | `limeshot-app tests/ui.rs::dials_and_sliders_catch_at_their_default` |
-| UI-013 | Window layout commands | P2 |  | NOT_STARTED | Not implemented. | — |
+| UI-013 | Window layout commands | P2 |  | IMPLEMENTED | View › Layout: Close all windows (F12; editors and plugin windows), Close all plugin windows (Opt+F12), Close all unfocused windows (Cmd+F12; keeps the focused editor), Align all channel editors (Shift+F12; stacks the open plugin windows at the main window's top left), Arrange windows › Realign (Cmd+Shift+H), Into workspace (docks detached windows), Layouts › Desktop (default) (FL's new-project layout), Custom (enabled once saved) and Save custom layout (open/maximised/detached/pinned states and each window's place as fractions of the workspace, kept in LimeShot's settings so it survives a restart). Not done: FL's Desktop (alternate) and Tablet layouts, the Background submenu (UI-015).<br>*Session 15. Headless tests apply a saved layout and round-trip it through JSON; the restart itself (settings.json) was not exercised in the live app.* | `crates/limeshot-app/tests/ui.rs::view_layout_commands_close_align_and_restore_windows` |
 | UI-014 | Toolbar customisation and presets | P3 |  | NOT_STARTED | Not implemented. | — |
 | UI-015 | Workspace background | P3 |  | NOT_STARTED | Not implemented. | — |
 | UI-016 | Auto scrolling option | P2 |  | NOT_STARTED | Not implemented.<br>*Check what LimeShot's editors do today before implementing.* | — |

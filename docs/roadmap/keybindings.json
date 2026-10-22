@@ -186,10 +186,10 @@
       "action": "Close all windows",
       "fl_keys": "F12",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
-      "feature": "UI-002",
-      "notes": ""
+      "limeshot_keys": "F12",
+      "status": "IMPLEMENTED",
+      "feature": "UI-013",
+      "notes": "View › Close all windows (MENU-123): the editors and the plugin windows."
     },
     {
       "id": "KB-018",
@@ -1209,8 +1209,8 @@
       "action": "Close all plugin windows",
       "fl_keys": "Alt+F12",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Alt+F12",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
       "notes": "View › Close all plugin windows (MENU-124)."
     },
@@ -1220,10 +1220,10 @@
       "action": "Close all unfocused windows",
       "fl_keys": "Ctrl+F12",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+F12",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": "View › Close all unfocused windows (MENU-125)."
+      "notes": "View › Close all unfocused windows (MENU-125): keeps the focused editor; closes the plugin windows too."
     },
     {
       "id": "KB-112",
@@ -1231,10 +1231,10 @@
       "action": "Align all channel editors",
       "fl_keys": "Shift+F12",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Shift+F12",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": "View › Align all channel editors (MENU-126)."
+      "notes": "View › Align all channel editors (MENU-126): LimeShot stacks the open plugin windows at the main window's top left."
     },
     {
       "id": "KB-113",

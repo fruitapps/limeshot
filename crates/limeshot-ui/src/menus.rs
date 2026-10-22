@@ -62,6 +62,46 @@ pub fn add_pattern(app: &mut LimeShotApp) {
     }
 }
 
+// ----- FL Studio's View › Layout (UI-013) -----
+
+/// View › Close all windows (F12): the editors and the plugin windows.
+pub fn close_all_windows(app: &mut LimeShotApp) {
+    app.ui.workspace.close_all();
+    close_all_plugin_windows(app);
+}
+
+/// View › Close all plugin windows (Opt+F12).
+pub fn close_all_plugin_windows(app: &mut LimeShotApp) {
+    if app.plugins.close_all_windows() {
+        app.doc.mark_unsaved();
+    }
+}
+
+/// View › Close all unfocused windows (Cmd+F12): every window but the focused editor's.
+pub fn close_unfocused_windows(app: &mut LimeShotApp) {
+    use crate::app::Focus;
+    use crate::workspace::Win;
+    let keep = match app.ui.focus {
+        Focus::Playlist => Some(Win::Playlist),
+        Focus::ChannelRack => Some(Win::ChannelRack),
+        Focus::PianoRoll => Some(Win::PianoRoll),
+        Focus::Mixer => Some(Win::Mixer),
+        Focus::None => None,
+    };
+    app.ui.workspace.close_all_but(keep);
+    close_all_plugin_windows(app);
+}
+
+/// View › Align all channel editors (Shift+F12): stack the plugin windows at the main window's
+/// top left, below the toolbar.
+pub fn align_channel_editors(app: &mut LimeShotApp, ctx: &egui::Context) {
+    let origin = ctx
+        .input(|i| i.viewport().outer_rect.map(|r| r.min))
+        .unwrap_or_default()
+        + egui::vec2(40.0, 110.0);
+    app.plugins.align_windows(origin);
+}
+
 // ----- FL Studio's Tools › Macros (APP-026) -----
 
 /// Select the channels no pattern and no audio clip uses (Tools › Macros › Select unused
@@ -485,9 +525,44 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
                 ui.separator();
                 section(ui, "Layout");
-                if item(ui, "Arrange windows", &key("Cmd+Shift+H")) {
-                    app.ui.workspace.reset_layout = true;
+                if item(ui, "Close all windows", &key("F12")) {
+                    close_all_windows(app);
                 }
+                if item(ui, "Close all plugin windows", &key("Alt+F12")) {
+                    close_all_plugin_windows(app);
+                }
+                if item(ui, "Close all unfocused windows", &key("Cmd+F12")) {
+                    close_unfocused_windows(app);
+                }
+                if item(ui, "Align all channel editors", &key("Shift+F12")) {
+                    align_channel_editors(app, ui.ctx());
+                }
+                ui.menu_button("Arrange windows", |ui| {
+                    if item(ui, "Realign", &key("Cmd+Shift+H")) {
+                        app.ui.workspace.reset_layout = true;
+                    }
+                    if item(ui, "Into workspace", "") {
+                        app.ui.workspace.into_workspace();
+                    }
+                    ui.separator();
+                    section(ui, "Layouts");
+                    if item(ui, "Desktop (default)", "") {
+                        app.ui.workspace.default_layout();
+                    }
+                    let custom = app.settings.custom_layout.clone();
+                    if ui.add_enabled(custom.is_some(), Button::new("Custom")).clicked() {
+                        if let Some(l) = &custom {
+                            app.ui.workspace.apply_layout(l);
+                        }
+                        ui.close();
+                    }
+                    ui.separator();
+                    if item(ui, "Save custom layout", "") {
+                        app.settings.custom_layout = Some(app.ui.workspace.save_layout());
+                        app.save_settings();
+                        app.toast("Custom layout saved");
+                    }
+                });
                 ui.separator();
                 section(ui, "Zoom");
                 if item(ui, "Zoom in", &key("Cmd+=")) {
@@ -525,7 +600,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     ] {
                         if toggle(ui, app.settings.autosave_minutes == m, label, "") {
                             app.settings.autosave_minutes = m;
-                            app.settings.save();
+                            app.save_settings();
                         }
                     }
                 });

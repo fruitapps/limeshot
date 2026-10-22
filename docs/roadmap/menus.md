@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 34, DIFFERENT 33, LIMESHOT_ONLY 9, NOT_STARTED 174, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 44, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 166, NOT_PLANNED 27
 
 ## Summary
 
@@ -16,7 +16,7 @@ Tracked: **277** — IMPLEMENTED 34, DIFFERENT 33, LIMESHOT_ONLY 9, NOT_STARTED 
 | Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
-| View | 48 | 5 | 3 | 35 | 5 | 4 |
+| View | 48 | 15 | 1 | 27 | 5 | 4 |
 | Options | 24 | 2 | 0 | 20 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
@@ -57,7 +57,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount |
 | REC-010 | P2 | NOT_STARTED | Start on input and blend recorded notes | MENU-169 Options › Start on input<br>MENU-170 Options › Blend recorded notes |
 | TR-012 | P2 | NOT_STARTED | Tap tempo | MENU-108 View › Tempo tapper |
-| UI-013 | P2 | NOT_STARTED | Window layout commands | MENU-123 View › Close all windows<br>MENU-124 View › Close all plugin windows<br>MENU-125 View › Close all unfocused windows<br>MENU-126 View › Align all channel editors<br>MENU-129 View › Arrange windows › Into workspace<br>MENU-130 View › Arrange windows › Desktop (default)<br>MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate)<br>MENU-134 View › Arrange windows › Custom<br>MENU-135 View › Arrange windows › Save custom layout |
+| UI-013 | P2 | IMPLEMENTED | Window layout commands | MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate) |
 | UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling |
 | WF-002 | P2 | NOT_STARTED | Typing keyboard to piano | MENU-166 Options › Typing keyboard to piano |
 | WF-004 | P2 | NOT_STARTED | Controller mapping (link to controller) | MENU-144 View › Remote control<br>MENU-175 Options › Multilink to controllers<br>MENU-218 Tools › Last tweaked › Link to controller...<br>MENU-219 Tools › Last tweaked › Override global link...<br>MENU-224 Tools › Last tweaked › Override volatile link...<br>MENU-233 Tools › Next to last tweaked › Link to controller...<br>MENU-234 Tools › Next to last tweaked › Override global link...<br>MENU-239 Tools › Next to last tweaked › Override volatile link... |
@@ -237,19 +237,19 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-120 | Tests | Windows | toggle |  |  | — | NOT_PLANNED |  | Image-Line's internal test window. |
 | MENU-121 | Plugin performance monitor | Windows | toggle |  |  | — | NOT_STARTED | PLG-011 |  |
 | MENU-122 | Welcome to FL Studio | Windows | dialog |  |  | — | NOT_STARTED | APP-023 |  |
-| MENU-123 | Close all windows | Layout | action | `F12` |  | — | NOT_STARTED | UI-013 |  |
-| MENU-124 | Close all plugin windows | Layout | action | `Opt+F12` |  | — | NOT_STARTED | UI-013 |  |
-| MENU-125 | Close all unfocused windows | Layout | action | `Cmd+F12` |  | — | NOT_STARTED | UI-013 |  |
-| MENU-126 | Align all channel editors | Layout | action | `Shift+F12` |  | — | NOT_STARTED | UI-013 |  |
-| MENU-127 | Arrange windows | Layout | submenu |  |  | View › Arrange windows | DIFFERENT | UI-002 | LimeShot has one item that resets the layout (FL's Realign key). |
-| MENU-128 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Realign | Layout | action | `Shift+Cmd+H` |  | View › Arrange windows | DIFFERENT | UI-002 |  |
-| MENU-129 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Into workspace | Layout | action |  |  | — | NOT_STARTED | UI-013 | Docks detached windows back into the main window. |
-| MENU-130 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Desktop (default) | Layout | action |  |  | — | NOT_STARTED | UI-013 | Section 'Layouts'. |
+| MENU-123 | Close all windows | Layout | action | `F12` |  | View › Close all windows | IMPLEMENTED | UI-013 | Editors and plugin windows. |
+| MENU-124 | Close all plugin windows | Layout | action | `Opt+F12` |  | View › Close all plugin windows | IMPLEMENTED | UI-013 |  |
+| MENU-125 | Close all unfocused windows | Layout | action | `Cmd+F12` |  | View › Close all unfocused windows | IMPLEMENTED | UI-013 | Keeps the focused editor's window. |
+| MENU-126 | Align all channel editors | Layout | action | `Shift+F12` |  | View › Align all channel editors | IMPLEMENTED | UI-013 | Stacks the open plugin windows at the main window's top left (LimeShot's Channel Settings is a single workspace window). |
+| MENU-127 | Arrange windows | Layout | submenu |  |  | View › Arrange windows | IMPLEMENTED | UI-013 | Submenu: Realign, Into workspace, Layouts (Desktop (default), Custom), Save custom layout. |
+| MENU-128 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Realign | Layout | action | `Shift+Cmd+H` |  | View › Arrange windows › Realign | IMPLEMENTED | UI-002 | Every window back at its default place. |
+| MENU-129 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Into workspace | Layout | action |  |  | View › Arrange windows › Into workspace | IMPLEMENTED | UI-013 | Docks detached windows back into the main window. |
+| MENU-130 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Desktop (default) | Layout | action |  |  | View › Arrange windows › Desktop (default) | IMPLEMENTED | UI-013 | FL's new-project layout: Playlist maximised, Channel Rack on top. |
 | MENU-131 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Desktop (alternate) | Layout | action |  |  | — | NOT_STARTED | UI-013 | Section 'Layouts'. |
 | MENU-132 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Tablet (default) | Layout | action |  |  | — | NOT_STARTED | UI-013 | Section 'Layouts'. |
 | MENU-133 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Tablet (alternate) | Layout | action |  |  | — | NOT_STARTED | UI-013 | Section 'Layouts'. |
-| MENU-134 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Custom | Layout | action |  | disabled | — | NOT_STARTED | UI-013 | Enabled once a custom layout is saved. |
-| MENU-135 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Save custom layout | Layout | action |  |  | — | NOT_STARTED | UI-013 |  |
+| MENU-134 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Custom | Layout | action |  | disabled | View › Arrange windows › Custom | IMPLEMENTED | UI-013 | Enabled once a custom layout is saved (kept in LimeShot's settings). |
+| MENU-135 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Save custom layout | Layout | action |  |  | View › Arrange windows › Save custom layout | IMPLEMENTED | UI-013 | Saves which windows are open, maximised, detached and pinned, and where (as fractions of the workspace). |
 | MENU-136 | Background | Layout | submenu |  |  | — | NOT_STARTED | UI-015 |  |
 | MENU-137 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set image wallpaper... | Layout | dialog |  |  | — | NOT_STARTED | UI-015 |  |
 | MENU-138 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set dynamic wallpaper | Layout | action |  |  | — | NOT_STARTED | UI-015 |  |

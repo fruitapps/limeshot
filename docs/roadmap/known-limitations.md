@@ -76,7 +76,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   process (macOS and Linux; such a plugin's own editor is not shown).
   Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
   channels do not play audio clips. No CLAP or Audio Units. Verified on macOS only.
-* Window positions, sizes and detached/maximised states are not remembered between sessions.
+* Window positions, sizes and detached/maximised states are not remembered between sessions unless saved as the
+  custom layout (View › Arrange windows › Save custom layout, applied with Custom).
 * Accessibility: custom-painted editors expose no accessibility labels.
 
 ## Research

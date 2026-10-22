@@ -297,7 +297,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         keep = false;
                         if *remember {
                             app.settings.confirm_channel_delete = false;
-                            app.settings.save();
+                            app.save_settings();
                         }
                         crate::channel_rack::delete_channels(app, &channels);
                     }

@@ -2137,10 +2137,10 @@
       "fl_keys": "F12",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Close all windows",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": ""
+      "notes": "Editors and plugin windows."
     },
     {
       "id": "MENU-124",
@@ -2154,8 +2154,8 @@
       "fl_keys": "Opt+F12",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Close all plugin windows",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
       "notes": ""
     },
@@ -2171,10 +2171,10 @@
       "fl_keys": "Cmd+F12",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Close all unfocused windows",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": ""
+      "notes": "Keeps the focused editor's window."
     },
     {
       "id": "MENU-126",
@@ -2188,10 +2188,10 @@
       "fl_keys": "Shift+F12",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Align all channel editors",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": ""
+      "notes": "Stacks the open plugin windows at the main window's top left (LimeShot's Channel Settings is a single workspace window)."
     },
     {
       "id": "MENU-127",
@@ -2206,9 +2206,9 @@
       "fl_state": "",
       "confidence": "OBSERVED",
       "limeshot": "View › Arrange windows",
-      "status": "DIFFERENT",
-      "feature": "UI-002",
-      "notes": "LimeShot has one item that resets the layout (FL's Realign key)."
+      "status": "IMPLEMENTED",
+      "feature": "UI-013",
+      "notes": "Submenu: Realign, Into workspace, Layouts (Desktop (default), Custom), Save custom layout."
     },
     {
       "id": "MENU-128",
@@ -2223,10 +2223,10 @@
       "fl_keys": "Shift+Cmd+H",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "View › Arrange windows",
-      "status": "DIFFERENT",
+      "limeshot": "View › Arrange windows › Realign",
+      "status": "IMPLEMENTED",
       "feature": "UI-002",
-      "notes": ""
+      "notes": "Every window back at its default place."
     },
     {
       "id": "MENU-129",
@@ -2241,8 +2241,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Arrange windows › Into workspace",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
       "notes": "Docks detached windows back into the main window."
     },
@@ -2259,10 +2259,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Arrange windows › Desktop (default)",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": "Section 'Layouts'."
+      "notes": "FL's new-project layout: Playlist maximised, Channel Rack on top."
     },
     {
       "id": "MENU-131",
@@ -2331,10 +2331,10 @@
       "fl_keys": "",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Arrange windows › Custom",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": "Enabled once a custom layout is saved."
+      "notes": "Enabled once a custom layout is saved (kept in LimeShot's settings)."
     },
     {
       "id": "MENU-135",
@@ -2349,10 +2349,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "View › Arrange windows › Save custom layout",
+      "status": "IMPLEMENTED",
       "feature": "UI-013",
-      "notes": ""
+      "notes": "Saves which windows are open, maximised, detached and pinned, and where (as fractions of the workspace)."
     },
     {
       "id": "MENU-136",

@@ -7829,9 +7829,9 @@
       "name": "Window layout commands",
       "description": "Close all / plugin / unfocused windows, align channel editors, dock everything into the workspace, layout presets and a saved custom layout.",
       "fl_reference": "View › Layout: Close all windows (F12), Close all plugin windows (Opt+F12), Close all unfocused windows (Cmd+F12), Align all channel editors (Shift+F12), Arrange windows › Into workspace, Desktop/Tablet layouts, Save custom layout.",
-      "limeshot_behavior": "Not implemented.",
+      "limeshot_behavior": "View › Layout: Close all windows (F12; editors and plugin windows), Close all plugin windows (Opt+F12), Close all unfocused windows (Cmd+F12; keeps the focused editor), Align all channel editors (Shift+F12; stacks the open plugin windows at the main window's top left), Arrange windows › Realign (Cmd+Shift+H), Into workspace (docks detached windows), Layouts › Desktop (default) (FL's new-project layout), Custom (enabled once saved) and Save custom layout (open/maximised/detached/pinned states and each window's place as fractions of the workspace, kept in LimeShot's settings so it survives a restart). Not done: FL's Desktop (alternate) and Tablet layouts, the Background submenu (UI-015).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "UI-002",
@@ -7844,7 +7844,9 @@
         "Each command works with detached windows.",
         "A saved custom layout survives a restart."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::view_layout_commands_close_align_and_restore_windows"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7854,7 +7856,7 @@
           "docs/research/evidence/screenshots/fl-menu-view-arrange.png"
         ]
       },
-      "notes": ""
+      "notes": "Session 15. Headless tests apply a saved layout and round-trip it through JSON; the restart itself (settings.json) was not exercised in the live app."
     },
     {
       "id": "UI-014",

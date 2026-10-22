@@ -289,7 +289,7 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
             && !app.settings.browser_folders.contains(&dir)
         {
             app.settings.browser_folders.push(dir);
-            app.settings.save();
+            app.save_settings();
         }
     });
     egui::Frame::new()
@@ -343,7 +343,7 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
         }
         if let Some(d) = remove {
             app.settings.browser_folders.retain(|f| f != &d);
-            app.settings.save();
+            app.save_settings();
         }
     });
 }

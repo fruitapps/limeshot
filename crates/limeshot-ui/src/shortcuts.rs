@@ -26,7 +26,11 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("F7", "Piano Roll"),
     ("F9", "Mixer"),
     ("Alt+F8", "Browser"),
-    ("Cmd+Shift+H", "Arrange windows"),
+    ("Cmd+Shift+H", "Arrange windows › Realign"),
+    ("F12", "Close all windows"),
+    ("Alt+F12", "Close all plugin windows"),
+    ("Cmd+F12", "Close all unfocused windows"),
+    ("Shift+F12", "Align all channel editors (plugin windows)"),
     ("F1", "This list"),
     (
         "Cmd+Z / Cmd+Alt+Z / Cmd+Shift+Z",
@@ -197,6 +201,16 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, Modifiers::ALT, Key::F8) {
         app.ui.show_browser ^= true;
+    }
+    // FL Studio's View › Layout keys.
+    if pressed(ctx, Modifiers::ALT, Key::F12) {
+        crate::menus::close_all_plugin_windows(app);
+    } else if pressed(ctx, cmd, Key::F12) {
+        crate::menus::close_unfocused_windows(app);
+    } else if pressed(ctx, Modifiers::SHIFT, Key::F12) {
+        crate::menus::align_channel_editors(app, ctx);
+    } else if pressed(ctx, Modifiers::NONE, Key::F12) {
+        crate::menus::close_all_windows(app);
     }
     if typing || app.dialog.is_some() {
         return;

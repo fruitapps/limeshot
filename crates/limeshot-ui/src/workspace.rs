@@ -22,6 +22,25 @@ use egui::{
 
 pub const TITLE_H: f32 = 28.0;
 
+/// A window layout saved in the settings (View › Arrange windows › Save custom layout).
+/// Rectangles are fractions of the workspace, so the layout fits another screen size.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SavedLayout {
+    pub windows: Vec<SavedWindow>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SavedWindow {
+    /// The window's label ("Playlist").
+    pub name: String,
+    pub open: bool,
+    pub maximized: bool,
+    pub detached: bool,
+    pub pinned: bool,
+    /// Left, top, width, height as fractions of the workspace (when not maximised).
+    pub rect: Option<[f32; 4]>,
+}
+
 /// The workspace windows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Win {
@@ -210,6 +229,95 @@ impl Workspace {
             min.min(self.area.size())
         } else {
             min
+        }
+    }
+
+    /// View › Close all windows (F12).
+    pub fn close_all(&mut self) {
+        for s in &mut self.states {
+            s.open = false;
+        }
+    }
+
+    /// View › Close all unfocused windows (Cmd+F12): every window but `keep`.
+    pub fn close_all_but(&mut self, keep: Option<Win>) {
+        for w in Win::ALL {
+            if Some(w) != keep {
+                self.close(w);
+            }
+        }
+    }
+
+    /// View › Arrange windows › Into workspace: put detached windows back into the main window.
+    pub fn into_workspace(&mut self) {
+        for s in &mut self.states {
+            s.detached = false;
+        }
+    }
+
+    /// View › Arrange windows › Desktop (default): FL Studio's new-project layout.
+    pub fn default_layout(&mut self) {
+        let area = self.area;
+        *self = Workspace {
+            area,
+            ..Workspace::default()
+        };
+    }
+
+    /// The current layout, to keep in the settings.
+    pub fn save_layout(&self) -> SavedLayout {
+        let area = self.area;
+        SavedLayout {
+            windows: Win::ALL
+                .iter()
+                .map(|&w| {
+                    let s = self.state(w);
+                    let rect = self.normal_rect[w.index()].filter(|_| area.is_positive()).map(|r| {
+                        [
+                            (r.min.x - area.min.x) / area.width(),
+                            (r.min.y - area.min.y) / area.height(),
+                            r.width() / area.width(),
+                            r.height() / area.height(),
+                        ]
+                    });
+                    SavedWindow {
+                        name: w.label().into(),
+                        open: s.open,
+                        maximized: s.maximized,
+                        detached: s.detached,
+                        pinned: s.pinned,
+                        rect,
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    /// Put the windows where a saved layout has them (on the next frame).
+    pub fn apply_layout(&mut self, layout: &SavedLayout) {
+        let area = self.area;
+        for saved in &layout.windows {
+            let Some(w) = Win::ALL.into_iter().find(|w| w.label() == saved.name) else {
+                continue;
+            };
+            *self.state_mut(w) = WinState {
+                open: saved.open,
+                maximized: saved.maximized,
+                detached: saved.detached,
+                pinned: saved.pinned,
+            };
+            let ok = |v: f32| v.is_finite() && (-1.0..=2.0).contains(&v);
+            if let Some([x, y, wd, ht]) = saved.rect
+                && area.is_positive()
+                && [x, y, wd, ht].into_iter().all(ok)
+            {
+                let r = Rect::from_min_size(
+                    area.min + vec2(x * area.width(), y * area.height()),
+                    vec2(wd * area.width(), ht * area.height()),
+                );
+                self.normal_rect[w.index()] = Some(r);
+                self.restore[w.index()] = !saved.maximized;
+            }
         }
     }
 
