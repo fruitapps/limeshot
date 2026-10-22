@@ -81,7 +81,7 @@ fn project(wav: &str) -> (Project, PatternId) {
     doc.execute(Command::SetEffectParam {
         track,
         effect: eq,
-        index: 1,
+        index: 2,
         value: 6.0,
     })
     .unwrap();
@@ -147,4 +147,101 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
     eprintln!("rms built-in {e}, Lime VST3 {a}, difference {d}");
     assert!(e > 0.01, "the built-in render is silent: {e}");
     assert!(d < 1e-4 * e, "Lime VST3 render differs: rms {a} vs {e}, difference {d}");
+}
+
+#[test]
+fn effect_automation_follows_the_converted_lime_plugin() {
+    if limeshot_plugins::lime::bundle_path("lime:Lime EQ.vst3").is_none() {
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "CI must build the Lime VST3 bundles first"
+        );
+        return;
+    }
+    let (mut project, pat) = project("missing.wav");
+    // Song mode: the pattern and an automation clip of the EQ's mid gain (linear, in dB).
+    let mut doc = Document::new(project.clone());
+    doc.execute(Command::AddClip {
+        pattern: pat,
+        track: 0,
+        start: 0,
+        length: None,
+    })
+    .unwrap();
+    let track = project.channels[0].mixer_track;
+    let effect = project.mixer.tracks[track as usize].effects[0].id;
+    doc.execute(Command::AddAutomationClip {
+        target: AutomationTarget::EffectParam {
+            track,
+            effect,
+            index: 2,
+        },
+        track: 1,
+        start: 0,
+        length: 3 * PPQ,
+        value: None,
+        name: None,
+    })
+    .unwrap();
+    let automation = doc.project().automations[0].id;
+    let points = [(0, 0.0), (3 * PPQ, 1.0)]
+        .map(|(tick, value)| AutomationPoint {
+            tick,
+            value,
+            tension: 0.0,
+            mode: Default::default(),
+        })
+        .to_vec();
+    doc.execute(Command::SetAutomationPoints { automation, points })
+        .unwrap();
+    project = doc.project().clone();
+
+    let song = |p: &Project, processors| {
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: limeshot_engine::ExportRange::Song,
+            max_tail_secs: 0.5,
+            block: 256,
+        };
+        let snap = Arc::new(compile(p, pat, &limeshot_sequencer::NoSamples));
+        render_offline_with(snap, &settings, processors).unwrap().0
+    };
+    let expected = song(&project, Processors::default());
+    // The ramp audibly changes the sound, so following it is what the comparison checks.
+    let mut still = project.clone();
+    still.automations.clear();
+    still
+        .playlist
+        .clips
+        .retain(|c| !matches!(c.source, ClipSource::Automation(_)));
+    let unautomated = song(&still, Processors::default());
+    let change: f32 = expected.iter().zip(&unautomated).map(|(a, b)| (a - b).abs()).sum();
+    assert!(change > 1.0, "the automation does not change the render: {change}");
+    let mut converted = project.clone();
+    lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio);
+    assert!(matches!(
+        converted.automations[0].target,
+        AutomationTarget::PluginParam { .. }
+    ));
+    let host = PluginHost::new(None);
+    let (processors, _keep) = host.offline(&converted, SR);
+    let actual = song(&converted, processors);
+    let rms = |a: &[f32]| (a.iter().map(|v| v * v).sum::<f32>() / a.len().max(1) as f32).sqrt();
+    let n = expected.len().min(actual.len());
+    let diff: Vec<f32> = expected[..n].iter().zip(&actual[..n]).map(|(a, b)| a - b).collect();
+    let (e, a, d) = (rms(&expected[..n]), rms(&actual[..n]), rms(&diff));
+    eprintln!("automated: rms built-in {e}, Lime VST3 {a}, difference {d}");
+    // The plugin smooths parameter changes and applies them per block, so the result is close to
+    // the built-in render rather than identical; without the conversion it would be far off.
+    let off: Vec<f32> = expected[..n]
+        .iter()
+        .zip(&unautomated[..n])
+        .map(|(a, b)| a - b)
+        .collect();
+    let o = rms(&off);
+    eprintln!("difference without automation {o}");
+    assert!(
+        d < 0.1 * o,
+        "automation not followed: difference {d}, without automation {o}"
+    );
 }

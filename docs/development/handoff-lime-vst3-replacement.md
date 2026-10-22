@@ -53,7 +53,7 @@ Next, in order:
    25 files (`crates/*/src`, `crates/*/tests`, plus `crates/limeshot-app/src/demo.rs`, the FLP and MIDI importers
    and the inspector, rack, browser and preset UIs). The importers can keep producing built-ins, because the
    normalizer converts them.
-4. P0 gaps PLG-017…PLG-022. PLG-014…016 are done: Lime Sampler now has every built-in sampler setting (envelope 9–11, filter 12–13, loop 14–16), and the converter carries them over.
+4. P0 gaps PLG-017…PLG-020 and PLG-022. PLG-021 (effect automation is retargeted to plugin parameters) is done. PLG-014…016 are done: Lime Sampler now has every built-in sampler setting (envelope 9–11, filter 12–13, loop 14–16), and the converter carries them over.
 5. The command-line renderer (`crates/limeshot-app/src/cli.rs`) already instantiates plugins for export
    (`PluginHost::offline`). It only needs `doc.set_normalizer(limeshot_ui::lime::normalizer())`. When you add it,
    set `LIMESHOT_LIME_PLUGINS` in CI's "Headless demo render" step too. That step only compares two renders with

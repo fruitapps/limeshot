@@ -10,7 +10,9 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::effects::{COMPRESSOR_SIDECHAIN, EffectKind};
+use crate::automation::AutomationTarget;
+use crate::document::PluginTarget;
+use crate::effects::{COMPRESSOR_SIDECHAIN, EffectKind, ParamSpec};
 use crate::model::{FilterMode, Instrument, Project, SamplerParams, SynthParams, Waveform};
 use crate::plugin::{PluginRef, PluginState, base64_encode};
 
@@ -142,6 +144,22 @@ pub fn component_state(state: &PluginState) -> Option<&[u8]> {
     rest.get(4..4 + n)
 }
 
+/// The VST3 parameter id of a Lime plugin's control `index` (0-based): nice-plug hashes the
+/// control's string id (`value_<n>`) with `hash = hash * 31 + byte` and clears the top bit.
+pub fn param_id(index: usize) -> u32 {
+    let id = format!("value_{}", index + 1);
+    id.bytes()
+        .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)))
+        & !(1 << 31)
+}
+
+/// A plain value as the Lime plugin's normalised parameter value: linear, or nice-plug's skewed
+/// range (factor 2^-2) for logarithmic controls.
+pub fn plugin_normalized(spec: &ParamSpec, plain: f32) -> f32 {
+    let x = (plain.clamp(spec.min, spec.max) - spec.min) / (spec.max - spec.min).max(f32::EPSILON);
+    if spec.log { x.powf(0.25) } else { x }
+}
+
 /// Decoded audio for Lime Sampler's state: interleaved stereo frames.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EmbeddedAudio {
@@ -217,6 +235,51 @@ pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
 /// stay as they are until they have Lime plugins.
 pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<EmbeddedAudio>) -> Vec<String> {
     let mut warnings = Vec::new();
+    // Effect automation becomes automation of the Lime plugin's parameter, before the slots change.
+    let mut retarget = Vec::new();
+    for (i, a) in project.automations.iter().enumerate() {
+        let AutomationTarget::EffectParam { track, effect, index } = a.target else {
+            continue;
+        };
+        let Some(slot) = project
+            .mixer
+            .tracks
+            .get(usize::from(track))
+            .and_then(|t| t.effects.iter().find(|e| e.id == effect))
+        else {
+            continue;
+        };
+        if LimePlugin::for_effect(slot.kind).is_none() {
+            continue;
+        }
+        if slot.kind == EffectKind::Compressor && index >= COMPRESSOR_SIDECHAIN {
+            warnings.push(format!(
+                "{}: Lime Comp has no mixer-track sidechain input to automate",
+                a.name
+            ));
+            continue;
+        }
+        let (Some(mapping), Some(spec)) = (a.target.mapping(project), slot.kind.params().get(index)) else {
+            continue;
+        };
+        let values: Vec<f32> = a
+            .points
+            .iter()
+            .map(|p| plugin_normalized(spec, mapping.to_value(p.value)))
+            .collect();
+        let target = AutomationTarget::PluginParam {
+            plugin: PluginTarget::Effect { track, effect },
+            id: param_id(index),
+        };
+        retarget.push((i, target, values));
+    }
+    for (i, target, values) in retarget {
+        let a = &mut project.automations[i];
+        a.target = target;
+        for (p, v) in a.points.iter_mut().zip(values) {
+            p.value = v;
+        }
+    }
     for c in &mut project.channels {
         let converted = match &c.instrument {
             Instrument::Synth(p) => Some(LimePlugin::SYNTH.with_values(&synth_values(p), false, None)),
@@ -289,6 +352,22 @@ mod tests {
         let r = LimePlugin(3).plugin_ref();
         assert_eq!(r.path, "lime:Lime EQ.vst3");
         assert_eq!(LimePlugin::of(&r), Some(LimePlugin(3)));
+    }
+
+    #[test]
+    fn parameter_ids_and_values_match_nice_plug() {
+        // nice-plug's hash of "value_1".
+        let expected = "value_1"
+            .bytes()
+            .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)))
+            & 0x7FFF_FFFF;
+        assert_eq!(param_id(0), expected);
+        assert_ne!(param_id(0), param_id(1));
+        let freq = *EffectKind::Filter.params().iter().find(|p| p.log).unwrap();
+        assert_eq!(plugin_normalized(&freq, freq.max), 1.0);
+        assert_eq!(plugin_normalized(&freq, freq.min), 0.0);
+        let mid = (0.5f32).powf(0.25);
+        assert!((plugin_normalized(&freq, (freq.min + freq.max) / 2.0) - mid).abs() < 1e-6);
     }
 
     #[test]
