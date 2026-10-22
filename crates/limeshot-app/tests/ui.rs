@@ -5288,3 +5288,52 @@ fn recording_turns_played_notes_into_pattern_notes() {
     assert!(pattern_notes(&h, pat, lead).is_empty());
     h.state_mut().stop();
 }
+
+/// PL-023: an audio clip's fade handles (top of its body, FL Studio) drag its fade-in and
+/// fade-out, one undo step each.
+#[test]
+fn audio_clip_fade_handles_set_the_fades() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.playlist.zoom_x = 100.0;
+    h.step();
+    let snare = limeshot_app::bundled_samples_dir()
+        .expect("samples")
+        .join("Lime Snare.wav");
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &snare, 4, bar).expect("placed");
+    h.state_mut().exec(Command::ResizeClip { clip: id, length: bar });
+    h.step();
+    h.step();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let top = g.grid.top() + 4.0 * g.track_h - g.scroll.y;
+    let x = |t: Tick| g.pos(t, 4).x;
+    let fades = |h: &Harness<'static, LimeShotApp>| {
+        let c = h.state().project().clip(id).expect("clip");
+        (c.fade_in, c.fade_out)
+    };
+    assert_eq!(fades(&h), (0, 0));
+    // The fade-in handle sits at the clip's left, the fade-out one at its right.
+    drag(
+        &mut h,
+        egui::pos2(x(bar) + 12.0, top + 20.0),
+        egui::pos2(x(bar + PPQ), top + 20.0),
+    );
+    let (fi, _) = fades(&h);
+    assert!((fi as i64 - PPQ as i64).abs() <= 10, "fade in {fi}");
+    assert_eq!(h.state().doc.undo_label(), Some("Clip fade"));
+    let undo = h.state().doc.history().len();
+    drag(
+        &mut h,
+        egui::pos2(x(2 * bar) - 12.0, top + 20.0),
+        egui::pos2(x(2 * bar - PPQ / 2), top + 20.0),
+    );
+    let (_, fo) = fades(&h);
+    assert!((fo as i64 - (PPQ / 2) as i64).abs() <= 10, "fade out {fo}");
+    assert_eq!(h.state().doc.history().len(), undo + 1, "a drag is one undo step");
+    assert_eq!(
+        h.state().project().clip(id).map(|c| (c.start, c.length)),
+        Some((bar, bar)),
+        "the clip did not move"
+    );
+}

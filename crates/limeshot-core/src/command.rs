@@ -362,6 +362,12 @@ pub enum Command {
         clip: ClipId,
         muted: bool,
     },
+    /// An audio clip's fade-in and fade-out lengths (each clamped so they fit the clip).
+    SetClipFades {
+        clip: ClipId,
+        fade_in: Tick,
+        fade_out: Tick,
+    },
     /// Insert `length` ticks of empty time at `at` (FL Studio's Playlist Insert space): clips
     /// and time markers from `at` on move right. With `slice`, clips crossing `at` are cut there
     /// first (Slice & insert space); otherwise they stay.
@@ -697,6 +703,7 @@ impl Command {
             DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
+            SetClipFades { .. } => "Clip fade",
             InsertSpace { .. } => "Insert space",
             DeleteSpace { .. } => "Delete space",
             MergeClips(_) => "Merge clips",
@@ -778,6 +785,7 @@ impl Command {
             // A Playlist paint stroke or mute drag is one undo step too.
             AddClip { track, .. } | PlaceClip { track, .. } => format!("addc{track}"),
             SetClipMuted { muted, .. } => format!("cmute{muted}"),
+            SetClipFades { clip, .. } => format!("fade{}", clip.0),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
             ResizeClipStart { clip, .. } => format!("rss{}", clip.0),
@@ -1353,6 +1361,8 @@ impl Command {
                     length: len,
                     offset: 0,
                     muted: false,
+                    fade_in: 0,
+                    fade_out: 0,
                     extra: Extra::new(),
                 });
                 return Ok(Created(Some(id)));
@@ -1403,6 +1413,20 @@ impl Command {
                 length,
                 offset,
             } => return place_clip(p, source, track, start, length, offset),
+            SetClipFades {
+                clip,
+                fade_in,
+                fade_out,
+            } => {
+                let c = p
+                    .playlist
+                    .clips
+                    .iter_mut()
+                    .find(|c| c.id == clip)
+                    .ok_or(CommandError::NoClip(clip))?;
+                c.fade_in = fade_in.min(c.length);
+                c.fade_out = fade_out.min(c.length - c.fade_in);
+            }
             InsertSpace { at, length, slice } => {
                 if slice {
                     let all = p.playlist.clips.iter().map(|c| c.id).collect();
@@ -2013,6 +2037,8 @@ fn place_clip(p: &mut Project, source: ClipSource, track: u32, start: Tick, leng
         length: length.max(1),
         offset,
         muted: false,
+        fade_in: 0,
+        fade_out: 0,
         extra: Extra::new(),
     });
     Ok(Created(Some(id)))

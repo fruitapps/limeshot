@@ -359,8 +359,18 @@ pub struct Clip {
     pub offset: Tick,
     #[serde(default)]
     pub muted: bool,
+    /// Audio clips: fade-in and fade-out lengths in ticks (FL Studio's clip fade handles).
+    /// Saved only when set.
+    #[serde(default, skip_serializing_if = "is_zero_tick")]
+    pub fade_in: Tick,
+    #[serde(default, skip_serializing_if = "is_zero_tick")]
+    pub fade_out: Tick,
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+fn is_zero_tick(t: &Tick) -> bool {
+    *t == 0
 }
 
 impl Clip {

@@ -656,6 +656,8 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
             length: scale(it.length).max(1),
             offset: it.offset.map(scale).unwrap_or(0),
             muted: it.muted,
+            fade_in: 0,
+            fade_out: 0,
             extra: Extra::new(),
         });
     }

@@ -2814,19 +2814,27 @@
       "name": "Crossfades and time stretching",
       "description": "Audio clip processing.",
       "fl_reference": "Audio focus options.",
-      "limeshot_behavior": "Fades and stretch on audio clips.",
+      "limeshot_behavior": "Audio clips have fade-in and fade-out handles at the top of their body (drag inward, unsnapped, one undo step; the hint shows the lengths in seconds); playback ramps the clip's gain linearly over them, also when playback starts inside a fade. Not yet: automatic crossfades, fade curve shapes, time stretching.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PL-014"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::audio_clip_fades_ramp_the_gain",
+        "crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2834,7 +2842,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 8). Fade lengths are ticks (Clip::fade_in/fade_out), so they follow the tempo. FL's handle positions and curve options were not observed live."
     },
     {
       "id": "PL-024",

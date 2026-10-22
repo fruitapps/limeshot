@@ -43,6 +43,9 @@ pub struct NoteEvent {
     /// An audio clip: plays for exactly `length` even on a one-shot sampler, and starts mid-way
     /// when playback begins inside it.
     pub clip: bool,
+    /// An audio clip's fade-in and fade-out, in seconds (0: none).
+    pub fade_in_secs: f32,
+    pub fade_out_secs: f32,
 }
 
 impl NoteEvent {
@@ -56,6 +59,8 @@ impl NoteEvent {
             pan: 0.0,
             offset_secs: 0.0,
             clip: false,
+            fade_in_secs: 0.0,
+            fade_out_secs: 0.0,
         }
     }
 
@@ -441,10 +446,12 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             ClipSource::Audio(ch) => {
                 if let (Some(channel), Some(c)) = (channel_index(ch), project.channel(ch)) {
                     // Tempo is constant within a project, so a tick offset is a fixed time.
-                    let secs = project.tempo.bpm().recip() * 60.0 * clip.offset as f64 / PPQ as f64;
+                    let secs_per_tick = project.tempo.bpm().recip() * 60.0 / PPQ as f64;
                     song_events.push(NoteEvent {
-                        offset_secs: secs,
+                        offset_secs: secs_per_tick * clip.offset as f64,
                         clip: true,
+                        fade_in_secs: (secs_per_tick * clip.fade_in as f64) as f32,
+                        fade_out_secs: (secs_per_tick * clip.fade_out as f64) as f32,
                         ..NoteEvent::note(clip.start, clip.length, channel, c.root_key, 1.0)
                     });
                 }

@@ -114,6 +114,37 @@ pub struct Voice {
     pub end_tick: u64,
     /// Start order, for stealing the oldest voice.
     pub serial: u64,
+    /// An audio clip's fades.
+    pub fade: Option<ClipFade>,
+}
+
+/// An audio clip's fade-in and fade-out, counted in frames: `pos` from the clip's start, `left`
+/// to its end.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ClipFade {
+    pub in_len: f32,
+    pub pos: f32,
+    pub out_len: f32,
+    pub left: f32,
+}
+
+impl ClipFade {
+    /// The gain for the next frame (linear ramps), advancing by one frame.
+    fn next(&mut self) -> f32 {
+        let g_in = if self.in_len > 0.0 {
+            (self.pos / self.in_len).min(1.0)
+        } else {
+            1.0
+        };
+        let g_out = if self.out_len > 0.0 {
+            (self.left / self.out_len).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        self.pos += 1.0;
+        self.left -= 1.0;
+        g_in * g_out
+    }
 }
 
 impl Default for Voice {
@@ -129,6 +160,7 @@ impl Default for Voice {
             release_at: u64::MAX,
             end_tick: u64::MAX,
             serial: 0,
+            fade: None,
         }
     }
 }
@@ -347,7 +379,10 @@ impl Voice {
                 (s, s)
             }
         };
-        let e = self.env.next() * self.gain;
+        let mut e = self.env.next() * self.gain;
+        if let Some(f) = &mut self.fade {
+            e *= f.next();
+        }
         if self.env.is_done() {
             self.source = Source::Off;
         }

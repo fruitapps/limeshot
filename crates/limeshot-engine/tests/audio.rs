@@ -1589,3 +1589,51 @@ fn stop_while_stopped_and_play_silence_tails_and_previews() {
     }
     assert!(loud(&buf) < 1e-3, "no tail rings into the song: {}", loud(&buf));
 }
+
+/// PL-023: an audio clip's fade-in and fade-out ramp its gain linearly, at any block size and
+/// when playback starts inside the fade-in.
+#[test]
+fn audio_clip_fades_ramp_the_gain() {
+    let (mut doc, _) = dc_clip_doc();
+    let clip = doc.project().playlist.clips[0].id;
+    // 960 ticks = 0.5 s in, 1920 ticks = 1 s out, on a 4 s clip at 120 BPM.
+    doc.execute(Command::SetClipFades {
+        clip,
+        fade_in: 960,
+        fade_out: 1920,
+    })
+    .unwrap();
+    let snap = dc_snapshot(&doc);
+    for block in [64, 333, 1024] {
+        let (audio, _) = render(snap.clone(), ExportRange::Song, block, SR);
+        let at = |i: usize| audio[2 * i];
+        let full = at(96_000);
+        assert!(full > 0.1);
+        assert!(at(0).abs() < 1e-6, "silent at the clip start (block {block})");
+        assert!((at(12_000) / full - 0.5).abs() < 1e-3, "half-way into the fade-in");
+        assert!((at(24_000) / full - 1.0).abs() < 1e-3);
+        assert!(
+            (at(192_000 - 24_000) / full - 0.5).abs() < 1e-3,
+            "half-way through the fade-out"
+        );
+        assert!(at(191_999).abs() / full < 1e-3);
+    }
+    // Starting inside the fade-in picks the ramp up where it is.
+    let mut r = Renderer::new(SR, snap.clone());
+    r.set_mode(PlayMode::Song);
+    r.locate(480);
+    r.play();
+    let mut buf = vec![0.0; 2 * 256];
+    r.render(&mut buf);
+    let (full_audio, _) = render(snap, ExportRange::Song, 512, SR);
+    assert!((buf[0] / full_audio[2 * 96_000] - 0.5).abs() < 1e-3, "{}", buf[0]);
+    // Fades are clamped to the clip.
+    doc.execute(Command::SetClipFades {
+        clip,
+        fade_in: 99_999,
+        fade_out: 500,
+    })
+    .unwrap();
+    let c = doc.project().clip(clip).unwrap();
+    assert_eq!((c.fade_in, c.fade_out), (c.length, 0));
+}

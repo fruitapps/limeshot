@@ -51,6 +51,8 @@ enum Action {
         end_tick: Tick,
         offset_secs: f64,
         clip: bool,
+        /// Audio clip fades (seconds) and how far into the clip playback starts.
+        fade: (f32, f32, f32),
     },
     Click {
         downbeat: bool,
@@ -627,6 +629,7 @@ impl Renderer {
                             end_tick: e.end(),
                             offset_secs: e.offset_secs + tl.seconds(t_lo - e.tick),
                             clip: true,
+                            fade: (e.fade_in_secs, e.fade_out_secs, tl.seconds(t_lo - e.tick) as f32),
                         },
                     ));
                 }
@@ -647,6 +650,7 @@ impl Renderer {
                     end_tick: e.tick + e.length,
                     offset_secs: e.offset_secs,
                     clip: e.clip,
+                    fade: (e.fade_in_secs, e.fade_out_secs, 0.0),
                 },
             ));
         }
@@ -722,6 +726,7 @@ impl Renderer {
                 end_tick,
                 offset_secs,
                 clip,
+                fade,
             } => {
                 let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
                     return;
@@ -757,6 +762,15 @@ impl Renderer {
                 } else {
                     self.timeline.sample_of_tick(end_tick)
                 };
+                if clip && (fade.0 > 0.0 || fade.1 > 0.0) {
+                    let left = self.timeline.sample_of_tick(end_tick).saturating_sub(at.1) as f32;
+                    v.fade = Some(crate::voice::ClipFade {
+                        in_len: fade.0 * sr,
+                        pos: fade.2 * sr,
+                        out_len: fade.1 * sr,
+                        left,
+                    });
+                }
                 self.alloc_voice(v);
             }
             Action::Click { downbeat } => self.alloc_voice(Voice::click(downbeat, sr)),

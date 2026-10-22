@@ -10,14 +10,14 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 20, VERIFIED 140, DEFERRED 4
+- By status: NOT_STARTED 93, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 20, VERIFIED 140, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 33 | 16 | 3 | 3 | 11 |
 | Channel Rack | 22 | 18 | 0 | 0 | 4 |
 | Piano Roll | 29 | 19 | 3 | 0 | 7 |
-| Playlist | 29 | 20 | 1 | 2 | 6 |
+| Playlist | 29 | 20 | 1 | 3 | 5 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 6 | 1 | 0 | 7 |
 | Effects | 15 | 8 | 1 | 0 | 6 |
@@ -156,7 +156,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PL-020 | Arrangements | P2 |  | NOT_STARTED | Several playlists sharing channels/mixer. | — |
 | PL-021 | Picker panel | P2 |  | VERIFIED | The picker column in the Playlist window (see PL-025 and PL-027): patterns, audio and automation clips in three tabs.<br>*Session 11: covered by PL-025/PL-027. FL's Alt+P floating picker is not implemented.* | `limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns` |
 | PL-022 | Consolidate / render to audio clip | P2 |  | IN_PROGRESS | Merge selected clips (Cmd+G): the selected pattern clips become one new pattern with their notes where they sounded, one clip on the topmost track. Not yet: Merge similar pattern clips, Consolidate (render to an audio clip).<br>*Session 16: from FL 2026.1.1's Playlist Edit menu (menus.json).* | `limeshot-core document::tests::insert_and_delete_space_and_merge_clips`<br>`crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers` |
-| PL-023 | Crossfades and time stretching | P2 |  | NOT_STARTED | Fades and stretch on audio clips. | — |
+| PL-023 | Crossfades and time stretching | P2 |  | IN_PROGRESS | Audio clips have fade-in and fade-out handles at the top of their body (drag inward, unsnapped, one undo step; the hint shows the lengths in seconds); playback ramps the clip's gain linearly over them, also when playback starts inside a fade. Not yet: automatic crossfades, fade curve shapes, time stretching.<br>*Session 16 (next-steps Then 8). Fade lengths are ticks (Clip::fade_in/fade_out), so they follow the tempo. FL's handle positions and curve options were not observed live.* | `limeshot-engine tests/audio.rs::audio_clip_fades_ramp_the_gain`<br>`crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades` |
 | PL-024 | Clip offset (start inside pattern) | P2 |  | IN_PROGRESS | Model and sequencer support `offset`; no UI to set it yet. | — |
 | PL-025 | Pattern picker | P1 |  | VERIFIED | Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern. | `limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place` |
 | PL-026 | Copy / cut / paste clips | P1 |  | IMPLEMENTED | Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.<br>*No automated test yet.* | — |

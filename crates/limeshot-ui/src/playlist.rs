@@ -56,6 +56,11 @@ enum Drag {
     ResizeStart {
         id: ClipId,
     },
+    /// Dragging an audio clip's fade-in (or fade-out) handle.
+    Fade {
+        id: ClipId,
+        out: bool,
+    },
     /// Dragging point `index` of an automation shown by `clip`.
     AutoPoint {
         clip: ClipId,
@@ -827,7 +832,8 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         let body = Rect::from_min_max(pos2(r.left(), r.top() + 15.0), r.max);
         match c.source {
             ClipSource::Audio(ch) => {
-                draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55))
+                draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55));
+                draw_fades(&painter.with_clip_rect(rr), &view, c, body, fg);
             }
             ClipSource::Automation(a) => {
                 if let Some(a) = app.project().automation(a) {
@@ -1145,6 +1151,21 @@ pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32,
         focus_source(app, &c);
     }
     Some(ClipId(id))
+}
+
+/// An audio clip's fade lines (from the corners to the handles) and the handles themselves.
+fn draw_fades(painter: &egui::Painter, view: &View, c: &Clip, body: Rect, color: Color32) {
+    let Some((a, b)) = fade_handles(view, c) else { return };
+    let line = Stroke::new(1.2, color.gamma_multiply(0.8));
+    if c.fade_in > 0 {
+        painter.line_segment([pos2(body.left(), body.bottom()), a], line);
+    }
+    if c.fade_out > 0 {
+        painter.line_segment([b, pos2(body.right(), body.bottom())], line);
+    }
+    for h in [a, b] {
+        painter.rect_filled(Rect::from_center_size(h, vec2(6.0, 6.0)), 1.0, color);
+    }
 }
 
 /// Where an automation clip draws its curve: below the title strip.
@@ -1686,6 +1707,24 @@ enum Part {
     LeftEdge,
     RightEdge,
     Menu,
+    /// An audio clip's fade-in / fade-out handle (FL Studio's fade handles).
+    FadeIn,
+    FadeOut,
+}
+
+/// Where an audio clip's fade handles are: on the top of its body, at the end of the fade in and
+/// the start of the fade out.
+fn fade_handles(view: &View, c: &Clip) -> Option<(Pos2, Pos2)> {
+    c.audio_channel()?;
+    let r = view.clip_rect(c);
+    // Inside the edges (which resize the clip) and just under the title strip.
+    if r.height() < 30.0 || r.width() < 40.0 {
+        return None;
+    }
+    let y = r.top() + 19.0;
+    let x_in = (view.x(c.start + c.fade_in)).clamp(r.left() + 12.0, r.right() - 12.0);
+    let x_out = (view.x(c.end() - c.fade_out)).clamp(r.left() + 12.0, r.right() - 12.0);
+    Some((pos2(x_in, y), pos2(x_out, y)))
 }
 
 fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
@@ -1693,7 +1732,12 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
         let r = view.clip_rect(c);
         r.contains(p).then(|| {
             let edge = EDGE.min(r.width() * 0.3);
-            let part = if p.x <= r.left() + 13.0 && p.y <= r.top() + 13.0 {
+            let fades = fade_handles(view, c);
+            let part = if fades.is_some_and(|(a, _)| a.distance(p) <= 5.0) {
+                Part::FadeIn
+            } else if fades.is_some_and(|(_, b)| b.distance(p) <= 5.0) {
+                Part::FadeOut
+            } else if p.x <= r.left() + 13.0 && p.y <= r.top() + 13.0 {
                 Part::Menu
             } else if p.x >= r.right() - edge {
                 Part::RightEdge
@@ -1786,7 +1830,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }),
         };
         let special = auto_icon.or(match (tool, hit(view, clips, p).map(|h| h.1)) {
-            (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge)) => {
+            (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge | Part::FadeIn | Part::FadeOut)) => {
                 Some(egui::CursorIcon::ResizeHorizontal)
             }
             (_, Some(Part::Menu)) => Some(egui::CursorIcon::PointingHand),
@@ -2006,6 +2050,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                             start: c.start,
                         },
                         Part::LeftEdge => Drag::ResizeStart { id: c.id },
+                        Part::FadeIn | Part::FadeOut => Drag::Fade {
+                            id: c.id,
+                            out: part == Part::FadeOut,
+                        },
                         _ => Drag::Move {
                             ids,
                             anchor_start: c.start,
@@ -2186,6 +2234,30 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                         *index + 1,
                         *index + 2,
                         t * 100.0
+                    ));
+                }
+            }
+            Some(Drag::Fade { id, out }) => {
+                // Fades are free (no snap), as FL Studio's handles.
+                if let Some(c) = app.project().clip(*id).cloned() {
+                    let t = view.tick_at(p.x).clamp(c.start as i64, c.end() as i64) as Tick;
+                    let (fade_in, fade_out) = if *out {
+                        (c.fade_in.min(t - c.start), c.end() - t)
+                    } else {
+                        (t - c.start, c.fade_out.min(c.end() - t))
+                    };
+                    if (fade_in, fade_out) != (c.fade_in, c.fade_out) {
+                        app.exec(Command::SetClipFades {
+                            clip: *id,
+                            fade_in,
+                            fade_out,
+                        });
+                    }
+                    let secs = |ticks: Tick| ticks as f64 * 60.0 / app.project().tempo.bpm() / PPQ as f64;
+                    app.hint(format!(
+                        "Fade in {:.2} s · fade out {:.2} s",
+                        secs(fade_in),
+                        secs(fade_out)
                     ));
                 }
             }
@@ -2763,6 +2835,8 @@ fn source_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
             length,
             offset: 0,
             muted: false,
+            fade_in: 0,
+            fade_out: 0,
             extra: Default::default(),
         };
         draw_waveform(

@@ -875,3 +875,11 @@ under the song position. `ui_shot --record` shows the armed button.
 `LimeShot.icns` from the new `make_icon` example, Info.plist with the `.lime` document type), ad-hoc `codesign`, and
 `dist/LimeShot-<version>-macos-<arch>.dmg` with an Applications link. Checked: signature, plist and DMG verify; the
 bundled CLI renders the demo with the bundled samples; the app launches from the bundle. `/dist` is ignored by git.
+
+### Session 16, part 15: audio clip fades (PL-023; next-steps Then 8)
+
+`Clip::fade_in` / `fade_out` (ticks, saved only when set) and `Command::SetClipFades` (clamped to the clip). The
+sequencer passes them in seconds on the clip's `NoteEvent`; the engine gives the voice a `ClipFade` (frames from
+the clip's start and to its end) that ramps its gain, including when playback chases into a clip. The Playlist
+draws fade lines and two handles on audio clips; dragging a handle sets the fade (`Drag::Fade`). `ui_shot --audio`
+shows a faded clip.

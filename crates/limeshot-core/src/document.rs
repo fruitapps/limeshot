@@ -1425,6 +1425,8 @@ mod tests {
             length: 10,
             offset: 0,
             muted: false,
+            fade_in: 0,
+            fade_out: 0,
             extra: Extra::new(),
         });
         let json = serde_json::to_string(&p.playlist.clips[0]).unwrap();
