@@ -1720,3 +1720,32 @@ fn sampler_loops_and_filters() {
         "the slow ramp passes"
     );
 }
+
+/// EXP-010: exporting the time selection renders exactly that span of the song, with clips that
+/// began before it already sounding.
+#[test]
+fn exporting_a_time_selection_renders_that_span() {
+    let (doc, _) = dc_clip_doc();
+    let snap = dc_snapshot(&doc);
+    let (song, _) = render(snap.clone(), ExportRange::Song, 256, SR);
+    for block in [64, 333] {
+        // Bar 2's first half: 3840..5760 at 120 BPM is one second, inside the two-bar clip.
+        let (sel, report) = render(snap.clone(), ExportRange::Selection { from: 3840, to: 5760 }, block, SR);
+        assert_eq!(report.music_frames, 48_000, "block {block}");
+        assert!(
+            (sel[0] - song[2 * 96_000]).abs() < 1e-6,
+            "the clip sounds from the first frame"
+        );
+        assert!((sel[2 * 47_999] - song[2 * (96_000 + 47_999)]).abs() < 1e-6);
+    }
+    let empty = render_offline(
+        snap,
+        &RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Selection { from: 100, to: 100 },
+            max_tail_secs: 0.0,
+            block: 256,
+        },
+    );
+    assert!(empty.is_err(), "an empty selection is an error");
+}

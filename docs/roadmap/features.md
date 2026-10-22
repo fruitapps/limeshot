@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 88, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 142, DEFERRED 4
+- By status: NOT_STARTED 87, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 143, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -25,7 +25,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Recording | 11 | 1 | 1 | 1 | 8 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
-| Export | 18 | 5 | 0 | 0 | 13 |
+| Export | 18 | 6 | 0 | 0 | 12 |
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 8 | 2 | 1 | 7 |
@@ -303,7 +303,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-007 | Dithering | P2 |  | NOT_STARTED | TPDF dither for 16/24-bit. | — |
 | EXP-008 | Normalization | P2 |  | NOT_STARTED | — | — |
 | EXP-009 | Stem export (per mixer track) | P2 |  | NOT_STARTED | — | — |
-| EXP-010 | Export ranges (time selection, loop) | P2 |  | NOT_STARTED | — | — |
+| EXP-010 | Export ranges (time selection, loop) | P2 |  | VERIFIED | With a Playlist time selection, File › Export offers (and starts on) Time selection: the song's span from its start to its end, with clips that began earlier already sounding, then the usual tail.<br>*Session 16. No loop-count option or export of the loop markers' range.* | `limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span` |
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
 | EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
 | EXP-013 | Wrap the tail into the loop | P3 |  | NOT_STARTED | Planned. | — |

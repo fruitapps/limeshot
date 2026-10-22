@@ -5770,19 +5770,24 @@
       "name": "Export ranges (time selection, loop)",
       "description": "Partial export.",
       "fl_reference": "Export selection.",
-      "limeshot_behavior": "—",
+      "limeshot_behavior": "With a Playlist time selection, File › Export offers (and starts on) Time selection: the song's span from its start to its end, with clips that began earlier already sounding, then the usual tail.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PL-016"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5791,7 +5796,7 @@
           "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. No loop-count option or export of the loop markers' range."
     },
     {
       "id": "EXP-011",

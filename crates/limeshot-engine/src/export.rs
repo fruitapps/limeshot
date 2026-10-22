@@ -1,7 +1,7 @@
 //! Offline rendering (bounce) and WAV export. Uses the same [`Renderer`] as realtime playback.
 
 use crate::renderer::{PlayMode, Renderer};
-use limeshot_core::Timeline;
+use limeshot_core::{Tick, Timeline};
 use limeshot_dsp::{BitDepth, SampleError, write_wav};
 use limeshot_sequencer::Snapshot;
 use std::path::Path;
@@ -14,6 +14,9 @@ pub enum ExportRange {
     Song,
     /// One pass of the current pattern.
     Pattern,
+    /// The Playlist's time selection, ticks `from..to` of the song (FL Studio renders the
+    /// selection when there is one).
+    Selection { from: Tick, to: Tick },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,9 +87,10 @@ pub fn render_offline_with(
     settings: &RenderSettings,
     processors: Processors,
 ) -> Result<(Vec<f32>, RenderReport), ExportError> {
-    let length = match settings.range {
-        ExportRange::Song => snapshot.song.length,
-        ExportRange::Pattern => snapshot.pattern.length,
+    let (start, length) = match settings.range {
+        ExportRange::Song => (0, snapshot.song.length),
+        ExportRange::Pattern => (0, snapshot.pattern.length),
+        ExportRange::Selection { from, to } => (from, to.saturating_sub(from)),
     };
     if length == 0 {
         return Err(ExportError::EmptySong);
@@ -105,13 +109,15 @@ pub fn render_offline_with(
     }
     r.rearrange();
     r.set_mode(match settings.range {
-        ExportRange::Song => PlayMode::Song,
+        ExportRange::Song | ExportRange::Selection { .. } => PlayMode::Song,
         ExportRange::Pattern => PlayMode::Pattern,
     });
     r.set_song_loop(false);
-    r.locate(0);
+    r.set_loop_range(None);
+    r.locate(start);
     r.play();
-    let music = Timeline::new(tempo, sample_rate).sample_of_tick(length) as usize;
+    let tl = Timeline::new(tempo, sample_rate);
+    let music = (tl.sample_of_tick(start + length) - tl.sample_of_tick(start)) as usize;
     let tail_max = (settings.max_tail_secs.max(0.0) * sample_rate as f32) as usize;
     let block = settings.block.clamp(1, crate::MAX_BLOCK);
     let mut out = Vec::with_capacity(2 * (music + tail_max.min(sample_rate as usize)));

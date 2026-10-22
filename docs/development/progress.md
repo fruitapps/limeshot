@@ -932,3 +932,9 @@ Next, in order:
 3. `next-steps.md` Then items still open: tempo automation (AUT-008, needs a tempo map in `Timeline`), export ranges
    (EXP-010), more effects (FX-009 distortion, FX-010 chorus/flanger/phaser), LimeSynth filter modes (INS-013),
    sampler volume envelope (INS-014), CLAP/AU hosting.
+
+### Session 16, part 20: export the time selection (EXP-010)
+
+`ExportRange::Selection { from, to }`: the offline render plays Song mode from `from` for exactly the selection's
+frames (clips already under way are chased), no loop. The export dialog offers Time selection when the Playlist
+has one and starts on it, as FL Studio does.

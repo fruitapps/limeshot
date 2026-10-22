@@ -2,6 +2,7 @@
 
 use crate::app::{LimeShotApp, Pending};
 use crate::theme::Theme;
+use crate::widgets::Hint as _;
 use egui::{Align2, ComboBox, Context, RichText, vec2};
 use limeshot_core::{ChannelId, Command, PatternId};
 use limeshot_engine::{BitDepth, ExportRange, RenderReport, RenderSettings};
@@ -56,10 +57,13 @@ pub enum Dialog {
 
 impl Dialog {
     pub fn export(app: &LimeShotApp) -> Self {
-        let range = if app.project().playlist.clips.is_empty() {
-            ExportRange::Pattern
-        } else {
-            ExportRange::Song
+        // FL Studio renders the Playlist's time selection when there is one.
+        let range = match app.ui.playlist.time_sel {
+            Some((from, to)) if to > from && !app.project().playlist.clips.is_empty() => {
+                ExportRange::Selection { from, to }
+            }
+            _ if app.project().playlist.clips.is_empty() => ExportRange::Pattern,
+            _ => ExportRange::Song,
         };
         Dialog::Export(ExportOptions {
             range,
@@ -339,6 +343,11 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         ui.horizontal(|ui| {
                             ui.selectable_value(&mut opts.range, ExportRange::Song, "Song");
                             ui.selectable_value(&mut opts.range, ExportRange::Pattern, "Pattern");
+                            if let Some((from, to)) = app.ui.playlist.time_sel.filter(|(a, b)| b > a) {
+                                let sel = ExportRange::Selection { from, to };
+                                ui.selectable_value(&mut opts.range, sel, "Time selection")
+                                    .hint("The Playlist's time selection");
+                            }
                         });
                         ui.end_row();
                         ui.label("Sample rate");
@@ -360,7 +369,9 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                             });
                         ui.end_row();
                     });
-                if opts.range == ExportRange::Song && app.project().playlist.clips.is_empty() {
+                if matches!(opts.range, ExportRange::Song | ExportRange::Selection { .. })
+                    && app.project().playlist.clips.is_empty()
+                {
                     ui.colored_label(
                         Theme::current().warning,
                         "The Playlist is empty: place a pattern first, or export the pattern.",
