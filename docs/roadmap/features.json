@@ -8797,7 +8797,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-015…PLG-023."
+      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-015, PLG-017…PLG-023."
     },
     {
       "id": "PLG-014",
@@ -8870,9 +8870,9 @@
       "name": "Lime Sampler filter",
       "description": "The former built-in sampler's low-pass filter (cutoff, resonance) in Lime Sampler (INS-007).",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Not implemented in Lime Sampler; converted samplers lose the filter with a warning.",
+      "limeshot_behavior": "Lime Sampler has Cutoff (20–20,000 Hz, open by default) and Resonance (0–0.95), appended as parameters 12–13 and shown under the waveform. As in LimeShot's compiler, the filter is off while fully open. They round-trip through .limepreset and the converter carries the built-in sampler's filter over. Changes apply to the next note, not to held notes.",
       "priority": "P0",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PLG-013",
@@ -8884,7 +8884,10 @@
       "acceptance_criteria": [
         "Cutoff and resonance controls; the converter carries them over."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
+        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes"
+      ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
@@ -8892,7 +8895,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": ""
+      "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW."
     },
     {
       "id": "PLG-017",

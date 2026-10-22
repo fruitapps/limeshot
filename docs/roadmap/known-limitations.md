@@ -148,7 +148,7 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   the command-line renderer still use the built-ins, which are not yet deleted. Gate, Drive and Chorus stay built-in.
 * Lime bundles must be built (`python build.py` in `native-plugins/`) or installed; the app package and CI do not
   ship them yet (PLG-023). Without them, Lime channels and slots fail to load and stay silent.
-* Lost in conversion, with a warning: the sampler's loop and filter (PLG-015, PLG-016) and the
+* Lost in conversion, with a warning: the sampler's loop (PLG-015) and the
   compressor's mixer-track sidechain (PLG-020). Effect-parameter automation of converted slots is not carried over
   (PLG-021). Lime Sampler embeds sample audio in the project, so projects grow with their samples.
 

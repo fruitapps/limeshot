@@ -250,7 +250,9 @@ impl<const ID: u8> LimePlugin<ID> {
                 reverse: p[5] >= 0.5,
                 one_shot: p[6] >= 0.5,
                 looping: None,
-                filter: None,
+                // As LimeShot compiles its sampler: no filter while it is fully open.
+                filter: (p[11] < 19_999.0 || p[12] > 0.0)
+                    .then(|| (p[11].clamp(20.0, 20_000.0), p[12].clamp(0.0, 0.95))),
             }
         }
     }

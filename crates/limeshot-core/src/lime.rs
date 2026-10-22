@@ -196,19 +196,17 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
         p.attack_ms,
         p.decay_ms,
         p.sustain,
+        p.cutoff_hz,
+        p.resonance,
     ]
 }
 
 /// Settings of a former built-in sampler that Lime Sampler cannot reproduce yet (the P0 features
 /// listed in decision D39), as user-facing phrases.
 pub fn sampler_losses(p: &SamplerParams) -> Vec<&'static str> {
-    let d = SamplerParams::default();
     let mut lost = Vec::new();
     if p.looping {
         lost.push("its loop");
-    }
-    if p.cutoff_hz != d.cutoff_hz || p.resonance != d.resonance {
-        lost.push("its filter");
     }
     lost
 }

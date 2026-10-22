@@ -7,7 +7,7 @@ LimeShot project or companion application is needed.
 | Plugin | What it does |
 | --- | --- |
 | **LimeSynth** | 64 voices; sine, square, saw and triangle; detune/octave, ADSR, resonant low-/band-/high-pass with key tracking, filter envelope, LFO/vibrato |
-| **Lime Sampler** | Stereo WAV playback, embedded sample recall, transpose/root key, trim, reverse, gated/one-shot, attack/decay/sustain/release |
+| **Lime Sampler** | Stereo WAV playback, embedded sample recall, transpose/root key, trim, reverse, gated/one-shot, attack/decay/sustain/release, low-pass filter |
 | **Lime Utility** | Gain, stereo width and polarity |
 | **Lime EQ** | Low shelf, parametric mid and high shelf |
 | **Lime Filter** | Resonant low-, band- and high-pass, wet/dry mix |

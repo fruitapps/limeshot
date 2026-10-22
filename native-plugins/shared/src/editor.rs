@@ -365,6 +365,8 @@ fn values(content: &Content) -> Vec<f32> {
             s.attack_ms,
             s.decay_ms,
             s.sustain,
+            s.cutoff_hz,
+            s.resonance,
         ],
     }
 }
@@ -412,6 +414,8 @@ fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
             attack_ms: p[8],
             decay_ms: p[9],
             sustain: p[10],
+            cutoff_hz: p[11],
+            resonance: p[12],
             ..Default::default()
         }),
         _ => Content::Effect {

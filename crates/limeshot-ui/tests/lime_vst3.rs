@@ -42,6 +42,8 @@ fn project(wav: &str) -> (Project, PatternId) {
                 attack_ms: 5.0,
                 decay_ms: 80.0,
                 sustain: 0.4,
+                cutoff_hz: 1500.0,
+                resonance: 0.5,
                 ..Default::default()
             }),
         })

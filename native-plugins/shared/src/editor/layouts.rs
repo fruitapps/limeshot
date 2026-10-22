@@ -155,7 +155,9 @@ impl NativeEditor {
         self.slider(ui, c, c.r(391.0, 135.0, 347.0, 34.0), 2, "Start offset", t);
         self.slider(ui, c, c.r(391.0, 174.0, 347.0, 34.0), 3, "End offset", t);
         self.slider(ui, c, c.r(391.0, 212.0, 347.0, 34.0), 4, "Release", t);
-        self.sample_waveform(ui, c, c.r(12.0, 270.0, 736.0, 186.0), t);
+        self.sample_waveform(ui, c, c.r(12.0, 270.0, 736.0, 148.0), t);
+        self.slider(ui, c, c.r(12.0, 424.0, 367.0, 34.0), 11, "Cutoff", t);
+        self.slider(ui, c, c.r(381.0, 424.0, 367.0, 34.0), 12, "Resonance", t);
         for (index, x, label) in [(8, 12.0, "Attack"), (9, 258.0, "Decay"), (10, 504.0, "Sustain")] {
             self.slider(ui, c, c.r(x, 462.0, 244.0, 34.0), index, label, t);
         }
