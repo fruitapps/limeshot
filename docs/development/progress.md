@@ -1090,3 +1090,68 @@ checks pass. Reused the existing `limeshot-s16/target` build cache. Prior PR run
 were still in progress when checked; no CI failure was observed. Live/native checks remain deferred while the Mac
 is locked, and PLG-006 remains IMPLEMENTED, not VERIFIED. Continue current priorities in next-steps.md using a new
 branch and NEW draft PR for each future development session.
+
+## 2026-10-22 — Lime Native standalone VST3 suite (PLG-012)
+
+The owner requested native Lime instruments/effects as separate VST plugins usable in other DAWs. Added the
+isolated `native-plugins/` workspace: LimeSynth, Lime Sampler, Lime Utility, Lime EQ, Lime Filter, Lime Delay,
+Lime Room, Lime Comp and Lime Limiter. All are self-contained VST3 bundles with statically linked existing
+LimeShot DSP, stable IDs, host automation/state/bypass, resizable dark-and-lime native editors, factory presets
+and .limepreset interchange. Sampler embeds bounded WAV audio in host state; Comp exposes a stereo key input;
+Delay follows host tempo. Shared voice/envelope methods update held notes without retriggering, and Limiter now
+reports real gain reduction through the shared DSP trait. No handwritten unsafe code or new graphic assets.
+
+`build.py` collects bundles into `native-plugins/dist/` without installation. Added native-plugin CI for macOS,
+Windows and Linux, license collection, a real exported-binary ABI verifier and reproducible offscreen editor
+renders. Production editors were inspected and corrected for label/knob layout; regression tests assert every
+control fits without overlap at the default and minimum sizes. Existing user changes and test-coverage audit
+notes were retained.
+
+Validation: nine release bundles built/ad-hoc signed on macOS arm64; actual VST3 ABI verification passed for all
+nine at 44.1/48/96 kHz and buffers 1/64/333/1024, including native editor creation, MIDI onset, automation and state
+recall. Repeated using debug plugins with realtime allocation assertions: all pass. Independent JUCE-based
+pluginval 1.0.4 level 5 (seed 42) passed all nine, including Editor and Editor Automation, and passed the separate
+GUI-skipped runs. Nine native unit/layout tests pass. Both workspaces' Clippy/rustfmt, the DAW's full tests/build,
+feature inventories and `git diff --check` pass. Details and reproduction: `native-plugins/VALIDATION.md`.
+
+PLG-012 is IMPLEMENTED: hands-on DAW/editor validation remains pending because the Mac was locked; Windows/Linux/
+Intel runtime and remote CI results remain pending. The supplied local bundles are macOS Apple Silicon, not
+universal/Windows/Linux binaries. No installed DAW files/settings or plugin folders were changed.
+
+## 2026-10-22 — Distinct Lime Native editors and modern LimeShot finish (PLG-012)
+
+Reviewed the official Image-Line manuals and interface screenshots for 3x Osc, Channel Sampler, Balance,
+Stereo Enhancer, Parametric EQ 2, Filter, Delay 3, Reeverb 2, Compressor and Limiter. Original painter layouts
+now give each of the nine plugins a distinct shape, control arrangement and accent. Research and clean-room
+boundaries are recorded in `docs/research/lime-native-ui.md`; no FL Studio artwork or code is included.
+
+Verified the FL-inspired layout revision first, then applied the owner's follow-up request for a cleaner,
+modern LimeShot finish: the app's Lime Dark neutral tokens, flat dials with thin value arcs, quiet section
+labels and subtle rounded panels. Sampler follows the built-in LimeShot/FL sampler organization with a large
+waveform, draggable trim handles, file controls, playback settings and root-key/audition keyboard. EQ uses the
+actual Eq3 response with draggable bands; Limiter shows measured input/output/reduction history. All displayed
+controls use existing parameters or perform their labeled actions. Class IDs and parameter/state schemas remain
+stable. Sample audition communicates with processing through an atomic request and preallocated voices.
+
+Final validation on macOS arm64: 11 native tests passed, including every editor at its default/minimum sizes,
+sampler pointer/audition requests and audio release at 1/64/333/1024-frame boundaries. All nine final production
+editors rendered and visually inspected. Native workspace Clippy with warnings denied and rustfmt passed.
+Rebuilt release and allocation-checked debug bundles; both passed actual VST3 ABI audio/MIDI timing,
+automation, state recall and editor creation at 44.1/48/96 kHz × 1/64/333/1024 frames. All nine final release
+bundles passed independent pluginval 1.0.4 strictness 5, seed 42, including Editor and Editor Automation.
+Signatures and system-only dynamic dependencies verified; release hashes and logs accompany the package.
+
+Hands-on DAW checks remain pending: computer-use discovery reconfirmed the development Mac is locked.
+Windows/Linux/Intel runtime checks and notarization remain pending; PLG-012 remains IMPLEMENTED. No installed
+DAW files, settings or plugin directories were changed. The prior DAW workspace's 300-test/build/Clippy pass is
+recorded above; this UI revision did not change DAW workspace code.
+
+### PR integration with current main
+
+Prepared `codex/lime-native-vst3-suite` from `main` at `dd53fb3`, preserving its sampler loop/filter, new effects
+and other production changes. Kept the original seven exported effect kinds in an explicit array and supplied
+neutral defaults for the newer sampler fields without changing standalone plugin IDs/parameters. Resolved the
+documentation append conflicts and renumbered the plugin-workspace decision D38. The unrelated local coverage
+audit remains outside this PR. Fresh integration checks: all 11 native tests, 71 shared DSP/engine tests, native
+all-target Clippy with warnings denied, both workspaces' formatting and feature inventories pass. Earlier
+exported-binary results/hashes remain a pre-integration artifact baseline; platform CI builds/checks the PR.
