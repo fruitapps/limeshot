@@ -825,3 +825,14 @@ establish live GUI/audio verification on those platforms.
 Validation: the Playlist test passed 30 consecutive runs; `cargo test --workspace` passed all 300 tests. After the
 Windows assertion edit, all seven plugin library tests passed; workspace Clippy, rustfmt and inventory checks pass.
 Remote macOS/Windows reruns are required to confirm the fixes on their runners.
+
+
+## 2026-10-22 — Session 17 hint-panel CI regression
+
+The Windows CI hint-panel test asserted "Stopped · Pattern" before the demo's sample loader completed. Showing
+"Loading 3 samples…" was correct application behavior. The hover/transport test now starts with an empty project:
+its toolbar and Playlist hint checks do not need any samples. The stopped and playing assertions remain exact;
+no production status behavior changed and no sleep or retry was added to hide the loading state.
+
+Validation: the focused test passed 30 consecutive runs, all 111 headless UI tests passed, and workspace Clippy,
+rustfmt, inventory validation and `git diff --check` passed. Remote Windows confirmation remains pending.

@@ -3796,7 +3796,9 @@ fn the_pattern_selector_creates_new_patterns_from_its_list() {
 /// the control under the pointer does, with its shortcut.
 #[test]
 fn the_hint_panel_describes_the_control_under_the_pointer() {
-    let mut h = harness(true);
+    // Hints and transport need no samples. Demo loading legitimately overrides the stopped
+    // activity until its worker finishes, which is unrelated to the controls tested here.
+    let mut h = harness(false);
     let r = h.state().ui.hint_rect.expect("hint panel in the header");
     assert!(r.width() > 200.0 && r.top() < 30.0, "{r:?}");
     assert_eq!(limeshot_ui::toolbar::activity(h.state()), "Stopped · Pattern");

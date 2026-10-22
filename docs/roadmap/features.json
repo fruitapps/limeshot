@@ -6573,7 +6573,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": "Session 11 (owner's list item 18). FL 2026.1.1's hint panel (top left, observed live) shows the hovered control's name or value with its shortcut on the right (\"Graph editor   Cmd+K\", \"Channel panning: 2% right\") and the Playlist position and clip (\"9:12:05 for 1:00:00  Pattern 1\"). Differs: LimeShot's panel sits in the header row after the menus (FL's toolbar layout differs), and its first line is LimeShot's activity rather than FL's account name. Icon buttons now carry accessible labels."
+      "notes": "Session 11 (owner's list item 18). FL 2026.1.1's hint panel (top left, observed live) shows the hovered control's name or value with its shortcut on the right (\"Graph editor   Cmd+K\", \"Channel panning: 2% right\") and the Playlist position and clip (\"9:12:05 for 1:00:00  Pattern 1\"). Differs: LimeShot's panel sits in the header row after the menus (FL's toolbar layout differs), and its first line is LimeShot's activity rather than FL's account name. Icon buttons now carry accessible labels. CI regression (2026-10-22): the hover/transport test uses an empty project, avoiding asynchronous demo sample loading that correctly takes priority over the stopped activity label."
     },
     {
       "id": "UI-005",
