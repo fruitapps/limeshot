@@ -35,6 +35,8 @@ enum Stage {
 pub struct Envelope {
     stage: Stage,
     level: f32,
+    stage_start: f32,
+    stage_elapsed: u64,
     attack_step: f32,
     decay_step: f32,
     sustain: f32,
@@ -56,6 +58,8 @@ impl Envelope {
         let mut e = Self {
             stage: Stage::Attack,
             level: 0.0,
+            stage_start: 0.0,
+            stage_elapsed: 0,
             attack_step: step(adsr.attack, 1.0, sr),
             decay_step: step(adsr.decay, 1.0 - sustain, sr),
             sustain,
@@ -65,6 +69,7 @@ impl Envelope {
         };
         if adsr.attack <= 0.0 {
             e.level = 1.0;
+            e.stage_start = 1.0;
             e.stage = Stage::Decay;
         }
         e
@@ -76,6 +81,8 @@ impl Envelope {
             return;
         }
         self.stage = Stage::Release;
+        self.stage_start = self.level;
+        self.stage_elapsed = 0;
         self.release_step = step(self.release_secs, self.level, self.sample_rate);
         if self.release_secs <= 0.0 {
             self.level = 0.0;
@@ -117,17 +124,22 @@ impl Envelope {
                 }
                 Stage::Done => return,
             };
-            let remaining = if step == 0.0 {
+            // Measure from the stage's origin so rounding never depends on call sizes.
+            let duration = if step == 0.0 {
                 1
             } else {
-                ((f64::from(target) - f64::from(self.level)) / f64::from(step)).ceil() as u64
+                ((f64::from(target) - f64::from(self.stage_start)) / f64::from(step)).ceil() as u64
             }
             .max(1);
+            let remaining = duration - self.stage_elapsed;
             if samples < remaining {
-                self.level = (f64::from(self.level) + f64::from(step) * samples as f64) as f32;
+                self.stage_elapsed += samples;
+                self.level = (f64::from(self.stage_start) + f64::from(step) * self.stage_elapsed as f64) as f32;
                 return;
             }
             self.level = target;
+            self.stage_start = target;
+            self.stage_elapsed = 0;
             self.stage = next;
             samples -= remaining;
         }
@@ -137,35 +149,7 @@ impl Envelope {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> f32 {
         let out = self.level;
-        match self.stage {
-            Stage::Attack => {
-                self.level += self.attack_step;
-                if self.level >= 1.0 {
-                    self.level = 1.0;
-                    self.stage = Stage::Decay;
-                }
-            }
-            Stage::Decay => {
-                self.level -= self.decay_step;
-                if self.level <= self.sustain {
-                    self.level = self.sustain;
-                    self.stage = Stage::Sustain;
-                }
-            }
-            Stage::Sustain => {
-                if self.sustain <= 0.0 {
-                    self.stage = Stage::Done;
-                }
-            }
-            Stage::Release => {
-                self.level -= self.release_step;
-                if self.level <= 0.0 {
-                    self.level = 0.0;
-                    self.stage = Stage::Done;
-                }
-            }
-            Stage::Done => self.level = 0.0,
-        }
+        self.advance(1);
         out
     }
 }
@@ -173,6 +157,53 @@ impl Envelope {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn advance_matches_next_with_non_exact_steps() {
+        let adsr = Adsr {
+            attack: 0.01,
+            decay: 0.013,
+            sustain: 0.37,
+            release: 0.017,
+        };
+        for sr in [1000.0, 48_000.0] {
+            // Release during attack, decay and sustain, as well as a stolen voice.
+            for (release_at, kill) in [
+                (None, false),
+                (Some(0.005), false),
+                (Some(0.015), false),
+                (Some(0.03), false),
+                (Some(0.015), true),
+            ] {
+                let mut start = Envelope::start(adsr, sr);
+                if let Some(seconds) = release_at {
+                    for _ in 0..(seconds * sr) as u64 {
+                        start.next();
+                    }
+                    if kill {
+                        start.kill();
+                    } else {
+                        start.release();
+                    }
+                }
+                let mut rendered = start;
+                let mut chunked = start;
+                for samples in 0..=(0.06 * sr) as u64 {
+                    let mut skipped = start;
+                    skipped.advance(samples);
+                    let context = format!("sr {sr}, offset {samples}, release {release_at:?}, kill {kill}");
+                    assert_eq!(skipped.stage, rendered.stage, "{context}");
+                    assert_eq!(skipped.level(), rendered.level(), "{context}");
+                    if samples % 7 == 0 {
+                        assert_eq!(chunked.stage, rendered.stage, "chunked {context}");
+                        assert_eq!(chunked.level(), rendered.level(), "chunked {context}");
+                        chunked.advance(7);
+                    }
+                    rendered.next();
+                }
+            }
+        }
+    }
 
     #[test]
     fn advance_crosses_stages_and_handles_large_offsets() {
