@@ -137,6 +137,8 @@ pub struct Wrapper {
 }
 
 impl Wrapper {
+    /// Create a wrapper from remembered tab, position, size, and keyboard settings, or their defaults.
+    /// Request that it be raised; defer editor creation and preset loading until it is drawn.
     fn new(memory: Option<Memory>) -> Self {
         let m = memory.unwrap_or_default();
         Self {
@@ -196,7 +198,7 @@ fn state_hash(host: &PluginHost, target: Target) -> Option<u64> {
 }
 
 impl PluginHost {
-    /// Open the window of the plugin at `target` (or bring it to `tab` if it is open).
+    /// Open and raise a loaded plugin's window, optionally selecting `tab`; ignore unloaded targets.
     pub fn open_window(&mut self, target: Target, tab: Option<Tab>) {
         if !self.is_loaded(target) {
             return;
@@ -439,6 +441,9 @@ pub fn show_all(app: &mut LimeShotApp, ctx: &Context) {
     }
 }
 
+/// Draw a plugin wrapper and synchronize its embedded editor's layout and visibility.
+/// Use parameter controls when no editor is available, attachment fails, or the native window
+/// cannot be found after the retry limit.
 fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     let zoom = ctx.zoom_factor();
     if app.plugins.windows.get(&target).is_some_and(|w| !w.asked) {
@@ -565,7 +570,9 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     }
 }
 
-/// Forward keys before global shortcuts now that wrappers share the main viewport.
+/// Offer typed characters to the topmost plugin wrapper before global shortcuts.
+/// Return true if its editor accepts any character. Skip forwarding during keyboard-note mode,
+/// text entry, or an active dialog.
 pub(crate) fn handle_keys(app: &LimeShotApp, ctx: &Context) -> bool {
     if app.keyboard_notes || app.dialog.is_some() || ctx.egui_wants_keyboard_input() {
         return false;
@@ -774,6 +781,7 @@ fn run(app: &mut LimeShotApp, target: Target, action: Action) {
     }
 }
 
+/// Draw the wrapper's current tab: settings, fallback parameters, or space for the native editor.
 fn body(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     let t = Theme::current();
     let Some(w) = app.plugins.window(target) else {

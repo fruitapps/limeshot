@@ -172,6 +172,9 @@ fn pressed(ctx: &Context, mods: Modifiers, key: Key) -> bool {
     ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(mods, key)))
 }
 
+/// Handle global shortcuts, then typing-keyboard notes or the focused editor's shortcuts.
+/// Text entry and dialogs suppress transport, note, and editor key handling. Typing notes are
+/// tracked with their original channel for release by the app's per-frame logic.
 pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     // While typing in a text field, letters and Space belong to the field.
     let typing = ctx.egui_wants_keyboard_input();

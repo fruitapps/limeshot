@@ -181,6 +181,8 @@ struct AudioState {
 }
 
 impl AudioState {
+    /// Apply up to 256 queued control messages and return retired processors to the control thread.
+    /// Retired processors that do not fit in the return queue are kept for a later callback.
     fn drain(&mut self) {
         // Bounded so a flood of messages cannot stall a callback.
         for _ in 0..256 {

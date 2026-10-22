@@ -97,6 +97,7 @@ impl State {
     }
 }
 
+/// Draw the current pattern's Channel Rack and handle channel controls, step edits, and drops.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.rack.step_strips.clear();
     app.ui.rack.leds.clear();
@@ -604,6 +605,8 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
     resp.context_menu(|ui| channel_menu(app, ui, ch));
 }
 
+/// Draw a channel's selection LED; click to select, or use modifiers/right-click to toggle it.
+/// A primary drag adds the rows crossed to the selection and makes the last added channel current.
 fn selector_led(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(LED_W, 22.0), Sense::click_and_drag());
@@ -702,6 +705,8 @@ pub fn move_selected(app: &mut LimeShotApp, delta: i32) {
     }
 }
 
+/// Show channel actions for `ch`, with note edits targeting the current pattern.
+/// The grouping action uses the current channel selection.
 pub(crate) fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let pid = app.current_pattern();
     if ui.button("Piano Roll").clicked() {

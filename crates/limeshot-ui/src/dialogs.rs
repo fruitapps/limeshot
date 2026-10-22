@@ -216,6 +216,7 @@ pub fn poll_export(app: &mut LimeShotApp) {
     }
 }
 
+/// Show `add` in a centered, fixed-width dialog window under the shared dialog id.
 fn modal(ctx: &Context, title: &str, add: impl FnOnce(&mut egui::Ui)) {
     egui::Window::new(RichText::new(title).strong())
         .id(egui::Id::new("dialog"))
@@ -230,6 +231,8 @@ fn modal(ctx: &Context, title: &str, add: impl FnOnce(&mut egui::Ui)) {
         });
 }
 
+/// Draw export progress and the active dialog, applying actions chosen by the user.
+/// Keep unfinished dialogs open; Escape dismisses all except the save-changes prompt.
 pub fn show(app: &mut LimeShotApp, ctx: &Context) {
     if let Some(job) = &app.export_job {
         let secs = job.started.elapsed().as_secs_f32();

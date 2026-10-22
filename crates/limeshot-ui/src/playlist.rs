@@ -438,6 +438,9 @@ pub fn audio_channels(p: &Project) -> Vec<ChannelId> {
         .collect()
 }
 
+/// Draw a draggable clip-source row with its Playlist use count and source actions.
+/// Clicking selects what to place and previews audio sources. Double-click opens the Piano Roll
+/// for patterns or Channel Settings for audio.
 fn picker_row(app: &mut LimeShotApp, ui: &mut Ui, source: ClipSource, name: &str, color: Rgb, uses: usize) {
     let t = Theme::current();
     let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click_and_drag());
@@ -634,6 +637,7 @@ pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option
     Some(ch)
 }
 
+/// Draw the arrangement, ruler, and track headers, then handle edits, drops, and scrolling.
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.available_rect_before_wrap();
@@ -874,6 +878,7 @@ pub struct Peaks {
 impl Peaks {
     const BLOCK: usize = 256;
 
+    /// Cache mono extrema in 256-frame blocks, including zero in each block's range.
     pub(crate) fn of(s: &limeshot_dsp::SampleData) -> Self {
         let blocks = (0..s.frames().div_ceil(Self::BLOCK))
             .map(|b| {
@@ -890,7 +895,8 @@ impl Peaks {
         Self { blocks }
     }
 
-    /// Min/max over frames `a..b`.
+    /// Return cached extrema for the blocks containing frame positions `a` through `b`, inclusive.
+    /// Negative positions clamp to zero; return `None` if the cache is empty or `a` is beyond it.
     pub(crate) fn range(&self, a: f64, b: f64) -> Option<(f32, f32)> {
         let i = (a.max(0.0) as usize) / Self::BLOCK;
         let j = ((b.max(0.0) as usize) / Self::BLOCK)
@@ -1132,7 +1138,9 @@ enum AutoHit {
     Curve(Tick, f32),
 }
 
-/// What of an automation curve is under `p`, if any.
+/// Hit-test the topmost clip for an automation point, tension handle, or new-point position.
+/// New points may be placed anywhere in the curve body away from resize edges; their local tick
+/// is snapped and clamped to the clip's source window, and their value is normalized to 0–1.
 fn automation_hit(app: &LimeShotApp, view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, AutomationId, AutoHit)> {
     let c = clips.iter().rev().find(|c| view.clip_rect(c).contains(p))?;
     let aid = c.automation()?;
@@ -1321,6 +1329,7 @@ pub fn add_marker(app: &mut LimeShotApp, tick: Tick) -> Option<MarkerId> {
     app.exec(Command::AddMarker { tick, name }).map(MarkerId)
 }
 
+/// Draw track headers and handle mute locks, solo, renaming, track menus, and adding a track.
 fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, tracks: u32) {
     let t = Theme::current();
     let painter = ui.painter_at(area);
@@ -1397,6 +1406,8 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
     }
 }
 
+/// Solo `track` by muting other unlocked tracks in one undo step, leaving locked tracks alone.
+/// If the unlocked tracks already match that solo state, unmute all unlocked tracks instead.
 fn solo_track(app: &mut LimeShotApp, track: u32) {
     let already = app
         .project()
@@ -1421,6 +1432,8 @@ fn solo_track(app: &mut LimeShotApp, track: u32) {
     app.exec(Command::Batch(cmds));
 }
 
+/// Show actions for a Playlist track, applying track and clip edits through undoable commands.
+/// Draw nothing if the track no longer exists.
 fn track_menu(app: &mut LimeShotApp, ui: &mut Ui, track: u32) {
     let Some(t) = app.project().playlist.tracks.get(track as usize).cloned() else {
         return;
@@ -1587,6 +1600,7 @@ fn track_menu(app: &mut LimeShotApp, ui: &mut Ui, track: u32) {
     }
 }
 
+/// Return a clip source's display name and color, falling back to `Clip` and the first palette color.
 fn source_name_color(app: &LimeShotApp, source: ClipSource) -> (String, Rgb) {
     match source {
         ClipSource::Pattern(id) => app.project().pattern(id).map(|p| (p.name.clone(), p.color)),
@@ -1678,6 +1692,8 @@ fn notes_under(app: &LimeShotApp, clips: &[Clip], tick: Tick) -> Vec<(ChannelId,
     out
 }
 
+/// Handle Playlist pointer tools, automation edits, selection, and scrub auditions.
+/// Apply clip and automation changes through commands grouped by the current drag gesture.
 fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips: &[Clip], tracks: u32) {
     let resp = ui.interact(grid, ui.id().with("pl_grid"), Sense::click_and_drag());
     let sig = app.project().time_signature;
@@ -2643,6 +2659,8 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     }
 }
 
+/// Preview a dragged clip source at a snapped grid position and place a linked clip on release.
+/// Reuse its remembered length when available, otherwise its full length; select the new clip.
 fn source_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, tracks: u32) {
     let resp = ui.interact(grid, ui.id().with("source-drop"), Sense::hover());
     let Some(source) = resp.dnd_hover_payload::<ClipSource>() else {
@@ -2712,6 +2730,8 @@ fn source_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
     }
 }
 
+/// Draw an automation cursor at `at`, hiding the system cursor.
+/// `kind` is 0 for moving a point, 1 for tension, or 2 for placing a point.
 fn automation_cursor(ctx: &Context, at: Pos2, kind: u8) {
     ctx.set_cursor_icon(egui::CursorIcon::None);
     let p = ctx.layer_painter(egui::LayerId::new(

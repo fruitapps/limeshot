@@ -73,6 +73,7 @@ fn pos_gain(p: f32) -> f32 {
     p.clamp(0.0, 1.0).powi(3) * MAX_GAIN
 }
 
+/// Draw the Mixer strips and selected track's controls, updating peak holds from audio status.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.mixer.route_buttons.clear();
     app.ui.mixer.name_rects.clear();
@@ -153,6 +154,8 @@ fn routed(app: &LimeShotApp, i: u16) -> Vec<(String, egui::Color32)> {
         .collect()
 }
 
+/// Draw a mixer strip with meters, routing, and undoable controls; ignore a missing track.
+/// Clicks on its background select it without making control drags change the selection.
 fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     let t = Theme::current();
     let Some(track) = app.project().mixer.tracks.get(usize::from(i)).cloned() else {

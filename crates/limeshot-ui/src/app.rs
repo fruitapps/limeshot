@@ -205,6 +205,8 @@ impl LimeShotApp {
         app
     }
 
+    /// Create an empty app using `player` to start playback from its initial snapshot.
+    /// Settings persistence, autosave storage, and user preset storage start disabled.
     fn new_with_player(
         settings: Settings,
         bundled_samples: Option<PathBuf>,
@@ -438,8 +440,9 @@ impl LimeShotApp {
         }
     }
 
-    /// Stop; stopping while stopped silences everything (see `Renderer::stop`), including a
-    /// Browser preview still loading.
+    /// Stop and return to where playback started, canceling pending Browser and sampler previews.
+    /// Stopping while stopped also silences everything (see `Renderer::stop`) and rewinds to zero,
+    /// or to the Playlist selection's start in Song mode.
     pub fn stop(&mut self) {
         self.ui.browser.cancel_preview();
         self.sampler_preview = None;
@@ -504,7 +507,9 @@ impl LimeShotApp {
         }
     }
 
-    /// Preview for its musical duration, independent of pointer release.
+    /// Queue a channel audition for `seconds`, independent of pointer release.
+    /// Synchronizes the engine first; ignores a missing channel or an index that cannot fit in `u16`.
+    /// Release timing and nonfinite durations follow [`limeshot_engine::Renderer::preview_note_for`].
     pub fn preview_for(&mut self, channel: ChannelId, key: u8, velocity: f32, seconds: f64) {
         if let Some(i) = self
             .project()

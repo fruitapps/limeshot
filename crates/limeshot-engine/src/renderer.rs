@@ -360,12 +360,18 @@ impl Renderer {
         self.voices[slot] = v;
     }
 
-    /// Audition a channel's instrument (piano keys, step clicks).
+    /// Audition a channel's instrument (piano keys, step clicks) without a scheduled release.
+    /// `channel` indexes the current snapshot; an out-of-range index is ignored.
+    /// Use `preview_note_off` to release the note.
     pub fn preview_note_on(&mut self, channel: u16, key: u8, velocity: f32) {
         self.preview_note_for(channel, key, velocity, f64::INFINITY);
     }
 
-    /// A free-running audition, released by the audio clock even while transport is stopped.
+    /// Audition a channel's instrument with a release deadline on the audio clock, even while stopped.
+    ///
+    /// `channel` indexes the current snapshot; an out-of-range index is ignored. Finite `seconds`
+    /// are clamped to at least zero and rounded to the nearest sample frame; nonfinite values schedule no
+    /// release. The instrument's release tail may continue after the deadline.
     pub fn preview_note_for(&mut self, channel: u16, key: u8, velocity: f32, seconds: f64) {
         let off_at = if seconds.is_finite() {
             self.now

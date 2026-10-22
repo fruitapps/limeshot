@@ -792,6 +792,10 @@ impl Command {
     }
 
     /// Apply to `p`. On error `p` may be partially modified; [`crate::Document`] applies to a copy.
+    ///
+    /// Returns the created id or index when the command supplies one, otherwise `Created(None)`.
+    /// Returns [`CommandError`] for missing targets or invalid values and operations, including
+    /// errors propagated from nested commands in a batch.
     pub fn apply(self, p: &mut Project) -> R {
         use Command::*;
         match self {

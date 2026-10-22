@@ -161,6 +161,7 @@ pub struct Workspace {
 }
 
 impl Default for Workspace {
+    /// Open a maximized Playlist with the Channel Rack in front, requesting the initial layout.
     fn default() -> Self {
         let mut states = [WinState::default(); 5];
         // FL Studio's new-project layout: the Playlist maximised and the Channel Rack on top.
@@ -206,7 +207,7 @@ impl Workspace {
         self.front = Some(w);
     }
 
-    /// F5/F6/F7/F9: open and raise a closed window, close an open one.
+    /// F5/F6/F7/F9: close an open window if it is frontmost or pinned; otherwise open and raise it.
     pub fn toggle(&mut self, w: Win) {
         if self.is_open(w) && (self.front == Some(w) || self.state(w).pinned) {
             self.state_mut(w).open = false;

@@ -349,8 +349,9 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     });
 }
 
-/// The project's channels (patterns are listed in the Playlist's picker). Click to select and
-/// show in the Inspector.
+/// Show the project's channels with selection, drag payloads, and channel context actions.
+/// Double-click opens a loaded plugin's wrapper or the channel's settings; sampler drags carry
+/// the sample path when assigned, and other channel drags carry the channel id.
 fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let sel = app.selected_channel();
@@ -508,6 +509,8 @@ fn load_into_selected(app: &mut LimeShotApp, path: &Path) {
 }
 
 /// Waveform shared by the sample drag's pointer preview and its snapped Playlist ghost.
+/// Caches peaks for loaded samples; draws nothing when the sample is not ready or the rect is
+/// smaller than one point in either dimension.
 pub(crate) fn paint_sample_wave(
     app: &mut LimeShotApp,
     painter: &egui::Painter,
@@ -545,6 +548,8 @@ pub(crate) fn paint_sample_wave(
     }
 }
 
+/// Show a waveform beside the pointer for a dragged sample or audio clip source.
+/// Requests the sample in the background; draws nothing without a sample payload or pointer.
 pub(crate) fn drag_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
     let sample = egui::DragAndDrop::payload::<DraggedSample>(ctx)
         .map(|s| s.0.clone())

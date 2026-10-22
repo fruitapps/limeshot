@@ -208,6 +208,8 @@ fn drag_value(ui: &Ui, resp: &Response, v: &mut f32, min: f32, max: f32, default
 }
 
 /// A rotary knob drawn as a thin arc. `bipolar` draws the value from the centre (pan).
+/// Drag or scroll to change `v`, or double-click to reset it to `default`, whose position is
+/// marked on the dial. The returned response is marked changed when `v` changes.
 pub fn knob(
     ui: &mut Ui,
     v: &mut f32,

@@ -218,6 +218,10 @@ impl Vst3Editor {
     }
 
     /// Attach as a child of the main window without changing the OS window's size.
+    /// Does nothing if already attached.
+    ///
+    /// Returns `PluginError::Unsupported` if a native container cannot be created (including off
+    /// macOS), or `PluginError::Call` if the plugin rejects attachment.
     pub fn attach_embedded(&mut self, window: &NativeWindow) -> Result<(), PluginError> {
         if self.attached {
             return Ok(());
@@ -235,8 +239,10 @@ impl Vst3Editor {
         Ok(())
     }
 
-    /// Position a native child view in the main window's content coordinates. Resize-capable
-    /// plugins receive onSize; fixed-size plugins retain their natural dimensions.
+    /// Position a native child view from the top left of the main window's content layout area,
+    /// in platform view units (points on macOS). Resize-capable plugins receive a size request
+    /// clamped to at least one unit per dimension, subject to their constraints; fixed-size
+    /// plugins retain their natural dimensions.
     pub fn layout_embedded(&self, x: f64, y: f64, width: f64, height: f64) {
         let requested = EditorSize {
             width: width.max(1.0) as u32,
@@ -373,6 +379,8 @@ mod platform {
     }
 
     impl Container {
+        /// Add a child view sized for the editor, `top_inset` points below the content view's top.
+        /// Returns `PluginError::Unsupported` off the main thread or if the window has no content view.
         pub(super) fn new(window: &Window, size: EditorSize, top_inset: f64) -> Result<Self, PluginError> {
             let mtm = MainThreadMarker::new().ok_or(PluginError::Unsupported("editors off the main thread"))?;
             let window = window.0.clone();
@@ -413,6 +421,7 @@ mod platform {
         }
 
         /// Resize the window so its content is the editor plus the inset, keeping its top left.
+        /// Does nothing for an embedded container.
         pub(super) fn resize(&self, size: EditorSize, top_inset: f64) {
             if self.embedded.get() {
                 return;
@@ -430,10 +439,13 @@ mod platform {
             self.place(size, top_inset);
         }
 
+        /// Keep subsequent editor resize requests from resizing the host window.
         pub(super) fn embed(&self) {
             self.embedded.set(true);
         }
 
+        /// Place the child at `(x, y)` points from the content layout area's top left.
+        /// Use `natural` for its size; the requested width and height are ignored.
         pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
             let Some(content) = self.window.contentView() else {
                 return;
@@ -489,7 +501,9 @@ mod platform {
         }
         pub(super) fn place(&self, _size: EditorSize, _top_inset: f64) {}
         pub(super) fn resize(&self, _size: EditorSize, _top_inset: f64) {}
+        /// Do nothing on platforms without native editor embedding.
         pub(super) fn embed(&self) {}
+        /// Do nothing on platforms without native editor embedding.
         pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}
     }

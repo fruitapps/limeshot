@@ -53,6 +53,7 @@ pub fn header(app: &mut LimeShotApp, ui: &mut Ui) {
     );
 }
 
+/// Draw the main toolbar and handle transport, pattern, snap, window, and keyboard-note controls.
 pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.max_rect();

@@ -118,6 +118,8 @@ fn channel_body(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     }
 }
 
+/// Draw sampler controls and its waveform, applying parameter edits as undoable commands.
+/// Pressing a loaded waveform auditions the trimmed, pitched region; dragging carries its sample.
 fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SamplerParams) {
     let t = Theme::current();
     let set = |p: SamplerParams| Command::SetInstrument {
@@ -519,6 +521,9 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     }
 }
 
+/// Estimate fractional progress through the trimmed sample for the waveform's playback head.
+/// `sample_seconds` is the full, unpitched sample duration. Prefer an active sampler preview,
+/// otherwise use the most recent eligible note or audio clip; return `None` if none qualifies.
 fn sample_progress(app: &LimeShotApp, cid: ChannelId, params: &SamplerParams, sample_seconds: f64) -> Option<f32> {
     if let Some((channel, began, duration)) = app.sampler_preview
         && channel == cid

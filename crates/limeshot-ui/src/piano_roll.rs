@@ -202,6 +202,7 @@ pub struct State {
 }
 
 impl Default for State {
+    /// Start with the Draw tool, no selection, and new notes two steps long at velocity 0.78.
     fn default() -> Self {
         Self {
             zoom_x: 96.0,
@@ -690,6 +691,7 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
     resp.hint("Click to move the playhead (Pattern mode)");
 }
 
+/// Draw the piano keys and audition the channel while the pointer is held, releasing on key changes or release.
 fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid: ChannelId) {
     let t = Theme::current();
     let painter = ui.painter_at(keys);
@@ -858,6 +860,7 @@ pub fn playback_line(ui: &Ui, grid: Rect, x: f32, held: bool) {
 }
 
 /// Sound `key` on `channel` as the Piano Roll's audition, ending the one before.
+/// Schedule release after the remembered note length at the current project tempo.
 fn audition(app: &mut LimeShotApp, channel: ChannelId, key: u8, velocity: f32) {
     if let Some((c, k)) = app.ui.piano.timed_audition.take() {
         app.preview_off(c, k);
@@ -889,6 +892,7 @@ pub fn scrub(app: &mut LimeShotApp, want: &[(ChannelId, u8, f32)]) {
     app.ui.scrub = now;
 }
 
+/// Handle Piano Roll pointer tools and channel drops, updating selection, auditions, and undoable note edits.
 fn grid_input(
     app: &mut LimeShotApp,
     ui: &mut Ui,

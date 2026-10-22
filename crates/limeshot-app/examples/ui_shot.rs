@@ -6,6 +6,7 @@ use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 
+/// Render the requested UI state offscreen to the first positional PNG path (default `ui.png`).
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let out = args

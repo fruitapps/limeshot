@@ -501,7 +501,9 @@ pub fn default_factory_dir() -> Option<std::path::PathBuf> {
     candidates.iter().map(std::path::PathBuf::from).find(|p| p.is_dir())
 }
 
-/// Convert a parsed file to a LimeShot project.
+/// Convert a parsed file to a sanitized LimeShot project and an import report.
+/// `factory_dir` replaces the `%FLStudioFactoryData%` prefix in sample paths when provided.
+/// The report records skipped content, replaced generators, and missing tempo.
 pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportReport) {
     let mut p = Project::new();
     p.patterns.clear();
