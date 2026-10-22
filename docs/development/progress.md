@@ -913,3 +913,22 @@ turns it on; `recording::tick` starts it when playback starts while armed and st
 (`settings.audio_input`); a level bar shows under the record button while recording; the macOS package declares
 microphone use. Not tried with a real input (it needs the owner's microphone permission): next session, record a few
 seconds from the built-in microphone and check the clip lines up.
+
+### Session 16: where to continue
+
+Done in session 16 (all on `main`): the four editor menus (Piano Roll with tool dialogs, stamps and scale
+highlighting; Playlist; Mixer track menu; Channel Rack options), delay tempo sync, pre-fader sends, effect and
+instrument presets, automated controls following the song, automation point modes, MIDI input and note
+recording, audio recording, macOS packaging, audio clip fades, MP3/FLAC/Ogg/AIFF samples, Lime Gate, sampler loop
+and filter. Work happens in a worktree (`../limeshot-s16`) rebased onto `origin/main` before each push, because
+other sessions (Codex) also change this repository.
+
+Next, in order:
+1. Live checks the owner should see or that need permissions: audio recording from a real input (microphone
+   permission), MIDI with a hardware keyboard, the plugin pass over presets/automation/PDC/bridge (sessions 12–15),
+   the packaged app on a second Mac (needs Developer ID signing).
+2. Remaining FL editor-menu work (`menus.md`): Piano Roll Time markers, Target control, Group; Playlist picker panel
+   options; Mixer groups; Channel Rack Zip / Unzip.
+3. `next-steps.md` Then items still open: tempo automation (AUT-008, needs a tempo map in `Timeline`), export ranges
+   (EXP-010), more effects (FX-009 distortion, FX-010 chorus/flanger/phaser), LimeSynth filter modes (INS-013),
+   sampler volume envelope (INS-014), CLAP/AU hosting.
