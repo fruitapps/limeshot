@@ -229,3 +229,14 @@ voices hold the same sample Arc that the plugin owns, so finishing/stealing a vo
 Factory and file presets share LimeShot's schema and factory definitions. The bundler targets this nested
 workspace explicitly, avoiding its upstream helper's outermost-manifest heuristic. `build.py` collects separate
 VST3 bundles in `dist/`, with no automatic installation or changes to the user's DAW.
+
+### D39. The Lime VST3s are LimeShot's instruments and effects
+
+Owner decision (2026-10-22): LimeShot drops its in-process built-in LimeSynth, Sampler and mixer effects and hosts the
+Lime Native VST3 plugins (D38) instead; capabilities the plugins lack are P0 features (PLG-014…PLG-023). Projects refer
+to them as `lime:<bundle>` so they stay portable; `limeshot-plugins::lime` resolves the bundle (override folder, beside
+the executable, `native-plugins/dist`, standard VST3 folders). Their state is written as the plugins' own nice-plug
+JSON inside the host's `LSV3` container, so the DAW configures them without instantiating them. Conversion is a
+document normalizer applied to every replaced project and every edit, so commands that still create built-ins and
+old projects both end up as Lime plugins; Lime Sampler embeds sample audio, as it does in other DAWs. The shared DSP
+crates stay: the plugins link them, which is why converted projects render bit-identically.

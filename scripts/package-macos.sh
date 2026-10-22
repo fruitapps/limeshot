@@ -17,6 +17,10 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp target/release/limeshot target/release/limeshot-cli "$app/Contents/MacOS/"
 # Bundled samples: the app looks for them in ../Resources/samples next to its binary.
 cp -R assets/samples "$app/Contents/Resources/samples"
+# LimeShot's instruments and effects are the Lime VST3s (D39); the app finds them in ../PlugIns.
+(cd native-plugins && python3 build.py)
+mkdir -p "$app/Contents/PlugIns"
+cp -R native-plugins/dist/*.vst3 "$app/Contents/PlugIns/"
 cp LICENSE LICENSE-MIT LICENSE-APACHE ATTRIBUTION.md "$app/Contents/Resources/"
 # Fonts are embedded in the executable; their licence texts must travel with the app.
 mkdir -p "$app/Contents/Resources/licenses/fonts"

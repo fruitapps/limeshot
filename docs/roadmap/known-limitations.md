@@ -141,3 +141,14 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   preserve the sample/root key; host state saves both. No sample loops/time stretching/multisampling.
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
+
+## Lime VST3s as LimeShot's instruments and effects (PLG-013, in progress)
+
+* The running app converts built-in instruments and the seven exported effects to Lime VST3s; headless test apps and
+  the command-line renderer still use the built-ins, which are not yet deleted. Gate, Drive and Chorus stay built-in.
+* Lime bundles must be built (`python build.py` in `native-plugins/`) or installed; the app package and CI do not
+  ship them yet (PLG-023). Without them, Lime channels and slots fail to load and stay silent.
+* Lost in conversion, with a warning: the sampler's attack/decay/sustain, loop and filter (PLG-014…016) and the
+  compressor's mixer-track sidechain (PLG-020). Effect-parameter automation of converted slots is not carried over
+  (PLG-021). Lime Sampler embeds sample audio in the project, so projects grow with their samples.
+

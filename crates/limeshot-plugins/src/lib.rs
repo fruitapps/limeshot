@@ -35,6 +35,7 @@ mod editor;
 mod host;
 mod hosted;
 mod instance;
+pub mod lime;
 mod module;
 pub mod preset;
 pub mod scan;
@@ -50,11 +51,19 @@ pub use preset::VstPreset;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Load the bundle at `path`, or LimeShot's built-in test plugins for
-/// [`testing::BUILTIN_PATH`].
+/// Load the bundle at `path`, a Lime plugin for a `lime:` path ([`lime::bundle_path`]), or
+/// LimeShot's built-in test plugins for [`testing::BUILTIN_PATH`].
 pub fn load_module(path: &str) -> Result<Arc<Vst3Module>, PluginError> {
     if path == testing::BUILTIN_PATH {
         testing::module()
+    } else if path.starts_with(lime::PATH_PREFIX) {
+        let bundle = lime::bundle_path(path).ok_or_else(|| PluginError::Load {
+            path: PathBuf::from(&path[lime::PATH_PREFIX.len()..]),
+            reason: "this Lime plugin is not installed with LimeShot (build native-plugins with \
+                     `python build.py` or set LIMESHOT_LIME_PLUGINS)"
+                .into(),
+        })?;
+        Vst3Module::load(&bundle)
     } else {
         Vst3Module::load(std::path::Path::new(path))
     }

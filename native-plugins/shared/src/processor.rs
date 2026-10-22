@@ -63,6 +63,8 @@ pub struct LimePlugin<const ID: u8> {
     notifier: RepaintNotifier,
     effect: Option<Box<dyn Effect>>,
     sample: Option<Arc<SampleData>>,
+    /// The sample store generation `sample` was taken from.
+    sample_generation: u64,
     voices: [Slot; 64],
     bend: [f32; 16],
     pedal: [bool; 16],
@@ -87,6 +89,7 @@ impl<const ID: u8> Default for LimePlugin<ID> {
             notifier: RepaintNotifier::new(),
             effect: None,
             sample: None,
+            sample_generation: 0,
             voices: std::array::from_fn(|_| Slot::default()),
             bend: [0.0; 16],
             pedal: [false; 16],
@@ -108,6 +111,7 @@ impl<const ID: u8> LimePlugin<ID> {
         self.sample_rate = rate;
         Meters::store(&self.meters.sample_rate, rate);
         self.meter_decay = (-1.0 / (rate * 0.18)).exp();
+        self.sample_generation = self.params.sample.generation();
         self.sample = self.params.sample.audio();
         self.effect = if ID >= 2 {
             Some(limeshot_engine::fx::build(
@@ -152,6 +156,24 @@ impl<const ID: u8> LimePlugin<ID> {
             );
         }
         self.preview_note = requested;
+    }
+
+    /// Take up a sample the host loaded with its state while the plugin was active (nice-plug does
+    /// not reactivate the plugin after loading state). Sounding notes stop, as when a sample is
+    /// loaded in the editor. Releasing the old audio may free memory on the audio thread, which
+    /// is allowed here as nice-plug allows it for the state load itself.
+    pub(crate) fn refresh_sample(&mut self) {
+        let generation = self.params.sample.generation();
+        if generation == self.sample_generation {
+            return;
+        }
+        if let Some(audio) = self.params.sample.try_audio() {
+            nice_plug::util::permit_alloc(|| {
+                self.clear();
+                self.sample = audio;
+            });
+            self.sample_generation = generation;
+        }
     }
 
     /// Stop voices and audition, clear pedal/bend state, and reset DSP and meters.
@@ -535,6 +557,7 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let tempo = context.transport().tempo.unwrap_or(120.0);
+        self.refresh_sample();
         self.sync_preview(&self.params.values());
         let mut event = context.next_event();
         for (i, mut frame) in buffer.iter_samples().enumerate() {
@@ -756,6 +779,21 @@ mod tests {
         }
         assert!(last[0] < 0.02, "{last:?}");
         assert!(Meters::read(&plugin.meters.reduction) > 10.0);
+    }
+    #[test]
+    fn sampler_takes_up_a_sample_loaded_while_active() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("late.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.prepare(48000.0);
+        assert!(plugin.sample.is_none());
+        // A host loading state (or a preset) after activation, as LimeShot does.
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.refresh_sample();
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        assert!(plugin.frame([0.0; 2], None, &values, 120.0)[0] > 0.1);
     }
     #[test]
     fn tempo_sync_moves_delay_echo_and_bypass_passes_exact_audio() {

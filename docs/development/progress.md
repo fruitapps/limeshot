@@ -1184,3 +1184,16 @@ now passes a gate (attack 0, decay 0, sustain 1), and `Voice::update_instrument`
 Checks: DAW workspace fmt/clippy (warnings denied)/tests; native workspace fmt/clippy/12 tests including
 `synth_filter_type_and_key_tracking_reach_the_voice` and the editor no-overlap layout test; offscreen LimeSynth
 render inspected; inventories and repository links. Not re-run: exported-binary verifier, pluginval, hands-on DAW.
+
+## 2026-10-23 — Lime VST3s replace the built-ins (PLG-013, in progress)
+
+Owner decision: LimeShot hosts the Lime Native VST3s instead of its built-in instruments and effects (D39). Branch
+`claude/lime-vst3-default`, draft PR stacked on #7. Added `limeshot_core::lime` (catalog, class ids, state writer in
+the host's `LSV3` container, `convert_project`), `limeshot_plugins::lime` (`lime:` path resolution), a `Document`
+normalizer installed by the app, and warning toasts for settings that cannot be carried over. Lime Sampler now takes
+up a sample loaded with host state while active (nice-plug does not reactivate after a state load). Equivalence test:
+a project with LimeSynth (band-pass, key tracking), Sampler (WAV, pitch, trim) and EQ renders bit-identically through
+the real bundles (RMS difference 0). Added P0 records PLG-013…PLG-023. Remaining: delete the built-ins and move
+their tests, ship the bundles in the package and CI, and the P0 gaps; see
+[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md).
+

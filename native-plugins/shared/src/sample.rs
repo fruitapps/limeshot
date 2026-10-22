@@ -82,14 +82,27 @@ impl EmbeddedSample {
     }
 }
 
+/// The embedded sample and its decoded audio, plus a counter that changes with every new sample
+/// so the audio thread can notice a sample loaded from host state while the plugin is active.
 #[derive(Default, Clone)]
-pub struct SampleStore(Arc<RwLock<(EmbeddedSample, Option<Arc<SampleData>>)>>);
+pub struct SampleStore(
+    Arc<RwLock<(EmbeddedSample, Option<Arc<SampleData>>)>>,
+    Arc<std::sync::atomic::AtomicU64>,
+);
 
 impl SampleStore {
     /// Share the decoded audio, or return `None` for an empty or rejected embedded sample.
     /// Acquires a read lock; use outside audio processing.
     pub fn audio(&self) -> Option<Arc<SampleData>> {
         self.0.read().1.clone()
+    }
+    /// Changes whenever a new sample is stored.
+    pub fn generation(&self) -> u64 {
+        self.1.load(std::sync::atomic::Ordering::Acquire)
+    }
+    /// The decoded audio without waiting: `None` while another thread holds the lock.
+    pub fn try_audio(&self) -> Option<Option<Arc<SampleData>>> {
+        self.0.try_read().map(|g| g.1.clone())
     }
     /// Copy the stored display name under a read lock.
     pub fn name(&self) -> String {
@@ -105,6 +118,7 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
             Ok(audio) => *self.0.write() = (sample, audio),
             Err(_) => *self.0.write() = Default::default(),
         }
+        self.1.fetch_add(1, std::sync::atomic::Ordering::Release);
     }
     /// Return the callback's result while holding a read lock on the embedded sample.
     fn map<F, R>(&self, f: F) -> R

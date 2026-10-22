@@ -8757,6 +8757,354 @@
         ]
       },
       "notes": ""
+    },
+    {
+      "id": "PLG-013",
+      "category": "Plugins",
+      "name": "Lime VST3s replace the built-in instruments and effects",
+      "description": "LimeShot plays every instrument and the exported effects through the Lime Native VST3 plugins instead of in-process built-ins.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "The app installs a document normalizer (limeshot-ui/src/lime.rs) that converts any former built-in LimeSynth, Sampler and the seven exported effects into Lime plugin references (lime:<bundle> paths, resolved by limeshot-plugins::lime) with their settings written as the plugins' own state, both for opened projects and for every edit. Lime Sampler embeds the sample's audio. Settings with no plugin equivalent produce a warning toast. Gate, Drive and Chorus remain built-in until they have Lime plugins. The built-in code paths still exist for headless tests and are to be deleted.",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "mvp": false,
+      "dependencies": [
+        "PLG-012",
+        "PLG-001"
+      ],
+      "modules": [
+        "limeshot-core",
+        "limeshot-plugins",
+        "limeshot-ui",
+        "native-plugins/shared"
+      ],
+      "acceptance_criteria": [
+        "Opening a project with built-in instruments/effects converts them to Lime VST3s with identical sound.",
+        "New channels and effects created through any command become Lime VST3s.",
+        "The built-in instrument and effect code paths are removed from the engine and UI.",
+        "CI builds the Lime bundles and runs the equivalence test."
+      ],
+      "tests": [
+        "limeshot-core lime::tests",
+        "limeshot-plugins lime::tests::the_override_folder_comes_first",
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
+        "native-plugins/shared/src/processor.rs::tests::sampler_takes_up_a_sample_loaded_while_active"
+      ],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-014…PLG-023."
+    },
+    {
+      "id": "PLG-014",
+      "category": "Plugins",
+      "name": "Lime Sampler volume envelope",
+      "description": "Attack, decay and sustain for Lime Sampler (the former built-in sampler's envelope, INS-014).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented: Lime Sampler is a gate (instant attack, full sustain, timed release). Converted samplers with an envelope lose it with a warning.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "INS-014"
+      ],
+      "modules": [
+        "native-plugins/shared"
+      ],
+      "acceptance_criteria": [
+        "Lime Sampler has attack/decay/sustain controls appended to its parameters.",
+        "The converter carries the built-in envelope over."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-015",
+      "category": "Plugins",
+      "name": "Lime Sampler loop points",
+      "description": "Sample looping with loop start and end in Lime Sampler (INS-007).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented in Lime Sampler; converted looping samplers play once with a warning.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "INS-007"
+      ],
+      "modules": [
+        "native-plugins/shared"
+      ],
+      "acceptance_criteria": [
+        "Loop on/off, start and end controls; the converter carries them over."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-016",
+      "category": "Plugins",
+      "name": "Lime Sampler filter",
+      "description": "The former built-in sampler's low-pass filter (cutoff, resonance) in Lime Sampler (INS-007).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented in Lime Sampler; converted samplers lose the filter with a warning.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "INS-007"
+      ],
+      "modules": [
+        "native-plugins/shared"
+      ],
+      "acceptance_criteria": [
+        "Cutoff and resonance controls; the converter carries them over."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-017",
+      "category": "Plugins",
+      "name": "Lime Gate VST3",
+      "description": "The noise gate (FX-006) as a Lime VST3.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Gate slots stay built-in effects until this exists.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "FX-006"
+      ],
+      "modules": [
+        "native-plugins"
+      ],
+      "acceptance_criteria": [
+        "A tenth bundle with the Gate DSP; the converter maps Gate slots to it."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-018",
+      "category": "Plugins",
+      "name": "Lime Drive VST3",
+      "description": "Saturation/distortion (FX-009: soft clip, hard clip, wave folding) as a Lime VST3.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Drive slots stay built-in effects until this exists.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "FX-009"
+      ],
+      "modules": [
+        "native-plugins"
+      ],
+      "acceptance_criteria": [
+        "A Lime Drive bundle with the Drive DSP; the converter maps Drive slots to it."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-019",
+      "category": "Plugins",
+      "name": "Lime Chorus VST3",
+      "description": "Chorus, flanger and phaser (FX-010) as a Lime VST3.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Chorus slots stay built-in effects until this exists.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "FX-010"
+      ],
+      "modules": [
+        "native-plugins"
+      ],
+      "acceptance_criteria": [
+        "A Lime Chorus bundle with the Chorus DSP; the converter maps Chorus slots to it."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-020",
+      "category": "Plugins",
+      "name": "Mixer-track sidechain into Lime Comp",
+      "description": "Route a mixer track into Lime Comp's external key bus, replacing the built-in compressor's sidechain selector (MIX-009).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented: the converter drops the sidechain track with a warning; LimeShot's plugin host does not feed plugin key buses.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "MIX-009"
+      ],
+      "modules": [
+        "limeshot-plugins",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "A converted compressor with a sidechain track ducks to that track."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-021",
+      "category": "Plugins",
+      "name": "Automation of converted instruments and effects",
+      "description": "Automation clips of built-in effect parameters keep working after conversion, as plugin-parameter automation.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented: EffectParam automation of converted slots is not converted to PluginParam targets.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "AUT-001"
+      ],
+      "modules": [
+        "limeshot-core"
+      ],
+      "acceptance_criteria": [
+        "Converted projects' effect automation plays the same; new automation targets Lime plugin parameters."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-022",
+      "category": "Plugins",
+      "name": "Channel Settings and Channel Rack for Lime instruments",
+      "description": "The former built-in instruments' inline Channel Settings panels, sample drops onto an existing channel, and Channel Rack sample waveforms, for Lime Synth/Sampler channels.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not checked: Lime channels open the plugin's own editor instead of the inline panels; sample drops and the rack's waveform with Lime Sampler channels are untested.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013",
+        "SEQ-002"
+      ],
+      "modules": [
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Dropping a sample on a Lime Sampler channel loads it into the plugin.",
+        "The rack shows the embedded sample's waveform."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": ""
+    },
+    {
+      "id": "PLG-023",
+      "category": "Plugins",
+      "name": "Ship the Lime VST3s with LimeShot",
+      "description": "The app package and CI contain the Lime bundles, so lime: references resolve without a development checkout.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "CI builds debug Lime bundles before the DAW tests and points LIMESHOT_LIME_PLUGINS at them (the equivalence test fails on CI without them); scripts/package-macos.sh builds release bundles and copies them into LimeShot.app/Contents/PlugIns, where limeshot-plugins::lime looks. Windows and Linux packages do not exist yet; their bundles would go in a plugins folder beside the executable.",
+      "priority": "P0",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "scripts",
+        "native-plugins",
+        ".github/workflows"
+      ],
+      "acceptance_criteria": [
+        "The macOS app contains Contents/PlugIns/*.vst3.",
+        "CI builds the bundles before the DAW tests and the equivalence test runs instead of skipping.",
+        "Windows and Linux packages place them beside the executable."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Not yet run: the CI change and the packaging script were not executed in this session."
     }
   ]
 }

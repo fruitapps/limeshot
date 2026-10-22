@@ -201,6 +201,9 @@ impl LimeShotApp {
         let audio = settings.audio.clone();
         let mut app = Self::new_with_player(settings, bundled_samples, |s| Player::start(&audio, s));
         app.plugins = crate::plugins::PluginHost::new(crate::plugins::PluginHost::default_db_path());
+        // Instruments and effects are the Lime VST3 plugins (D39); headless test apps built with
+        // `new_with_player` keep the former built-ins until those are removed.
+        app.doc.set_normalizer(crate::lime::normalizer());
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app.persist_settings = true;
@@ -1026,6 +1029,9 @@ impl LimeShotApp {
             ctx.request_repaint();
         }
         ctx.set_zoom_factor(self.settings.ui_scale);
+        for w in self.doc.take_warnings() {
+            self.toast_error(w);
+        }
         self.player.collect_garbage();
         // A safety net: auditions end with their mouse button, whichever editor started them.
         if !self.auditions.is_empty() && !ctx.input(|i| i.pointer.any_down()) {

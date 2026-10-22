@@ -60,7 +60,17 @@ jobs:
       # CI runners have no sound card: the audio tests use the offline renderer and the silent
       # clock; the UI tests render without a window. The offscreen-screenshot example (wgpu) is
       # only built, not run, because hosted runners may lack a GPU adapter.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      # LimeShot's instruments and effects are the Lime VST3s (D39); the equivalence test in
+      # limeshot-ui/tests/lime_vst3.rs loads these bundles and fails on CI without them.
+      - name: Build the Lime VST3 bundles
+        working-directory: native-plugins
+        run: python build.py --debug
       - name: Test
+        env:
+          LIMESHOT_LIME_PLUGINS: ${{ github.workspace }}/native-plugins/target/debug-bundled
         run: cargo test --workspace
       - name: Headless demo render
         shell: bash

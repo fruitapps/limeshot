@@ -10,6 +10,44 @@ Keep **Lime Test Gain / Lime Test Tone** (`crates/limeshot-plugins/src/testing.r
 They are compiled-in VST3 test fixtures that users never see. The owner chose to keep them so CI can test hosting
 without installed plugins.
 
+## Status (2026-10-23, branch `claude/lime-vst3-default`)
+
+Done and tested (PLG-013 is IN_PROGRESS; decision D39):
+* `limeshot_core::lime`: the Lime catalog (names, class ids `LIMENATIVE…01<n>`, `lime:<bundle>` paths), the state
+  writer (nice-plug JSON `value_1…`, `bypass`, `sample-v1`, wrapped in the host's `LSV3` container) and
+  `convert_project` / `needs_conversion`, which return warnings for settings that are lost.
+* `limeshot_plugins::lime`: resolves `lime:` paths (`LIMESHOT_LIME_PLUGINS`, `../PlugIns` / `plugins` beside the
+  executable, `native-plugins/dist`, the standard VST3 folders). The bridge uses the same `load_module`.
+* `Document::set_normalizer` / `take_warnings`. `LimeShotApp::new` installs `limeshot_ui::lime::normalizer()`, so
+  every opened project and every edit has built-ins converted. Warnings appear as error toasts.
+  `new_with_player` (the headless test apps) does not install it yet.
+* Lime Sampler picks up a sample loaded with host state while it is active (`SampleStore` generation, checked in
+  `process`). Before this fix it played silence when a host loaded state after activation.
+* `crates/limeshot-ui/tests/lime_vst3.rs`: built-in versus converted render through the real bundles, compared
+  bit for bit (it skips when the bundles are not built).
+* P0 records PLG-014…PLG-023, known limitations, progress.
+
+Next, in order:
+1. PLG-023 is written but not yet run: CI builds debug bundles and sets `LIMESHOT_LIME_PLUGINS`, and
+   `scripts/package-macos.sh` copies the release bundles into `Contents/PlugIns`. Check the PR's CI result and fix
+   what fails, for example the build time on Windows and Linux or the 45-minute timeout.
+2. Make commands create Lime plugins directly: `AddChannel` from the rack's add menu, sample drops
+   (`command.rs` around line 1393), `AddEffect` for the seven kinds. Then install the normalizer in
+   `new_with_player` too, and update the UI and app tests that assert built-in instruments.
+3. Delete the built-in synth and sampler (`InstrumentState::{Synth, Sampler}`, the inspector panels) and the seven
+   built-in effect kinds from the engine and UI. Keep `limeshot-dsp` and `limeshot-engine::voice`, because the
+   plugins link them, and keep the deserialization of the old enums for conversion. Move the DSP assertions into
+   native-plugins or DSP-level tests.
+   Scope at handoff: about 37 `Instrument::Synth`, 69 `Instrument::Sampler` and 77 built-in `EffectKind` uses in
+   25 files (`crates/*/src`, `crates/*/tests`, plus `crates/limeshot-app/src/demo.rs`, the FLP and MIDI importers
+   and the inspector, rack, browser and preset UIs). The importers can keep producing built-ins, because the
+   normalizer converts them.
+4. P0 gaps PLG-014…PLG-022.
+5. The command-line renderer (`crates/limeshot-app/src/cli.rs`) already instantiates plugins for export
+   (`PluginHost::offline`). It only needs `doc.set_normalizer(limeshot_ui::lime::normalizer())`. When you add it,
+   set `LIMESHOT_LIME_PLUGINS` in CI's "Headless demo render" step too. That step only compares two renders with
+   each other, so it would still pass if both were silent: also assert that the render is not silent.
+
 ## Session policy
 
 Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a NEW draft PR. Stack it on
