@@ -10,6 +10,13 @@ feature work to an earlier session’s PR. Inspect merge state and stack on the 
 Finish implementation, validation, documentation, commit and push, attach the new PR, and do not merge automatically.
 Repeat this policy in every future session handoff before these docs merge. Do not create further sessions unless asked.
 
+## Highest priority: replace the built-ins with the Lime VST3s (owner decision, 2026-10-22)
+
+The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
+VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
+The plan, the current architecture and the list of lost capabilities are in
+[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
+
 ## Immediate verification
 
 1. **Native plugin embedding (PLG-006).** Internal Plugin / Settings windows are implemented, but final live checks
