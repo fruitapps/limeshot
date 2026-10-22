@@ -1049,10 +1049,10 @@
       "fl_default": "off",
       "fl_reference": "Options › General settings › Miscellaneous › Auto zip empty channels",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "settings.auto_zip_empty_channels",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-013",
-      "notes": ""
+      "notes": "Saved application setting, off by default. Pattern switches collapse channels without note data and expand populated ones (including muted notes). Enabling waits for the next switch; manual restoration remains until then. Headless interaction tests listed under SEQ-013."
     },
     {
       "id": "SET-090",

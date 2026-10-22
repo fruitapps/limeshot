@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **730** — IMPLEMENTED 198, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 382, NOT_PLANNED 41
+Tracked: **730** — IMPLEMENTED 200, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 380, NOT_PLANNED 41
 
 ## Summary
 
@@ -21,7 +21,7 @@ Tracked: **730** — IMPLEMENTED 198, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTE
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 | Toolbar | 52 | 24 | 8 | 17 | 3 | 2 |
-| Channel Rack | 72 | 25 | 12 | 31 | 4 | 2 |
+| Channel Rack | 72 | 27 | 12 | 29 | 4 | 2 |
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
 | Mixer | 44 | 9 | 9 | 22 | 4 | 0 |
@@ -94,7 +94,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PR-029 | P3 | NOT_STARTED | Riff machine | MENU-184 Tools › Riff machine...<br>MENU-445 Piano Roll › Options › Tools › Riff machine... |
 | REC-009 | P3 | NOT_STARTED | Step edit mode | MENU-171 Options › Step edit |
 | REC-011 | P3 | NOT_STARTED | Audio logger | MENU-201 Tools › Enabled<br>MENU-202 Tools › Settings<br>MENU-203 Tools › Settings › 1 minute<br>MENU-204 Tools › Settings › 2 minutes<br>MENU-205 Tools › Settings › 5 minutes<br>MENU-206 Tools › Settings › 10 minutes<br>MENU-207 Tools › Settings › Pre effects<br>MENU-208 Tools › Settings › Post effects, pre fader<br>MENU-209 Tools › Dump to audio editor |
-| SEQ-013 | P3 | NOT_STARTED | Zip / unzip channels | MENU-354 Channel Rack › Options › Zip selected<br>MENU-355 Channel Rack › Options › Unzip all |
 | SEQ-022 | P3 | NOT_STARTED | Pattern groups | MENU-087 Patterns › Group selected...<br>MENU-088 Patterns › Rename group...<br>MENU-089 Patterns › Ungroup selected... |
 | UI-006 | P3 | NOT_STARTED | Additional themes (light, high contrast) | MENU-157 Options › Theme settings |
 | UI-014 | P3 | NOT_STARTED | Toolbar customisation and presets | MENU-111 View › Toolbars<br>MENU-112 View › Toolbars › Edit<br>MENU-113 View › Toolbars › Separators<br>MENU-114 View › Toolbars › Flat buttons<br>MENU-116 View › Toolbars › Show detected MIDI chords near the hint bar<br>MENU-118 View › Toolbars › Hide<br>MENU-119 View › Toolbars › <factory presets> |
@@ -510,8 +509,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-351 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Assign selected to free mixer track(s) | Channels | action | `Cmd+L` |  | Channel Rack › ⏵ › Assign selected to free mixer track(s) | IMPLEMENTED | SEQ-005 | Cmd+L routes the selected channels, as in FL. |
 | MENU-352 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select mixer tracks for the selected channels | Channels | action |  |  | Channel Rack › ⏵ › Select mixer tracks for the selected channels | DIFFERENT | SEQ-005 | Session 16: selects the first channel's track and shows the Mixer (LimeShot's Mixer selects one track). |
 | MENU-353 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change declicking for selected channels to | Channels | submenu |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-354 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zip selected | Channels | action | `Opt+Z` |  | — | NOT_STARTED | SEQ-013 |  |
-| MENU-355 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unzip all | Channels | action | `Opt+U` |  | — | NOT_STARTED | SEQ-013 |  |
+| MENU-354 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zip selected | Channels | action | `Opt+Z` |  | Channel Rack › Zip selected | IMPLEMENTED | SEQ-013 | 2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013). |
+| MENU-355 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unzip all | Channels | action | `Opt+U` |  | Channel Rack › Unzip all | IMPLEMENTED | SEQ-013 | 2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013). |
 | MENU-356 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Restretch all | Channels | action | `Cmd+Opt+R` | disabled | — | NOT_STARTED |  |  |
 | MENU-357 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group playlist tracks created by Loop starter | Options | submenu |  |  | — | NOT_PLANNED | SEQ-017 |  |
 | MENU-358 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto resize | Options | submenu |  |  | — | NOT_STARTED |  |  |

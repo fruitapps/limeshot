@@ -394,3 +394,23 @@ Opened live in FL 2026.1.1 with their Opt keys on a three-note chord (nothing sa
 Not seen: Opt+Y (Flip), Opt+O (LFO), Opt+L (Articulate), Opt+U (Chop), Opt+Q (Quantize) — after Scale levels, one Opt
 key opened the Raycast launcher instead, so the sweep was stopped. Esc closes the dialogs; at one point the key sweep
 closed the Piano Roll and switched FL to Song mode (restored).
+
+## 23. Channel Rack compact rows — documentation check (2026-10-22)
+
+The [Image-Line Channel Rack manual](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm)
+documents Zip selected (Alt/Opt+Z) as compact view for selected channels, right-click on the compact channel button
+to restore it, and Unzip all (Alt/Opt+U) for all channels. It separately documents Auto zip empty channels in General
+Settings. The existing menu captures establish the labels (MENU-354/355); no new live FL interaction was attempted.
+LimeShot implements the manual actions with its own compact named buttons. Compact button selection, dimensions,
+and session-only state are LimeShot choices; auto-zip and saved zip state remain unavailable. No FL code or assets used.
+
+
+### 2026-10-22 continuation — automatic empty-channel zip
+
+Read Image-Line's [General settings manual](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/envsettings_general.htm)
+(“Miscellaneous”, accessed 2026-10-22). Its Auto zip empty channels description specifies collapsing channels without
+steps/note data and expanding populated channels when switching patterns. Existing SET-089 records the observed
+General/Miscellaneous switch and its off default. LimeShot implements that transition rule on its existing compact
+rows. Enabling waits for a subsequent switch, muted notes count as data, and new/open projects start expanded;
+these edge choices were not measured live in FL. Manual restoration persists until another pattern change, rather
+than continuously hiding empty channels during editing. No live automation or FL code/assets used.

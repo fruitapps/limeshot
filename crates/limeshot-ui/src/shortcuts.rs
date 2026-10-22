@@ -151,6 +151,7 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("Alt+↑ / Alt+↓", "Channel Rack: move the selected channels"),
     ("Alt+C", "Channel Rack: clone the selected channels"),
+    ("Alt+Z / Alt+U", "Channel Rack: zip selected / unzip all channels"),
     ("Alt+Delete", "Channel Rack: delete the selected channels"),
     ("F2", "Channel Rack: rename the current pattern"),
     (

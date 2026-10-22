@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **142** — IMPLEMENTED 108, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 21, NOT_PLANNED 3
+Tracked: **143** — IMPLEMENTED 109, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 21, NOT_PLANNED 3
 
 ## Global
 
@@ -94,6 +94,7 @@ Tracked: **142** — IMPLEMENTED 108, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-078 | Add / remove a channel from the selection | `Ctrl+click / Shift+click / right-click selector LED` | OBSERVED | `Cmd+click / Shift+click / right-click selector LED` | IMPLEMENTED | SEQ-020 | A mouse binding, listed for completeness. A plain click selects only that channel. |
 | KB-093 | Group selected channels (display filter group) | `Opt+G` | OBSERVED | `Alt+G` | IMPLEMENTED | SEQ-012 | FL 2026.1.1 Channel Rack menu: Group selected… Opt+G asks for a filter group name (session 8). |
 | KB-142 | Clone selected channels | `Opt+C` | OBSERVED | `Alt+C` | IMPLEMENTED | SEQ-007 | FL 2026.1.1 Channel Rack menu (menus.json). Session 16. |
+| KB-143 | Zip selected / unzip all channels | `Alt+Z / Alt+U` | VERIFIED | `Alt+Z / Alt+U` | IMPLEMENTED | SEQ-013 | Image-Line Channel Rack manual, Zip selected / Unzip all. Headless tests cover both bindings. |
 
 ## Piano Roll
 

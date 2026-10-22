@@ -60,8 +60,11 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * Auto scrolling follows the existing playheads: Playlist in Song mode and Piano Roll in Pattern mode only.
   It starts off; enable it from Options or the toolbar. Paging thresholds are LimeShot's own.
 * Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
-* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Its ⏵ menu has no Zip /
-  Unzip, layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
+* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Zip selected / Unzip all
+  and right-click restoration are available. General settings can automatically zip empty channels on pattern switches;
+  it waits for a switch after enabling, counts muted notes as data and leaves manual restoration usable until the
+  next switch. Zip state is session-only; new/open projects start expanded. No live FL timing/parity pass performed.
+  Its ⏵ menu has no layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
 * The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is

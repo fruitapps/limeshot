@@ -4,6 +4,13 @@ LimeShot is an open-source, offline-first, cross-platform DAW in Rust with an FL
 (Channel Rack, Piano Roll, Playlist, Mixer). It is an independent implementation: no FL Studio code or assets, and no
 code copied from ArtCraft/SoundCraft. The full brief is `START.md`.
 
+## Development session policy
+Every new development session creates its own new `codex/` branch and NEW draft PR. Never append new-session
+feature work to a prior session’s PR. Use a separate managed worktree; leave older checkouts intact. Inspect merge
+state and base stacked PRs on the latest unmerged continuation. Carry useful work through implementation,
+validation, documentation, commit, push and an attached draft PR; never merge automatically. Repeat this policy
+in every session handoff, including before these instructions merge. Create further sessions only when the owner asks.
+
 ## Start every session here
 1. Read `docs/development/next-steps.md` (prioritised work) and the latest entry in `docs/development/progress.md`.
 2. Pick work from `docs/roadmap/features.json` (P0 → P3, respecting `dependencies`). Read the record first.
@@ -79,7 +86,7 @@ features as records.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
   native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
-* The workspace has 125 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* The workspace has 132 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
 * UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
 
 ## Immediate next tasks

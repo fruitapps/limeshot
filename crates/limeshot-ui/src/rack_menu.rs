@@ -24,6 +24,8 @@ pub enum Act {
     TransposeSelected,
     AssignFreeTracks,
     SelectMixerTracks,
+    ZipSelected,
+    UnzipAll,
 }
 
 fn item(app: &mut LimeShotApp, ui: &mut Ui, text: &str, keys: &str, act: Act, enabled: bool) {
@@ -87,6 +89,15 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui) {
     item(app, ui, "Mute selected", "", Act::MuteSelected, any);
     item(app, ui, "Unmute selected", "", Act::UnmuteSelected, any);
     item(app, ui, "Transpose selected…", "", Act::TransposeSelected, any);
+    item(app, ui, "Zip selected", "Alt+Z", Act::ZipSelected, any);
+    item(
+        app,
+        ui,
+        "Unzip all",
+        "Alt+U",
+        Act::UnzipAll,
+        !app.ui.rack.zipped.is_empty(),
+    );
     ui.separator();
     item(
         app,
@@ -143,6 +154,8 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
         }
     };
     match act {
+        Act::ZipSelected => crate::channel_rack::zip_selected(app),
+        Act::UnzipAll => app.ui.rack.zipped.clear(),
         Act::CloneSelected => each(app, &Command::CloneChannel),
         Act::DeleteSelected => request_delete(app, sel),
         Act::MoveUp => move_selected(app, -1),
@@ -207,5 +220,11 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if crate::shortcuts::key(ctx, Modifiers::ALT, Key::C) {
         run(app, Act::CloneSelected);
+    }
+    if crate::shortcuts::key(ctx, Modifiers::ALT, Key::Z) {
+        run(app, Act::ZipSelected);
+    }
+    if crate::shortcuts::key(ctx, Modifiers::ALT, Key::U) {
+        run(app, Act::UnzipAll);
     }
 }

@@ -28,6 +28,7 @@ use egui::{Align2, Context, CornerRadius, DragValue, Key, Modifiers, Rect, RichT
 use limeshot_core::*;
 
 const ROW_H: f32 = 30.0;
+const ZIPPED_H: f32 = 14.0;
 const STEP_W: f32 = 22.0;
 const LED_W: f32 = 8.0;
 
@@ -61,6 +62,12 @@ impl RackFilter {
 
 #[derive(Default)]
 pub struct State {
+    /// Last effective pattern; catches fallback changes after deletion or undo.
+    pub(crate) viewed_pattern: Option<PatternId>,
+    /// Compact rows are workspace state, independent of patterns and project undo.
+    pub zipped: std::collections::BTreeSet<ChannelId>,
+    /// Compact channel buttons drawn in the last frame (for tests and tools).
+    pub zipped_buttons: Vec<(ChannelId, Rect)>,
     /// The filter group shown.
     pub filter: RackFilter,
     /// (channel, painting on/off) while a step drag is in progress.
@@ -97,10 +104,57 @@ impl State {
     }
 }
 
+/// Finish edits before hiding their input surfaces, including a stroke held during Alt+Z.
+pub fn zip_selected(app: &mut LimeShotApp) {
+    let selected = app.selected_channels();
+    finish_hidden_edits(app, &selected);
+    app.ui.rack.zipped.extend(selected);
+}
+
+fn finish_hidden_edits(app: &mut LimeShotApp, hidden: &[ChannelId]) {
+    if let Some((channel, _)) = app.ui.rack.paint
+        && hidden.contains(&channel)
+    {
+        app.ui.rack.paint = None;
+        app.doc.end_gesture();
+        if let Some(key) = app.project().channel(channel).map(|c| c.root_key) {
+            app.preview_off(channel, key);
+        }
+    }
+    if app.selected_channel().is_some_and(|c| hidden.contains(&c)) && app.ui.rack.graph_drag.take().is_some() {
+        app.doc.end_gesture();
+    }
+}
+
+/// Pattern changes recompute the compact view once; manual restoration then remains usable.
+pub(crate) fn auto_zip(app: &mut LimeShotApp, pattern: PatternId) {
+    let Some(pattern) = app.project().pattern(pattern) else {
+        return;
+    };
+    let populated: std::collections::BTreeSet<_> = pattern.notes.iter().map(|n| n.channel).collect();
+    let empty: Vec<_> = app
+        .project()
+        .channels
+        .iter()
+        .map(|c| c.id)
+        .filter(|c| !populated.contains(c))
+        .collect();
+    // A held stroke still belongs to the previous pattern, even if its row stays expanded.
+    let channels: Vec<_> = app.project().channels.iter().map(|c| c.id).collect();
+    finish_hidden_edits(app, &channels);
+    app.ui.rack.zipped = empty.into_iter().collect();
+}
+
 /// Draw the current pattern's Channel Rack and handle channel controls, step edits, and drops.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    let pattern = app.current_pattern();
+    if app.ui.rack.viewed_pattern.is_some_and(|p| p != pattern) && app.settings.auto_zip_empty_channels {
+        auto_zip(app, pattern);
+    }
+    app.ui.rack.viewed_pattern = Some(pattern);
     app.ui.rack.step_strips.clear();
     app.ui.rack.leds.clear();
+    app.ui.rack.zipped_buttons.clear();
     let t = Theme::current();
     let pid = app.current_pattern();
     let sig = app.project().time_signature;
@@ -220,6 +274,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         });
 
     let channels: Vec<Channel> = app.project().channels.clone();
+    app.ui.rack.zipped.retain(|id| channels.iter().any(|c| c.id == *id));
     if channels.is_empty() {
         ui.add_space(12.0);
         ui.vertical_centered(|ui| {
@@ -237,6 +292,10 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         ui.add_space(2.0);
         let filter = app.ui.rack.filter.clone();
         for ch in channels.iter().filter(|c| filter.shows(c)) {
+            if app.ui.rack.zipped.contains(&ch.id) {
+                zipped_row(app, ui, ch);
+                continue;
+            }
             let row_top = ui.cursor().top();
             let selected = sel == Some(ch.id);
             if selected {
@@ -349,6 +408,54 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     if let Some(p) = drop.dnd_release_payload::<DraggedSample>() {
         browser::new_sampler_channel(app, &p.0);
     }
+}
+
+/// A compact channel remains selectable; restoring it reveals its controls and steps again.
+fn zipped_row(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
+    let t = Theme::current();
+    ui.allocate_ui_with_layout(
+        vec2(242.0, ZIPPED_H),
+        egui::Layout::left_to_right(egui::Align::Center),
+        |ui| {
+            ui.spacing_mut().item_spacing.x = 5.0;
+            ui.add_space(8.0);
+            let (r, response) = ui.allocate_exact_size(vec2(234.0, ZIPPED_H), Sense::click());
+            app.ui.rack.zipped_buttons.push((ch.id, r));
+            let selected = app.ui.channel_selection.contains(&ch.id);
+            let fill = if response.hovered() { t.raised_hover } else { t.raised };
+            ui.painter().rect_filled(r, CornerRadius::same(t.radius_sm), fill);
+            ui.painter().rect_filled(
+                Rect::from_min_size(r.min, vec2(3.0, r.height())),
+                CornerRadius::same(1),
+                rgb(ch.color),
+            );
+            if selected {
+                ui.painter().rect_stroke(
+                    r,
+                    CornerRadius::same(t.radius_sm),
+                    Stroke::new(1.0, t.accent),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            ui.painter().text(
+                r.left_center() + vec2(10.0, 0.0),
+                Align2::LEFT_CENTER,
+                elide(&ch.name, 30),
+                crate::theme::prop(10.5),
+                t.text_dim,
+            );
+            if response.secondary_clicked() {
+                app.ui.rack.zipped.remove(&ch.id);
+            } else if response.clicked() {
+                if ui.input(|i| i.modifiers.command || i.modifiers.shift) {
+                    app.toggle_channel_selection(ch.id);
+                } else {
+                    app.select_channel(ch.id);
+                }
+            }
+            response.hint(format!("{} — zipped · click: select · right-click: unzip", ch.name));
+        },
+    );
 }
 
 const GRAPH_H: f32 = 96.0;

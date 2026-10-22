@@ -102,6 +102,16 @@ The Channel Rack's selector LEDs are FL Studio's channel selection (`UiState::ch
 channel, Cmd/Shift/right-click toggles one; dragging the selector LEDs selects crossed rows without moving the window. `selected_channel` stays the current channel that the Piano Roll and
 Channel Settings edit; it is the last channel selected.
 
+Channel Rack › Zip selected (Alt+Z) replaces selected rows with compact named buttons. Right-click one to restore
+its controls, or use Unzip all (Alt+U), which includes filtered-out channels. Compact buttons retain click and
+Cmd/Shift-click selection. Zip state belongs to the session, follows channel IDs across patterns/reordering, and
+does not edit the project or its undo history. Deleted channels are pruned; new/open projects start expanded.
+General settings › Miscellaneous › Auto zip empty channels saves `settings.auto_zip_empty_channels` (off by default).
+On a pattern switch it replaces the compact set for all channels, including filtered-out ones, using the destination
+pattern's note data. Muted notes count as data. Enabling waits for the next switch, and note edits do not recompute
+the view, so manual Unzip/right-click restoration remains usable. Deletion/undo fallback pattern changes are caught
+when the rack draws. Any held rack step/graph gesture ends before switching its editing surface.
+
 The toolbar typing-keyboard toggle (Cmd+T outside Playlist) maps Z–M and Q–U to notes for the selected channel.
 Key release targets the original channel even after selection changes; dialogs, text fields and focus loss release
 held notes. Playlist Cmd+T retains its marker action. Single-key shortcuts are ignored while a text field has focus.
