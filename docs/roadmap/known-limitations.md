@@ -144,12 +144,20 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 
 ## Lime VST3s as LimeShot's instruments and effects (PLG-013, in progress)
 
-* The running app converts built-in instruments and the seven exported effects to Lime VST3s; headless test apps and
-  the command-line renderer still use the built-ins, which are not yet deleted. Gate, Drive and Chorus stay built-in.
-* Lime bundles must be built (`python build.py` in `native-plugins/`) or installed; the app package and CI do not
-  ship them yet (PLG-023). Without them, Lime channels and slots fail to load and stay silent.
-* Lost in conversion, with a warning: the compressor's mixer-track sidechain (PLG-020). Converted effect
-  automation follows the plugin closely but not bit for bit (parameter smoothing; logarithmic controls interpolate
-  along the plugin's curve). Lime Sampler embeds sample audio in the project, so
-  projects grow with their samples.
-
+* GUI and headless apps convert legacy instruments and the seven exported inserts to Lime VST3s. The former
+  instrument/effect parameter panels have been removed; hosted controls support Lime gesture undo and preset
+  interchange. The engine's built-in playback paths remain pending removal, including Gate, Drive and Chorus.
+* CI builds debug bundles; macOS packaging builds and copies release bundles into `Contents/PlugIns` (PLG-023).
+  GitHub Actions results are blocked by account billing. Missing plugins now fail CLI/GUI export with an error;
+  realtime playback retains silent missing channels and reports the load failure in their Settings.
+* Channel Settings retains source-file loading and waveform audition for converted samplers; Browser loads,
+  Playlist picker reuse, source-path portability and root-key edits work with Lime references. Rack waveforms,
+  previewing embedded samples after the original source disappears, and native editor interaction still need
+  validation/completion (PLG-022).
+* Lost on conversion: compressor mixer-track sidechain input (PLG-020), **Playlist audio clip playback** (PLG-024),
+  per-note pan (PLG-025), full host type-in-value control menus (PLG-026), host dynamics gain-reduction metering
+  (PLG-027), and plugin voice statistics (PLG-028). These are P0 records. Converted audio clips are currently
+  silent because the hosted-instrument event path excludes clip events; the old engine tests exercise built-ins.
+* Converted effect automation follows the plugin closely but not bit for bit (smoothing and interpolation).
+  Non-automated equivalence is checked bit for bit, allowing only trailing silent frames to differ in length.
+  Lime Sampler embeds sample audio, so projects grow with their samples.

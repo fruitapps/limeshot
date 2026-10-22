@@ -510,6 +510,10 @@ pub enum Command {
     },
     /// Run a channel's or insert's plugin in a process of its own (FL Studio's bridged plugins),
     /// or back in LimeShot's.
+    SetPluginState {
+        plugin: crate::PluginTarget,
+        state: crate::PluginState,
+    },
     SetPluginSeparateProcess {
         plugin: crate::PluginTarget,
         on: bool,
@@ -741,6 +745,7 @@ impl Command {
             SetRoutePre { .. } => "Post-fader send",
             AddEffect { .. } => "Add effect",
             AddPluginEffect { .. } => "Add plugin",
+            SetPluginState { .. } => "Edit plugin",
             SetPluginSeparateProcess { .. } => "Plugin process",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
@@ -770,6 +775,7 @@ impl Command {
             SetChannelPan { channel, .. } => format!("chpan{}", channel.0),
             SetChannelMixerTrack { channel, .. } => format!("chmix{}", channel.0),
             SetInstrument { channel, .. } => format!("inst{}", channel.0),
+            SetPluginState { plugin, .. } => format!("plugin{plugin:?}"),
             SetMixerVolume { track, .. } => format!("mxvol{track}"),
             SetMixerPan { track, .. } => format!("mxpan{track}"),
             SetMixerEq { track, band, .. } => format!("mxeq{track}:{band}"),
@@ -901,7 +907,20 @@ impl Command {
                 }
                 channel(p, id)?.mixer_track = track;
             }
-            SetChannelRootKey { channel: id, key } => channel(p, id)?.root_key = key.min(127),
+            SetChannelRootKey { channel: id, key } => {
+                let ch = channel(p, id)?;
+                ch.root_key = key.min(127);
+                if let Instrument::Plugin(plugin) = &mut ch.instrument
+                    && crate::LimePlugin::of(plugin) == Some(crate::LimePlugin::SAMPLER)
+                    && let Some(state) = crate::lime::edited_param_state(
+                        plugin,
+                        crate::lime::param_id(7),
+                        f64::from(ch.root_key) / 127.0,
+                    )
+                {
+                    plugin.state = state;
+                }
+            }
             SetInstrument {
                 channel: id,
                 instrument,
@@ -1384,7 +1403,8 @@ impl Command {
                     .find(|c| {
                         // Audio clip channels: used by an audio clip, or added to the picker.
                         (audio_channels.contains(&c.id) || c.group.as_deref() == Some("Audio"))
-                            && matches!(&c.instrument, Instrument::Sampler(s) if s.sample.as_ref() == Some(&sample))
+                            && crate::lime::sampler_params(&c.instrument)
+                                .is_some_and(|s| s.sample.as_ref() == Some(&sample))
                     })
                     .map(|c| c.id);
                 let channel = match reuse {
@@ -1936,6 +1956,14 @@ impl Command {
             AddPluginEffect { track, plugin } => {
                 let slot = |id| crate::effects::EffectSlot::plugin(id, plugin);
                 return add_effect(p, track, slot);
+            }
+            SetPluginState { plugin, state } => {
+                if state.len() > crate::plugin::MAX_STATE_BYTES {
+                    return Err(CommandError::Invalid("the plugin state is too large".into()));
+                }
+                p.plugin_mut(plugin)
+                    .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?
+                    .state = state;
             }
             SetPluginSeparateProcess { plugin, on } => {
                 p.plugin_mut(plugin)

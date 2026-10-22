@@ -32,6 +32,7 @@
 #[cfg(unix)]
 pub mod bridge;
 mod editor;
+mod graphics;
 mod host;
 mod hosted;
 mod instance;
@@ -43,6 +44,7 @@ pub mod testing;
 mod util;
 
 pub use editor::{EditorSize, NativeWindow, Vst3Editor};
+pub use graphics::{HostGraphicsContext, HostGraphicsGuard};
 pub use hosted::{PluginInstance, PluginProcessor};
 pub use instance::{NoteEvent, NoteEventKind, ParamInfo, Transport, Vst3Instance, Vst3Processor};
 pub use module::Vst3Module;

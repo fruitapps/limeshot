@@ -222,6 +222,118 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
     ]
 }
 
+/// Plain controls from a Lime plugin's component state, using defaults for older states.
+pub fn plain_values(plugin: &PluginRef, defaults: &[f32]) -> Vec<f32> {
+    let state = component_state(&plugin.state).and_then(|b| serde_json::from_slice::<Value>(b).ok());
+    defaults
+        .iter()
+        .enumerate()
+        .map(|(i, default)| {
+            state
+                .as_ref()
+                .and_then(|s| s["params"][format!("value_{}", i + 1)]["f32"].as_f64())
+                .filter(|v| v.is_finite())
+                .map(|v| v as f32)
+                .unwrap_or(*default)
+        })
+        .collect()
+}
+
+/// Legacy preset settings reconstructed from a LimeSynth component state.
+pub fn synth_params(plugin: &PluginRef) -> Option<SynthParams> {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SYNTH) {
+        return None;
+    }
+    let v = plain_values(plugin, &synth_values(&SynthParams::default()));
+    Some(SynthParams {
+        waveform: match v[0].round() as u8 {
+            0 => Waveform::Sine,
+            1 => Waveform::Square,
+            3 => Waveform::Triangle,
+            _ => Waveform::Saw,
+        },
+        octave: v[1] as i8,
+        detune_cents: v[2],
+        gain_db: v[3],
+        attack_ms: v[4],
+        decay_ms: v[5],
+        sustain: v[6],
+        release_ms: v[7],
+        cutoff_hz: v[8],
+        resonance: v[9],
+        filter_env: v[10],
+        filter_decay_ms: v[11],
+        lfo_rate_hz: v[12],
+        vibrato_cents: v[13],
+        lfo_cutoff: v[14],
+        filter_mode: match v[15].round() as u8 {
+            1 => FilterMode::BandPass,
+            2 => FilterMode::HighPass,
+            _ => FilterMode::LowPass,
+        },
+        key_track: v[16],
+    })
+}
+
+/// Create a sampler reference without doing I/O in the project model. The document's
+/// normalizer embeds its source audio before the reference reaches the host.
+pub fn sampler_ref(p: &SamplerParams, root_key: u8) -> PluginRef {
+    let mut plugin = LimePlugin::SAMPLER.with_values(&sampler_values(p, root_key), false, None);
+    if let Some(sample) = &p.sample {
+        plugin.extra.insert("lime-sample-path".into(), json!(sample.path));
+        plugin.extra.insert("lime-sample-pending".into(), json!(true));
+    }
+    plugin
+}
+
+/// Sampler settings in a legacy channel or a Lime Sampler's saved component state.
+/// The source path is a preview/reload hint; playback uses the embedded audio.
+pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
+    let Instrument::Plugin(plugin) = instrument else {
+        return match instrument {
+            Instrument::Sampler(p) => Some(p.clone()),
+            _ => None,
+        };
+    };
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return None;
+    }
+    let mut p = SamplerParams {
+        sample: plugin
+            .extra
+            .get("lime-sample-path")
+            .and_then(Value::as_str)
+            .map(|path| crate::SampleRef { path: path.into() }),
+        ..Default::default()
+    };
+    if let Some(state) = component_state(&plugin.state).and_then(|bytes| serde_json::from_slice::<Value>(bytes).ok()) {
+        let defaults = sampler_values(&p, 60);
+        let value = |i: usize| {
+            state["params"][format!("value_{}", i + 1)]["f32"]
+                .as_f64()
+                .filter(|v| v.is_finite())
+                .map(|v| v as f32)
+                .unwrap_or(defaults[i])
+        };
+        p.gain_db = value(0);
+        p.pitch = value(1);
+        p.start = value(2);
+        p.end = value(3);
+        p.release_ms = value(4);
+        p.reverse = value(5) >= 0.5;
+        p.one_shot = value(6) >= 0.5;
+        p.attack_ms = value(8);
+        p.decay_ms = value(9);
+        p.sustain = value(10);
+        p.cutoff_hz = value(11);
+        p.resonance = value(12);
+        p.looping = value(13) >= 0.5;
+        p.loop_start = value(14);
+        p.loop_end = value(15);
+    }
+    Some(p)
+}
+
 /// Settings of a former built-in sampler that Lime Sampler cannot reproduce yet (the P0 features
 /// listed in decision D39), as user-facing phrases. Lime Sampler now has every sampler setting.
 pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
@@ -294,7 +406,33 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                 for lost in sampler_losses(p) {
                     warnings.push(format!("{}: Lime Sampler does not have {lost} yet", c.name));
                 }
-                Some(LimePlugin::SAMPLER.with_values(&sampler_values(p, c.root_key), false, sample.as_ref()))
+                {
+                    let mut plugin =
+                        LimePlugin::SAMPLER.with_values(&sampler_values(p, c.root_key), false, sample.as_ref());
+                    if let Some(source) = &p.sample {
+                        plugin.extra.insert("lime-sample-path".into(), json!(source.path));
+                    }
+                    Some(plugin)
+                }
+            }
+            Instrument::Plugin(plugin)
+                if plugin.extra.get("lime-sample-pending").and_then(Value::as_bool) == Some(true)
+                    && LimePlugin::of(plugin) == Some(LimePlugin::SAMPLER) =>
+            {
+                let mut plugin = plugin.clone();
+                if let Some(p) = sampler_params(&c.instrument) {
+                    let sample = p.sample.as_ref().and_then(|s| audio(&s.path));
+                    if sample.is_none() {
+                        warnings.push(format!("{}: the sample could not be loaded", c.name));
+                    }
+                    let root = plain_values(&plugin, &sampler_values(&p, c.root_key))[7]
+                        .round()
+                        .clamp(0.0, 127.0) as u8;
+                    let state = LimePlugin::SAMPLER.with_values(&sampler_values(&p, root), false, sample.as_ref());
+                    plugin.state = state.state;
+                }
+                plugin.extra.remove("lime-sample-pending");
+                Some(plugin)
             }
             _ => None,
         };
@@ -326,21 +464,230 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
 
 /// Whether `project` still uses a former built-in instrument or an effect that has a Lime plugin.
 pub fn needs_conversion(project: &Project) -> bool {
-    project
-        .channels
+    project.channels.iter().any(|c| {
+        matches!(c.instrument, Instrument::Synth(_) | Instrument::Sampler(_))
+            || matches!(&c.instrument, Instrument::Plugin(p) if LimePlugin::of(p) == Some(LimePlugin::SAMPLER)
+                && p.extra.get("lime-sample-pending").and_then(Value::as_bool) == Some(true))
+    }) || project
+        .mixer
+        .tracks
         .iter()
-        .any(|c| matches!(c.instrument, Instrument::Synth(_) | Instrument::Sampler(_)))
-        || project
-            .mixer
-            .tracks
-            .iter()
-            .flat_map(|t| &t.effects)
-            .any(|e| LimePlugin::for_effect(e.kind).is_some())
+        .flat_map(|t| &t.effects)
+        .any(|e| LimePlugin::for_effect(e.kind).is_some())
+}
+
+const fn spec(name: &'static str, min: f32, max: f32, default: f32, unit: &'static str, log: bool) -> ParamSpec {
+    ParamSpec {
+        name,
+        min,
+        max,
+        default,
+        unit,
+        log,
+        labels: &[],
+    }
+}
+const fn choice(name: &'static str, labels: &'static [&'static str], default: f32) -> ParamSpec {
+    ParamSpec {
+        name,
+        min: 0.0,
+        max: (labels.len() - 1) as f32,
+        default,
+        unit: "",
+        log: false,
+        labels,
+    }
+}
+pub const SYNTH_CONTROLS: &[ParamSpec] = &[
+    choice("Waveform", &["Sine", "Square", "Saw", "Triangle"], 2.0),
+    spec("Octave", -3.0, 3.0, 0.0, "oct", false),
+    spec("Detune", -100.0, 100.0, 0.0, "ct", false),
+    spec("Gain", -60.0, 12.0, -6.0, "dB", false),
+    spec("Attack", 0.0, 5000.0, 5.0, "ms", false),
+    spec("Decay", 1.0, 5000.0, 200.0, "ms", true),
+    spec("Sustain", 0.0, 1.0, 0.7, "", false),
+    spec("Release", 1.0, 10000.0, 150.0, "ms", true),
+    spec("Cutoff", 20.0, 20000.0, 20000.0, "Hz", true),
+    spec("Resonance", 0.0, 0.95, 0.0, "", false),
+    spec("Filter envelope", 0.0, 8.0, 0.0, "oct", false),
+    spec("Filter decay", 1.0, 5000.0, 300.0, "ms", true),
+    spec("LFO rate", 0.1, 30.0, 5.0, "Hz", true),
+    spec("Vibrato", 0.0, 200.0, 0.0, "ct", false),
+    spec("LFO cutoff", 0.0, 6.0, 0.0, "oct", false),
+    // Appended after the original controls so earlier parameter IDs and saved states stay valid.
+    choice("Filter type", &["Low-pass", "Band-pass", "High-pass"], 0.0),
+    spec("Key track", 0.0, 1.0, 0.0, "", false),
+];
+pub const SAMPLER_CONTROLS: &[ParamSpec] = &[
+    spec("Gain", -60.0, 12.0, 0.0, "dB", false),
+    spec("Pitch", -48.0, 48.0, 0.0, "st", false),
+    spec("Start", 0.0, 1.0, 0.0, "", false),
+    spec("End", 0.0, 1.0, 1.0, "", false),
+    spec("Release", 0.0, 5000.0, 10.0, "ms", false),
+    choice("Reverse", &["Forward", "Reverse"], 0.0),
+    choice("Playback", &["Gated", "One-shot"], 1.0),
+    spec("Root key", 0.0, 127.0, 60.0, "MIDI", false),
+    // Appended (PLG-014) so earlier parameter IDs and saved states stay valid; the defaults are a gate.
+    spec("Attack", 0.0, 10000.0, 0.0, "ms", false),
+    spec("Decay", 0.0, 10000.0, 0.0, "ms", false),
+    spec("Sustain", 0.0, 1.0, 1.0, "", false),
+    // Appended (PLG-016): the low-pass filter, open by default.
+    spec("Cutoff", 20.0, 20000.0, 20000.0, "Hz", true),
+    spec("Resonance", 0.0, 0.95, 0.0, "", false),
+    // Appended (PLG-015): loop the region while the note is held, as fractions of the sample.
+    choice("Loop", &["Off", "On"], 0.0),
+    spec("Loop start", 0.0, 1.0, 0.0, "", false),
+    spec("Loop end", 0.0, 1.0, 1.0, "", false),
+];
+
+/// Return controls in the stable native plugin order (IDs 0–8), or an empty slice for other IDs.
+/// Compressor controls omit the DAW's mixer-track selector; its key comes from a host bus.
+pub fn control_specs(id: u8) -> &'static [ParamSpec] {
+    match id {
+        0 => SYNTH_CONTROLS,
+        1 => SAMPLER_CONTROLS,
+        7 => &LimePlugin::EFFECTS[5].params()[..5], // The external key is a bus, not a mixer track number.
+        2..=8 => LimePlugin::EFFECTS[(id - 2) as usize].params(),
+        _ => &[],
+    }
+}
+
+/// Update one of our known controls without waiting for an audio callback to serialize it.
+/// Other fields, including embedded sample audio, remain intact.
+pub fn edited_param_state(plugin: &PluginRef, id: u32, normalized: f64) -> Option<PluginState> {
+    let lime = LimePlugin::of(plugin)?;
+    let mut state: Value = component_state(&plugin.state)
+        .and_then(|s| serde_json::from_slice(s).ok())
+        .unwrap_or_else(|| json!({"version": "0.1.0", "params": {}, "fields": {}}));
+    if !normalized.is_finite() {
+        return None;
+    }
+    let params = state
+        .as_object_mut()?
+        .entry("params")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()?;
+    let hash = |s: &str| {
+        s.bytes()
+            .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)))
+            & !(1 << 31)
+    };
+    if let Some(index) = control_specs(lime.0)
+        .iter()
+        .enumerate()
+        .find_map(|(i, _)| (param_id(i) == id).then_some(i))
+    {
+        let spec = &control_specs(lime.0)[index];
+        let fraction = (normalized.clamp(0.0, 1.0) as f32).powf(if spec.log { 4.0 } else { 1.0 });
+        let mut plain = spec.min + fraction * (spec.max - spec.min);
+        if !spec.labels.is_empty()
+            || (lime == LimePlugin::SYNTH && index == 1)
+            || (lime == LimePlugin::SAMPLER && index == 7)
+        {
+            plain = plain.round();
+        }
+        params.insert(format!("value_{}", index + 1), json!({"f32": plain}));
+    } else {
+        let key = ["bypass", "key"].into_iter().find(|name| hash(name) == id)?;
+        params.insert(key.into(), json!({"bool": normalized >= 0.5}));
+    }
+    Some(PluginState::new(host_state(state.to_string().as_bytes())))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pending_sampler_embeds_once_and_keeps_source_settings() {
+        let params = SamplerParams {
+            sample: Some(crate::SampleRef {
+                path: "kick.wav".into(),
+            }),
+            attack_ms: 25.0,
+            looping: true,
+            loop_start: 0.2,
+            loop_end: 0.8,
+            ..Default::default()
+        };
+        let mut doc = crate::Document::default();
+        doc.execute(crate::Command::AddChannel {
+            name: "Kick".into(),
+            instrument: Instrument::Plugin(sampler_ref(&params, 48)),
+        })
+        .unwrap();
+        let mut project = doc.project().clone();
+        assert!(needs_conversion(&project));
+        let loaded = std::cell::Cell::new(0);
+        let audio = |path: &str| {
+            assert_eq!(path, "kick.wav");
+            loaded.set(loaded.get() + 1);
+            Some(EmbeddedAudio {
+                name: path.into(),
+                sample_rate: 48_000,
+                stereo: vec![0.5, -0.5],
+            })
+        };
+        assert!(convert_project(&mut project, &audio).is_empty());
+        assert!(!needs_conversion(&project));
+        assert!(convert_project(&mut project, &audio).is_empty());
+        assert_eq!(loaded.get(), 1);
+        assert_eq!(sampler_params(&project.channels[0].instrument), Some(params));
+        let Instrument::Plugin(plugin) = &project.channels[0].instrument else {
+            panic!("plugin")
+        };
+        let state: Value = serde_json::from_slice(component_state(&plugin.state).unwrap()).unwrap();
+        assert_eq!(state["params"]["value_8"]["f32"], 48.0);
+        assert!(state["fields"]["sample-v1"].is_string());
+    }
+
+    #[test]
+    fn parameter_state_edits_keep_audio_and_undo_as_one_gesture() {
+        let audio = EmbeddedAudio {
+            name: "hit.wav".into(),
+            sample_rate: 48_000,
+            stereo: vec![0.5, -0.5],
+        };
+        let plugin =
+            LimePlugin::SAMPLER.with_values(&sampler_values(&SamplerParams::default(), 60), false, Some(&audio));
+        let mut doc = crate::Document::default();
+        let channel = crate::ChannelId(
+            doc.execute(crate::Command::AddChannel {
+                name: "Hit".into(),
+                instrument: Instrument::Plugin(plugin.clone()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let target = PluginTarget::Channel(channel);
+        doc.begin_gesture();
+        for normalized in [0.25, 0.5, 0.75] {
+            let state = edited_param_state(doc.project().plugin(target).unwrap(), param_id(8), normalized).unwrap();
+            doc.execute(crate::Command::SetPluginState { plugin: target, state })
+                .unwrap();
+        }
+        doc.end_gesture();
+        assert_eq!(doc.history().len(), 2);
+        let before: Value = serde_json::from_slice(component_state(&plugin.state).unwrap()).unwrap();
+        let after: Value =
+            serde_json::from_slice(component_state(&doc.project().plugin(target).unwrap().state).unwrap()).unwrap();
+        assert_eq!(after["params"]["value_9"]["f32"], 7500.0);
+        assert_eq!(before["fields"], after["fields"]);
+        assert!(doc.undo());
+        assert_eq!(doc.project().plugin(target).unwrap().state, plugin.state);
+        assert!(doc.redo());
+        assert_eq!(
+            sampler_params(&doc.project().channel(channel).unwrap().instrument)
+                .unwrap()
+                .attack_ms,
+            7500.0
+        );
+        let mut malformed = plugin;
+        malformed.state = PluginState::new(host_state(b"false"));
+        assert!(edited_param_state(&malformed, param_id(8), 0.5).is_none());
+        assert!(edited_param_state(&malformed, param_id(8), f64::NAN).is_none());
+    }
 
     #[test]
     fn class_ids_match_the_exported_plugins() {

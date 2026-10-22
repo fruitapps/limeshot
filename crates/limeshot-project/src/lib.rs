@@ -71,6 +71,13 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
             {
                 r.path = relative_path(Path::new(&r.path), dir);
             }
+            if let Instrument::Plugin(plugin) = &mut c.instrument
+                && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
+                && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(Value::as_str)
+            {
+                let stored = relative_path(Path::new(stored), dir);
+                plugin.extra.insert("lime-sample-path".into(), json!(stored));
+            }
         }
     }
     let env = json!({

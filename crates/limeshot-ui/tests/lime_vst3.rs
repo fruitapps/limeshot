@@ -131,7 +131,7 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
     assert!(warnings.is_empty(), "{warnings:?}");
     assert!(!lime::needs_conversion(&converted));
     let host = PluginHost::new(None);
-    let (processors, _keep) = host.offline(&converted, SR);
+    let (processors, _keep) = host.offline(&converted, SR).unwrap();
     assert_eq!(
         processors.instruments.len(),
         2,
@@ -147,6 +147,17 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
     eprintln!("rms built-in {e}, Lime VST3 {a}, difference {d}");
     assert!(e > 0.01, "the built-in render is silent: {e}");
     assert!(d < 1e-4 * e, "Lime VST3 render differs: rms {a} vs {e}, difference {d}");
+    assert!(
+        expected[..n]
+            .iter()
+            .map(|v| v.to_bits())
+            .eq(actual[..n].iter().map(|v| v.to_bits())),
+        "the comparison must remain bit-identical"
+    );
+    assert!(
+        expected[n..].iter().chain(&actual[n..]).all(|v| *v == 0.0),
+        "render lengths may only differ by trailing silence"
+    );
 }
 
 #[test]
@@ -224,7 +235,7 @@ fn effect_automation_follows_the_converted_lime_plugin() {
         AutomationTarget::PluginParam { .. }
     ));
     let host = PluginHost::new(None);
-    let (processors, _keep) = host.offline(&converted, SR);
+    let (processors, _keep) = host.offline(&converted, SR).unwrap();
     let actual = song(&converted, processors);
     let rms = |a: &[f32]| (a.iter().map(|v| v * v).sum::<f32>() / a.len().max(1) as f32).sqrt();
     let n = expected.len().min(actual.len());

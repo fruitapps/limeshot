@@ -10,63 +10,56 @@ Keep **Lime Test Gain / Lime Test Tone** (`crates/limeshot-plugins/src/testing.r
 They are compiled-in VST3 test fixtures that users never see. The owner chose to keep them so CI can test hosting
 without installed plugins.
 
-## Status (2026-10-23, branch `claude/lime-vst3-default`)
+## Status (2026-10-23, Codex continuation on `claude/lime-vst3-default`)
 
-Done and tested (PLG-013 is IN_PROGRESS; decision D39):
-* `limeshot_core::lime`: the Lime catalog (names, class ids `LIMENATIVE…01<n>`, `lime:<bundle>` paths), the state
-  writer (nice-plug JSON `value_1…`, `bypass`, `sample-v1`, wrapped in the host's `LSV3` container) and
-  `convert_project` / `needs_conversion`, which return warnings for settings that are lost.
-* `limeshot_plugins::lime`: resolves `lime:` paths (`LIMESHOT_LIME_PLUGINS`, `../PlugIns` / `plugins` beside the
-  executable, `native-plugins/dist`, the standard VST3 folders). The bridge uses the same `load_module`.
-* `Document::set_normalizer` / `take_warnings`. `LimeShotApp::new` installs `limeshot_ui::lime::normalizer()`, so
-  every opened project and every edit has built-ins converted. Warnings appear as error toasts.
-  `new_with_player` (the headless test apps) does not install it yet.
-* Lime Sampler picks up a sample loaded with host state while it is active (`SampleStore` generation, checked in
-  `process`). Before this fix it played silence when a host loaded state after activation.
-* `crates/limeshot-ui/tests/lime_vst3.rs`: built-in versus converted render through the real bundles, compared
-  bit for bit (it skips when the bundles are not built).
-* P0 records PLG-014…PLG-023, known limitations, progress.
+PLG-013 remains **IN_PROGRESS**. The owner explicitly authorized the supplied takeover prompt: continue the
+existing branch and draft PR #8 instead of making a new branch/PR for this continuation. Do not merge.
+
+Completed:
+* Portable Lime references, legacy conversion, embedded sample state and bundle resolution remain in place.
+* GUI and headless constructors now share the converter. Rack add actions and Browser loads create Lime
+  references. Browser/Playlist previews and audio-source reuse recognize Lime Sampler; source hints save relative
+  and reopen absolute. Root-key edits reach sampler state.
+* Deleted the former synth/sampler and insert parameter panels. Hosted controls retain factory/user `.limepreset`
+  interchange, source-file loading and waveform audition. Lime parameter edits write undoable state directly;
+  native and host parameter definitions have one source in `limeshot_core::lime`. `SetPluginState` merges per drag.
+* Existing instances follow changed document state, including undo/redo and sample replacement. Loading failures
+  show app error toasts; failed plugin loading/state recall aborts export. CLI play and every CLI save/import path
+  now convert to Lime references too.
+* Fixed the live macOS black-host-window regression when native editors render: restore the main viewport's
+  OpenGL context before/after its UI. The plugin renderer clears the current context, but glutin's macOS surface
+  check only compares bound views. Live Lime Sampler rendering and Plugin/Settings tab switching now retain the
+  surrounding host UI. PLG-006 is still IMPLEMENTED: broader native interaction checks remain.
+* `python3 build.py` built all nine release bundles. The real-binary verifier passed all nine at 44.1/48/96 kHz
+  and 1/64/333/1024-frame buffers. `scripts/package-macos.sh` built the app/DMG with `Contents/PlugIns`; deep
+  signature verification passed. The packaged CLI rendered the demo at peak −3.7 dBFS.
+* Realtime CLI playback through converted Lime instruments: MacBook Pro Speakers, 44.1 kHz, 324 callbacks in
+  2 seconds, peak −5.3 dBFS. This is measured output, not an independent listening assessment.
+* All 134 headless UI tests pass, plus the DAW workspace suite and 13 native tests. Non-automated equivalence now
+  asserts identical sample bits (only trailing silent frames may differ in length), and passes with RMS difference 0.
+  Both workspaces' fmt/Clippy, inventories and repository references pass.
 
 Next, in order:
-0. GitHub Actions is blocked: jobs on PRs #7 and #8 end within seconds with "recent account payments have failed or
-   your spending limit needs to be increased". This is the owner's to fix, under Billing & plans. Until then,
-   verify locally and say so.
-1. PLG-023 is written but not yet run: CI builds debug bundles and sets `LIMESHOT_LIME_PLUGINS`, and
-   `scripts/package-macos.sh` copies the release bundles into `Contents/PlugIns`. Check the PR's CI result and fix
-   what fails, for example the build time on Windows and Linux or the 45-minute timeout.
-2. Make commands create Lime plugins directly: `AddChannel` from the rack's add menu, sample drops
-   (`command.rs` around line 1393), `AddEffect` for the seven kinds. Then install the normalizer in
-   `new_with_player` too, and update the UI and app tests that assert built-in instruments.
-3. Delete the built-in synth and sampler (`InstrumentState::{Synth, Sampler}`, the inspector panels) and the seven
-   built-in effect kinds from the engine and UI. Keep `limeshot-dsp` and `limeshot-engine::voice`, because the
-   plugins link them, and keep the deserialization of the old enums for conversion. Move the DSP assertions into
-   native-plugins or DSP-level tests.
-   Experiment (2026-10-23): installing the normalizer in `new_silent` as well, with the bundles built, makes
-   13 of the 134 tests in `crates/limeshot-app/tests/ui.rs` fail. All of them use the built-in panels:
-   `clicking_a_channel_button_toggles_its_settings_window`,
-   `browser_click_previews_and_double_click_loads_a_sample`,
-   `samples_preview_from_the_browser_panel_the_picker_and_channel_settings`,
-   `samples_are_picked_and_drawn_in_the_playlist_like_patterns`, `the_draw_tool_reuses_the_length_of_the_last_clip`,
-   `sampler_envelope_controls_reset_and_undo`, `right_click_on_an_effect_slider_offers_automation_without_moving_it`,
-   `piano_roll_keyboard_ruler_ghosts_and_channel_selector`, `midi_input_notes_play_the_selected_channel`,
-   `compressed_samples_list_load_and_play`, `mixer_sidechain_route_menu_and_compressor_input`,
-   `effect_and_instrument_presets_load_and_save` and `double_click_resets_sliders_and_knobs`. Each of them needs
-   rewriting for Lime plugin channels and slots, or becomes a P0 gap. The experiment was reverted.
-   Scope at handoff: about 37 `Instrument::Synth`, 69 `Instrument::Sampler` and 77 built-in `EffectKind` uses in
-   25 files (`crates/*/src`, `crates/*/tests`, plus `crates/limeshot-app/src/demo.rs`, the FLP and MIDI importers
-   and the inspector, rack, browser and preset UIs). The importers can keep producing built-ins, because the
-   normalizer converts them.
-4. P0 gaps PLG-017…PLG-020 and PLG-022. PLG-021 (effect automation is retargeted to plugin parameters) is done. PLG-014…016 are done: Lime Sampler now has every built-in sampler setting (envelope 9–11, filter 12–13, loop 14–16), and the converter carries them over.
-5. Done: `limeshot-cli render` converts to Lime VST3s, and CI's headless demo render fails if it is silent. The
-   whole demo plays through the bundles; with the bundles hidden it renders silence without an error message, so
-   missing-bundle reporting in the CLI and the app is still to do.
-   CLI-created documents (`script`, `import-midi`) still save built-ins, which the app converts on open.
+1. **Delete the built-in playback paths.** `InstrumentState::{Synth, Sampler}` and `fx::build`/`build_all` still
+   exist in the engine/sequencer and are exercised by legacy DSP/engine tests. Keep shared Voice/DSP for native
+   plugins and preserve legacy enum deserialization. Move DSP assertions to native/shared tests and retain exact
+   conversion-equivalence evidence when replacing the reference renderer. Core legacy creation commands/importers
+   still accept old enums; the app/CLI convert before playback/save.
+2. **Preserve and address P0 losses.** PLG-017…020 and PLG-022 remain. Newly confirmed PLG-024…028 cover silent
+   hosted Playlist audio clips, note pan, full host typed-value menus, host dynamics meters and voice statistics.
+   The old audio-clip engine tests use built-ins; do not mistake them for VST3 playback coverage.
+3. Continue native embedding validation: resize, occlusion, pinning, keyboard forwarding, reopening and third-party
+   editors (Vital), with special attention to detached viewports. See [lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+4. **External validation remains unavailable.** GitHub Actions is blocked by account billing. Keep relying on local
+   checks and state this in PR #8. Windows/Linux/Intel runtime checks remain open. `pluginval` was unavailable in
+   this continuation and was not rerun; older recorded passes are not evidence for the latest binaries.
 
 ## Session policy
 
-Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a NEW draft PR. Stack it on
-`claude/s16-synth-tempo` (PR #7), or on `main` if #7 has merged. PR #7 adds LimeSynth VST3 *Filter type*
-(control 16) and *Key track* (control 17), which the replacement needs. Do not merge automatically.
+The owner's explicit takeover instruction overrides the new-session branch/PR rule **for this continuation only**:
+continue `claude/lime-vst3-default`, push to it and update draft PR #8. Never merge automatically. For every future
+session, repeat and follow AGENTS.md: a NEW `codex/` branch in a separate managed worktree, a NEW draft PR stacked
+on the latest unmerged continuation, and no new chat/session unless the owner asks.
 
 ## State of the repository at handoff
 

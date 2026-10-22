@@ -5,7 +5,7 @@ use crate::app::{ClipOp, LimeShotApp, Pending};
 use crate::dialogs::Dialog;
 use crate::shortcuts::label as key;
 use egui::{Button, Ui};
-use limeshot_core::{Command, Instrument, PatternId, SamplerParams, SynthParams};
+use limeshot_core::{Command, Instrument, LimePlugin, PatternId};
 
 fn item(ui: &mut Ui, text: &str, shortcut: &str) -> bool {
     let clicked = ui.add(Button::new(text).shortcut_text(shortcut)).clicked();
@@ -37,7 +37,7 @@ pub fn add_sampler(app: &mut LimeShotApp) {
     let n = app.project().channels.len() + 1;
     if let Some(id) = app.exec(Command::AddChannel {
         name: format!("Sampler {n}"),
-        instrument: Instrument::Sampler(SamplerParams::default()),
+        instrument: Instrument::Plugin(LimePlugin::SAMPLER.plugin_ref()),
     }) {
         app.select_channel(limeshot_core::ChannelId(id));
     }
@@ -47,7 +47,7 @@ pub fn add_synth(app: &mut LimeShotApp) {
     let n = app.project().channels.len() + 1;
     if let Some(id) = app.exec(Command::AddChannel {
         name: format!("LimeSynth {n}"),
-        instrument: Instrument::Synth(SynthParams::default()),
+        instrument: Instrument::Plugin(LimePlugin::SYNTH.plugin_ref()),
     }) {
         app.select_channel(limeshot_core::ChannelId(id));
     }

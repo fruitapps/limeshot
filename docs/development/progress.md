@@ -1197,3 +1197,33 @@ the real bundles (RMS difference 0). Added P0 records PLG-013…PLG-023. Remaini
 their tests, ship the bundles in the package and CI, and the P0 gaps; see
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md).
 
+
+### 2026-10-23 — hosted controls and headless conversion continuation
+
+Continued on `claude/lime-vst3-default` / draft PR #8 at the owner's explicit instruction (the supplied takeover
+prompt overrides the standing new-branch/new-PR session policy for this continuation only). No new chat/session
+was created; no merge is authorized. Future sessions follow the standing AGENTS policy unless the owner overrides it.
+
+Installed conversion in headless constructors, made rack/Browser add actions create Lime references, retained
+sample loading and waveform audition in hosted Channel Settings, and taught Browser/Playlist source selection,
+previews and clip reuse about Lime Sampler. Source hints save relative and reopen absolute; root-key edits update
+sampler state. Removed the old synth/sampler and insert parameter panels. Shared the native parameter schema
+with core; Lime parameter edits now write undoable state and merge per drag. Existing plugin instances follow
+changed saved state. Legacy preset menus work on hosted Lime state. Offline loading failures abort CLI/GUI export.
+
+Added P0 records PLG-024…PLG-028 for audio-clip playback, note pan, full host typed-value menus, host dynamics
+meters and plugin voice statistics. The built-in engine paths remain: PLG-013 is IN_PROGRESS. Native rendering/tab checks and measured audio-device output were subsequently exercised as recorded below.
+
+Validation: all 134 headless UI tests pass, as does the complete DAW workspace suite; 13 native tests pass.
+Non-automated legacy-vs-VST3 rendering now asserts exact sample bits and trailing silence, and passes (RMS
+error 0). Automated EQ comparison remains close, as documented. Both workspaces' formatting and Clippy pass.
+Offscreen hosted Sampler wrapper was rendered and visually inspected. Packaging and binary verification results
+are recorded in the handoff status after completion. GitHub Actions remains unavailable due account billing.
+
+Live follow-up: reproduced and fixed macOS host rendering going black after native editor attachment. A main
+viewport OpenGL context guard restores the host context around UI callbacks. Lime Sampler and its host render
+together after the fix, including a switch to Settings. The packaged demo renders at −3.7 dBFS; realtime converted
+playback produces 324 device callbacks over 2 s at 44.1 kHz, peak −5.3 dBFS. Native binary verification passes all
+nine bundles across three sample rates/four buffer sizes; app/DMG packaging and strict deep ad-hoc signature check
+pass. CLI save/import/play paths now convert too. Broader native interaction, remote CI and pluginval remain open.
+Details: [lime-vst3-host-validation.md](lime-vst3-host-validation.md).

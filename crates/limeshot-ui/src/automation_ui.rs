@@ -246,15 +246,6 @@ mod tests {
             (AutomationTarget::MixerVolume(1), "-80", 0.0001),
             (AutomationTarget::MixerVolume(1), "-140", 0.0000001),
             (AutomationTarget::MixerVolume(1), "6.0206", 2.0),
-            (
-                AutomationTarget::EffectParam {
-                    track: 1,
-                    effect,
-                    index: 1,
-                },
-                "1000",
-                1000.0,
-            ),
         ] {
             let v = parse_value(&app, target, text).expect("valid value");
             let tolerance = 1e-5_f32.min(f32::abs(expected) * 1e-5);
@@ -264,6 +255,15 @@ mod tests {
             let (text, _) = input_value(&app, target).unwrap();
             assert!((parse_value(&app, target, &text).unwrap() - expected).abs() <= tolerance);
         }
+        let legacy = AutomationTarget::EffectParam {
+            track: 1,
+            effect,
+            index: 1,
+        };
+        assert!(
+            parse_value(&app, legacy, "1000").is_none(),
+            "the slot is now a hosted plugin"
+        );
         for text in ["NaN", "inf", "-inf", "", "abc", "101", "-101"] {
             assert_eq!(parse_value(&app, AutomationTarget::MixerPan(1), text), None);
         }

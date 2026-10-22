@@ -5367,7 +5367,8 @@
         "crates/limeshot-app/tests/ui.rs::a_plugin_channel_button_toggles_the_plugin_window_with_its_tabs",
         "crates/limeshot-app/tests/ui.rs::a_plugin_insert_with_an_editor_opens_its_window_from_the_slot",
         "crates/limeshot-app/tests/ui.rs::plugin_window_presets_step_and_the_window_place_is_saved_in_the_project",
-        "crates/limeshot-core/src/plugin.rs::tests::a_plugin_window_round_trips_and_bad_values_are_dropped"
+        "crates/limeshot-core/src/plugin.rs::tests::a_plugin_window_round_trips_and_bad_values_are_dropped",
+        "docs/development/lime-vst3-host-validation.md"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5384,7 +5385,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass."
+      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md."
     },
     {
       "id": "PLG-007",
@@ -8764,7 +8765,7 @@
       "name": "Lime VST3s replace the built-in instruments and effects",
       "description": "LimeShot plays every instrument and the exported effects through the Lime Native VST3 plugins instead of in-process built-ins.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "The app installs a document normalizer (limeshot-ui/src/lime.rs) that converts any former built-in LimeSynth, Sampler and the seven exported effects into Lime plugin references (lime:<bundle> paths, resolved by limeshot-plugins::lime) with their settings written as the plugins' own state, both for opened projects and for every edit. Lime Sampler embeds the sample's audio. Settings with no plugin equivalent produce a warning toast. Gate, Drive and Chorus remain built-in until they have Lime plugins. The built-in code paths still exist for headless tests and are to be deleted.",
+      "limeshot_behavior": "The app and headless apps install the Lime converter. Rack add actions create portable Lime instrument references; Browser loads create Lime Sampler state with embedded audio. Channel Settings and insert cards use hosted-plugin controls instead of the former built-in panels. Engine built-in playback remains pending deletion; Gate, Drive and Chorus still use it.",
       "priority": "P0",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -8797,7 +8798,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-017…PLG-020, PLG-022, PLG-023."
+      "notes": "Host UI migrated to Lime references, sample reload/preview/picker reuse, portable source hints, root-key synchronization, native-schema parameter state edits with gesture undo, and legacy preset interchange. Built-in engine paths remain; PLG-013 stays IN_PROGRESS."
     },
     {
       "id": "PLG-014",
@@ -9062,9 +9063,9 @@
       "name": "Channel Settings and Channel Rack for Lime instruments",
       "description": "The former built-in instruments' inline Channel Settings panels, sample drops onto an existing channel, and Channel Rack sample waveforms, for Lime Synth/Sampler channels.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Not checked: Lime channels open the plugin's own editor instead of the inline panels; sample drops and the rack's waveform with Lime Sampler channels are untested.",
+      "limeshot_behavior": "Browser sample loads and drops create Lime Sampler references, replacing samples in existing channels while retaining sampler settings. Host Settings retain file loading and waveform audition; Playlist audio picker and drag previews recognize converted channels. Sampler source hints become relative when saved and absolute in memory. Inline sound controls are replaced by the plugin parameter list/native editor; Lime controls have gesture undo. Channel Rack waveforms and previews when only embedded audio survives still need work.",
       "priority": "P0",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PLG-013",
@@ -9077,7 +9078,14 @@
         "Dropping a sample on a Lime Sampler channel loads it into the plugin.",
         "The rack shows the embedded sample's waveform."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "crates/limeshot-app/tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings",
+        "crates/limeshot-app/tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns",
+        "crates/limeshot-app/tests/ui.rs::sampler_envelope_controls_reset_and_undo",
+        "limeshot-core lime::tests::pending_sampler_embeds_once_and_keeps_source_settings",
+        "limeshot-core lime::tests::parameter_state_edits_keep_audio_and_undo_as_one_gesture"
+      ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
@@ -9085,7 +9093,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": ""
+      "notes": "Headless verification covers the real plugin parameter list, file reloads, preview actions and undo. Native embedding, rack waveform parity and source-less embedded sample previews remain unverified/incomplete."
     },
     {
       "id": "PLG-023",
@@ -9110,6 +9118,39 @@
         "CI builds the bundles before the DAW tests and the equivalence test runs instead of skipping.",
         "Windows and Linux packages place them beside the executable."
       ],
+      "tests": [
+        "docs/development/lime-vst3-host-validation.md"
+      ],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "macOS arm64: release bundles built, real-binary verifier passes all nine at three sample rates/four buffer sizes; app/DMG packaging and deep strict ad-hoc signature verification pass; packaged CLI demo peaks at -3.7 dBFS. CI runs are blocked by owner account billing. Windows/Linux packaging/runtime remains pending."
+    },
+    {
+      "id": "PLG-024",
+      "category": "Plugins",
+      "name": "Audio clips through Lime Sampler",
+      "description": "Preserve Playlist sample windows, playback chase, overlap and fades when the channel is a hosted sampler.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented: Renderer::start currently excludes clip events from plugin note delivery, so converted Playlist audio clips are silent. Legacy audio-clip engine tests do not cover VST3 channels.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Audio clips on Lime Sampler channels are audible, seek into their source, stop at clip end, overlap correctly and apply clip fades.",
+        "Verify multiple block sizes and starting playback inside a clip."
+      ],
       "tests": [],
       "reference": {
         "application": "Owner requirement",
@@ -9118,7 +9159,127 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Not yet run: the CI change and the packaging script were not executed in this session."
+      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+    },
+    {
+      "id": "PLG-025",
+      "category": "Plugins",
+      "name": "Per-note pan for hosted instruments",
+      "description": "Preserve Piano Roll note pan when instruments run as VST3 plugins.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented: InstrumentRack::note_on forwards key/velocity/id; the former voice path applies note pan separately. Channel pan still works.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Piano Roll per-note pan is audible through LimeSynth and Lime Sampler, including overlapping notes."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+    },
+    {
+      "id": "PLG-026",
+      "category": "Plugins",
+      "name": "Typed plugin control values in host units",
+      "description": "Retain the former effect controls’ type-in-value and copy/paste/reset actions on hosted parameter controls.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "The host parameter list supports reset and Create automation clip. The full automation_ui control menu and unit-based type-in dialogs are not integrated for plugin parameters.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Hosted Lime controls expose type-in value with native units, copy/paste, reset and undo."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+    },
+    {
+      "id": "PLG-027",
+      "category": "Plugins",
+      "name": "Hosted dynamics meters in the Mixer",
+      "description": "Preserve Mixer gain-reduction metering for converted dynamics effects.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "The generic hosted effect reports no gain reduction through the host DSP trait. Lime Comp/Limiter native editors meter themselves; the old host compressor reduction bar was removed with the built-in panel.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "The Mixer displays actual gain reduction from hosted Lime dynamics effects."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+    },
+    {
+      "id": "PLG-028",
+      "category": "Plugins",
+      "name": "Hosted instrument voice statistics",
+      "description": "Include hosted instruments in the transport voice count.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Renderer::active_voices counts its internal voice pool; hosted plugin notes do not appear in Status::voices. UI audible-note tests use the master meter for hosted instruments.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "The host voice statistic has a documented meaningful count for Lime instrument playback and previews."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
     }
   ]
 }

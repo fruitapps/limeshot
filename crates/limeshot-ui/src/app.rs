@@ -201,9 +201,6 @@ impl LimeShotApp {
         let audio = settings.audio.clone();
         let mut app = Self::new_with_player(settings, bundled_samples, |s| Player::start(&audio, s));
         app.plugins = crate::plugins::PluginHost::new(crate::plugins::PluginHost::default_db_path());
-        // Instruments and effects are the Lime VST3 plugins (D39); headless test apps built with
-        // `new_with_player` keep the former built-ins until those are removed.
-        app.doc.set_normalizer(crate::lime::normalizer());
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app.persist_settings = true;
@@ -278,7 +275,8 @@ impl LimeShotApp {
         bundled_samples: Option<PathBuf>,
         player: impl FnOnce(Arc<Snapshot>) -> Player,
     ) -> Self {
-        let doc = Document::default();
+        let mut doc = Document::default();
+        doc.set_normalizer(crate::lime::normalizer());
         let snapshot = Arc::new(compile(
             doc.project(),
             doc.project().patterns[0].id,
@@ -633,7 +631,12 @@ impl LimeShotApp {
             return;
         }
         if self.compiled.map(|k| k.0) != Some(key.0) {
-            let refs: Vec<String> = self.project().sample_refs().map(|r| r.path.clone()).collect();
+            let mut refs: Vec<String> = self.project().sample_refs().map(|r| r.path.clone()).collect();
+            refs.extend(self.project().channels.iter().filter_map(|c| {
+                limeshot_core::lime::sampler_params(&c.instrument)?
+                    .sample
+                    .map(|s| s.path)
+            }));
             for r in refs {
                 self.samples.request(&r);
             }
@@ -676,8 +679,12 @@ impl LimeShotApp {
                 log::warn!("audio queue full; plugin processor dropped");
             }
         };
-        self.plugins
+        let warnings = self
+            .plugins
             .sync(self.doc.project(), self.doc.generation(), sr, &mut send);
+        for warning in warnings {
+            self.toast_error(warning);
+        }
     }
 
     pub fn snapshot(&self) -> &Arc<Snapshot> {
@@ -1108,6 +1115,7 @@ impl LimeShotApp {
 
     /// Draw the whole window.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        let _graphics = self.plugins.host_graphics.guard();
         let ctx = ui.ctx().clone();
         ui.set_style(ctx.global_style());
         let t = crate::theme::Theme::current();
@@ -1211,6 +1219,17 @@ fn absolutize_samples(project: &Project, dir: Option<&Path>) -> Project {
             r.path = limeshot_project::resolve_sample_path(&r.path, dir)
                 .to_string_lossy()
                 .into_owned();
+        }
+        if let limeshot_core::Instrument::Plugin(plugin) = &mut c.instrument
+            && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
+            && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(serde_json::Value::as_str)
+        {
+            let stored = limeshot_project::resolve_sample_path(stored, dir)
+                .to_string_lossy()
+                .into_owned();
+            plugin
+                .extra
+                .insert("lime-sample-path".into(), serde_json::json!(stored));
         }
     }
     p

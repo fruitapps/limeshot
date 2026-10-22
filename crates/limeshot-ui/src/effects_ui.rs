@@ -3,9 +3,9 @@
 use crate::app::LimeShotApp;
 use crate::theme::{Theme, mix, semibold};
 use crate::widgets::Hint as _;
-use crate::widgets::{section, segmented, toggle_label};
+use crate::widgets::{section, toggle_label};
 use egui::{CornerRadius, RichText, Stroke, Ui, vec2};
-use limeshot_core::{AutomationTarget, COMPRESSOR_SIDECHAIN, Command, EffectKind, EffectSlot, MAX_EFFECTS};
+use limeshot_core::{Command, EffectKind, EffectSlot, MAX_EFFECTS};
 
 /// Draw a mixer track's insert chain with controls for adding, editing, bypassing, and reordering effects.
 pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
@@ -23,9 +23,15 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_enabled_ui(effects.len() < MAX_EFFECTS, |ui| {
                 ui.menu_button("+ Add effect", |ui| {
-                    for kind in EffectKind::ALL {
-                        if ui.button(kind.label()).clicked() {
-                            app.exec(Command::AddEffect { track, kind });
+                    for lime in limeshot_core::LimePlugin::ALL
+                        .into_iter()
+                        .filter(|p| !p.is_instrument())
+                    {
+                        if ui.button(lime.name()).clicked() {
+                            app.exec(Command::AddPluginEffect {
+                                track,
+                                plugin: lime.plugin_ref(),
+                            });
                             ui.close();
                         }
                     }
@@ -120,193 +126,11 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                 if e.kind == EffectKind::Plugin {
                     crate::plugins::effect_card(app, ui, track, e.id, e.plugin.as_ref());
                 }
-                for (i, spec) in e.kind.params().iter().enumerate() {
-                    let cur = app
-                        .automated(AutomationTarget::EffectParam {
-                            track,
-                            effect: e.id,
-                            index: i,
-                        })
-                        .or_else(|| e.params.get(i).copied())
-                        .unwrap_or(spec.default);
-                    ui.horizontal(|ui| {
-                        ui.add_sized(
-                            vec2(64.0, 20.0),
-                            egui::Label::new(RichText::new(spec.name).color(t.text_dim)),
-                        );
-                        if e.kind == EffectKind::Compressor && i == COMPRESSOR_SIDECHAIN {
-                            sidechain_choice(app, ui, track, e.id, cur.round() as u16);
-                            return;
-                        }
-                        if spec.labels.len() > 4 {
-                            // Many choices (the delay's Sync): a drop-down, not a segmented row.
-                            let mut choice = cur.round() as usize;
-                            egui::ComboBox::from_id_salt((track, e.id, i))
-                                .width(90.0)
-                                .selected_text(spec.labels.get(choice).copied().unwrap_or("?"))
-                                .show_ui(ui, |ui| {
-                                    for (k, l) in spec.labels.iter().enumerate() {
-                                        ui.selectable_value(&mut choice, k, *l);
-                                    }
-                                });
-                            if choice != cur.round() as usize {
-                                app.exec(Command::SetEffectParam {
-                                    track,
-                                    effect: e.id,
-                                    index: i,
-                                    value: choice as f32,
-                                });
-                            }
-                            return;
-                        }
-                        if !spec.labels.is_empty() {
-                            if let Some(choice) = segmented(ui, spec.labels, cur.round() as usize, 22.0, spec.name) {
-                                app.exec(Command::SetEffectParam {
-                                    track,
-                                    effect: e.id,
-                                    index: i,
-                                    value: choice as f32,
-                                });
-                            }
-                            return;
-                        }
-                        let mut v = cur;
-                        // A tempo-synced delay ignores its Time.
-                        let synced = e.kind == EffectKind::Delay
-                            && i == 0
-                            && e.params.get(limeshot_core::DELAY_SYNC).is_some_and(|s| *s >= 1.0);
-                        ui.add_enabled_ui(!synced, |ui| {
-                            ui.spacing_mut().slider_width = (ui.available_width() - 74.0).max(60.0);
-                            let unit = spec.unit;
-                            let r = crate::widgets::reset_on_double_click(
-                                ui.add(
-                                    egui::Slider::new(&mut v, spec.min..=spec.max)
-                                        .logarithmic(spec.log)
-                                        .custom_formatter(move |x, _| format_value(x as f32, unit)),
-                                ),
-                                &mut v,
-                                spec.default,
-                            );
-                            let cmd = crate::widgets::user_changed(&r).then_some(Command::SetEffectParam {
-                                track,
-                                effect: e.id,
-                                index: i,
-                                value: v,
-                            });
-                            app.exec_gesture(&r, cmd);
-                            crate::automation_ui::menu(
-                                app,
-                                &r,
-                                AutomationTarget::EffectParam {
-                                    track,
-                                    effect: e.id,
-                                    index: i,
-                                },
-                            );
-                        });
-                    });
-                }
-                if e.kind == EffectKind::Compressor {
-                    reduction_meter(app, ui, track);
+                if e.kind != EffectKind::Plugin {
+                    ui.label(RichText::new("Legacy effect: not implemented as a Lime plugin yet").color(t.warning));
                 }
             });
         ui.add_space(4.0);
-    }
-}
-
-/// The compressor's sidechain input: its own signal, or a track that routes here (FL Studio's
-/// "Sidechain to this track" makes such a route at level 0).
-fn sidechain_choice(app: &mut LimeShotApp, ui: &mut Ui, track: u16, effect: u32, cur: u16) {
-    let mixer = &app.project().mixer;
-    let name = |j: u16| {
-        mixer
-            .tracks
-            .get(usize::from(j))
-            .map(|x| x.name.clone())
-            .unwrap_or_default()
-    };
-    let sources: Vec<(u16, String)> = mixer
-        .tracks
-        .iter()
-        .enumerate()
-        .filter(|(_, x)| x.routes.iter().any(|r| r.to == track))
-        .filter_map(|(j, _)| u16::try_from(j).ok())
-        .map(|j| (j, format!("{j}. {}", name(j))))
-        .collect();
-    let text = match cur {
-        0 => "Off (own input)".to_string(),
-        j if sources.iter().any(|s| s.0 == j) => format!("{j}. {}", name(j)),
-        j => format!("{j}. {} (not routed here)", name(j)),
-    };
-    let mut pick = None;
-    egui::ComboBox::from_id_salt(("sidechain", track, effect))
-        .selected_text(text)
-        .width(ui.available_width() - 8.0)
-        .show_ui(ui, |ui| {
-            if ui.selectable_label(cur == 0, "Off (own input)").clicked() {
-                pick = Some(0);
-            }
-            for (j, label) in &sources {
-                if ui.selectable_label(cur == *j, label).clicked() {
-                    pick = Some(*j);
-                }
-            }
-            if sources.is_empty() {
-                ui.label(
-                    RichText::new("Route a track here first (right-click its route button: Sidechain to this track)")
-                        .small(),
-                );
-            }
-        })
-        .response
-        .hint("The track whose signal drives the compressor; it must route to this track");
-    if let Some(j) = pick
-        && j != cur
-    {
-        app.exec(Command::SetEffectParam {
-            track,
-            effect,
-            index: COMPRESSOR_SIDECHAIN,
-            value: f32::from(j),
-        });
-    }
-}
-
-/// Gain reduction of the track's compressors, as a bar growing from the right (0–24 dB).
-fn reduction_meter(app: &LimeShotApp, ui: &mut Ui, track: u16) {
-    let t = Theme::current();
-    let gr = app.player.status().gain_reduction(usize::from(track)).clamp(0.0, 24.0);
-    ui.horizontal(|ui| {
-        ui.add_sized(
-            vec2(64.0, 16.0),
-            egui::Label::new(RichText::new("Reduction").color(t.text_dim)),
-        );
-        let w = (ui.available_width() - 74.0).max(60.0);
-        let (r, _) = ui.allocate_exact_size(vec2(w, 8.0), egui::Sense::hover());
-        ui.painter().rect_filled(r, CornerRadius::same(2), t.sunken);
-        let fill = egui::Rect::from_min_max(egui::pos2(r.right() - r.width() * gr / 24.0, r.top()), r.max);
-        ui.painter().rect_filled(fill, CornerRadius::same(2), t.warning);
-        ui.label(
-            RichText::new(if gr < 0.05 {
-                "0.0 dB".to_string()
-            } else {
-                format!("-{gr:.1} dB")
-            })
-            .font(crate::theme::mono(10.0))
-            .color(t.text_dim),
-        );
-    });
-}
-
-fn format_value(v: f32, unit: &str) -> String {
-    match unit {
-        "Hz" if v >= 1000.0 => format!("{:.2} kHz", v / 1000.0),
-        "Hz" => format!("{v:.0} Hz"),
-        "ms" => format!("{v:.0} ms"),
-        "dB" => format!("{v:+.1} dB"),
-        ":1" => format!("{v:.1}:1"),
-        "×" => format!("{v:.2}×"),
-        _ => format!("{:.0}%", v * 100.0),
     }
 }
 

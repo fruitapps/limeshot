@@ -240,3 +240,18 @@ JSON inside the host's `LSV3` container, so the DAW configures them without inst
 document normalizer applied to every replaced project and every edit, so commands that still create built-ins and
 old projects both end up as Lime plugins; Lime Sampler embeds sample audio, as it does in other DAWs. The shared DSP
 crates stay: the plugins link them, which is why converted projects render bit-identically.
+
+### D39 continuation — hosted control migration (2026-10-23)
+
+GUI and headless constructors now use the same normalizer. Rack and Browser creation use Lime references;
+legacy core/import commands remain accepted during engine migration. Channel Settings and insert cards use
+hosted controls, with source-file actions and waveform audition retained for Lime Sampler. Parameter definitions
+for LimeSynth/Sampler now live in `limeshot_core::lime` and are re-exported by native plugins, so the host can write
+requested values into undoable state without reading stale pre-callback component state. `SetPluginState` is a
+mergeable command. The host applies changed document state to an existing instance, including on undo/redo.
+Legacy `.limepreset` menus reconstruct settings from Lime state; failed offline plugin loading stops export.
+The migration exposes additional losses recorded as P0 PLG-024…PLG-028. Built-in engine deletion is still pending.
+
+The live macOS pass also exposed lost host OpenGL context after a plugin renderer callback. The plugin crate now
+owns a context guard restored around the main viewport UI; its live rendering/tab checks are recorded separately.
+CLI save/import/play paths convert before use, and plugin load/state failures surface as app errors and export failures.

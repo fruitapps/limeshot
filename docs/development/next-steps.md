@@ -14,6 +14,8 @@ Repeat this policy in every future session handoff before these docs merge. Do n
 
 The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
+Hosted controls and headless conversion are now migrated. Engine built-in deletion remains next; the newly
+confirmed losses PLG-024…PLG-028 (especially silent hosted audio clips) must remain visible as P0 work.
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
