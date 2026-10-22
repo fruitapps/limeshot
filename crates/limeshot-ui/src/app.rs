@@ -799,6 +799,10 @@ impl LimeShotApp {
         if self.plugins.poll() {
             self.doc.mark_unsaved();
         }
+        if self.ui.mode == PlayMode::Song && self.is_playing() {
+            let tick = self.player.status().position();
+            self.plugins.follow_automation(self.doc.project(), &self.snapshot, tick);
+        }
         if let Some(summary) = self.plugins.poll_scan() {
             self.toast(summary);
         }

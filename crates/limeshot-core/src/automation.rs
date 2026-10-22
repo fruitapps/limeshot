@@ -6,6 +6,7 @@
 //! range, on the same scale as the control's travel) and the tension of the segment that follows
 //! them.
 
+use crate::document::PluginTarget;
 use crate::model::{ChannelId, Extra, Project, Rgb};
 use crate::time::Tick;
 use serde::{Deserialize, Serialize};
@@ -21,7 +22,16 @@ pub enum AutomationTarget {
     ChannelPan(ChannelId),
     MixerVolume(u16),
     MixerPan(u16),
-    EffectParam { track: u16, effect: u32, index: usize },
+    EffectParam {
+        track: u16,
+        effect: u32,
+        index: usize,
+    },
+    /// Parameter `id` (VST3) of a hosted plugin; values are the plugin's own normalised ones.
+    PluginParam {
+        plugin: PluginTarget,
+        id: u32,
+    },
 }
 
 /// How a normalised value maps to the parameter's own units.
@@ -98,6 +108,9 @@ impl AutomationTarget {
                     }
                 })
             }
+            AutomationTarget::PluginParam { plugin, .. } => {
+                p.plugin(plugin).map(|_| Mapping::Linear { min: 0.0, max: 1.0 })
+            }
         }
     }
 
@@ -118,6 +131,8 @@ impl AutomationTarget {
                 .params
                 .get(index)
                 .copied(),
+            // The value lives in the plugin, not the project.
+            AutomationTarget::PluginParam { .. } => None,
         }
     }
 
@@ -153,6 +168,16 @@ impl AutomationTarget {
                         e.kind.params().get(index).map_or("?", |s| s.name)
                     ),
                     None => format!("{} – (deleted effect)", track(t)),
+                }
+            }
+            AutomationTarget::PluginParam { plugin, id } => {
+                let place = match plugin {
+                    PluginTarget::Channel(c) => chan(c),
+                    PluginTarget::Effect { track: t, .. } => track(t),
+                };
+                match p.plugin(plugin) {
+                    Some(pl) => format!("{place} – {}: parameter {id}", pl.name),
+                    None => format!("{place} – (removed plugin)"),
                 }
             }
         }

@@ -233,3 +233,134 @@ fn stop_while_stopped_ends_plugin_auditions() {
     assert_eq!(buf[2 * 255], 0.0, "the audition ended");
     assert_eq!(log.lock().unwrap().last().map(|e| (e.1, e.2)), Some((false, 72)));
 }
+
+/// Logs every automation point a plugin gets, with the engine frame it lands on.
+struct ParamLog {
+    frame: u64,
+    log: Arc<Mutex<Vec<(u64, u32, f64)>>>,
+    pending: Vec<(u32, u32, f64)>,
+}
+
+impl ParamLog {
+    fn new(log: Arc<Mutex<Vec<(u64, u32, f64)>>>) -> Self {
+        Self {
+            frame: 0,
+            log,
+            pending: Vec::with_capacity(4096),
+        }
+    }
+
+    fn take(&mut self, frames: usize) {
+        if let Ok(mut l) = self.log.try_lock() {
+            for &(id, offset, v) in &self.pending {
+                assert!((offset as usize) < frames.max(1), "offset inside the block");
+                l.push((self.frame + u64::from(offset), id, v));
+            }
+        }
+        self.pending.clear();
+        self.frame += frames as u64;
+    }
+}
+
+impl PluginInstrument for ParamLog {
+    fn process(&mut self, out: &mut [f32], _notes: &[NoteEvent], _t: &Transport) {
+        out.fill(0.0);
+        self.take(out.len() / 2);
+    }
+    fn reset(&mut self) {}
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        self.pending.push((id, offset, value));
+    }
+}
+
+impl limeshot_dsp::effects::Effect for ParamLog {
+    fn set_params(&mut self, _params: &[f32]) {}
+    fn process(&mut self, buf: &mut [f32]) {
+        self.take(buf.len() / 2);
+    }
+    fn reset(&mut self) {}
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        self.pending.push((id, offset, value));
+    }
+}
+
+#[test]
+fn plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames() {
+    let (mut doc, ch) = project();
+    let effect = doc
+        .execute(Command::AddPluginEffect {
+            track: 1,
+            plugin: PluginRef::vst3("/fx.vst3", "01", "Fx"),
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    // A ramp from 0 to 1 over one bar (4 beats at 120 BPM = 96 000 frames) on the channel's
+    // plugin parameter 7, and a falling one on the insert's parameter 3.
+    for (plugin, id, from, to) in [
+        (PluginTarget::Channel(ch), 7, 0.0, 1.0),
+        (PluginTarget::Effect { track: 1, effect }, 3, 1.0, 0.0),
+    ] {
+        let clip = ClipId(
+            doc.execute(Command::AddAutomationClip {
+                target: AutomationTarget::PluginParam { plugin, id },
+                track: if id == 7 { 0 } else { 1 },
+                start: 0,
+                length: 3840,
+                value: Some(from),
+                name: Some("Ramp".into()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let a = doc.project().clip(clip).unwrap().automation().unwrap();
+        assert_eq!(doc.project().automation(a).unwrap().name, "Ramp");
+        doc.execute(Command::SetAutomationPoints {
+            automation: a,
+            points: vec![
+                AutomationPoint {
+                    tick: 0,
+                    value: from,
+                    tension: 0.0,
+                },
+                AutomationPoint {
+                    tick: 3840,
+                    value: to,
+                    tension: 0.0,
+                },
+            ],
+        })
+        .unwrap();
+    }
+    let pat = doc.project().patterns[0].id;
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    for block in [64, 333, 1024] {
+        let (inst_log, fx_log) = (Arc::new(Mutex::new(Vec::new())), Arc::new(Mutex::new(Vec::new())));
+        let processors = Processors {
+            effects: vec![(effect, Box::new(ParamLog::new(fx_log.clone())))],
+            instruments: vec![(ch.0, Box::new(ParamLog::new(inst_log.clone())))],
+        };
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Song,
+            max_tail_secs: 0.0,
+            block,
+        };
+        render_offline_with(snap.clone(), &settings, processors).unwrap();
+        for (log, id, rising) in [(inst_log, 7, true), (fx_log, 3, false)] {
+            let log = log.lock().unwrap();
+            assert!(log.len() > 1000, "points every 64 frames or less: {}", log.len());
+            let mut last = 0;
+            for &(frame, pid, v) in log.iter().filter(|p| p.0 < 96_000) {
+                assert_eq!(pid, id);
+                assert!(frame >= last, "in order");
+                assert!(frame - last <= 64 || last == 0, "a point at least every 64 frames");
+                last = frame;
+                let want = frame as f64 / 96_000.0;
+                let want = if rising { want } else { 1.0 - want };
+                assert!((v - want).abs() < 1e-3, "block {block}, frame {frame}: {v} vs {want}");
+            }
+        }
+    }
+}

@@ -4235,7 +4235,7 @@
       "name": "Automate mixer and channel parameters",
       "description": "Automate mixer and channel parameters.",
       "fl_reference": "Right-click control › Create automation clip",
-      "limeshot_behavior": "Targets: channel volume and pan, mixer track volume and pan (master included), and every insert-effect parameter. Values use the control's own scale (faders cube-root, frequencies logarithmic). Applied in Song mode every 64 frames, also in exports.",
+      "limeshot_behavior": "Targets: channel volume and pan, mixer track volume and pan (master included), every insert-effect parameter, and hosted plugins' parameters (PLG-007). Values use the control's own scale (faders cube-root, frequencies logarithmic). Applied in Song mode every 64 frames, also in exports.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -4256,7 +4256,8 @@
         "limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback",
         "limeshot-engine tests/audio.rs::mixer_automation_holds_between_clips_and_only_runs_in_song_mode",
         "limeshot-engine tests/audio.rs::automation_drives_effect_parameters",
-        "limeshot-core automation::tests::mappings_round_trip"
+        "limeshot-core automation::tests::mappings_round_trip",
+        "crates/limeshot-app/tests/ui.rs::right_click_on_an_effect_slider_offers_automation_without_moving_it"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4266,7 +4267,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": "Controls do not move on screen while automated. Synth/sampler parameters and tempo (AUT-008) are not automatable yet."
+      "notes": "Controls do not move on screen while automated (plugins' own editors do, PLG-007). Session 15: a right-click on a slider (effect cards, plugin parameters) opens the automation menu again and no longer moves the value; egui sliders sense only drags, so the menu had not opened on them. Synth/sampler parameters and tempo (AUT-008) are not automatable yet."
     },
     {
       "id": "AUT-004",
@@ -5204,21 +5205,32 @@
       "id": "PLG-007",
       "category": "Plugins",
       "name": "Plugin parameter automation",
-      "description": "Plugin parameter automation.",
-      "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Planned behind a dedicated crate where FFI `unsafe` is confined (as ArtCraft's hosts do); not started.",
+      "description": "Automate a hosted plugin's parameters with automation clips, as FL Studio does.",
+      "fl_reference": "FL Studio: tweak a plugin's control, then Add › Automation for last tweaked parameter (or Tools › Last tweaked › Create automation clip); the clip drives the parameter in Song playback and the plugin's knob moves with it.",
+      "limeshot_behavior": "`AutomationTarget::PluginParam` (a channel's or insert's plugin and a VST3 parameter id, the plugin's own normalised 0–1 values) is an automation clip target like any other. Right-click a parameter in the plugin's parameter list (Plugin tab without an editor, or Settings) → Create automation clip, flat at the parameter's current value and named \"<parameter> – <plugin>\"; or tweak a parameter (in the plugin's own editor or LimeShot's list) and choose Add › Automation for last tweaked parameter (FL; disabled until a plugin parameter was changed). In Song mode the engine sends the curve to the plugin's processor as parameter changes at their frame offsets, every 64 frames (also in exports), and the plugin's own editor follows the curve while playing (the controller is told separately, so the knob moves as in FL).",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
-        "PLG-004"
+        "PLG-002",
+        "AUT-003"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-plugins",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-engine/tests/plugins.rs::plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames",
+        "crates/limeshot-plugins/tests/host.rs::automation_points_reach_the_processor_and_show_in_the_controller",
+        "crates/limeshot-app/tests/ui.rs::a_plugin_parameter_is_automated_from_its_menu_and_as_the_last_tweaked_parameter"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5227,7 +5239,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md). Session 10: parameters can be set from LimeShot's parameter list, not yet automated."
+      "notes": "Session 15. Tested through the VST3 path with LimeShot's built-in test plugins and with logging processors at block sizes 64, 333 and 1024; not yet listened to with a commercial plugin in the live app. Parameter changes made by hand are still not undo steps."
     },
     {
       "id": "PLG-008",

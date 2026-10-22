@@ -683,6 +683,25 @@ impl Project {
         self.channels.iter().find(|c| c.id == id)
     }
 
+    /// The plugin a channel or insert slot runs.
+    pub fn plugin(&self, target: crate::PluginTarget) -> Option<&crate::PluginRef> {
+        match target {
+            crate::PluginTarget::Channel(c) => match &self.channel(c)?.instrument {
+                Instrument::Plugin(p) => Some(p),
+                _ => None,
+            },
+            crate::PluginTarget::Effect { track, effect } => self
+                .mixer
+                .tracks
+                .get(usize::from(track))?
+                .effects
+                .iter()
+                .find(|e| e.id == effect)?
+                .plugin
+                .as_ref(),
+        }
+    }
+
     /// The Channel Rack filter groups in use, sorted.
     pub fn channel_groups(&self) -> Vec<String> {
         let mut g: Vec<String> = self.channels.iter().filter_map(|c| c.group.clone()).collect();

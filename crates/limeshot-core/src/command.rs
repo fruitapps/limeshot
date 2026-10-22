@@ -268,6 +268,13 @@ pub enum Command {
         track: u32,
         start: Tick,
         length: Tick,
+        /// The control's normalised value, for targets whose value the project does not hold
+        /// (plugin parameters).
+        #[serde(default)]
+        value: Option<f32>,
+        /// The automation's name instead of the target's label (a plugin parameter's title).
+        #[serde(default)]
+        name: Option<String>,
     },
     /// Replace an automation's points (they are sorted and clamped).
     SetAutomationPoints {
@@ -1102,8 +1109,17 @@ impl Command {
                 track,
                 start,
                 length,
+                value: norm,
+                name,
             } => {
-                let (Some(mapping), Some(value)) = (target.mapping(p), target.current_value(p)) else {
+                let current = target.current_value(p);
+                let mapping = target.mapping(p);
+                let norm = match (mapping, current, norm) {
+                    (Some(m), Some(v), _) => Some(m.to_norm(v)),
+                    (Some(_), None, Some(n)) if n.is_finite() => Some(n.clamp(0.0, 1.0)),
+                    _ => None,
+                };
+                let Some(norm) = norm else {
                     return Err(CommandError::Invalid("that control no longer exists".into()));
                 };
                 if track as usize >= p.playlist.tracks.len() {
@@ -1113,12 +1129,12 @@ impl Command {
                 let color = PALETTE[(p.automations.len() + 6) % PALETTE.len()];
                 p.automations.push(Automation {
                     id,
-                    name: target.label(p),
+                    name: name.filter(|n| !n.trim().is_empty()).unwrap_or_else(|| target.label(p)),
                     color,
                     target,
                     points: vec![AutomationPoint {
                         tick: 0,
-                        value: mapping.to_norm(value),
+                        value: norm,
                         tension: 0.0,
                     }],
                     length: length.max(1),

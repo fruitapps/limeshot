@@ -539,3 +539,25 @@ picks one from the menu, flips the keyboard toggle, saves, reopens and finds the
 (`-D warnings`), `cargo fmt --check` and `scripts/features.py check` are clean. Looked at with
 `ui_shot --plugin --plugin-window`. Not done: a live pass with a real plugin's window (PLG-008 stays IMPLEMENTED).
 
+### Session 15, part 2: plugin parameter automation (PLG-007)
+
+1. **Model.** `AutomationTarget::PluginParam { plugin, id }` (a channel's or insert's plugin and its VST3 parameter
+   id, normalised values); `AddAutomationClip` gained an optional starting value and name for targets whose value the
+   project does not hold. `Project::plugin(target)` finds the plugin a channel or slot runs.
+2. **Engine.** New lane targets for channel and insert plugins. `apply_controls` (every 64 frames in Song mode) hands
+   each value to the plugin processor with its frame offset in the block (`Instrument`/`Effect::set_plugin_param`);
+   `Vst3Processor::set_param_at` queues them without allocating and adds them to the plugin's parameter queues in the
+   chunk they fall in. Offline renders use the same path.
+3. **UI.** Right-click a plugin parameter → Create automation clip; FL's Add › Automation for last tweaked parameter
+   (plugin parameters changed in the editor or the list). While playing in Song mode the plugin's own controls follow
+   the curve (`Vst3Instance::show_param`, controller only).
+4. **Bug fixed on the way.** A right-click on any egui slider (effect cards, plugin parameters) never opened the
+   automation menu, because sliders sense only drags, and it moved the value. `widgets::clickable` adds click sensing
+   for the menu and `user_changed` ignores right-button changes.
+
+Verification: engine test with logging processors at block sizes 64, 333 and 1024 (values at their frames, a point
+at least every 64 frames, channel and insert plugins), a host test through the real VST3 path (Lime Test Gain), UI
+tests for the menu, the last-tweaked item, the plugin's control following the curve, and the effect slider's
+right-click. `cargo test --workspace`, Clippy (`-D warnings`, also `x86_64-pc-windows-msvc`), `cargo fmt --check` and
+`scripts/features.py check` pass. Not done: listening to automation on a commercial plugin in the live app.
+

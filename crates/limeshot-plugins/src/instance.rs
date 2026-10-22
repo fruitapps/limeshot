@@ -18,6 +18,8 @@ const PARAM_QUEUES: usize = 64;
 const PARAM_RING: usize = 1024;
 /// Note events per block.
 const MAX_EVENTS: usize = 512;
+/// Automation points queued for the next `process` call.
+const MAX_PENDING: usize = 1024;
 /// Channels kept per bus (more than any stereo plugin uses; surround buses get silence).
 const MAX_BUS_CHANNELS: usize = 8;
 
@@ -118,6 +120,8 @@ pub struct Vst3Processor {
     params_out: ComWrapper<ParamChanges>,
     context: ProcessContext,
     from_control: rtrb::Consumer<(u32, f64)>,
+    /// Automation for the next `process` call: (parameter, frame offset, value).
+    pending: Vec<(u32, u32, f64)>,
     processing: bool,
     transport: Transport,
     sample_rate: f64,
@@ -286,6 +290,7 @@ impl Vst3Instance {
                 params_out: ComWrapper::new(ParamChanges::new(PARAM_QUEUES)),
                 context: std::mem::zeroed(),
                 from_control,
+                pending: Vec::with_capacity(MAX_PENDING),
                 processing: false,
                 transport: Transport::default(),
                 sample_rate,
@@ -468,6 +473,20 @@ impl Vst3Instance {
         self.set_param(id, i / f64::from(n));
     }
 
+    /// Show `value` on the plugin's own controls without sending it to the processor (the audio
+    /// thread already plays it: automation).
+    pub fn show_param(&mut self, id: u32, value: f64) {
+        let Some(c) = &self.core.controller else {
+            return;
+        };
+        // SAFETY: plain calls on the live controller.
+        unsafe {
+            if (c.getParamNormalized(id) - value).abs() > 1e-6 {
+                c.setParamNormalized(id, value.clamp(0.0, 1.0));
+            }
+        }
+    }
+
     /// How the plugin shows `value` (normalised) of parameter `id`, such as "-6.0 dB".
     pub fn param_text(&self, id: u32, value: f64) -> String {
         let Some(c) = &self.core.controller else {
@@ -619,6 +638,10 @@ impl Vst3Processor {
     pub fn process(&mut self, buf: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
         self.transport = *transport;
         let frames = buf.len() / 2;
+        let last = frames.saturating_sub(1) as u32;
+        for p in &mut self.pending {
+            p.1 = p.1.min(last);
+        }
         let mut start = 0;
         while start < frames {
             let n = (frames - start).min(self.max_block);
@@ -626,6 +649,30 @@ impl Vst3Processor {
             start += n;
             self.transport.sample_pos += n as i64;
             self.transport.ppq_pos += n as f64 * self.transport.tempo / (60.0 * self.sample_rate);
+        }
+        self.pending.clear();
+    }
+
+    /// Queue an automation point for the next [`process`](Self::process) call: parameter `id`
+    /// takes `value` (normalised) at frame `offset`. A point repeating the last value queued for
+    /// the same parameter is dropped. Does not allocate.
+    pub fn set_param_at(&mut self, id: u32, offset: u32, value: f64) {
+        let value = if value.is_finite() {
+            value.clamp(0.0, 1.0)
+        } else {
+            return;
+        };
+        if self
+            .pending
+            .iter()
+            .rev()
+            .find(|p| p.0 == id)
+            .is_some_and(|p| p.2 == value)
+        {
+            return;
+        }
+        if self.pending.len() < self.pending.capacity() {
+            self.pending.push((id, offset, value));
         }
     }
 
@@ -642,6 +689,12 @@ impl Vst3Processor {
         self.params_out.clear();
         while let Ok((id, v)) = self.from_control.pop() {
             self.params_in.add(id, 0, v);
+        }
+        // Automation points in this chunk (`process` keeps every offset inside the buffer).
+        for &(id, offset, v) in &self.pending {
+            if offset >= first && offset < first + n as u32 {
+                self.params_in.add(id, (offset - first) as i32, v);
+            }
         }
         self.events.clear();
         if self.has_event_input {
@@ -784,6 +837,10 @@ impl limeshot_dsp::effects::Effect for Vst3Processor {
     fn set_transport(&mut self, transport: &Transport) {
         self.transport = *transport;
     }
+
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        self.set_param_at(id, offset, value);
+    }
 }
 
 impl limeshot_dsp::Instrument for Vst3Processor {
@@ -794,6 +851,10 @@ impl limeshot_dsp::Instrument for Vst3Processor {
 
     fn reset(&mut self) {
         self.restart();
+    }
+
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        self.set_param_at(id, offset, value);
     }
 }
 

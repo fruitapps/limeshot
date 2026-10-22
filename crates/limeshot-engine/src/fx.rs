@@ -191,6 +191,18 @@ impl FxRack {
         }
     }
 
+    /// Set parameter `id` of the plugin in effect slot `effect` on track `t` at frame `offset` of
+    /// the next block (automation).
+    pub fn set_plugin_param(&mut self, t: usize, effect: u32, id: u32, offset: u32, value: f32) {
+        if let Some(p) = self
+            .chains
+            .get_mut(t)
+            .and_then(|c| c.iter_mut().find(|p| p.id == effect))
+        {
+            p.fx.set_plugin_param(id, offset, f64::from(value));
+        }
+    }
+
     pub fn has_effects(&self) -> bool {
         self.chains.iter().any(|c| !c.is_empty())
     }

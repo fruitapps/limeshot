@@ -135,6 +135,14 @@ impl InstrumentRack {
         self.retire(inst);
     }
 
+    /// Set parameter `id` of the plugin on snapshot channel `channel` at frame `offset` of the next
+    /// block (automation).
+    pub(crate) fn set_plugin_param(&mut self, channel: usize, id: u32, offset: u32, value: f32) {
+        if let Some(Some(s)) = self.slots.get_mut(channel) {
+            s.inst.set_plugin_param(id, offset, f64::from(value));
+        }
+    }
+
     pub(crate) fn has_instruments(&self) -> bool {
         self.slots.iter().any(Option::is_some)
     }

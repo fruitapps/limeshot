@@ -243,6 +243,9 @@ pub struct PluginHost {
     pub(crate) windows: HashMap<Target, crate::plugin_window::Wrapper>,
     /// Where and on which tab each closed window was, for when it opens again.
     pub(crate) window_memory: HashMap<Target, crate::plugin_window::Memory>,
+    /// The plugin parameter changed last (in the plugin's editor or LimeShot's list), for FL's
+    /// Add › Automation for last tweaked parameter.
+    pub last_tweaked: Option<(Target, u32)>,
     /// Processors returned from an export thread, dropped here on the main thread.
     returned: Option<(
         Sender<limeshot_plugins::Vst3Processor>,
@@ -442,11 +445,58 @@ impl PluginHost {
             while rx.try_recv().is_ok() {}
         }
         let mut changed = false;
-        for l in self.live.values_mut() {
-            changed |= !l.instance.take_editor_edits().is_empty();
+        for (target, l) in &mut self.live {
+            if let Some(&(id, _)) = l.instance.take_editor_edits().last() {
+                self.last_tweaked = Some((*target, id));
+                changed = true;
+            }
             changed |= l.instance.take_restart();
         }
         changed
+    }
+
+    /// Move plugins' own controls to their automated values at `tick` (Song playback), as FL
+    /// Studio's automated knobs move.
+    pub fn follow_automation(
+        &mut self,
+        project: &Project,
+        snapshot: &limeshot_sequencer::Snapshot,
+        tick: limeshot_core::Tick,
+    ) {
+        use limeshot_sequencer::LaneTarget;
+        for lane in &snapshot.automation {
+            let (target, id) = match lane.target {
+                LaneTarget::ChannelPluginParam { channel, id } => match project.channels.get(channel) {
+                    Some(c) => (Target::Channel(c.id), id),
+                    None => continue,
+                },
+                LaneTarget::EffectPluginParam { track, effect, id } => match u16::try_from(track) {
+                    Ok(track) => (Target::Effect { track, effect }, id),
+                    Err(_) => continue,
+                },
+                _ => continue,
+            };
+            if let (Some(v), Some(l)) = (lane.value_at(tick), self.live.get_mut(&target)) {
+                l.instance.show_param(id, f64::from(v));
+            }
+        }
+    }
+
+    /// The automation target, current value and name of a running plugin's parameter.
+    pub fn automation_of(
+        &self,
+        project: &Project,
+        target: Target,
+        id: u32,
+    ) -> Option<(limeshot_core::AutomationTarget, f32, String)> {
+        let inst = self.instance(target)?;
+        let p = inst.params().iter().find(|p| p.id == id)?;
+        let plugin = project.plugin(target).map(|p| p.name.clone()).unwrap_or_default();
+        Some((
+            limeshot_core::AutomationTarget::PluginParam { plugin: target, id },
+            inst.param(id) as f32,
+            format!("{} – {plugin}", p.title),
+        ))
     }
 
     /// Set a parameter of a running plugin (normalised 0–1).
@@ -535,6 +585,11 @@ impl limeshot_dsp::effects::Effect for ReturnOnDrop {
             limeshot_dsp::effects::Effect::set_transport(p, t);
         }
     }
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        if let Some(p) = &mut self.inner {
+            p.set_param_at(id, offset, value);
+        }
+    }
 }
 
 impl limeshot_dsp::Instrument for ReturnOnDrop {
@@ -547,6 +602,11 @@ impl limeshot_dsp::Instrument for ReturnOnDrop {
     fn reset(&mut self) {
         if let Some(p) = &mut self.inner {
             p.restart();
+        }
+    }
+    fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
+        if let Some(p) = &mut self.inner {
+            p.set_param_at(id, offset, value);
         }
     }
 }
@@ -626,21 +686,7 @@ pub fn add_channel(app: &mut LimeShotApp, e: &Entry) {
 
 /// The plugin a channel or insert runs.
 pub(crate) fn plugin_ref(project: &Project, target: Target) -> Option<&PluginRef> {
-    match target {
-        Target::Channel(c) => match &project.channel(c)?.instrument {
-            Instrument::Plugin(p) => Some(p),
-            _ => None,
-        },
-        Target::Effect { track, effect } => project
-            .mixer
-            .tracks
-            .get(usize::from(track))?
-            .effects
-            .iter()
-            .find(|e| e.id == effect)?
-            .plugin
-            .as_ref(),
-    }
+    project.plugin(target)
 }
 
 /// Where a plugin channel or insert's plugin runs, for windows: "Vital (Master)".
@@ -766,6 +812,7 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     });
     app.plugins.filters.insert(target, filter);
     let mut changes = Vec::new();
+    let mut automate = None;
     for (id, title, value, default, text) in visible.iter().take(PARAMS_SHOWN) {
         ui.horizontal(|ui| {
             ui.add_sized(
@@ -790,6 +837,14 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
             if crate::widgets::user_changed(&r) {
                 changes.push((*id, v));
             }
+            crate::widgets::clickable(&r).context_menu(|ui| {
+                ui.label(RichText::new(title).small().color(t.text_dim));
+                ui.separator();
+                if ui.button("Create automation clip").clicked() {
+                    automate = Some(*id);
+                    ui.close();
+                }
+            });
         });
     }
     if visible.len() > PARAMS_SHOWN {
@@ -802,9 +857,21 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     if !changes.is_empty() {
         for (id, v) in changes {
             app.plugins.set_param(target, id, v);
+            app.plugins.last_tweaked = Some((target, id));
         }
         app.doc.mark_unsaved();
     }
+    if let Some(id) = automate {
+        create_automation(app, target, id);
+    }
+}
+
+/// FL Studio's "Create automation clip" for a plugin parameter.
+pub fn create_automation(app: &mut LimeShotApp, target: Target, id: u32) -> bool {
+    let Some((auto, value, name)) = app.plugins.automation_of(app.project(), target, id) else {
+        return false;
+    };
+    crate::automation_ui::create_with(app, auto, Some(value), Some(name)).is_some()
 }
 
 #[cfg(test)]

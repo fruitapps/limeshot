@@ -985,6 +985,8 @@ fn automate(doc: &mut Document, target: AutomationTarget, track: u32, start: Tic
             track,
             start,
             length: 3840,
+            value: Some(0.5),
+            name: None,
         })
         .unwrap()
         .0

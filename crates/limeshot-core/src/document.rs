@@ -4,7 +4,7 @@ use crate::command::{Command, CommandError, Created};
 use crate::model::{ChannelId, Project};
 
 /// Where a hosted plugin runs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PluginTarget {
     Channel(ChannelId),
     Effect { track: u16, effect: u32 },

@@ -611,6 +611,18 @@ fn slider_detent<T: Detent>(r: &mut Response, v: &mut T, default: T) {
 
 /// Whether a standard egui widget's `changed()` came from the user. egui sliders can report a
 /// change on their own (rounding to the displayed decimals), which must not edit the project.
+/// A right-click is not a change: in FL Studio it opens the control's menu and leaves the value
+/// alone (an egui slider moves under any button).
 pub fn user_changed(r: &Response) -> bool {
-    r.changed() && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
+    let secondary = r.ctx.input(|i| {
+        i.pointer.button_down(egui::PointerButton::Secondary)
+            || i.pointer.button_released(egui::PointerButton::Secondary)
+    });
+    r.changed() && !secondary && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
+}
+
+/// A control's response that also senses clicks, so a right-click can open its context menu
+/// (egui sliders sense only drags).
+pub fn clickable(r: &Response) -> Response {
+    r.interact(egui::Sense::click())
 }

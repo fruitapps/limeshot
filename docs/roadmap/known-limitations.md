@@ -17,9 +17,10 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
 * Each mixer track's built-in EQ (MIX-010) cannot be automated, and its width-to-Q mapping is LimeShot's own (FL
   Studio's exact curve shapes were not measured).
-* Automation covers channel volume/pan, mixer volume/pan and effect parameters in Song mode only; no tempo automation
-  (one project tempo), no synth/sampler parameter automation, single-curve segments only. Automated controls do not
-  move on screen. Automation clips are edited in their Playlist clip, whose curve area is small at the default track
+* Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song
+  mode only; no tempo automation (one project tempo), no synth/sampler parameter automation, single-curve segments
+  only. Automated controls do not move on screen, except inside a plugin's own editor. Add › Automation for last
+  tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
   height.
 * Audio clips are not time-stretched; there are no crossfades or fades on clip edges.
 * Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
@@ -69,8 +70,7 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
   their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
   characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
-  view directly. No
-  automation of plugin parameters, parameter changes are not undo steps, no delay compensation for plugin latency,
+  view directly. Plugin parameter changes are not undo steps, no delay compensation for plugin latency,
   no custom plugin folders, and a plugin that crashes while playing takes LimeShot down (only scanning is isolated).
   Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
   channels do not play audio clips. No CLAP or Audio Units. Verified on macOS only.

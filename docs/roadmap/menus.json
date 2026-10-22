@@ -1296,10 +1296,10 @@
       "fl_keys": "",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "AUT-003",
-      "notes": "Disabled until a control was tweaked. LimeShot creates automation from a control's context menu."
+      "limeshot": "Add › Automation for last tweaked parameter",
+      "status": "DIFFERENT",
+      "feature": "PLG-007",
+      "notes": "Disabled until a control was tweaked. LimeShot remembers plugin parameters only (tweaked in the plugin's editor or parameter list); other controls offer Create automation clip on right-click."
     },
     {
       "id": "MENU-075",

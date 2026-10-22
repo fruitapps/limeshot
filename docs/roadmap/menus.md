@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 12, DIFFERENT 35, LIMESHOT_ONLY 9, NOT_STARTED 194, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 12, DIFFERENT 36, LIMESHOT_ONLY 9, NOT_STARTED 193, NOT_PLANNED 27
 
 ## Summary
 
@@ -14,7 +14,7 @@ Tracked: **277** — IMPLEMENTED 12, DIFFERENT 35, LIMESHOT_ONLY 9, NOT_STARTED 
 |---|---|---|---|---|---|---|
 | File | 45 | 3 | 8 | 31 | 3 | 0 |
 | Edit | 4 | 0 | 1 | 3 | 0 | 0 |
-| Add | 26 | 1 | 13 | 11 | 1 | 2 |
+| Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 1 | 5 | 17 | 0 | 0 |
 | View | 48 | 5 | 3 | 35 | 5 | 4 |
 | Options | 24 | 2 | 0 | 20 | 2 | 2 |
@@ -28,7 +28,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | Feature | Pri | Status | Name | Menu items |
 |---|---|---|---|---|
 | APP-020 | P1 | NOT_STARTED | MIDI settings | MENU-153 Options › MIDI settings |
-| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-074 Add › Automation for last tweaked parameter<br>MENU-216 Tools › Last tweaked › Create automation clip<br>MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
+| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-216 Tools › Last tweaked › Create automation clip<br>MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
@@ -180,7 +180,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-071 | Refresh plugin list (fast scan) | Other | action |  |  | plugin menus › Find plugins… | DIFFERENT | PLG-004 |  |
 | MENU-072 | Manage plugins | Other | dialog |  |  | — | NOT_STARTED | APP-021 | Opens: settings.json page 'Plugin Manager'. |
 | MENU-073 | Manage FL Cloud plugins... | Other | dialog |  |  | — | NOT_PLANNED |  |  |
-| MENU-074 | Automation for last tweaked parameter | Other | action |  | disabled | — | NOT_STARTED | AUT-003 | Disabled until a control was tweaked. LimeShot creates automation from a control's context menu. |
+| MENU-074 | Automation for last tweaked parameter | Other | action |  | disabled | Add › Automation for last tweaked parameter | DIFFERENT | PLG-007 | Disabled until a control was tweaked. LimeShot remembers plugin parameters only (tweaked in the plugin's editor or parameter list); other controls offer Create automation clip on right-click. |
 | MENU-075 | Pattern | Other | action |  |  | Add › Pattern | IMPLEMENTED | SEQ-018 |  |
 | MENU-076 | Playlist track |  | action |  |  | Add › Playlist track | LIMESHOT_ONLY | PL-012 | Not in FL's Add menu. |
 | MENU-077 | Mixer track |  | action |  |  | Add › Mixer track | LIMESHOT_ONLY | MIX-006 | Not in FL's Add menu. |

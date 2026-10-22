@@ -36,6 +36,9 @@ pub trait Effect: Send {
     }
     /// The transport for the next `process` call (tempo-synced plugins read it).
     fn set_transport(&mut self, _transport: &crate::Transport) {}
+    /// Set a hosted plugin's parameter `id` (normalised) at frame `offset` of the next `process`
+    /// call (automation). Only plugins have such parameters.
+    fn set_plugin_param(&mut self, _id: u32, _offset: u32, _value: f64) {}
 }
 
 fn get(params: &[f32], i: usize, fallback: f32) -> f32 {

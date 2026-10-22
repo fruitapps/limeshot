@@ -53,4 +53,7 @@ pub trait Instrument: Send {
     fn process(&mut self, out: &mut [f32], notes: &[NoteEvent], transport: &Transport);
     /// Silence every note and clear tails.
     fn reset(&mut self);
+    /// Set a hosted plugin's parameter `id` (normalised) at frame `offset` of the next `process`
+    /// call (automation). Only plugins have such parameters.
+    fn set_plugin_param(&mut self, _id: u32, _offset: u32, _value: f64) {}
 }

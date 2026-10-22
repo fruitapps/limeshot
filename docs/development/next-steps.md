@@ -18,8 +18,8 @@
    and a Settings tab, macOS; checked live with Vital, Serum 2, Surge XT and OTT). Next: plugin windows on Windows
    (`HWND`) and Linux (`X11EmbedWindowID` + `IRunLoop`) once CI runs there. Session 15 added FL's wrapper extras
    (presets ◀ ▶ and a presets menu with factory programs and `.vstpreset` files, the keyboard toggle, window places
-   saved in the project; a live pass with a real plugin is still open). Next: plugin
-   parameter automation (PLG-007), delay compensation (PLG-009), crash isolation while playing (PLG-010), a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
+   saved in the project) and plugin parameter automation (PLG-007); a live pass with a real plugin is still open.
+   Next: delay compensation (PLG-009), crash isolation while playing (PLG-010), a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
    effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
    PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
    `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in

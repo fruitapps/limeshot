@@ -130,6 +130,24 @@ fn a_vstpreset_saves_and_loads_the_state() {
     );
 }
 
+#[test]
+fn automation_points_reach_the_processor_and_show_in_the_controller() {
+    let (mut inst, mut proc) = gain(64);
+    // A point at frame 150 of a 200-frame call: past the first 64-frame chunk.
+    proc.set_param_at(0, 150, 0.25);
+    proc.set_param_at(0, 160, 0.25); // repeats the last value: dropped
+    let mut buf = vec![1.0f32; 400];
+    proc.process(&mut buf, &[], &Transport::default());
+    assert_eq!(buf[2 * 199], 0.25, "the last chunk plays the automated gain");
+    let mut buf = vec![1.0f32; 8];
+    proc.process(&mut buf, &[], &Transport::default());
+    assert!(buf.iter().all(|&s| s == 0.25), "the value holds after the call");
+    // The controller (the plugin's knobs) is told separately, without reaching the processor.
+    assert_eq!(inst.param(0), 1.0);
+    inst.show_param(0, 0.25);
+    assert_eq!(inst.param(0), 0.25);
+}
+
 fn crossings(x: &[f32]) -> usize {
     x.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count()
 }

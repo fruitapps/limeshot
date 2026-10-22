@@ -438,7 +438,7 @@ impl Renderer {
         let automate = self.mode == PlayMode::Song && !self.snapshot.automation.is_empty();
         let mut done = 0;
         while done < frames {
-            self.apply_controls();
+            self.apply_controls(done as u32);
             let max = if automate {
                 (frames - done).min(AUTOMATION_INTERVAL)
             } else {
@@ -504,8 +504,8 @@ impl Renderer {
     }
 
     /// Load channel and mixer settings from the snapshot and apply automation at the current
-    /// position (Song mode only).
-    fn apply_controls(&mut self) {
+    /// position (Song mode only). `offset` is the frame in this block (plugin automation points).
+    fn apply_controls(&mut self, offset: u32) {
         let snapshot = self.snapshot.clone();
         for (m, ch) in self.chan_mix.iter_mut().zip(&snapshot.channels) {
             *m = (ch.volume, ch.pan);
@@ -541,6 +541,12 @@ impl Renderer {
                     }
                 }
                 LaneTarget::EffectParam { track, effect, index } => self.fx.set_param(track, effect, index, v),
+                LaneTarget::ChannelPluginParam { channel, id } => {
+                    self.instruments.set_plugin_param(channel, id, offset, v)
+                }
+                LaneTarget::EffectPluginParam { track, effect, id } => {
+                    self.fx.set_plugin_param(track, effect, id, offset, v)
+                }
             }
         }
     }

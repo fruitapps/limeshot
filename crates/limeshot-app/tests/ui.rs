@@ -3636,6 +3636,121 @@ fn plugin_window_presets_step_and_the_window_place_is_saved_in_the_project() {
 }
 
 #[test]
+fn a_plugin_parameter_is_automated_from_its_menu_and_as_the_last_tweaked_parameter() {
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").id;
+    let target = Target::Channel(ch);
+    h.state_mut().plugins.open_window(target, None);
+    for _ in 0..3 {
+        h.step();
+    }
+    h.state_mut().plugins.set_param(target, 0, 0.25);
+    h.step();
+    // Right-click on the Level slider: Create automation clip, flat at the plugin's value.
+    let label = h.get_by_label("Level").rect();
+    let slider = egui::pos2(label.left() + 140.0, label.center().y);
+    click(&mut h, slider, PointerButton::Secondary);
+    h.step();
+    assert_eq!(
+        h.state().plugins.instance(target).map(|i| i.param(0)),
+        Some(0.25),
+        "a right-click does not move the slider"
+    );
+    h.get_by_label("Create automation clip").click();
+    h.step();
+    let a = h.state().project().automations.last().expect("automation").clone();
+    assert_eq!(a.target, AutomationTarget::PluginParam { plugin: target, id: 0 });
+    assert_eq!(a.name, "Level – Lime Test Tone");
+    assert!((a.points[0].value - 0.25).abs() < 1e-6);
+    assert!(
+        h.state()
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .any(|c| c.automation() == Some(a.id))
+    );
+
+    // FL Studio's Add › Automation for last tweaked parameter: off until a parameter changes.
+    assert_eq!(h.state().plugins.last_tweaked, None);
+    click(&mut h, slider, PointerButton::Primary);
+    assert_eq!(h.state().plugins.last_tweaked, Some((target, 0)));
+    let before = h.state().project().automations.len();
+    h.get_by_label("Add").click();
+    h.step();
+    h.get_by_label("Automation for last tweaked parameter").click();
+    h.step();
+    assert_eq!(h.state().project().automations.len(), before + 1);
+
+    // During Song playback the plugin's own control follows the curve (the second automation of
+    // the same parameter removed first: the later one would win).
+    let second = h.state().project().automations.last().map(|a| a.id).expect("second");
+    h.state_mut().exec(Command::RemoveAutomation(second));
+    let id = a.id;
+    h.state_mut().exec(Command::SetAutomationPoints {
+        automation: id,
+        points: vec![
+            AutomationPoint {
+                tick: 0,
+                value: 0.0,
+                tension: 0.0,
+            },
+            AutomationPoint {
+                tick: 960,
+                value: 1.0,
+                tension: 0.0,
+            },
+        ],
+    });
+    let project = h.state().project().clone();
+    let snap = limeshot_sequencer::compile(&project, project.patterns[0].id, &limeshot_sequencer::NoSamples);
+    h.state_mut().plugins.follow_automation(&project, &snap, 480);
+    let v = h.state().plugins.instance(target).expect("plugin").param(0);
+    assert!((v - 0.5).abs() < 1e-3, "{v}");
+}
+
+/// A right-click on an effect's slider opens its automation menu and leaves the value alone (FL
+/// Studio). egui sliders sense only drags, so the menu never opened before session 15.
+#[test]
+fn right_click_on_an_effect_slider_offers_automation_without_moving_it() {
+    let mut h = mixer_harness(1);
+    let fx = h
+        .state_mut()
+        .exec(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Delay,
+        })
+        .expect("effect");
+    h.step();
+    h.step();
+    let spec = EffectKind::Delay.params()[0];
+    let before = h.state().project().mixer.tracks[1].effects[0].params[0];
+    let label = h.get_by_label(spec.name).rect();
+    click(
+        &mut h,
+        egui::pos2(label.right() + 30.0, label.center().y),
+        PointerButton::Secondary,
+    );
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].effects[0].params[0], before);
+    h.get_by_label("Create automation clip").click();
+    h.step();
+    let a = h.state().project().automations.last().expect("automation");
+    assert_eq!(
+        a.target,
+        AutomationTarget::EffectParam {
+            track: 1,
+            effect: fx,
+            index: 0
+        }
+    );
+}
+
+#[test]
 fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
     use limeshot_ui::plugin_window::Tab;
     use limeshot_ui::plugins::Target;

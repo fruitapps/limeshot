@@ -19,8 +19,8 @@
 
 use limeshot_core::automation::{curve_value, shape as curve_shape};
 use limeshot_core::{
-    AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, Project, STEP_TICKS, Tempo, Tick, TimeSignature,
-    Waveform,
+    AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, PluginTarget, Project, STEP_TICKS, Tempo, Tick,
+    TimeSignature, Waveform,
 };
 use limeshot_dsp::osc::Shape;
 use limeshot_dsp::{Adsr, SampleData, db_to_gain};
@@ -178,7 +178,22 @@ pub enum LaneTarget {
     ChannelPan(usize),
     MixerVolume(usize),
     MixerPan(usize),
-    EffectParam { track: usize, effect: u32, index: usize },
+    EffectParam {
+        track: usize,
+        effect: u32,
+        index: usize,
+    },
+    /// Parameter `id` (VST3) of the plugin on channel index `channel`.
+    ChannelPluginParam {
+        channel: usize,
+        id: u32,
+    },
+    /// Parameter `id` of the plugin in effect slot `effect` on track `track`.
+    EffectPluginParam {
+        track: usize,
+        effect: u32,
+        id: u32,
+    },
 }
 
 /// A breakpoint in song time. `hold` keeps the value until the next point (gaps between clips).
@@ -502,6 +517,12 @@ fn automation_lanes(project: &Project) -> Vec<AutomationLane> {
                 effect,
                 index,
             } => track(t).map(|track| LaneTarget::EffectParam { track, effect, index }),
+            AutomationTarget::PluginParam { plugin, id } => match plugin {
+                PluginTarget::Channel(c) => channel(c).map(|channel| LaneTarget::ChannelPluginParam { channel, id }),
+                PluginTarget::Effect { track: t, effect } => {
+                    track(t).map(|track| LaneTarget::EffectPluginParam { track, effect, id })
+                }
+            },
         };
         let Some(target) = target else { continue };
         let mut clips: Vec<_> = project

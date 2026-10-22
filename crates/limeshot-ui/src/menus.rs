@@ -162,6 +162,26 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if item(ui, "Mixer track", "") {
                     app.exec(Command::AddMixerTrack);
                 }
+                ui.separator();
+                // FL Studio: disabled until a control was tweaked. LimeShot remembers plugin
+                // parameters; other controls offer it on right-click.
+                let last = app.plugins.last_tweaked.filter(|&(t, id)| {
+                    app.plugins
+                        .instance(t)
+                        .is_some_and(|i| i.params().iter().any(|p| p.id == id && p.automatable()))
+                });
+                if ui
+                    .add_enabled(
+                        last.is_some(),
+                        egui::Button::new("Automation for last tweaked parameter"),
+                    )
+                    .clicked()
+                {
+                    if let Some((t, id)) = last {
+                        crate::plugins::create_automation(app, t, id);
+                    }
+                    ui.close();
+                }
             });
             ui.menu_button("Patterns", |ui| {
                 let cur = app.current_pattern();
