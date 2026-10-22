@@ -143,9 +143,74 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui) {
     ui.menu_button("Tools", |ui| items(app, ui, TOOLS));
     ui.menu_button("Select", |ui| items(app, ui, SELECT));
     ui.menu_button("Zoom", |ui| items(app, ui, ZOOM));
+    ui.menu_button("Stamp", |ui| stamp_menu(app, ui));
+    ui.menu_button("View", |ui| {
+        ui.menu_button("Scale highlighting", |ui| scale_menu(app, ui));
+    });
     if ui.add(Button::new("Center").shortcut_text(key("Shift+0"))).clicked() {
         ui.close();
         run(app, Act::Center);
+    }
+}
+
+const ROOTS: [&str; 12] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+/// Stamp: a chord or scale that the Draw tool places (FL Studio's Stamp tool), or none.
+fn stamp_menu(app: &mut LimeShotApp, ui: &mut Ui) {
+    use limeshot_core::note_tools::{CHORDS, Scale, Stamp};
+    if ui
+        .add(Button::selectable(app.ui.piano.stamp.is_none(), "(none)"))
+        .clicked()
+    {
+        app.ui.piano.stamp = None;
+        ui.close();
+    }
+    ui.separator();
+    for i in 0..CHORDS.len() {
+        let s = Stamp::Chord(i);
+        if ui
+            .add(Button::selectable(app.ui.piano.stamp == Some(s), s.label()))
+            .clicked()
+        {
+            app.ui.piano.stamp = Some(s);
+            app.ui.piano.tool = crate::piano_roll::Tool::Draw;
+            ui.close();
+        }
+    }
+    ui.menu_button("Scales", |ui| {
+        for scale in Scale::ALL.into_iter().skip(1) {
+            let s = Stamp::Scale(scale);
+            if ui
+                .add(Button::selectable(app.ui.piano.stamp == Some(s), s.label()))
+                .clicked()
+            {
+                app.ui.piano.stamp = Some(s);
+                app.ui.piano.tool = crate::piano_roll::Tool::Draw;
+                ui.close();
+            }
+        }
+    });
+}
+
+/// View › Scale highlighting: the key, then the scale ("(none)" turns it off).
+fn scale_menu(app: &mut LimeShotApp, ui: &mut Ui) {
+    use limeshot_core::note_tools::Scale;
+    let (root, cur) = app.ui.piano.scale.unwrap_or((0, Scale::None));
+    ui.menu_button(format!("Key: {}", ROOTS[usize::from(root % 12)]), |ui| {
+        for (r, name) in ROOTS.iter().enumerate() {
+            if ui.add(Button::selectable(r as u8 == root, *name)).clicked() {
+                let scale = if cur == Scale::None { Scale::Major } else { cur };
+                app.ui.piano.scale = Some((r as u8, scale));
+                ui.close();
+            }
+        }
+    });
+    ui.separator();
+    for scale in Scale::ALL {
+        if ui.add(Button::selectable(scale == cur, scale.label())).clicked() {
+            app.ui.piano.scale = (scale != Scale::None).then_some((root, scale));
+            ui.close();
+        }
     }
 }
 

@@ -437,7 +437,8 @@ impl Scale {
         }
     }
 
-    fn steps(self) -> &'static [u8] {
+    /// Semitones from the root.
+    pub fn steps(self) -> &'static [u8] {
         match self {
             Scale::None => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
             Scale::Major => &[0, 2, 4, 5, 7, 9, 11],
@@ -453,6 +454,53 @@ impl Scale {
     /// Is `key` in the scale on `root` (0 = C)?
     pub fn contains(self, root: u8, key: u8) -> bool {
         self.steps().contains(&((key + 12 - root % 12) % 12))
+    }
+}
+
+/// FL Studio's stamps: chords (semitones above the clicked key) …
+pub const CHORDS: &[(&str, &[u8])] = &[
+    ("Major", &[0, 4, 7]),
+    ("Minor", &[0, 3, 7]),
+    ("Diminished", &[0, 3, 6]),
+    ("Augmented", &[0, 4, 8]),
+    ("Sus2", &[0, 2, 7]),
+    ("Sus4", &[0, 5, 7]),
+    ("Power (5)", &[0, 7, 12]),
+    ("Major 6", &[0, 4, 7, 9]),
+    ("Minor 6", &[0, 3, 7, 9]),
+    ("Dominant 7", &[0, 4, 7, 10]),
+    ("Major 7", &[0, 4, 7, 11]),
+    ("Minor 7", &[0, 3, 7, 10]),
+    ("Minor 7 flat 5", &[0, 3, 6, 10]),
+    ("Diminished 7", &[0, 3, 6, 9]),
+    ("Dominant 9", &[0, 4, 7, 10, 14]),
+    ("Major 9", &[0, 4, 7, 11, 14]),
+    ("Minor 9", &[0, 3, 7, 10, 14]),
+    ("Add 9", &[0, 4, 7, 14]),
+];
+
+/// … and scales, one octave of them stacked from the clicked key.
+pub fn stamp_intervals(stamp: Stamp) -> Vec<u8> {
+    match stamp {
+        Stamp::Chord(i) => CHORDS.get(i).map(|c| c.1.to_vec()).unwrap_or_default(),
+        Stamp::Scale(s) => s.steps().to_vec(),
+    }
+}
+
+/// A Piano Roll stamp (FL Studio's Stamp tool).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stamp {
+    /// An index into [`CHORDS`].
+    Chord(usize),
+    Scale(Scale),
+}
+
+impl Stamp {
+    pub fn label(self) -> &'static str {
+        match self {
+            Stamp::Chord(i) => CHORDS.get(i).map_or("?", |c| c.0),
+            Stamp::Scale(s) => s.label(),
+        }
     }
 }
 
@@ -1056,6 +1104,18 @@ mod tests {
             a,
             randomize(note(0, 0, 0, 1), 0, 3840, 240, &Randomize { seed: 2, ..r })
         );
+    }
+
+    #[test]
+    fn stamps_and_scales() {
+        assert_eq!(stamp_intervals(Stamp::Chord(0)), vec![0, 4, 7]);
+        assert_eq!(stamp_intervals(Stamp::Scale(Scale::Minor)).len(), 7);
+        assert_eq!(Stamp::Chord(10).label(), "Major 7");
+        assert!(
+            Scale::Major.contains(2, 66) && !Scale::Major.contains(2, 65),
+            "F# is in D major, F is not"
+        );
+        assert!(CHORDS.iter().all(|c| c.1[0] == 0));
     }
 
     #[test]

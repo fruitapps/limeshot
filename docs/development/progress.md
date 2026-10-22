@@ -720,3 +720,10 @@ Clone selected (Alt+C), Delete selected…, Move selected up / down, Sort by (na
 Unmute selected, Transpose selected… (the Transpose dialog now takes channels), Assign selected to free mixer
 track(s), Select mixer tracks for the selected channels. Not done: Zip / Unzip, layers, swing mix per channel,
 display options (button width, name alignment …), declicking and plugin-editor switches.
+
+### Session 16, part 6: Piano Roll stamps and scale highlighting (PR-027, PR-013; next-steps Then 10)
+
+⏵ menu › Stamp: 18 chords and the scales from `note_tools` (`CHORDS`, `Stamp`, `stamp_intervals`); with a stamp
+chosen, a Draw click places it from the clicked key (one undo step, selected and draggable), and the header shows
+"Stamp: <name> ×". ⏵ › View › Scale highlighting: key and scale; off-scale rows are dark, the root's tinted.
+`ui_shot --scale` shows both.

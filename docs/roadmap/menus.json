@@ -8263,10 +8263,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Stamp",
+      "status": "DIFFERENT",
       "feature": "PR-027",
-      "notes": "Chords and scales to stamp."
+      "notes": "Chords and scales to stamp. Session 16: 18 chords and the 7 scales; Draw places the stamp from the clicked key, the header shows it. FL's stamp list is longer and its stamp mode is not observed."
     },
     {
       "id": "MENU-468",
@@ -8281,10 +8281,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › View",
+      "status": "DIFFERENT",
       "feature": "",
-      "notes": ""
+      "notes": "Session 16: Scale highlighting only."
     },
     {
       "id": "MENU-469",
@@ -8528,10 +8528,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › View › Scale highlighting",
+      "status": "IMPLEMENTED",
       "feature": "PR-013",
-      "notes": ""
+      "notes": "Session 16: key and scale; rows off the scale dark, the root tinted. Not saved in the project."
     },
     {
       "id": "MENU-482",

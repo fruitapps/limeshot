@@ -4747,3 +4747,35 @@ fn channel_rack_menu_acts_on_the_selected_channels() {
         assert_eq!(now, want);
     }
 }
+
+/// PR-027 / PR-013: a stamp places a chord from the clicked key; scale highlighting is a view
+/// setting from the ⏵ menu.
+#[test]
+fn piano_roll_stamp_places_chords_and_scale_highlighting() {
+    use limeshot_core::note_tools::{Scale, Stamp};
+    let (mut h, pat, lead) = empty_piano_roll();
+    piano_menu(&mut h, "Stamp", "Minor 7");
+    assert_eq!(h.state().ui.piano.stamp, Some(Stamp::Chord(11)));
+    let g = piano_geometry(&h);
+    click(&mut h, g.pos(PPQ / 2 + 10, 62), PointerButton::Primary);
+    let keys: Vec<u8> = notes_by_start(&h, pat, lead).iter().map(|n| n.0).collect();
+    assert_eq!(keys, vec![62, 65, 69, 72], "D minor 7 from D");
+    assert_eq!(h.state().ui.piano.selection.len(), 4);
+    h.state_mut().doc.undo();
+    assert!(notes_by_start(&h, pat, lead).is_empty(), "one undo step");
+    // The header's "Stamp: …" button stops stamping.
+    h.get_by(|n| n.label().is_some_and(|l| l.starts_with("Stamp: Minor 7")))
+        .click();
+    h.step();
+    assert_eq!(h.state().ui.piano.stamp, None);
+    // View › Scale highlighting › Dorian (key C).
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(&mut h, button, "View", "Scale highlighting");
+    h.get_by_label("Scale highlighting ⏵").hover();
+    for _ in 0..3 {
+        h.step();
+    }
+    h.get_by_label("Dorian").click();
+    h.step();
+    assert_eq!(h.state().ui.piano.scale, Some((0, Scale::Dorian)));
+}

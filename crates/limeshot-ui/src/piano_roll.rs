@@ -194,6 +194,10 @@ pub struct State {
     pub tool_dialog: Option<crate::piano_tools::ToolDialog>,
     /// Where the ⏵ menu button was drawn in the last frame (for tests).
     pub menu_button: Option<Rect>,
+    /// View › Scale highlighting: the root (0 = C) and scale whose rows are lit.
+    pub scale: Option<(u8, limeshot_core::note_tools::Scale)>,
+    /// The Stamp menu's chord or scale: Draw and Paint place it instead of a single note.
+    pub stamp: Option<limeshot_core::note_tools::Stamp>,
 }
 
 impl Default for State {
@@ -216,6 +220,8 @@ impl Default for State {
             sounding: Vec::new(),
             tool_dialog: None,
             menu_button: None,
+            scale: None,
+            stamp: None,
         }
     }
 }
@@ -356,6 +362,14 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.label(RichText::new(format!("in {pat_name}")).color(t.text_dim));
                 ui.separator();
                 ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
+                if let Some(stamp) = app.ui.piano.stamp
+                    && ui
+                        .small_button(format!("Stamp: {} ×", stamp.label()))
+                        .hint("Draw places this chord or scale; click to stop stamping")
+                        .clicked()
+                {
+                    app.ui.piano.stamp = None;
+                }
                 if ui
                     .small_button("Quantize")
                     .hint("Quantize the selected notes (or all of this channel's) to the snap (Alt+Q)")
@@ -445,8 +459,19 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
             continue;
         }
         let row = Rect::from_min_max(pos2(grid.left(), y), pos2(grid.right(), y + view.key_h));
-        if is_black(k) {
-            painter.rect_filled(row.intersect(grid), 0.0, t.row_black_key);
+        match app.ui.piano.scale {
+            // Scale highlighting: rows off the scale are dark, the root's are tinted.
+            Some((root, scale)) => {
+                if !scale.contains(root, k) {
+                    painter.rect_filled(row.intersect(grid), 0.0, t.row_black_key);
+                } else if k % 12 == root % 12 {
+                    painter.rect_filled(row.intersect(grid), 0.0, t.accent.gamma_multiply(0.08));
+                }
+            }
+            None if is_black(k) => {
+                painter.rect_filled(row.intersect(grid), 0.0, t.row_black_key);
+            }
+            None => {}
         }
         if k % 12 == 0 {
             painter.line_segment(
@@ -1004,6 +1029,49 @@ fn grid_input(
                             applied_dk: 0,
                         });
                         audition(app, cid, n.key, n.velocity);
+                    }
+                }
+                None if st.stamp.is_some() && tool == Tool::Draw => {
+                    // Stamp: the chord or scale from the clicked key, all selected and dragged
+                    // together (FL Studio's Stamp tool).
+                    let key = view.key_at(p.y).clamp(0, 127) as u8;
+                    let start = snap.floor(view.tick_at(p.x).max(0) as u64, sig);
+                    let (len, vel) = (st.last_len.max(1), st.last_vel);
+                    let notes: Vec<NewNote> = st
+                        .stamp
+                        .map(limeshot_core::note_tools::stamp_intervals)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter_map(|i| {
+                            let k = u16::from(key) + u16::from(i);
+                            (k <= 127).then_some(NewNote {
+                                channel: cid,
+                                key: k as u8,
+                                start,
+                                length: len,
+                                velocity: vel,
+                            })
+                        })
+                        .collect();
+                    let before = note_ids(app, pid);
+                    app.doc.begin_gesture();
+                    app.exec(Command::AddNotes { pattern: pid, notes });
+                    let ids: Vec<NoteId> = note_ids(app, pid)
+                        .into_iter()
+                        .filter(|id| !before.contains(id))
+                        .collect();
+                    if !ids.is_empty() {
+                        app.ui.piano.selection = ids.clone();
+                        app.ui.piano.drag = Some(Drag::Move {
+                            ids,
+                            anchor_start: start,
+                            anchor_key: key,
+                            grab_tick: view.tick_at(p.x),
+                            grab_key: view.key_at(p.y),
+                            applied_dt: 0,
+                            applied_dk: 0,
+                        });
+                        audition(app, cid, key, vel);
                     }
                 }
                 None => {

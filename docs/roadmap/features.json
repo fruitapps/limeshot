@@ -1681,17 +1681,23 @@
       "name": "Scale highlighting / snap to scale",
       "description": "Key-aware editing.",
       "fl_reference": "Snap to scale, root & scale, shading.",
-      "limeshot_behavior": "Scale selector, shading rows out of key, optional snapping.",
+      "limeshot_behavior": "⏵ menu › View › Scale highlighting: pick a key and a scale (major, minor, harmonic minor, pentatonics, blues, dorian); rows off the scale are dark and the root's rows tinted. A view setting, not saved.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core note_tools::tests::stamps_and_scales",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_stamp_places_chords_and_scale_highlighting"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1699,7 +1705,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. Not: snap to scale while drawing, saving the scale in the project."
     },
     {
       "id": "PR-014",
@@ -7207,21 +7213,25 @@
       "name": "Stamp tool (chords and scales)",
       "description": "Draw chords or scales with one click.",
       "fl_reference": "Piano Roll Stamp menu.",
-      "limeshot_behavior": "A Stamp selector: drawing a note adds the chosen chord or scale.",
+      "limeshot_behavior": "⏵ menu › Stamp: a chord (18 types) or a scale; while one is chosen, a Draw click places it from the clicked key with the last note length, selected and dragged as one (one undo step). The header shows \"Stamp: <name> ×\" to stop.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PR-012"
       ],
       "modules": [
+        "limeshot-core",
         "limeshot-ui"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core note_tools::tests::stamps_and_scales",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_stamp_places_chords_and_scale_highlighting"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7229,7 +7239,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Split out of PR-012 in session 7."
+      "notes": "Split out of PR-012 in session 7. Session 16: FL's stamp mode not observed live; the chord list is LimeShot's."
     },
     {
       "id": "APP-023",

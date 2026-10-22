@@ -33,8 +33,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
 
 ## Editing
 * Clipboard is app-internal (not the system clipboard). Quantize… has start and duration strength only (no swing templates). Swing is
-  global only (no per-channel mix). The Piano Roll has FL's eight tools but no Stamp
-  tool (PR-027), no scale highlighting, no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
+  global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
+  menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * The Mixer's track menu acts on one selected track (FL selects several). Moving, inserting or deleting a track

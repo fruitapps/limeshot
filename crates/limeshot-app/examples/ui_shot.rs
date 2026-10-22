@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -293,6 +293,14 @@ fn main() {
             for _ in 0..4 {
                 harness.step();
             }
+        }
+    }
+    if args.iter().any(|a| a == "--scale") {
+        // Piano Roll scale highlighting: A minor.
+        harness.state_mut().ui.piano.scale = Some((9, limeshot_core::note_tools::Scale::Minor));
+        harness.state_mut().ui.piano.stamp = Some(limeshot_core::note_tools::Stamp::Chord(1));
+        for _ in 0..2 {
+            harness.step();
         }
     }
     if let Some(tool) = args.iter().find_map(|a| a.strip_prefix("--tool=")) {
