@@ -1718,20 +1718,21 @@ fn playlist_time_selection_loops_song_playback() {
     assert_eq!(h.state().ui.playlist.time_sel, Some((bar, 3 * bar)));
     assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Song);
     wait_for(&mut h, "the locate", |a| a.player.status().position() == bar);
-    // Playing never leaves the selection (the silent clock runs in real time; 10 ms blocks).
+    // Exercise the UI -> player loop range without requiring several seconds of audio progress
+    // in a fixed wall-clock window: the silent thread can fall behind on busy CI runners.
+    // Full loops at multiple buffer sizes are covered by the engine's deterministic tests.
+    let near_end = 3 * bar - PPQ / 4;
+    h.state_mut().locate(near_end);
+    wait_for(&mut h, "the locate near the selection's end", |a| {
+        a.player.status().position() == near_end
+    });
+    h.state_mut().set_song_loop(false);
     h.state_mut().toggle_play();
-    let start = std::time::Instant::now();
-    let mut seen_wrap = false;
-    let mut last = 0;
-    while start.elapsed().as_secs_f32() < 4.5 {
-        std::thread::sleep(std::time::Duration::from_millis(20));
-        h.step();
-        let pos = h.state().player.status().position();
+    wait_for(&mut h, "playback to loop to the selection's start", |a| {
+        let pos = a.player.status().position();
         assert!((bar..3 * bar).contains(&pos), "{pos} left the selection");
-        seen_wrap |= pos < last;
-        last = pos;
-    }
-    assert!(seen_wrap, "playback looped back to the selection's start");
+        a.is_playing() && pos < near_end
+    });
     h.state_mut().stop();
     // A Cmd+click on the ruler clears it.
     click_with(

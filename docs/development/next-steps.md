@@ -12,9 +12,10 @@ Completed work and verification evidence are retained in [progress.md](progress.
    execution host's permissions, then test Vital and a resize-capable editor: visibility, resizing, tab changes,
    covering/pinned windows, keyboard forwarding and reopening saved wrappers. Do not mark VERIFIED from a build or
    headless fallback screenshot. See D35 and known limitations.
-2. **Platform CI (PF-002…PF-005).** CI definitions exist in `.github/workflows/ci.yml`. Previous runs stayed pending
-   without jobs; an org admin needs to check Actions/billing settings. Recheck the remote runs, fix platform failures
-   once jobs run, and record evidence separately for Apple Silicon, Intel, Windows and Linux.
+2. **Platform CI (PF-002…PF-005).** CI definitions exist in `.github/workflows/ci.yml`; jobs now run (the owner supplied a
+   macOS test failure on 2026-10-22). The Playlist selection-loop test no longer assumes a full loop fits a fixed
+   wall-clock window. Recheck remote results and fix remaining failures; record evidence separately for Apple
+   Silicon, Intel, Windows and Linux. Earlier pending-job reports remain historical.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
    compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
    embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.

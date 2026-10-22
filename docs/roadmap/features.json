@@ -2615,7 +2615,7 @@
           "docs/research/evidence/screenshots/fl-playlist-time-markers-menu.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project."
+      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project. CI regression (2026-10-22): the UI loop test locates near the selection end and waits for audio-clock progress rather than requiring a full loop in 4.5 wall-clock seconds; deterministic engine tests retain full-loop coverage across buffer sizes."
     },
     {
       "id": "PL-017",
@@ -5202,7 +5202,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. No custom plugin folders yet."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. No custom plugin folders yet. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
     },
     {
       "id": "PLG-005",

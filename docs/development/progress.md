@@ -804,3 +804,24 @@ Final checks passed: `cargo test --workspace` (including 111 headless UI tests a
 `cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace`, formatting, inventory validation
 and `git diff --check`. Earlier Session 17 offscreen reviews cover editor/dialog layout. Native plugin embedding
 still requires live verification; the PR must retain this limitation and the disabled advanced Playlist track actions.
+
+
+## 2026-10-22 — Session 17 CI regression fixes
+
+The owner's macOS CI log exposed a timing assumption in
+`playlist_time_selection_loops_song_playback`: a two-bar selection at 124 BPM needs about 3.87 seconds of audio
+progress, while the test allowed only 4.5 seconds of wall time. The silent fallback can advance more slowly under
+runner scheduling pressure. The UI test now locates a quarter beat before the selection end and waits for the
+observed wrap with the existing bounded polling helper, checking every observed position stays in the selection
+and playback continues with song looping disabled. The deterministic engine test still verifies full loops and
+onsets at five buffer sizes; no production playback behavior changed.
+
+Also inspected the completed Windows x86-64 job in CI run 39809093123. Its plugin-discovery assertion compared
+`Vendor\B.VST3` with `Vendor/B.VST3` as strings. It now compares relative `PathBuf` values, retaining exact bundle,
+ordering and nested-bundle exclusion checks without assuming a path separator. CI jobs now run; updated the old
+pending-job continuation note. Linux ARM64 and Windows ARM64 cross-build jobs succeeded in that run; this does not
+establish live GUI/audio verification on those platforms.
+
+Validation: the Playlist test passed 30 consecutive runs; `cargo test --workspace` passed all 300 tests. After the
+Windows assertion edit, all seven plugin library tests passed; workspace Clippy, rustfmt and inventory checks pass.
+Remote macOS/Windows reruns are required to confirm the fixes on their runners.

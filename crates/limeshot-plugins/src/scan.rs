@@ -90,9 +90,16 @@ mod tests {
         let found = find_bundles(&[dir.path().to_owned(), dir.path().join("missing")]);
         let names: Vec<_> = found
             .iter()
-            .map(|p| p.strip_prefix(dir.path()).unwrap().to_string_lossy().into_owned())
+            .map(|p| p.strip_prefix(dir.path()).unwrap().to_path_buf())
             .collect();
-        assert_eq!(names, ["A.vst3", "C.vst3", "Vendor/B.VST3"]);
+        assert_eq!(
+            names,
+            [
+                PathBuf::from("A.vst3"),
+                PathBuf::from("C.vst3"),
+                PathBuf::from("Vendor/B.VST3")
+            ]
+        );
     }
 
     #[test]
