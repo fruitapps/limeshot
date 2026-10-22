@@ -175,8 +175,9 @@ impl Voice {
         !matches!(self.source, Source::Off)
     }
 
-    /// Set up a voice for `instrument`. Returns `None` when the instrument makes no sound (no
-    /// sample loaded, unsupported instrument).
+    /// Set up a sampler or synth voice with its volume envelope and clamped note velocity.
+    /// Returns `None` for plugin or silent instruments, missing samples, samples shorter than
+    /// two frames, or a playback window shorter than one source frame.
     pub fn for_instrument(
         instrument: &InstrumentState,
         root_key: u8,
@@ -193,6 +194,9 @@ impl Voice {
                 start,
                 end,
                 reverse,
+                attack,
+                decay,
+                sustain,
                 release,
                 one_shot: _,
                 looping,
@@ -232,13 +236,13 @@ impl Voice {
                         looping,
                     },
                     filter,
-                    // Declick on the way out only (samples are expected to start cleanly), so the
-                    // first sample frame lands exactly on the note's onset.
+                    // With no attack set, the first sample frame lands exactly on the note's onset
+                    // (samples are expected to start cleanly); the release declicks the end.
                     env: Envelope::start(
                         Adsr {
-                            attack: 0.0,
-                            decay: 0.0,
-                            sustain: 1.0,
+                            attack: *attack,
+                            decay: *decay,
+                            sustain: *sustain,
                             release: *release,
                         },
                         sample_rate,
@@ -427,8 +431,13 @@ impl Voice {
     }
 
     /// Start `secs` (of output time) into the source: audio clips trimmed at the start, or
-    /// playback starting inside a clip. Only samplers move; a voice skipped past its end stops.
+    /// playback starting inside a clip. Negative durations are treated as zero. `sample_rate`
+    /// is the output rate in Hz; elapsed whole output samples advance every voice's envelope.
+    /// Only sampler playback positions move; crossing the playback window or finishing the
+    /// envelope turns the voice off, including for looping samples.
     pub fn skip(&mut self, secs: f64, sample_rate: f32) {
+        let output_samples = secs.max(0.0) * f64::from(sample_rate);
+        self.env.advance(output_samples as u64);
         if let Source::Sampler {
             pos,
             step,
@@ -438,7 +447,7 @@ impl Voice {
             ..
         } = &mut self.source
         {
-            let frames = secs.max(0.0) * f64::from(sample_rate) * *step;
+            let frames = output_samples * *step;
             if *reverse {
                 *pos -= frames;
             } else {
@@ -447,6 +456,9 @@ impl Voice {
             if *pos < *lo || *pos >= *hi {
                 self.source = Source::Off;
             }
+        }
+        if self.env.is_done() {
+            self.source = Source::Off;
         }
     }
 

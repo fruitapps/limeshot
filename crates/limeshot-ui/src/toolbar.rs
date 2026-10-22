@@ -360,6 +360,17 @@ fn snap_and_options(app: &mut LimeShotApp, ui: &mut Ui) {
         let m = !app.ui.metronome;
         app.set_metronome(m);
     }
+    if icon_button(
+        ui,
+        Icon::AutoScroll,
+        app.settings.auto_scroll,
+        B,
+        "Auto scrolling — follow the playhead",
+    )
+    .clicked()
+    {
+        app.set_auto_scroll(!app.settings.auto_scroll);
+    }
     if icon_button(ui, Icon::Loop, app.ui.song_loop, B, "Loop the song in Song mode").clicked() {
         let l = !app.ui.song_loop;
         app.set_song_loop(l);

@@ -551,17 +551,23 @@
       "name": "Save new version",
       "description": "Save with incrementing suffix.",
       "fl_reference": "Ctrl+N saves project_2.flp.",
-      "limeshot_behavior": "File › Save new version. (LimeShot uses Cmd+N for New.)",
+      "limeshot_behavior": "File › Save new version saves a numbered sibling (song_2.lime, song_3.lime …), skips occupied names and makes the new file active. Unsaved projects use Save as. No shortcut is assigned; Cmd+N remains New.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-project/tests/versions.rs",
+        "crates/limeshot-app/tests/ui.rs::save_new_version_from_file_menu_keeps_previous_project_and_undo_history"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -570,7 +576,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": ""
+      "notes": "A trailing numeric _suffix increments; otherwise _2 is appended. Atomic no-clobber publishing preserves existing files even during concurrent version saves. Save errors retain the active path and modified state."
     },
     {
       "id": "APP-019",
@@ -1117,25 +1123,36 @@
       "name": "Zip / unzip channels",
       "description": "Compact view.",
       "fl_reference": "Alt+Z / Alt+U.",
-      "limeshot_behavior": "Collapse rows.",
+      "limeshot_behavior": "Channel Rack options › Zip selected (Alt+Z) compacts selected channels into thin named buttons; right-click a compact button to restore its row. Unzip all (Alt+U) restores every channel, including those hidden by a display filter. Compact buttons select channels; Cmd/Shift-click toggles multiselection. Zip state follows channel IDs across patterns and is session-only. General settings › Miscellaneous › Auto zip empty channels (off by default, saved in application settings) recomputes all channels on a pattern switch: channels without note data collapse, and channels with steps or melodic notes expand. Muted notes count as note data. Manual Zip/Unzip remains effective until the next switch; enabling the setting waits for that switch. Pattern deletion/undo fallback changes are included.",
       "priority": "P3",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::rack_zip_shortcuts_compact_selected_rows_and_right_click_restores_them",
+        "crates/limeshot-app/tests/ui.rs::rack_zip_menu_and_filters_restore_hidden_rows_and_forget_deleted_channels",
+        "crates/limeshot-app/tests/ui.rs::rack_zip_finishes_a_held_step_stroke_before_hiding_it",
+        "crates/limeshot-app/tests/ui.rs::rack_auto_zip_setting_is_off_by_default_and_does_not_edit_the_project",
+        "crates/limeshot-app/tests/ui.rs::rack_auto_zip_follows_pattern_notes_and_preserves_manual_restoration_between_switches",
+        "crates/limeshot-app/tests/ui.rs::rack_auto_zip_handles_pattern_deletion_and_undo_fallbacks",
+        "crates/limeshot-app/tests/ui.rs::rack_auto_zip_finishes_a_held_stroke_in_the_old_pattern"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/envsettings_general.htm"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: documented FL manual and automatic zip actions, independently designed compact rows. Project content/playback and undo are unchanged. Zip state is session-only; new/open projects start expanded. Auto zip runs at pattern transitions, not on each note edit; manual restorations remain accessible. Headless tests and offscreen layout review; no live verification while the Mac is locked."
     },
     {
       "id": "SEQ-014",
@@ -6796,7 +6813,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "cargo test --workspace (local)"
+        "cargo test --workspace (local)",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085852"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6813,18 +6831,22 @@
       "name": "macOS Intel",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "x86_64-apple-darwin release build runs under Rosetta; headless render bit-identical to arm64. GUI and audio device not exercised on Intel.",
+      "limeshot_behavior": "Native Intel macOS CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventories on macos-15-intel. The earlier release build also ran headless under Rosetta with bit-identical rendering. Native GUI/audio-device checks remain open.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "local: arch -x86_64 limeshot-cli demo … (render compared with cmp)"
+        "local: arch -x86_64 limeshot-cli demo … (render compared with cmp)",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085995"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6833,7 +6855,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: replacement Intel runner confirmed by successful CI 39826217710 at 38d9a7b. See docs/development/platform-validation.md. Intel GUI/audio remain unverified."
     },
     {
       "id": "PF-003",
@@ -6841,17 +6863,23 @@
       "name": "Windows x86-64",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "`cargo check --target x86_64-pc-windows-msvc` passes locally; CI job defined but not yet run.",
+      "limeshot_behavior": "Windows x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085936"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6859,7 +6887,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-004",
@@ -6867,17 +6895,23 @@
       "name": "Linux x86-64",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "CI job defined (ALSA, X11/Wayland, GTK deps); not yet run. Local cross-check stops at alsa-sys (needs target pkg-config).",
+      "limeshot_behavior": "Linux x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022486",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085807"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6885,7 +6919,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-005",
@@ -6893,17 +6927,25 @@
       "name": "Windows ARM64 / Linux ARM64",
       "description": "Secondary architectures.",
       "fl_reference": "—",
-      "limeshot_behavior": "`cargo check --target aarch64-pc-windows-msvc` passes locally; CI jobs defined.",
+      "limeshot_behavior": "Linux ARM64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventories; Windows ARM64 cross-build passes. Windows ARM64 runtime and native GUI/audio-device checks remain open.",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022953",
+        "Windows ARM64 cross-build: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022229",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085903",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085709"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6911,7 +6953,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-006",
@@ -7044,7 +7086,7 @@
       "name": "Control context menu",
       "description": "Right-click menu on knobs, faders and sliders.",
       "fl_reference": "Observed: right-click a knob › Reset, Edit events, Init song with this position, Create automation clip, Link to controller, Copy value, Paste value, Type in value…, Set….",
-      "limeshot_behavior": "Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.",
+      "limeshot_behavior": "Right-click channel/mixer volume and pan or built-in effect parameters for Reset, Copy value, Paste value, Type in value… and Create automation clip. Copy/paste transfers normalised control position using the automation mapping; the value clipboard is separate from notes/clips. Type in uses percentages for channel volume/pan and mixer pan, dB for mixer gain (-inf for silence), and effect units. Edits commit through Commands and undo once; cancel and invalid input leave the project unchanged.",
       "priority": "P1",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -7056,7 +7098,11 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::control_menus_copy_paste_reset_and_undo",
+        "limeshot-app tests/ui.rs::control_value_dialog_validates_commits_once_and_cancels",
+        "limeshot-ui automation_ui::tests::typed_values_use_control_units_and_reject_invalid_or_deleted_targets"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7064,7 +7110,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob."
+      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob. Codex continuation 2026-10-22: basic value actions implemented; cross-control paste follows LimeShot automation mappings, not a measured FL conversion. Event editing, Init song, Link to controller, and host value menus for instrument/plugin parameters remain open."
     },
     {
       "id": "AUT-010",
@@ -7439,19 +7485,28 @@
       "name": "Sampler volume envelope",
       "description": "ADSR for sampler channels.",
       "fl_reference": "Channel Sampler › Envelope/instrument settings: volume, panning, cutoff, resonance and pitch envelopes with LFOs.",
-      "limeshot_behavior": "Planned: the sampler has a release only.",
+      "limeshot_behavior": "The Sampler's Playback section has a volume envelope: Attack, Decay, Sustain and Release (defaults 0 ms / 0 ms / 100 % / 10 ms keep a sample's start exact).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "INS-002"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::sampler_volume_envelope",
+        "limeshot-core model::tests::sampler_envelope_defaults_round_trip_and_sanitize",
+        "limeshot-app tests/ui.rs::sampler_envelope_controls_reset_and_undo"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7459,7 +7514,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024."
     },
     {
       "id": "EXP-013",
@@ -8122,9 +8177,9 @@
       "name": "Auto scrolling option",
       "description": "Editors follow the playhead during playback; one switch turns it off.",
       "fl_reference": "Options › Auto scrolling.",
-      "limeshot_behavior": "Not implemented.",
+      "limeshot_behavior": "Options › Auto scrolling and the toolbar arrow share a saved switch (off by default). While playing, Playlist follows Song position and Piano Roll follows Pattern position. The view pages when the playhead leaves the visible span and returns on loop/locate; it stays still while stopped, switched off, or during an active editor drag.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -8134,7 +8189,11 @@
         "When on, Playlist and Piano Roll scroll to keep the playhead visible.",
         "The switch is saved in settings."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::auto_scrolling_switches_follow_each_other_without_editing_the_project",
+        "limeshot-app tests/ui.rs::auto_scrolling_follows_playback_and_loop_returns_only_when_enabled",
+        "limeshot-ui settings::tests::round_trip_and_recent_list"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -8143,7 +8202,7 @@
           "docs/research/evidence/screenshots/fl-menu-options.png"
         ]
       },
-      "notes": "Check what LimeShot's editors do today before implementing."
+      "notes": "Codex continuation 2026-10-22. Follows existing editor playheads (Piano Roll in Pattern mode, Playlist in Song mode). Off by default to preserve existing settings behavior. Paging is LimeShot's own; FL's exact scrolling thresholds were not measured. No shortcut was claimed."
     },
     {
       "id": "UI-017",

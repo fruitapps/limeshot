@@ -97,6 +97,10 @@ pub enum InstrumentState {
         start: f32,
         end: f32,
         reverse: bool,
+        /// Attack, decay (seconds) and sustain level of the volume envelope.
+        attack: f32,
+        decay: f32,
+        sustain: f32,
         release: f32,
         one_shot: bool,
         /// Loop range as fractions of the sample, when looping.
@@ -341,6 +345,9 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                     start: p.start.clamp(0.0, 1.0),
                     end: p.end.clamp(0.0, 1.0),
                     reverse: p.reverse,
+                    attack: p.attack_ms.clamp(0.0, 10_000.0) / 1000.0,
+                    decay: p.decay_ms.clamp(0.0, 10_000.0) / 1000.0,
+                    sustain: p.sustain.clamp(0.0, 1.0),
                     release: p.release_ms.max(0.0) / 1000.0,
                     one_shot: p.one_shot,
                     looping: p.looping.then(|| {

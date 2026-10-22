@@ -49,7 +49,7 @@ The core composition loop has automated coverage in
 
 | Kind | What's included |
 | --- | --- |
-| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a Sampler with trim, reverse, loop points and a low-pass filter; bundled Lime samples and factory presets |
+| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a Sampler with ADSR, trim, reverse, loop points and a low-pass filter; bundled Lime samples and factory presets |
 | **Effects** | Lime EQ, Filter, tempo-synced Delay, Room (reverb), Comp (with sidechain), Limiter, Gate, Drive, Chorus (chorus/flanger/phaser) and Utility |
 | **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
 | **Automation** | Song-mode clips for channel/mixer volume and pan, built-in effect and hosted VST3 parameters; point modes and visible automated controls |
@@ -65,17 +65,17 @@ from the source commits recorded in
 [the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
 plugin embedding and device audio require separate checks.
 
-The main-branch inventory currently tracks **272 features: 145 VERIFIED, 21 IMPLEMENTED, 16 IN_PROGRESS,
-85 NOT_STARTED, 1 RESEARCHED and 4 DEFERRED** (2026-10-22). IMPLEMENTED means code exists; VERIFIED additionally
+The inventory currently tracks **272 features: 149 VERIFIED, 24 IMPLEMENTED, 13 IN_PROGRESS,
+81 NOT_STARTED, 1 RESEARCHED and 4 DEFERRED** (2026-10-22). IMPLEMENTED means code exists; VERIFIED additionally
 requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
 with FL Studio or measured test coverage.
 
 | State tracker | What it records |
 | --- | --- |
 | [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, implementation states and verification evidence |
-| [Menu inventory](docs/roadmap/menus.md) | 725 menu/toolbar/editor entries and their implementation differences |
-| [Shortcut inventory](docs/roadmap/keybindings.md) | 142 bindings, including differences and unimplemented shortcuts |
-| [Settings inventory](docs/roadmap/settings.md) | 188 controls/settings and their current states |
+| [Menu inventory](docs/roadmap/menus.md) | 730 menu/toolbar/editor entries and their implementation differences |
+| [Shortcut inventory](docs/roadmap/keybindings.md) | 143 bindings, including differences and unimplemented shortcuts |
+| [Settings inventory](docs/roadmap/settings.md) | 189 controls/settings and their current states |
 | [MVP acceptance](docs/roadmap/mvp.md) / [milestones](docs/roadmap/milestones.md) | End-to-end acceptance and delivery scope |
 | [Progress log](docs/development/progress.md) / [next steps](docs/development/next-steps.md) | Dated verification records and continuation priorities |
 | [Known limitations](docs/roadmap/known-limitations.md) | Outstanding restrictions and manual/platform checks |
@@ -143,11 +143,13 @@ The suite exports these nine plugins; the DAW's Gate, Drive and Chorus are addit
 
 | Platform | State |
 | --- | --- |
-| macOS Apple Silicon | Local build/tests, GUI, realtime output and VST3 processing exercised; recording hardware and replacement native embedding still need checks |
-| macOS Intel | Release build runs under Rosetta; headless render is bit-identical to arm64; GUI not exercised |
-| Windows x86-64 | Local type-check and remote CI attempts recorded; complete current-commit CI and GUI/audio validation pending |
-| Windows ARM64 | Cross-build success recorded for an earlier CI run; device/GUI/audio validation pending |
-| Linux x86-64 / ARM64 | CI jobs run/queue; an earlier Linux ARM64 job succeeded; current-commit and live GUI/audio validation pending |
+| macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 processing tested; new native editor embedding unverified |
+| macOS Intel | Native headless CI passes; earlier Rosetta render matched arm64; GUI/audio-device checks remain open |
+| Windows x86-64 / ARM64 | x86-64 headless CI and ARM64 cross-build pass; native GUI/audio checks remain open |
+| Linux x86-64 / ARM64 | Native headless CI passes; GUI/audio-device checks remain open |
+
+Commit-specific CI evidence is recorded in [platform-validation.md](docs/development/platform-validation.md);
+successful results apply to the listed commits, and later commits need their own CI runs.
 
 ## Build from Source
 
@@ -202,6 +204,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all -- --check
 python3 scripts/features.py check
+python3 scripts/check_repository.py
 ```
 
 The suite covers musical timing, scheduling across buffer sizes and sample rates, synth and sampler behaviour,

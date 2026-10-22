@@ -73,7 +73,15 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
+Right-click channel/mixer volume or pan and built-in effect parameters for Reset, Copy/Paste value,
+Type in value… and Create automation clip. The value clipboard holds normalised control position independently
+of notes/clips. Type-in uses the control's units and commits once on OK; invalid input and Cancel do not edit.
+
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
+
+Options › Auto scrolling and the toolbar arrow share `settings.auto_scroll` (off by default). When enabled,
+Playlist follows Song playback and Piano Roll follows Pattern playback. They page when the playhead leaves
+view, including returning to a loop start; stopped transport and active editor drags leave the view alone.
 
 ## Keyboard
 
@@ -93,6 +101,16 @@ current pattern.
 The Channel Rack's selector LEDs are FL Studio's channel selection (`UiState::channel_selection`): a click selects one
 channel, Cmd/Shift/right-click toggles one; dragging the selector LEDs selects crossed rows without moving the window. `selected_channel` stays the current channel that the Piano Roll and
 Channel Settings edit; it is the last channel selected.
+
+Channel Rack › Zip selected (Alt+Z) replaces selected rows with compact named buttons. Right-click one to restore
+its controls, or use Unzip all (Alt+U), which includes filtered-out channels. Compact buttons retain click and
+Cmd/Shift-click selection. Zip state belongs to the session, follows channel IDs across patterns/reordering, and
+does not edit the project or its undo history. Deleted channels are pruned; new/open projects start expanded.
+General settings › Miscellaneous › Auto zip empty channels saves `settings.auto_zip_empty_channels` (off by default).
+On a pattern switch it replaces the compact set for all channels, including filtered-out ones, using the destination
+pattern's note data. Muted notes count as data. Enabling waits for the next switch, and note edits do not recompute
+the view, so manual Unzip/right-click restoration remains usable. Deletion/undo fallback pattern changes are caught
+when the rack draws. Any held rack step/graph gesture ends before switching its editing surface.
 
 The toolbar typing-keyboard toggle (Cmd+T outside Playlist) maps Z–M and Q–U to notes for the selected channel.
 Key release targets the original channel even after selection changes; dialogs, text fields and focus loss release

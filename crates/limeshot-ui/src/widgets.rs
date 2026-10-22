@@ -628,11 +628,35 @@ pub fn user_changed(r: &Response) -> bool {
         i.pointer.button_down(egui::PointerButton::Secondary)
             || i.pointer.button_released(egui::PointerButton::Secondary)
     });
-    r.changed() && !secondary && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
+    let input = r.ctx.input(|i| {
+        i.pointer.primary_down()
+            || i.pointer.button_released(egui::PointerButton::Primary)
+            || i.smooth_scroll_delta != egui::Vec2::ZERO
+            || i.events.iter().any(|e| {
+                matches!(
+                    e,
+                    egui::Event::Key { .. } | egui::Event::Text(_) | egui::Event::Paste(_)
+                )
+            })
+    });
+    r.changed()
+        && !secondary
+        && input
+        && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
 }
 
 /// A control's response that also senses clicks, so a right-click can open its context menu
 /// (egui sliders sense only drags).
 pub fn clickable(r: &Response) -> Response {
     r.interact(egui::Sense::click())
+}
+
+/// Page horizontally when the playhead is left of the view or past its right edge minus four
+/// pixels. `scroll` and `playhead` are content offsets in pixels; `width` is the viewport width.
+/// Place the playhead 10% into the view, clamping scroll to zero. Widths at most eight pixels
+/// leave scroll unchanged, as does a playhead exactly on either threshold.
+pub(crate) fn follow_playhead(scroll: &mut f32, playhead: f32, width: f32) {
+    if width > 8.0 && (playhead < *scroll || playhead > *scroll + width - 4.0) {
+        *scroll = (playhead - width * 0.1).max(0.0);
+    }
 }

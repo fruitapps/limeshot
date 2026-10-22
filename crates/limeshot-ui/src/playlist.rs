@@ -730,10 +730,15 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let grid = Rect::from_min_max(pos2(full.left() + HEADER_W, full.top() + RULER_H), full.right_bottom());
 
     let tracks = app.project().playlist.tracks.len() as u32;
+    let follow = app.settings.auto_scroll && app.is_playing() && app.ui.mode == limeshot_engine::PlayMode::Song;
+    let position = app.player.status().position();
     let st = &mut app.ui.playlist;
     let max_y = ((tracks as f32 + 1.0) * st.track_h - grid.height()).max(0.0);
     st.scroll.y = st.scroll.y.clamp(0.0, max_y);
     st.scroll.x = st.scroll.x.max(0.0);
+    if follow && st.drag.is_none() && st.sel_anchor.is_none() && st.marker_drag.is_none() {
+        crate::widgets::follow_playhead(&mut st.scroll.x, position as f32 * st.zoom_x / PPQ as f32, grid.width());
+    }
     let view = View {
         grid,
         ppt: st.zoom_x / PPQ as f32,

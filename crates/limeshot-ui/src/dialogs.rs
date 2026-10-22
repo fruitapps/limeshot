@@ -52,6 +52,11 @@ pub enum Dialog {
         channels: Vec<ChannelId>,
         semitones: i32,
     },
+    /// Type a control value in its displayed units, committed once on OK.
+    ControlValue {
+        target: limeshot_core::AutomationTarget,
+        text: String,
+    },
     Shortcuts,
 }
 
@@ -409,6 +414,48 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         keep = false;
                     }
                 });
+            });
+        }
+        Dialog::ControlValue { target, text } => {
+            let target = *target;
+            modal(ctx, "Type in value", |ui| {
+                ui.label(target.label(app.project()));
+                if let Some((_, unit)) = crate::automation_ui::input_value(app, target) {
+                    ui.horizontal(|ui| {
+                        let label = ui.label("Value");
+                        let r = ui
+                            .add(egui::TextEdit::singleline(text).desired_width(180.0))
+                            .labelled_by(label.id);
+                        ui.label(unit);
+                        if !r.has_focus() && !ui.memory(|m| m.had_focus_last_frame(r.id)) {
+                            r.request_focus();
+                        }
+                    });
+                    let value = crate::automation_ui::parse_value(app, target, text);
+                    if value.is_none() {
+                        ui.colored_label(Theme::current().danger, "Enter a value within the control's range.");
+                    }
+                    if matches!(target, limeshot_core::AutomationTarget::MixerVolume(_)) {
+                        ui.label("Use -inf for silence.");
+                    }
+                    let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    ui.horizontal(|ui| {
+                        if (ui.add_enabled(value.is_some(), egui::Button::new("OK")).clicked() || enter)
+                            && let Some(value) = value
+                        {
+                            crate::automation_ui::set_value(app, target, value);
+                            keep = false;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            keep = false;
+                        }
+                    });
+                } else {
+                    ui.label("This control is no longer available.");
+                    if ui.button("Close").clicked() {
+                        keep = false;
+                    }
+                }
             });
         }
         Dialog::Rename { target, text } => {

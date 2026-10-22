@@ -6,25 +6,26 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 190, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 385, NOT_PLANNED 41
+Tracked: **730** — IMPLEMENTED 200, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 380, NOT_PLANNED 41
 
 ## Summary
 
 | Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |
 |---|---|---|---|---|---|---|
-| File | 45 | 4 | 7 | 31 | 3 | 0 |
+| File | 45 | 5 | 7 | 30 | 3 | 0 |
 | Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 16 | 1 | 26 | 5 | 4 |
-| Options | 24 | 8 | 0 | 14 | 2 | 2 |
+| Options | 24 | 9 | 0 | 13 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
-| Toolbar | 52 | 23 | 8 | 18 | 3 | 2 |
-| Channel Rack | 72 | 25 | 12 | 31 | 4 | 2 |
+| Toolbar | 52 | 24 | 8 | 17 | 3 | 2 |
+| Channel Rack | 72 | 27 | 12 | 29 | 4 | 2 |
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
 | Mixer | 44 | 9 | 9 | 22 | 4 | 0 |
+| Control | 5 | 5 | 0 | 0 | 0 | 0 |
 
 ## Open work by feature
 
@@ -51,7 +52,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
 | WF-003 | P1 | VERIFIED | MIDI controller input | MENU-163 Options › Enable MIDI remote control<br>MENU-399 Channel Rack › Channel menu › MIDI channel through<br>MENU-400 Channel Rack › Channel menu › Receive notes from |
 | APP-015 | P2 | NOT_STARTED | Project templates | MENU-002 File › New from template<br>MENU-003 File › New from template › Advanced<br>MENU-004 File › New from template › Minimal<br>MENU-005 File › New from template › Other<br>MENU-006 File › New from template › Performance<br>MENU-007 File › New from template › Power User<br>MENU-008 File › New from template › Utility<br>MENU-009 File › New from template › Empty<br>MENU-010 File › New from template › Change default template...<br>MENU-017 File › Save as template... |
-| APP-018 | P2 | NOT_STARTED | Save new version | MENU-014 File › Save new version |
 | APP-019 | P2 | NOT_STARTED | Project bundle (zip with samples) | MENU-040 File › Export › Zipped loop package... |
 | APP-021 | P2 | NOT_STARTED | Plugin manager | MENU-072 Add › Manage plugins<br>MENU-158 Options › Manage plugins<br>MENU-725 Mixer › Effect slot menu › Plugin database |
 | APP-027 | P2 | NOT_STARTED | Revert to last backup | MENU-044 File › Revert to last backup |
@@ -73,7 +73,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | SEQ-012 | P2 | VERIFIED | Channel filter groups | MENU-359 Channel Rack › Options › Auto switch display filter |
 | SEQ-014 | P2 | VERIFIED | Fill / rotate / advanced fill | MENU-395 Channel Rack › Channel menu › Advanced fill...<br>MENU-396 Channel Rack › Channel menu › Auto fill |
 | UI-013 | P2 | IMPLEMENTED | Window layout commands | MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate) |
-| UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling<br>MENU-318 Toolbar › Auto scrolling |
 | WF-004 | P2 | NOT_STARTED | Controller mapping (link to controller) | MENU-144 View › Remote control<br>MENU-175 Options › Multilink to controllers<br>MENU-218 Tools › Last tweaked › Link to controller...<br>MENU-219 Tools › Last tweaked › Override global link...<br>MENU-224 Tools › Last tweaked › Override volatile link...<br>MENU-233 Tools › Next to last tweaked › Link to controller...<br>MENU-234 Tools › Next to last tweaked › Override global link...<br>MENU-239 Tools › Next to last tweaked › Override volatile link...<br>MENU-685 Mixer › Options › Link all parameters... |
 | WF-005 | P2 | NOT_STARTED | External MIDI devices / MIDI out | MENU-164 Options › Enable MIDI output |
 | WF-010 | P2 | NOT_STARTED | Score logger | MENU-194 Tools › Dump score log to selected pattern<br>MENU-195 Tools › Dump score log to selected pattern › Last 2 minutes<br>MENU-196 Tools › Dump score log to selected pattern › Last 5 minutes<br>MENU-197 Tools › Dump score log to selected pattern › Last 10 minutes<br>MENU-198 Tools › Dump score log to selected pattern › Last 20 minutes<br>MENU-199 Tools › Dump score log to selected pattern › Last 30 minutes<br>MENU-200 Tools › Clear log |
@@ -95,7 +94,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PR-029 | P3 | NOT_STARTED | Riff machine | MENU-184 Tools › Riff machine...<br>MENU-445 Piano Roll › Options › Tools › Riff machine... |
 | REC-009 | P3 | NOT_STARTED | Step edit mode | MENU-171 Options › Step edit |
 | REC-011 | P3 | NOT_STARTED | Audio logger | MENU-201 Tools › Enabled<br>MENU-202 Tools › Settings<br>MENU-203 Tools › Settings › 1 minute<br>MENU-204 Tools › Settings › 2 minutes<br>MENU-205 Tools › Settings › 5 minutes<br>MENU-206 Tools › Settings › 10 minutes<br>MENU-207 Tools › Settings › Pre effects<br>MENU-208 Tools › Settings › Post effects, pre fader<br>MENU-209 Tools › Dump to audio editor |
-| SEQ-013 | P3 | NOT_STARTED | Zip / unzip channels | MENU-354 Channel Rack › Options › Zip selected<br>MENU-355 Channel Rack › Options › Unzip all |
 | SEQ-022 | P3 | NOT_STARTED | Pattern groups | MENU-087 Patterns › Group selected...<br>MENU-088 Patterns › Rename group...<br>MENU-089 Patterns › Ungroup selected... |
 | UI-006 | P3 | NOT_STARTED | Additional themes (light, high contrast) | MENU-157 Options › Theme settings |
 | UI-014 | P3 | NOT_STARTED | Toolbar customisation and presets | MENU-111 View › Toolbars<br>MENU-112 View › Toolbars › Edit<br>MENU-113 View › Toolbars › Separators<br>MENU-114 View › Toolbars › Flat buttons<br>MENU-116 View › Toolbars › Show detected MIDI chords near the hint bar<br>MENU-118 View › Toolbars › Hide<br>MENU-119 View › Toolbars › <factory presets> |
@@ -126,7 +124,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-011 | Open... |  | dialog | `Cmd+O` |  | File › Open… | IMPLEMENTED | APP-002 |  |
 | MENU-012 | Save |  | action | `Cmd+S` |  | File › Save | IMPLEMENTED | APP-003 |  |
 | MENU-013 | Save as... |  | dialog | `Shift+Cmd+S` |  | File › Save as… | IMPLEMENTED | APP-003 |  |
-| MENU-014 | Save new version |  | action | `Cmd+N` |  | — | NOT_STARTED | APP-018 | Saves name_2.flp, name_3.flp … next to the project. |
+| MENU-014 | Save new version |  | action | `Cmd+N` |  | File › Save new version | IMPLEMENTED | APP-018 | Numbered sibling, skips existing files; unsaved projects use Save as. No shortcut: Cmd+N remains New. |
 | MENU-015 | Save and back up to FL Cloud |  | action |  |  | — | NOT_PLANNED |  | Image-Line cloud service. |
 | MENU-016 | Save to new project folder... |  | dialog |  | disabled | — | NOT_STARTED | APP-028 | Disabled in a project that was never saved. |
 | MENU-017 | Save as template... |  | dialog |  |  | — | NOT_STARTED | APP-015 |  |
@@ -310,7 +308,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-170 | Blend recorded notes | Switches | toggle | `Cmd+B` |  | — | NOT_STARTED | REC-010 |  |
 | MENU-171 | Step edit | Switches | toggle | `Cmd+E` |  | — | NOT_STARTED | REC-009 |  |
 | MENU-172 | Loop record | Switches | toggle |  |  | — | NOT_STARTED | REC-005 |  |
-| MENU-173 | Auto scrolling | Switches | toggle |  |  | — | NOT_STARTED | UI-016 |  |
+| MENU-173 | Auto scrolling | Switches | toggle |  |  | Options › Auto scrolling | IMPLEMENTED | UI-016 | Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default. |
 | MENU-174 | Enable groups | Switches | toggle | `Shift+Opt+G` | checked | — | NOT_STARTED | WF-013 |  |
 | MENU-175 | Multilink to controllers | Switches | toggle | `Cmd+J` |  | — | NOT_STARTED | WF-004 |  |
 | MENU-176 | Manage accounts... | 3rd party services | dialog |  |  | — | NOT_PLANNED |  |  |
@@ -470,7 +468,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-315 | Piano roll / Maximize Piano roll | Shortcut icons | toggle | `F7` |  | Toolbar › Piano Roll | IMPLEMENTED | UI-002 | A click toggles it; a right-click shows it maximised, as in FL. |
 | MENU-316 | Playlist / Maximize Play list | Shortcut icons | toggle | `F5` |  | Toolbar › Playlist | IMPLEMENTED | UI-002 | As Piano roll. |
 | MENU-317 | Mixer | Shortcut icons | toggle | `F9` |  | Toolbar › Mixer | IMPLEMENTED | UI-002 |  |
-| MENU-318 | Auto scrolling | Shortcut icons | toggle |  |  | — | NOT_STARTED | UI-016 |  |
+| MENU-318 | Auto scrolling | Shortcut icons | toggle |  |  | Toolbar › Auto scrolling — follow the playhead | IMPLEMENTED | UI-016 | Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default. |
 | MENU-319 | One-click audio recording | Shortcut icons | control |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-320 | Main snap / quantization / step edit step | Snap | list | `BkSp` |  | Toolbar › snap selector | DIFFERENT | PR-005 | LimeShot has FL's list in FL's order: (none), 1/6, 1/4, 1/3, 1/2 step, Step, 1/6, 1/4, 1/3, 1/2 beat, Beat, Bar; not FL's Line and Cell (the Piano Roll's own grid modes) or the BkSp key. |
 | MENU-321 | Pattern options | Patterns | submenu |  |  | Toolbar › pattern selector | DIFFERENT | SEQ-021 | The ▸ left of the selector opens the Patterns menu (pattern list and commands). LimeShot's selector menu lists the patterns and Create new; the commands are in the main Patterns menu. |
@@ -511,8 +509,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-351 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Assign selected to free mixer track(s) | Channels | action | `Cmd+L` |  | Channel Rack › ⏵ › Assign selected to free mixer track(s) | IMPLEMENTED | SEQ-005 | Cmd+L routes the selected channels, as in FL. |
 | MENU-352 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select mixer tracks for the selected channels | Channels | action |  |  | Channel Rack › ⏵ › Select mixer tracks for the selected channels | DIFFERENT | SEQ-005 | Session 16: selects the first channel's track and shows the Mixer (LimeShot's Mixer selects one track). |
 | MENU-353 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change declicking for selected channels to | Channels | submenu |  |  | — | NOT_STARTED | WF-009 |  |
-| MENU-354 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zip selected | Channels | action | `Opt+Z` |  | — | NOT_STARTED | SEQ-013 |  |
-| MENU-355 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unzip all | Channels | action | `Opt+U` |  | — | NOT_STARTED | SEQ-013 |  |
+| MENU-354 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zip selected | Channels | action | `Opt+Z` |  | Channel Rack › Zip selected | IMPLEMENTED | SEQ-013 | 2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013). |
+| MENU-355 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unzip all | Channels | action | `Opt+U` |  | Channel Rack › Unzip all | IMPLEMENTED | SEQ-013 | 2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013). |
 | MENU-356 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Restretch all | Channels | action | `Cmd+Opt+R` | disabled | — | NOT_STARTED |  |  |
 | MENU-357 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group playlist tracks created by Loop starter | Options | submenu |  |  | — | NOT_PLANNED | SEQ-017 |  |
 | MENU-358 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto resize | Options | submenu |  |  | — | NOT_STARTED |  |  |
@@ -898,6 +896,16 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-723 | Effect slot menu |  | submenu |  |  | Mixer › + Add effect | DIFFERENT | FX-001 | The ▸ of an empty insert slot: More plugins…, Plugin database (Shift+F8), FL's effects by category (Controller, Delay reverb, Distortion, Dynamics, Filter, Flanger, Gain, Misc, Patcher, Visual) and Categories / Simple / Tree. LimeShot's + Add effect lists its built-in effects and plugins. |
 | MENU-724 | &nbsp;&nbsp;&nbsp;&nbsp;↳ <FL effects by category> |  | list |  |  | — | NOT_PLANNED |  | FL's own plugins. |
 | MENU-725 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Plugin database |  | action | `Shift+F8` |  | — | NOT_STARTED | APP-021 |  |
+
+## Control
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| MENU-726 | Reset | Value and automation | action |  |  | Control context menu › Reset | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-727 | Copy value | Value and automation | action |  |  | Control context menu › Copy value | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-728 | Paste value | Value and automation | action |  |  | Control context menu › Paste value | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-729 | Type in value… | Value and automation | action |  |  | Control context menu › Type in value… | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-730 | Create automation clip | Value and automation | action |  |  | Control context menu › Create automation clip | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
 
 ## Lists
 

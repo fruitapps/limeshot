@@ -1749,3 +1749,82 @@ fn exporting_a_time_selection_renders_that_span() {
     );
     assert!(empty.is_err(), "an empty selection is an error");
 }
+
+/// INS-014: the sampler's volume envelope: an attack fades the start in, a decay falls to the
+/// sustain level.
+#[test]
+fn sampler_volume_envelope() {
+    for block in [1, 64, 333, 1024] {
+        let v = 0.78;
+        let (a, _) = render(
+            ramp_snapshot(SamplerParams {
+                attack_ms: 5.0,
+                ..Default::default()
+            }),
+            ExportRange::Pattern,
+            block,
+            SR,
+        );
+        // 5 ms is 240 frames at 48 kHz.
+        assert!(a[0].abs() < 0.01, "starts silent: {}", a[0]);
+        let full = |i: usize| (0.1 + i as f32 / 2000.0) * v;
+        assert!(
+            a[2 * 120] > 0.2 * full(120) && a[2 * 120] < 0.8 * full(120),
+            "half-way up: {}",
+            a[2 * 120]
+        );
+        assert!(
+            (a[2 * 400] - full(400)).abs() < 0.01 * full(400),
+            "fully open after the attack"
+        );
+        let (b, _) = render(
+            ramp_snapshot(SamplerParams {
+                decay_ms: 2.0,
+                sustain: 0.5,
+                ..Default::default()
+            }),
+            ExportRange::Pattern,
+            block,
+            SR,
+        );
+        assert!((b[0] - full(0)).abs() < 0.01, "no attack");
+        assert!(
+            (b[2 * 900] - 0.5 * full(900)).abs() < 0.02 * full(900),
+            "at the sustain level: {}",
+            b[2 * 900]
+        );
+    }
+}
+
+#[test]
+fn skipped_sampler_advances_envelope_in_output_time() {
+    use limeshot_engine::voice::{Source, Voice};
+    for reverse in [false, true] {
+        let snap = ramp_snapshot(SamplerParams {
+            attack_ms: 4.0,
+            decay_ms: 4.0,
+            sustain: 0.5,
+            pitch: 12.0,
+            reverse,
+            ..Default::default()
+        });
+        let instrument = &snap.channels[0].instrument;
+        // The sample moves two source frames per output frame at this pitch.
+        for offset in [0, 96, 192, 288, 384, 480] {
+            let mut skipped = Voice::for_instrument(instrument, 60, 60, 1.0, SR as f32).unwrap();
+            let mut rendered = skipped.clone();
+            for _ in 0..offset {
+                rendered.next_frame();
+            }
+            skipped.skip(f64::from(offset) / f64::from(SR), SR as f32);
+            assert!((skipped.env.level() - rendered.env.level()).abs() < 1e-5);
+            for _ in 0..8 {
+                let (actual, _) = skipped.next_frame();
+                let (expected, _) = rendered.next_frame();
+                assert!((actual - expected).abs() < 1e-5, "offset {offset}, reverse {reverse}");
+            }
+            skipped.skip(1.0, SR as f32);
+            assert!(matches!(skipped.source, Source::Off));
+        }
+    }
+}

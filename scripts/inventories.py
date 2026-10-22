@@ -40,7 +40,7 @@ ST_STATUS = ["IMPLEMENTED", "IN_PROGRESS", "NOT_STARTED", "NOT_PLANNED"]
 HAS_KEYS = ("IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY")
 MN_STATUS = ["IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY", "NOT_STARTED", "NOT_PLANNED"]
 MN_KINDS = ["action", "dialog", "submenu", "toggle", "radio", "list", "link", "control", "display"]
-FL_MENUS = ["File", "Edit", "Add", "Patterns", "View", "Options", "Tools", "Help", "Toolbar", "Channel Rack", "Piano Roll", "Playlist", "Mixer"]
+FL_MENUS = ["File", "Edit", "Add", "Patterns", "View", "Options", "Tools", "Help", "Toolbar", "Channel Rack", "Piano Roll", "Playlist", "Mixer", "Control"]
 
 
 def combos(s):

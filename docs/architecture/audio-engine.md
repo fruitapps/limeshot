@@ -103,8 +103,10 @@ is applied once per block. Evaluation is a binary search, allocation-free.
 
 * **Sampler**: linear-interpolated playback of interleaved stereo `SampleData`;
   `step = src_rate / out_rate · 2^((key − root + pitch)/12)`; region `[start, end)` as fractions; reverse plays from
-  the end. Envelope: no attack (the onset lands on the exact sample), release = `release_ms`. One-shot samplers ignore
-  the note length.
+  the end. Envelope: configurable attack, decay, sustain and release; defaults preserve the exact sample onset
+  (0 ms attack/decay, full sustain, 10 ms release). One-shot samplers ignore
+  the note length unless looping is enabled. Loop points repeat while held, and an optional low-pass filter
+  processes the sampler output.
 * **LimeSynth**: one or two PolyBLEP oscillators (sine/square/saw/triangle; the second detuned by `detune_cents`), octave
   offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud. An optional
   `ModState` (inline, no allocation) adds a TPT state-variable low-pass with an exponentially decaying filter envelope
@@ -136,7 +138,7 @@ audible. The master is never solo-muted.
 ### Insert effects
 
 Each mixer track (master included) has an insert chain of up to 10 effects (`limeshot_dsp::effects`: Utility, Lime EQ,
-Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter). In `mix()`, each bus runs its chain after the voices are
+Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter, Lime Gate, Lime Drive and Lime Chorus). In `mix()`, each bus runs its chain after the voices are
 summed and before volume/pan.
 
 Processors own delay lines, so they must be allocated off the audio thread:

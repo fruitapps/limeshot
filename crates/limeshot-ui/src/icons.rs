@@ -10,6 +10,7 @@ pub enum Icon {
     Stop,
     Record,
     Metronome,
+    AutoScroll,
     Loop,
     Browser,
     ChannelRack,
@@ -79,6 +80,12 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
                 Stroke::new(1.6 * u, Color32::BLACK.gamma_multiply(0.6)),
             );
             p.line_segment([at(0.0, 3.0), at(4.5, -5.0)], Stroke::new(0.9 * u, c));
+        }
+        Icon::AutoScroll => {
+            p.line_segment([at(-6.0, -6.0), at(-6.0, 6.0)], line);
+            p.line_segment([at(-3.0, 0.0), at(6.0, 0.0)], line);
+            p.line_segment([at(2.0, -4.0), at(6.0, 0.0)], line);
+            p.line_segment([at(2.0, 4.0), at(6.0, 0.0)], line);
         }
         Icon::Loop => {
             let pts: Vec<Pos2> = (0..=24)

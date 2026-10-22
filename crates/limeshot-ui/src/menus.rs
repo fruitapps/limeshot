@@ -307,6 +307,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if item(ui, "Save as…", &key("Cmd+Shift+S")) {
                     app.save_as();
                 }
+                if item(ui, "Save new version", "") {
+                    app.save_new_version();
+                }
                 ui.separator();
                 if item(ui, "Import MIDI file…", "") {
                     let dialog = rfd::FileDialog::new().add_filter("MIDI file", &["mid", "midi"]);
@@ -610,6 +613,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if toggle(ui, app.ui.metronome, "Metronome", &key("Cmd+M")) {
                     let m = !app.ui.metronome;
                     app.set_metronome(m);
+                }
+                if toggle(ui, app.settings.auto_scroll, "Auto scrolling", "") {
+                    app.set_auto_scroll(!app.settings.auto_scroll);
                 }
                 if toggle(ui, app.ui.song_loop, "Loop song", "") {
                     let l = !app.ui.song_loop;

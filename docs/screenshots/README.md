@@ -28,6 +28,16 @@ cargo run -p limeshot-app --example ui_shot -- docs/screenshots/current/synth.pn
 cargo run -p limeshot-app --example ui_shot -- docs/screenshots/current/export.png --audio --dialog=export
 ```
 
+Additional DAW review scenarios include `--empty`, `--plugin`, `--plugin-window` and `--tapper`.
+Dialog choices are `export`, `quit`, `marker` and `control`, for example:
+
+```sh
+cargo run -p limeshot-app --example ui_shot -- out/dialogs.png --dialog=control --tapper
+```
+
+Read the resulting PNG after UI edits. DAW offscreen captures of hosted VST3 plugins exercise the parameter
+fallback; native views require a live application and working capture/input permissions.
+
 In a checkout of the standalone suite source commit:
 
 ```sh

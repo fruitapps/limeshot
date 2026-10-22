@@ -949,6 +949,147 @@ tone low-pass, mix and output; factory presets. No oversampling yet (noted in th
 `EffectKind::Chorus` / `effects::Chorus` with a Mode choice: modulated delay (chorus, flanger with feedback) or a
 six-stage swept all-pass phaser; rate, depth, feedback, spread and mix; factory presets.
 
+### Session 16, part 23: sampler volume envelope (INS-014)
+
+`SamplerParams::attack_ms / decay_ms / sustain` feed the sampler voice's ADSR (it used only the release before);
+Channel Settings shows them above Release.
+
+
+### 2026-10-22 — Codex continuation: finish sampler volume envelope (INS-014)
+
+Resumed Claude's uncommitted part 23 in `/Users/sebastian/Developer/limeshot-s16` after its usage limit.
+Completed load sanitization for the new stages, backward-compatible defaults and serialization checks; exercised
+attack/decay/sustain at block sizes 1, 64, 333 and 1024. Added a headless UI regression covering each new control's
+reset and undo. Rendered and inspected Channel Settings; limited Attack/Decay readouts to one decimal so zero
+values fit the window. Updated architecture and the sampler's known limitations.
+
+Validation: `cargo test --workspace` (including 120 headless UI tests), workspace Clippy with warnings denied,
+`cargo fmt --all --check`, inventory validation and `git diff --check`. Offscreen UI:
+`cargo run -p limeshot-app --example ui_shot -- /tmp/limeshot-sampler-envelope.png --settings`.
+Delay/hold stages and envelopes for pan, cutoff and pitch remain open; native plugin embedding remains unverified.
+
+
+### 2026-10-22 — Codex continuation: platform CI audit
+
+Read the current runner jobs rather than treating cancelled workflow summaries as failed tests. Windows x86-64,
+Linux x86-64/ARM64, Windows ARM64 cross-build and an earlier Apple Silicon job passed; exact commits and job links
+are in `platform-validation.md`. Updated the stale platform feature records and current next steps. Intel jobs
+had no steps on the retired `macos-13` label, so switched that matrix entry to `macos-15-intel` following GitHub's
+retirement notice. Remote confirmation of the replacement is pending. No native GUI/audio-device claims added.
+Live UI verification was deferred at the owner's request while the Mac was locked.
+
+
+### 2026-10-22 — Codex continuation: control value context menus (UI-010)
+
+Channel/mixer volume and pan and built-in effect parameters now offer Reset, Copy value, Paste value and
+Type in value… alongside Create automation clip. The independent value clipboard stores normalised control
+position using the existing automation mappings. Typed values use percentages, mixer dB (-inf for silence) or
+the effect's units. Invalid/non-finite/out-of-range input and Cancel do not edit; applying, resetting and pasting
+use existing Commands and one undo step each. Controller linking, event editing, Init song and host value menus
+for instrument/plugin parameters remain open; UI-010 remains IN_PROGRESS.
+
+The context-menu tests exposed that an egui slider's display rounding could edit the project on mere hover.
+`user_changed` now requires input as well as a changed/interactive response. Tests cover copy without edits,
+normalised paste across pan/fader scales, undo, reset, typing validation, cancellation and deleted targets.
+
+Validation: `cargo test --workspace` (329 tests, including 122 headless UI tests), workspace Clippy with warnings
+denied, workspace build, rustfmt, inventory check (730 menus) and `git diff --check`. Rendered and inspected the
+new dialog with `ui_shot --mixer --dialog=control` (`/tmp/limeshot-control-value.png`). No live UI checks performed.
+
+
+### 2026-10-22 — Codex continuation: Auto scrolling (UI-016)
+
+Added a saved `settings.auto_scroll` switch shared by Options and the toolbar's painter arrow icon. It is off by
+default to preserve existing settings behavior. While enabled and playing, Playlist follows Song position and
+Piano Roll follows Pattern position, paging only when the playhead leaves view; a return to the loop/locate start
+brings the view back. Stopped transport and active editor drags leave the view alone. Thresholds are LimeShot's
+own, not a claim about FL's exact scroll algorithm. No shortcut was added.
+
+Tests cover both switches, no project edits, both editors' playback/return behavior, disabling follow and manual
+inspection while stopped, plus settings save/load and old settings defaults. The playback tests locate outside the
+viewport after sending the new pattern snapshot instead of depending on long wall-clock waits.
+
+Validation: `cargo test --workspace` (331 tests, 124 headless UI tests), workspace Clippy with warnings denied,
+rustfmt, inventory validation (189 settings, 730 menus) and `git diff --check`. Rendered and inspected the toolbar
+and Options switch using `ui_shot --menu=Options --auto-scroll` (`/tmp/limeshot-auto-scroll.png`).
+
+
+### 2026-10-22 — Codex new session: numbered saves and repository integrity
+
+Continued the clean `s16-automation` worktree at `ec46e8f`; attached draft PR #3. Full dispatch CI run 39826217710
+at `38d9a7b` has now passed all seven jobs, including native Intel macOS on `macos-15-intel`. Updated exact platform
+job evidence; no GUI/audio-device or PLG-006 verification claims were added. The owner still defers live UI checks.
+
+Completed APP-018: File › Save new version writes a numbered sibling, skips occupied files/directories and makes
+it active after success. A numeric trailing suffix increments; unsaved projects use Save as. Uses a complete,
+synced temporary file with no-clobber publishing, including concurrent saves. Original bytes, sample paths,
+modified-state/error behavior and undo history are covered. No shortcut was assigned (Cmd+N remains New).
+Rendered and inspected `/tmp/limeshot-save-version.png` with `ui_shot --menu=File`.
+
+Audited tracked/untracked/ignored files, duplicate content, references, manifests, fixtures and attribution.
+Removed an unused engine dev dependency; fixed stale current-facing docs and packaged missing font notices;
+added the offline repository-reference check to CI. No tracked file deletion was justified. Scope, cleanup decisions,
+checks and remaining questions are recorded in [repository-audit.md](repository-audit.md).
+
+Validation: 335 workspace tests pass (125 headless UI tests), Clippy with warnings denied, all-target build,
+rustfmt, inventories, repository-reference check and diff checks. Git object check passes. Rebuilt the macOS app
+and DMG; signature/plist/image checks, packaged font-text comparison and bundled CLI demo/reload render comparison
+pass. Native UI checks were not attempted. Continue with the latest PR CI and remaining roadmap priorities.
+
+### 2026-10-22 — Separate continuation: Channel Rack Zip / Unzip (SEQ-013)
+
+Started from pushed `origin/s16-automation` (`6fd1f41`) in a new managed worktree on
+`codex/channel-rack-zip`; the primary checkout and PR #3's branch were left intact. PR #3 remained open when checked,
+so this continuation targets `s16-automation` and depends on that PR. Its latest CI run `39830009498` was still in
+progress; no live UI checks were attempted while the owner's Mac is locked.
+
+Implemented Channel Rack › Zip selected (Alt+Z) and Unzip all (Alt+U), using Image-Line's documented actions and the
+existing clean-room menu captures. Compact named buttons select channels (Cmd/Shift-click toggles multiselection);
+right-click restores one row. Unzip all includes filtered-out channels. Zipping hides the graph for that row and
+finishes a held step/graph edit gesture before hiding its surface. State follows stable channel IDs across patterns
+and reordering, is pruned on deletion, and starts expanded for new/open projects. It is session-only; automatic
+zipping of empty channels and saved zip state remain unavailable.
+
+Three new headless regressions cover menu and shortcut actions, row spacing, selection, graph hiding, filtered rows,
+deletion/undo, all rows compacted, new-project reset, unchanged project/revision and a held step stroke followed by
+an independent undo step. SEQ-013 is VERIFIED for this scope. Updated shortcut help, canonical inventories,
+architecture, research notes and limitations. `ui_shot --zip` renders a reproducible compact-row view; inspected
+`/tmp/limeshot-rack-zip.png` offscreen.
+
+Validation: 338 workspace tests pass, including 128 headless UI tests; workspace all-target Clippy with warnings
+denied, all-target build, rustfmt, inventory/reference checks and `git diff --check`. Live plugin embedding remains
+IMPLEMENTED, not VERIFIED. Continue remaining editor View/context-menu work and P1 production gaps according to
+dependencies; native GUI/audio verification is still separate from CI.
+
+### 2026-10-22 — New session: automatic empty-channel zip and session PR policy
+
+Created managed worktree `rack-auto-zip/limeshot` from `origin/codex/channel-rack-zip` (`8488fae`) and new branch
+`codex/rack-auto-zip`. PRs #4 and #3 were still open, so this session's new draft PR targets `codex/channel-rack-zip`
+and depends on both. The primary checkout and previous continuation sources/branches were left intact. Recorded the
+owner's standing policy in AGENTS.md and next-steps.md before implementation: every new development session must
+create its own new branch and NEW draft PR, never append feature work to an earlier session's PR, and repeat this
+policy in future handoffs before these docs merge. Do not merge automatically or create further sessions unless asked.
+
+Completed the existing SEQ-013 / SET-089 automatic-zip follow-up. General › Miscellaneous › Auto zip empty channels
+is saved in application settings and defaults off. Switching patterns replaces the compact set for all channels,
+including filtered-out ones: no note data collapses; steps or melodic notes expand. Muted notes count as data.
+Enabling waits for the next switch, and manual Zip/Unzip or right-click restoration remains effective until another
+switch. Note edits do not continuously collapse a restored row. New/open projects start expanded. Deletion/undo
+fallback pattern switches are handled too; held step/graph edits end before switching their surface.
+
+Read Image-Line's General settings manual for the transition behavior; recorded unmeasured edge choices in the
+research notes. Updated canonical feature/setting inventories, UI architecture and known limitations. Four new
+headless tests cover the actual setting control, empty/step/melodic/muted-note patterns, filters, manual restoration,
+deletion/undo fallbacks, new-project reset, unchanged project/revision and held-stroke undo separation. Settings
+round-trip tests also cover the saved switch and old-file default. `ui_shot --auto-zip --prefs=General` produced
+`/tmp/limeshot-auto-zip.png`, inspected offscreen.
+
+Validation: 342 workspace tests pass, including 132 headless UI tests; all-target workspace Clippy with warnings
+denied, all-target build, rustfmt, feature/shortcut/setting/menu inventories, repository-reference check and diff
+checks pass. Reused the existing `limeshot-s16/target` build cache. Prior PR runs `39831714286` and `39830009498`
+were still in progress when checked; no CI failure was observed. Live/native checks remain deferred while the Mac
+is locked, and PLG-006 remains IMPLEMENTED, not VERIFIED. Continue current priorities in next-steps.md using a new
+branch and NEW draft PR for each future development session.
 
 ## 2026-10-22 — Lime Native standalone VST3 suite (PLG-012)
 

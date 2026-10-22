@@ -17,7 +17,10 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp target/release/limeshot target/release/limeshot-cli "$app/Contents/MacOS/"
 # Bundled samples: the app looks for them in ../Resources/samples next to its binary.
 cp -R assets/samples "$app/Contents/Resources/samples"
-cp LICENSE* ATTRIBUTION.md "$app/Contents/Resources/" 2>/dev/null || true
+cp LICENSE LICENSE-MIT LICENSE-APACHE ATTRIBUTION.md "$app/Contents/Resources/"
+# Fonts are embedded in the executable; their licence texts must travel with the app.
+mkdir -p "$app/Contents/Resources/licenses/fonts"
+cp assets/fonts/*.txt "$app/Contents/Resources/licenses/fonts/"
 
 cargo run --release -q -p limeshot-app --example make_icon -- "$dist/LimeShot.iconset"
 iconutil -c icns "$dist/LimeShot.iconset" -o "$app/Contents/Resources/LimeShot.icns"

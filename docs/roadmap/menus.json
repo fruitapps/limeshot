@@ -245,10 +245,10 @@
       "fl_keys": "Cmd+N",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "File › Save new version",
+      "status": "IMPLEMENTED",
       "feature": "APP-018",
-      "notes": "Saves name_2.flp, name_3.flp … next to the project."
+      "notes": "Numbered sibling, skips existing files; unsaved projects use Save as. No shortcut: Cmd+N remains New."
     },
     {
       "id": "MENU-015",
@@ -2998,10 +2998,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Auto scrolling",
+      "status": "IMPLEMENTED",
       "feature": "UI-016",
-      "notes": ""
+      "notes": "Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default."
     },
     {
       "id": "MENU-174",
@@ -5541,10 +5541,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › Auto scrolling — follow the playhead",
+      "status": "IMPLEMENTED",
       "feature": "UI-016",
-      "notes": ""
+      "notes": "Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default."
     },
     {
       "id": "MENU-319",
@@ -6175,10 +6175,10 @@
       "fl_keys": "Opt+Z",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › Zip selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-013",
-      "notes": ""
+      "notes": "2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013)."
     },
     {
       "id": "MENU-355",
@@ -6193,10 +6193,10 @@
       "fl_keys": "Opt+U",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › Unzip all",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-013",
-      "notes": ""
+      "notes": "2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013)."
     },
     {
       "id": "MENU-356",
@@ -13084,6 +13084,91 @@
       "status": "NOT_STARTED",
       "feature": "APP-021",
       "notes": ""
+    },
+    {
+      "id": "MENU-726",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Reset"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Reset",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-727",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Copy value"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Copy value",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-728",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Paste value"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Paste value",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-729",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Type in value…"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Type in value…",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-730",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Create automation clip"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Create automation clip",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
     }
   ],
   "lists": {

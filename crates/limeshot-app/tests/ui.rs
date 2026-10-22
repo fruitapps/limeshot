@@ -778,6 +778,379 @@ fn led(h: &Harness<'static, LimeShotApp>, c: ChannelId) -> Pos2 {
     h.state().ui.rack.led_pos(c).expect("selector LED drawn")
 }
 
+#[test]
+fn rack_zip_shortcuts_compact_selected_rows_and_right_click_restores_them() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let pid = h.state().current_pattern();
+    let before_y = led(&h, ids[2]).y;
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    h.state_mut().ui.rack.graph = Some(NoteProp::Velocity);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), 2);
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_none());
+    assert!(h.state().ui.rack.led_pos(ids[0]).is_none());
+    assert!(h.state().ui.rack.graph_rect.is_none(), "no graph over another row");
+    assert!(led(&h, ids[2]).y < before_y - 20.0, "compact rows reclaim space");
+    let compact = |h: &Harness<'static, LimeShotApp>, id| {
+        h.state()
+            .ui
+            .rack
+            .zipped_buttons
+            .iter()
+            .find(|(c, _)| *c == id)
+            .unwrap()
+            .1
+            .center()
+    };
+    let p = compact(&h, ids[0]);
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(h.state().selected_channels(), vec![ids[0]]);
+    let p = compact(&h, ids[1]);
+    click_with(&mut h, p, PointerButton::Primary, Modifiers::COMMAND);
+    assert_eq!(h.state().selected_channels(), vec![ids[0], ids[1]]);
+    let p = compact(&h, ids[0]);
+    click(&mut h, p, PointerButton::Secondary);
+    assert!(!h.state().ui.rack.zipped.contains(&ids[0]));
+    assert!(h.state().ui.rack.zipped.contains(&ids[1]));
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_some());
+    assert!(
+        h.query_by_label("Piano roll").is_none(),
+        "unzip does not open the channel menu"
+    );
+    let other_pattern = h.state().project().patterns[1].id;
+    h.state_mut().set_current_pattern(other_pattern);
+    h.step();
+    assert!(
+        h.state().ui.rack.zipped.contains(&ids[1]),
+        "zip follows the channel across patterns"
+    );
+    h.state_mut().set_current_pattern(pid);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty());
+    assert_eq!(led(&h, ids[2]).y, before_y);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(
+        h.state().doc.revision(),
+        revision,
+        "view changes leave undo history alone"
+    );
+}
+
+#[test]
+fn rack_zip_menu_and_filters_restore_hidden_rows_and_forget_deleted_channels() {
+    use limeshot_ui::channel_rack::RackFilter;
+    let mut h = harness(true);
+    let ids = order(&h);
+    h.state_mut().select_channel(ids[0]);
+    let button = h.state().ui.rack.menu_button.unwrap().center();
+    click(&mut h, button, PointerButton::Primary);
+    h.get_by_label_contains("Zip selected").click();
+    h.step();
+    assert!(h.state().ui.rack.zipped.contains(&ids[0]));
+    h.state_mut().exec(Command::SetChannelGroup {
+        channels: vec![ids[0]],
+        group: Some("Drums".into()),
+    });
+    h.state_mut().ui.rack.filter = RackFilter::Unsorted;
+    h.step();
+    assert!(h.state().ui.rack.zipped_buttons.is_empty());
+    let button = h.state().ui.rack.menu_button.unwrap().center();
+    click(&mut h, button, PointerButton::Primary);
+    h.get_by_label_contains("Unzip all").click();
+    h.step();
+    h.state_mut().ui.rack.filter = RackFilter::All;
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[0], 0).is_some(),
+        "unzip includes filtered-out rows"
+    );
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    h.state_mut().exec(Command::RemoveChannel(ids[0]));
+    h.step();
+    assert!(!h.state().ui.rack.zipped.contains(&ids[0]));
+    h.state_mut().doc.undo();
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[0], 0).is_some(),
+        "undo restores an accessible full row"
+    );
+    h.state_mut().ui.channel_selection = ids.clone();
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    assert!(h.state().ui.rack.step_strips.is_empty(), "all rows can be compacted");
+    assert_eq!(h.state().ui.rack.zipped_buttons.len(), ids.len());
+    h.state_mut().new_project();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty(), "new projects start expanded");
+}
+
+#[test]
+fn rack_zip_finishes_a_held_step_stroke_before_hiding_it() {
+    let mut h = harness(true);
+    let cid = h.state().project().channels[3].id;
+    let pid = h.state().current_pattern();
+    let p = h.state().ui.rack.step_pos(cid, 0).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    assert!(
+        h.state()
+            .project()
+            .pattern(pid)
+            .unwrap()
+            .step_note(cid, 60, 0)
+            .is_some()
+    );
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    press(&mut h, p, PointerButton::Primary, false);
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    let p = h.state().ui.rack.step_pos(cid, 1).unwrap();
+    click(&mut h, p, PointerButton::Primary);
+    let pattern = h.state().project().pattern(pid).unwrap();
+    assert!(pattern.step_note(cid, 60, 0).is_some());
+    assert!(pattern.step_note(cid, 60, 1).is_some());
+    h.state_mut().doc.undo();
+    let pattern = h.state().project().pattern(pid).unwrap();
+    assert!(
+        pattern.step_note(cid, 60, 0).is_some(),
+        "the earlier stroke is a separate undo step"
+    );
+    assert!(pattern.step_note(cid, 60, 1).is_none());
+}
+
+#[test]
+fn rack_auto_zip_setting_is_off_by_default_and_does_not_edit_the_project() {
+    let mut h = harness(true);
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    assert!(!h.state().settings.auto_zip_empty_channels);
+    h.get_by_label("Options").click();
+    h.step();
+    h.get_by_label_contains("General settings").click();
+    h.step();
+    h.get_by_label("Auto zip empty channels").click();
+    h.step();
+    assert!(h.state().settings.auto_zip_empty_channels);
+    assert!(
+        h.state().ui.rack.zipped.is_empty(),
+        "applies on the next pattern switch"
+    );
+    h.get_by_label("Auto zip empty channels").click();
+    h.step();
+    assert!(!h.state().settings.auto_zip_empty_channels);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(h.state().doc.revision(), revision);
+}
+
+#[test]
+fn rack_auto_zip_follows_pattern_notes_and_preserves_manual_restoration_between_switches() {
+    use limeshot_ui::channel_rack::RackFilter;
+    let mut h = harness(true);
+    let ids = order(&h);
+    let original = h.state().current_pattern();
+    let sparse = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Sparse".into() })
+            .unwrap(),
+    );
+    let empty = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Empty".into() })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetStep {
+        pattern: sparse,
+        channel: ids[0],
+        step: 0,
+        on: true,
+    });
+    let note = NoteId(
+        h.state_mut()
+            .exec(Command::AddNote {
+                pattern: sparse,
+                note: NewNote {
+                    channel: ids[1],
+                    key: 73,
+                    start: 123,
+                    length: 700,
+                    velocity: 0.8,
+                },
+            })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetNotesMuted {
+        pattern: sparse,
+        notes: vec![note],
+        muted: true,
+    });
+    h.state_mut().exec(Command::SetChannelGroup {
+        channels: vec![ids[2]],
+        group: Some("Hidden".into()),
+    });
+    h.state_mut().ui.rack.filter = RackFilter::Unsorted;
+    h.state_mut().ui.rack.zipped.insert(ids[0]);
+    h.state_mut().set_current_pattern(sparse);
+    assert!(
+        h.state().ui.rack.zipped.contains(&ids[0]),
+        "disabled leaves manual state alone"
+    );
+    h.state_mut().set_current_pattern(original);
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.iter().copied().collect::<Vec<_>>(), ids[2..]);
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_some());
+    assert!(
+        h.state().ui.rack.step_pos(ids[1], 0).is_some(),
+        "muted melodic note data is nonempty"
+    );
+    h.state_mut().ui.rack.filter = RackFilter::All;
+    h.step();
+    let p = h
+        .state()
+        .ui
+        .rack
+        .zipped_buttons
+        .iter()
+        .find(|(c, _)| *c == ids[2])
+        .unwrap()
+        .1
+        .center();
+    click(&mut h, p, PointerButton::Secondary);
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[2], 0).is_some(),
+        "same-pattern selection keeps restoration"
+    );
+    h.state_mut().set_current_pattern(empty);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty());
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len() - 2);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(h.state().doc.revision(), revision);
+    h.state_mut().settings.auto_zip_empty_channels = false;
+    h.state_mut().set_current_pattern(empty);
+    assert!(
+        !h.state().ui.rack.zipped.contains(&ids[0]),
+        "disabled preserves the current view"
+    );
+    h.state_mut().new_project();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty(), "new projects start expanded");
+}
+
+#[test]
+fn rack_auto_zip_handles_pattern_deletion_and_undo_fallbacks() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let original = h.state().current_pattern();
+    let empty = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Empty".into() })
+            .unwrap(),
+    );
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    h.state_mut().set_current_pattern(empty);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+    h.state_mut().exec(Command::RemovePattern(empty));
+    h.step();
+    assert_eq!(h.state().current_pattern(), original);
+    assert!(
+        !h.state().ui.rack.zipped.contains(&ids[0]),
+        "fallback expands populated rows"
+    );
+    h.state_mut().doc.undo();
+    h.step();
+    assert_eq!(h.state().current_pattern(), empty);
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+}
+
+#[test]
+fn rack_auto_zip_finishes_a_held_stroke_in_the_old_pattern() {
+    let mut h = harness(true);
+    let cid = h.state().project().channels[3].id;
+    let old = h.state().current_pattern();
+    let next = PatternId(h.state_mut().exec(Command::AddPattern { name: "Next".into() }).unwrap());
+    // Keep the destination rows expanded so the held strip keeps receiving pointer input.
+    let channels: Vec<_> = h.state().project().channels.iter().map(|c| c.id).collect();
+    for channel in channels {
+        h.state_mut().exec(Command::SetStep {
+            pattern: next,
+            channel,
+            step: 8,
+            on: true,
+        });
+    }
+    let next_before = h.state().project().pattern(next).unwrap().clone();
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    let p = h.state().ui.rack.step_pos(cid, 0).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    press(&mut h, p, PointerButton::Secondary, true);
+    let history = h.state().doc.history().len();
+    h.state_mut().set_current_pattern(next);
+    h.step();
+    let p = h.state().ui.rack.step_pos(cid, 1).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
+    press(&mut h, p, PointerButton::Primary, false);
+    h.step();
+    assert_eq!(
+        h.state().project().pattern(next).unwrap(),
+        &next_before,
+        "releasing one button must not unblock a stroke while another is held"
+    );
+    press(&mut h, p, PointerButton::Secondary, false);
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
+    assert_eq!(h.state().doc.history().len(), history);
+    click(&mut h, p, PointerButton::Primary);
+    assert!(
+        h.state()
+            .project()
+            .pattern(next)
+            .unwrap()
+            .step_note(cid, 60, 1)
+            .is_some()
+    );
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
+    let pattern = h.state().project().pattern(old).unwrap();
+    assert!(
+        pattern.step_note(cid, 60, 0).is_some(),
+        "old stroke is its own undo step"
+    );
+    assert!(pattern.step_note(cid, 60, 1).is_none());
+}
+
 fn order(h: &Harness<'static, LimeShotApp>) -> Vec<ChannelId> {
     h.state().project().channels.iter().map(|c| c.id).collect()
 }
@@ -5410,4 +5783,318 @@ fn an_audio_take_becomes_an_audio_clip() {
     );
     // Audio recording is off until the Audio filter is chosen.
     assert!(!h.state().ui.record.audio);
+}
+
+/// INS-014: sampler envelope controls reset through commands and remain undoable.
+#[test]
+fn sampler_envelope_controls_reset_and_undo() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    let Instrument::Sampler(mut params) = h.state().project().channels[0].instrument.clone() else {
+        panic!("demo sampler expected");
+    };
+    params.attack_ms = 500.0;
+    params.decay_ms = 800.0;
+    params.sustain = 0.3;
+    h.state_mut().exec(Command::SetInstrument {
+        channel,
+        instrument: Instrument::Sampler(params.clone()),
+    });
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    h.step();
+    h.step();
+    for label in ["Attack", "Decay", "Sustain"] {
+        let rect = h.get_by_label(label).rect();
+        double_click(&mut h, egui::pos2(rect.right() + 30.0, rect.center().y));
+        let Instrument::Sampler(p) = &h.state().project().channels[0].instrument else {
+            panic!("sampler expected");
+        };
+        match label {
+            "Attack" => assert_eq!(p.attack_ms, 0.0),
+            "Decay" => assert_eq!(p.decay_ms, 0.0),
+            "Sustain" => assert_eq!(p.sustain, 1.0),
+            _ => unreachable!(),
+        }
+        // The first click can move the slider before the second click resets it.
+        assert!(h.state_mut().doc.undo());
+        if h.state().project().channels[0].instrument != Instrument::Sampler(params.clone()) {
+            assert!(h.state_mut().doc.undo());
+        }
+        h.step();
+        assert_eq!(
+            h.state().project().channels[0].instrument,
+            Instrument::Sampler(params.clone())
+        );
+    }
+}
+
+fn mixer_control_menu(h: &mut Harness<'static, LimeShotApp>, label: &str) {
+    let r = h
+        .get_all_by_label(label)
+        .map(|n| n.rect())
+        .max_by(|a, b| a.width().total_cmp(&b.width()))
+        .expect("mixer control");
+    click(h, r.left_center() + vec2(20.0, 0.0), PointerButton::Secondary);
+    h.step();
+}
+
+#[test]
+fn control_menus_copy_paste_reset_and_undo() {
+    let mut h = mixer_harness(1);
+    let original_volume = h.state().project().mixer.tracks[1].volume;
+    h.state_mut().exec(Command::SetMixerPan { track: 1, pan: -0.5 });
+    h.step();
+    let history = h.state().doc.history().len();
+    mixer_control_menu(&mut h, "Pan");
+    h.get_by_label("Copy value").click();
+    h.step();
+    assert_eq!(h.state().control_clipboard, Some(0.25));
+    assert_eq!(h.state().doc.history().len(), history, "copy does not edit the project");
+    // Paste transfers the normalised control position onto the fader's cubic scale.
+    mixer_control_menu(&mut h, "Volume");
+    h.get_by_label("Paste value").click();
+    h.step();
+    assert!((h.state().project().mixer.tracks[1].volume - 0.03125).abs() < 1e-6);
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].volume, original_volume);
+    mixer_control_menu(&mut h, "Pan");
+    {
+        use egui_kittest::kittest::NodeT;
+        h.get_all_by_label("Reset")
+            .find(|n| !n.accesskit_node().is_disabled())
+            .expect("control menu Reset")
+            .click();
+    }
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].pan, 0.0);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().mixer.tracks[1].pan, -0.5);
+}
+
+#[test]
+fn control_value_dialog_validates_commits_once_and_cancels() {
+    let mut h = mixer_harness(1);
+    let original_volume = h.state().project().mixer.tracks[1].volume;
+    let history = h.state().doc.history().len();
+    mixer_control_menu(&mut h, "Volume");
+    h.get_by_label("Type in value…").click();
+    h.step();
+    assert!(matches!(
+        h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::ControlValue { .. })
+    ));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("NaN".into()));
+    h.step();
+    h.key_press(Key::Enter);
+    h.step();
+    assert!(h.state().dialog.is_some(), "invalid input keeps the dialog open");
+    assert_eq!(h.state().doc.history().len(), history);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("-12".into()));
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert!((h.state().project().mixer.tracks[1].volume - limeshot_dsp::db_to_gain(-12.0)).abs() < 1e-5);
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].volume, original_volume);
+    mixer_control_menu(&mut h, "Pan");
+    h.get_by_label("Type in value…").click();
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("50".into()));
+    h.step();
+    h.get_by_label("Cancel").click();
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert_eq!(h.state().project().mixer.tracks[1].pan, 0.0);
+    assert_eq!(h.state().doc.history().len(), history);
+}
+
+#[test]
+fn auto_scrolling_switches_follow_each_other_without_editing_the_project() {
+    let mut h = harness(false);
+    assert!(!h.state().settings.auto_scroll);
+    h.get_by_label("Auto scrolling — follow the playhead").click();
+    h.step();
+    assert!(h.state().settings.auto_scroll);
+    let options = h.get_by_label("Options").rect().center();
+    click(&mut h, options, PointerButton::Primary);
+    h.step();
+    h.get_all_by_label_contains("Auto scrolling")
+        .find(|n| n.rect().top() > 90.0)
+        .expect("Options menu switch")
+        .click();
+    h.step();
+    assert!(!h.state().settings.auto_scroll);
+    assert!(!h.state().doc.is_modified());
+    assert!(h.state().doc.history().is_empty());
+}
+
+/// UI-016: locate beyond the viewport instead of waiting for wall-clock playback to get there.
+#[test]
+fn auto_scrolling_follows_playback_and_loop_returns_only_when_enabled() {
+    use limeshot_engine::PlayMode;
+    for (mode, window) in [(PlayMode::Pattern, Win::PianoRoll), (PlayMode::Song, Win::Playlist)] {
+        let mut h = harness(true);
+        let channel = h.state().project().channels[0].id;
+        let pattern = h.state().current_pattern();
+        h.state_mut().select_channel(channel);
+        h.state_mut().exec(Command::SetPatternLength {
+            pattern,
+            steps: Some(128),
+        });
+        h.state_mut().doc.mark_saved();
+        h.state_mut().ui.workspace.close(Win::ChannelRack);
+        h.state_mut().show_window(window);
+        h.state_mut().ui.workspace.state_mut(window).maximized = true;
+        h.state_mut().ui.piano.zoom_x = 160.0;
+        h.state_mut().ui.playlist.zoom_x = 160.0;
+        h.state_mut().set_auto_scroll(true);
+        h.state_mut().set_mode(mode);
+        let target = 16 * PPQ;
+        h.step(); // send the new pattern length before locating beyond the original loop
+        h.state_mut().locate(target);
+        wait_for(&mut h, "locate before playback", |a| {
+            a.player.status().position() == target
+        });
+        h.step();
+        let scroll = |a: &LimeShotApp| {
+            if mode == PlayMode::Pattern {
+                a.ui.piano.scroll.x
+            } else {
+                a.ui.playlist.scroll.x
+            }
+        };
+        assert_eq!(scroll(h.state()), 0.0, "stopped editors do not follow");
+        h.state_mut().toggle_play();
+        wait_for(&mut h, "playback", |a| a.is_playing());
+        h.step();
+        assert!(scroll(h.state()) > 0.0, "the active editor follows");
+        let position = h.state().player.status().position();
+        let (x, grid) = if mode == PlayMode::Pattern {
+            let g = h.state().ui.piano.geometry.expect("piano");
+            (g.pos(position, 60).x, g.grid)
+        } else {
+            let g = h.state().ui.playlist.geometry.expect("playlist");
+            (g.pos(position, 0).x, g.grid)
+        };
+        assert!(x >= grid.left() && x <= grid.right(), "the playhead is visible");
+        h.state_mut().set_auto_scroll(false);
+        h.state_mut().ui.piano.scroll.x = 0.0;
+        h.state_mut().ui.playlist.scroll.x = 0.0;
+        h.step();
+        h.step();
+        assert_eq!(scroll(h.state()), 0.0, "switch off leaves the view alone");
+        h.state_mut().set_auto_scroll(true);
+        h.step();
+        assert!(scroll(h.state()) > 0.0);
+        h.state_mut().locate(0);
+        wait_for(&mut h, "return to the start", |a| a.player.status().position() < PPQ);
+        h.step();
+        assert_eq!(scroll(h.state()), 0.0, "loop/locate returns bring the view back");
+        h.state_mut().stop();
+        wait_for(&mut h, "stop", |a| !a.is_playing());
+        h.state_mut().ui.piano.scroll.x = 1000.0;
+        h.state_mut().ui.playlist.scroll.x = 1000.0;
+        h.step();
+        assert_eq!(scroll(h.state()), 1000.0, "manual inspection works while stopped");
+        assert!(!h.state().doc.is_modified());
+    }
+}
+
+#[test]
+fn playlist_auto_scroll_pauses_during_ruler_gestures() {
+    for marker in [false, true] {
+        let mut h = playlist_harness();
+        let bar = h.state().project().time_signature.ticks_per_bar();
+        if marker {
+            h.state_mut().exec(Command::AddMarker {
+                tick: 0,
+                name: "Intro".into(),
+            });
+        }
+        h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+        h.state_mut().set_auto_scroll(true);
+        h.state_mut().locate(0);
+        wait_for(&mut h, "locate", |a| a.player.status().position() == 0);
+        h.state_mut().toggle_play();
+        wait_for(&mut h, "playback", |a| a.is_playing());
+        h.step();
+        let g = h.state().ui.playlist.geometry.unwrap();
+        let from = if marker {
+            h.state().ui.playlist.marker_rects[0].1.center()
+        } else {
+            egui::pos2(g.pos(bar, 0).x, g.grid.top() - 24.0)
+        };
+        let mods = if marker { Modifiers::NONE } else { Modifiers::COMMAND };
+        h.event(Event::ModifiersChanged(mods));
+        h.event(Event::PointerMoved(from));
+        h.event(Event::PointerButton {
+            pos: from,
+            button: PointerButton::Primary,
+            pressed: true,
+            modifiers: mods,
+        });
+        h.step();
+        // Move the view away from the playing position while the ruler gesture is held.
+        h.state_mut().ui.playlist.scroll.x = 1000.0;
+        h.event(Event::PointerMoved(from + vec2(20.0, 0.0)));
+        h.step();
+        h.step();
+        assert_eq!(h.state().ui.playlist.scroll.x, 1000.0, "marker drag: {marker}");
+        h.event(Event::PointerButton {
+            pos: from + vec2(20.0, 0.0),
+            button: PointerButton::Primary,
+            pressed: false,
+            modifiers: mods,
+        });
+        h.event(Event::ModifiersChanged(Modifiers::NONE));
+        h.step();
+        h.state_mut().stop();
+    }
+}
+
+#[test]
+fn save_new_version_from_file_menu_keeps_previous_project_and_undo_history() {
+    let dir = tempfile::tempdir().expect("dir");
+    let original = dir.path().join("beat.lime");
+    let mut h = harness(true);
+    assert!(h.state_mut().save_to(&original));
+    let previous = std::fs::read(&original).expect("saved file");
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(103.0)));
+    let revision = h.state().doc.revision();
+    let undo = h.state().doc.undo_label();
+    h.step();
+    let file = h.get_by_label("File").rect().center();
+    click(&mut h, file, PointerButton::Primary);
+    h.get_by_label_contains("Save new version").click();
+    h.step();
+    let next = dir.path().join("beat_2.lime");
+    assert_eq!(h.state().path.as_ref(), Some(&next));
+    assert_eq!(h.state().settings.recent.first(), Some(&next));
+    assert!(!h.state().doc.is_modified());
+    assert_eq!(h.state().doc.revision(), revision);
+    assert_eq!(h.state().doc.undo_label(), undo);
+    assert_eq!(std::fs::read(&original).expect("original"), previous);
+    assert_eq!(
+        limeshot_project::load(&next).expect("new version").tempo,
+        Tempo::from_bpm(103.0)
+    );
+    assert!(h.state_mut().doc.undo(), "undo previous edit");
+    assert!(h.state().doc.is_modified());
+    assert_ne!(h.state().project().tempo, Tempo::from_bpm(103.0));
+
+    // A failed save retains the active path and unsaved state.
+    let unavailable = dir.path().join("missing/beat.lime");
+    h.state_mut().path = Some(unavailable.clone());
+    assert!(!h.state_mut().save_new_version());
+    assert_eq!(h.state().path.as_ref(), Some(&unavailable));
+    assert!(h.state().doc.is_modified());
 }

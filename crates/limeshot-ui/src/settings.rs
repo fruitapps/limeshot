@@ -16,6 +16,10 @@ pub struct Settings {
     /// Extra folders shown in the Browser.
     pub browser_folders: Vec<PathBuf>,
     pub ui_scale: f32,
+    /// Options / toolbar: keep the active editor's playhead visible while playing.
+    pub auto_scroll: bool,
+    /// Collapse channels without note data when switching patterns.
+    pub auto_zip_empty_channels: bool,
     /// Minutes between autosaves of unsaved changes; 0 turns autosave off.
     pub autosave_minutes: u32,
     /// Ask before deleting channels (turned off by "Remember my choice").
@@ -38,6 +42,8 @@ impl Default for Settings {
             recent: Vec::new(),
             browser_folders: Vec::new(),
             ui_scale: 1.0,
+            auto_scroll: false,
+            auto_zip_empty_channels: false,
             autosave_minutes: 5,
             confirm_channel_delete: true,
             custom_layout: None,
@@ -112,12 +118,24 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let f = dir.path().join("s.json");
         let mut s = Settings::default();
+        assert!(
+            !serde_json::from_str::<Settings>("{}")
+                .expect("old settings")
+                .auto_scroll
+        );
         for i in 0..15 {
             s.add_recent(Path::new(&format!("/p/{i}.lime")));
         }
         s.add_recent(Path::new("/p/3.lime"));
         assert_eq!(s.recent.len(), MAX_RECENT);
         assert_eq!(s.recent[0], Path::new("/p/3.lime"));
+        assert!(
+            !serde_json::from_str::<Settings>("{}")
+                .expect("old settings")
+                .auto_zip_empty_channels
+        );
+        s.auto_scroll = true;
+        s.auto_zip_empty_channels = true;
         s.save_to(&f).expect("save");
         assert_eq!(Settings::load_from(&f), s);
         std::fs::write(&f, "garbage").expect("write");

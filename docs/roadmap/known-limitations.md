@@ -5,11 +5,13 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
   headless under Rosetta, but its GUI and audio were not exercised.
-* Windows and Linux: CI jobs exist, but complete CI runtime verification is pending (jobs now run; the owner supplied a macOS test failure on 2026-10-22). Windows type-checks
-  locally. Linux was not built.
+* Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64 passes a cross-build.
+  Native GUI/audio-device checks remain open. Intel headless CI now passes on `macos-15-intel`.
+  See [platform-validation.md](../development/platform-validation.md) for commit-specific evidence.
 
 ## Audio
-* Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
+* No ASIO, JACK or surround output (extra device channels are silent). Audio recording is implemented;
+  real input-device validation remains open.
 * Switching output devices was tested only with the default device.
 * MIDI input plays the selected channel from one device; it was checked with a virtual port, not a hardware
   keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes and (with the Audio filter) the audio input;
@@ -25,12 +27,12 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   Studio's exact curve shapes were not measured).
 * Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song
   mode only; no tempo automation (one project tempo), no synth/sampler parameter automation, single-curve segments
-  only. Automated controls do not move on screen, except inside a plugin's own editor. Add › Automation for last
+  only. Channel/mixer and built-in effect controls follow automation on screen; host plugin parameter sliders do not. Add › Automation for last
   tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
   height.
-* Audio clips are not time-stretched; there are no crossfades or fades on clip edges.
-* Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
-  aliasing when pitched far up).
+* Audio clips are not time-stretched; there are no automatic crossfades. Manual clip-edge fades are implemented.
+* Sampler: volume ADSR, loop points and a low-pass filter are available. No envelope delay/hold stages or
+  panning, cutoff or pitch envelopes; no time stretching. Linear interpolation aliases when pitched far up.
 * LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
   glide are not available.
 * The voice pool is fixed at 128 voices; the oldest voice is stolen abruptly (no fade).
@@ -38,7 +40,9 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
 ## Editing
-* Clipboard is app-internal (not the system clipboard). Quantize… has start and duration strength only (no swing templates). Swing is
+* Clipboard is app-internal (not the system clipboard). The separate value clipboard supports channel/mixer volume/pan
+  and built-in effect parameters; instrument and hosted-plugin host value menus, Edit events, Init song and controller
+  linking remain unavailable. Cross-control paste uses LimeShot's automation mappings. Quantize… has start and duration strength only (no swing templates). Swing is
   global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
   menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
@@ -53,24 +57,29 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The Playback tool scrubs notes only: the Playlist's line sounds the pattern clips' notes under it, not audio clips
   (no audio scrubbing). Notes start from their beginning when the line reaches them. FL Studio's Playback tool plays
   on from the pointer instead; LimeShot scrubs at the owner's request.
+* Auto scrolling follows the existing playheads: Playlist in Song mode and Piano Roll in Pattern mode only.
+  It starts off; enable it from Options or the toolbar. Paging thresholds are LimeShot's own.
 * Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
-* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Its ⏵ menu has no Zip /
-  Unzip, layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
+* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Zip selected / Unzip all
+  and right-click restoration are available. General settings can automatically zip empty channels on pattern switches;
+  it waits for a switch after enabling, counts muted notes as data and leaves manual restoration usable until the
+  next switch. Zip state is session-only; new/open projects start expanded. No live FL timing/parity pass performed.
+  Its ⏵ menu has no layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
 * The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
   Playlist-only and not saved with the project. No performance mode.
-* No MIDI devices or MIDI recording. MIDI files: notes, tempo and time signature only; exported files were only read
+* MIDI files: notes, tempo and time signature only; exported files were only read
   back by LimeShot's own reader.
 * There is no confirmation when deleting a pattern (undo restores it). Channel deletion asks first, as in FL Studio;
   once "Remember my choice" is ticked the question can only be turned back on in `settings.json`.
 * The channel selection is not saved with the project (FL Studio saves it).
 
 ## Project and app
-* No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
+* Save new version is available from File only; it has no shortcut. No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
   (`docs/roadmap/keybindings.json`). The tabbed Settings window exposes implemented settings; FL-only controls remain absent or disabled (`docs/roadmap/settings.json`).
 * The main menus and editor menus implement a subset of FL Studio actions. Tools, pattern commands and layouts exist;
-  recording, templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
+  templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
 * One autosave slot per user: two LimeShot instances share it.
 * `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
   pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer

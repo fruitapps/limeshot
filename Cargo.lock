@@ -2103,7 +2103,6 @@ dependencies = [
  "limeshot-core",
  "limeshot-dsp",
  "limeshot-sequencer",
- "tempfile",
  "thiserror 2.0.21",
 ]
 

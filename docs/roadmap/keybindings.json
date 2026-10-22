@@ -332,7 +332,7 @@
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "APP-018",
-      "notes": "LimeShot uses Cmd+N for New (platform convention); a new-version shortcut is still to be chosen."
+      "notes": "File menu action is implemented. LimeShot keeps Cmd+N for New; a new-version shortcut remains unassigned."
     },
     {
       "id": "KB-031",
@@ -1565,6 +1565,17 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "FL 2026.1.1 Channel Rack menu (menus.json). Session 16."
+    },
+    {
+      "id": "KB-143",
+      "context": "Channel Rack",
+      "action": "Zip selected / unzip all channels",
+      "fl_keys": "Alt+Z / Alt+U",
+      "confidence": "VERIFIED",
+      "limeshot_keys": "Alt+Z / Alt+U",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-013",
+      "notes": "Image-Line Channel Rack manual, Zip selected / Unzip all. Headless tests cover both bindings."
     }
   ]
 }

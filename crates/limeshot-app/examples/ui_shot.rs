@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -24,6 +24,21 @@ fn main() {
         if let Some(c) = app.project().channels.get(3).map(|c| c.id) {
             app.select_channel(c);
         }
+    }
+    if args.iter().any(|a| a == "--auto-scroll") {
+        app.set_auto_scroll(true);
+    }
+    if args.iter().any(|a| a == "--auto-zip") {
+        app.settings.auto_zip_empty_channels = true;
+        if let Some(id) = app.project().patterns.get(1).map(|p| p.id) {
+            app.set_current_pattern(id);
+        }
+    }
+    if args.iter().any(|a| a == "--zip") {
+        app.ui
+            .rack
+            .zipped
+            .extend(app.project().channels.iter().take(2).map(|c| c.id).collect::<Vec<_>>());
     }
     if args.iter().any(|a| a == "--markers") {
         // Two time markers and a time selection over bars 3–4, Channel Rack closed.
@@ -232,6 +247,10 @@ fn main() {
     if let Some(dialog) = args.iter().find_map(|a| a.strip_prefix("--dialog=")) {
         use limeshot_ui::dialogs::Dialog;
         app.dialog = match dialog {
+            "control" => Some(Dialog::ControlValue {
+                target: limeshot_core::AutomationTarget::MixerVolume(1),
+                text: "-12".into(),
+            }),
             "export" => Some(Dialog::export(&app)),
             "quit" => Some(Dialog::ConfirmDiscard(limeshot_ui::app::Pending::Quit)),
             "marker" => limeshot_ui::playlist::add_marker(&mut app, 0).map(|id| Dialog::rename_marker(&app, id)),
