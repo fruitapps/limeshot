@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 77, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 33, NOT_PLANNED 2
+Tracked: **118** — IMPLEMENTED 78, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 32, NOT_PLANNED 2
 
 ## Global
 
@@ -29,7 +29,7 @@ Tracked: **118** — IMPLEMENTED 77, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-013 | Mixer | `F9` | VERIFIED | `F9` | IMPLEMENTED | UI-002 |  |
 | KB-014 | Browser | `Alt+F8` | VERIFIED | `Alt+F8` | IMPLEMENTED | UI-001 |  |
 | KB-015 | MIDI settings | `F10` | OBSERVED | — | NOT_STARTED | APP-020 | Seen in the main menu on macOS (session 13, menus.json). |
-| KB-016 | Project info | `F11` | OBSERVED | — | NOT_STARTED | APP-017 | Seen in the main menu on macOS (session 13, menus.json). |
+| KB-016 | Project info | `F11` | OBSERVED | `F11` | IMPLEMENTED | APP-017 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-017 | Close all windows | `F12` | VERIFIED | `F12` | IMPLEMENTED | UI-013 | View › Close all windows (MENU-123): the editors and the plugin windows. |
 | KB-018 | Close the focused window | `Esc` | VERIFIED | — | NOT_STARTED | UI-002 | Esc closes menus and dialogs only. |
 | KB-019 | Maximise the Playlist | `Enter` | VERIFIED | — | NOT_STARTED | UI-002 |  |

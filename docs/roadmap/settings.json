@@ -352,7 +352,7 @@
       "limeshot_setting": "settings.audio.device",
       "status": "IMPLEMENTED",
       "feature": "APP-012",
-      "notes": "FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Audio settings show the open device, rate and plugin delay compensation."
+      "notes": "FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Settings › Audio status shows the open device, rate, buffer and plugin delay compensation."
     },
     {
       "id": "SET-003",
@@ -562,7 +562,7 @@
       "limeshot_setting": "settings.ui_scale",
       "status": "IMPLEMENTED",
       "feature": "UI-005",
-      "notes": "FL: 'Main GUI scaling' plus a 'Define 1 inch / 2.54 cm or set display's PPI' slider; LimeShot scales live with View › Zoom."
+      "notes": "Settings › General › Display: 75–200 %; also Cmd+= / Cmd+- / Cmd+0. Applies at once (FL needs a restart)."
     },
     {
       "id": "SET-058",
@@ -1458,7 +1458,7 @@
       "limeshot_setting": "settings.autosave_minutes",
       "status": "IMPLEMENTED",
       "feature": "APP-024",
-      "notes": "LimeShot: Options › Autosave (off, 1, 2, 5, 10 minutes)."
+      "notes": "Settings › File › Backup: Off / every 1, 2, 5 or 10 minutes (FL's choices differ)."
     },
     {
       "id": "SET-118",
@@ -1528,7 +1528,7 @@
       "limeshot_setting": "settings.browser_folders",
       "status": "IMPLEMENTED",
       "feature": "BR-001",
-      "notes": "FL lets each folder carry its own Browser name."
+      "notes": "Settings › File: listed with × to remove and Add folder…; also the Browser's + button."
     },
     {
       "id": "SET-121",
@@ -1626,7 +1626,7 @@
       "limeshot_setting": "settings.recent",
       "status": "IMPLEMENTED",
       "feature": "APP-010",
-      "notes": "Last 10 projects."
+      "notes": "Settings › File › Recent files lists them, with Clear list; also File › Recent projects."
     },
     {
       "id": "SET-015",
@@ -1959,10 +1959,10 @@
       "fl_default": "empty",
       "fl_reference": "Options › Project info (F11) › Project info (title, author, genre, comments)",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "IN_PROGRESS",
+      "limeshot_setting": "project.info",
+      "status": "IMPLEMENTED",
       "feature": "APP-017",
-      "notes": "Title, Author, Genre (with a list), Comments (multi-line), Web link."
+      "notes": "Settings › Info (F11): Title, Author, Genre, Comments, Web link; typing in a field is one undo step. Saved in the .lime."
     },
     {
       "id": "SET-146",
@@ -1987,10 +1987,10 @@
       "fl_default": "",
       "fl_reference": "Options › Project info (F11) › Project statistics",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "project.info",
+      "status": "IMPLEMENTED",
       "feature": "APP-033",
-      "notes": "'This project was started on …, last saved in <version>', total time spent, plugins/channels/mixer tracks, arrangements/playlist tracks/clips/notes."
+      "notes": "Counts of plugins, channels, mixer tracks, patterns, Playlist tracks and clips, and notes under the Info fields. No dates or working time (APP-033)."
     },
     {
       "id": "SET-148",
@@ -2046,7 +2046,7 @@
       "limeshot_setting": "",
       "status": "IN_PROGRESS",
       "feature": "APP-032",
-      "notes": "LimeShot: Help › About LimeShot."
+      "notes": "Settings › About: version, licence and the trademark note (Help › About LimeShot opens it)."
     },
     {
       "id": "SET-152",
@@ -2634,7 +2634,7 @@
       "limeshot_setting": "settings.confirm_channel_delete",
       "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": "Turned off by ticking \"Remember my choice\"; no way to turn it back on yet except editing settings.json (APP-025)."
+      "notes": "Settings › General › Hints and warnings: 'Ask before deleting channels'."
     }
   ]
 }

@@ -2675,10 +2675,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Options › Audio settings…",
+      "limeshot": "Options › Audio settings",
       "status": "IMPLEMENTED",
-      "feature": "APP-012",
-      "notes": "Opens: settings.json page 'Audio' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "feature": "APP-025",
+      "notes": "Opens the settings window on the Audio tab."
     },
     {
       "id": "MENU-155",
@@ -2692,10 +2692,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › General settings",
+      "status": "IMPLEMENTED",
       "feature": "APP-025",
-      "notes": "Opens: settings.json page 'General' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "notes": "Settings window, General tab."
     },
     {
       "id": "MENU-156",
@@ -2709,10 +2709,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › File settings",
+      "status": "IMPLEMENTED",
       "feature": "APP-025",
-      "notes": "Opens: settings.json page 'File' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "notes": "Settings window, File tab."
     },
     {
       "id": "MENU-157",
@@ -2760,10 +2760,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "APP-030",
-      "notes": "Opens: settings.json page 'Project' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "limeshot": "Options › Project general settings",
+      "status": "IMPLEMENTED",
+      "feature": "APP-025",
+      "notes": "Settings window, Project tab (time signature)."
     },
     {
       "id": "MENU-160",
@@ -2777,10 +2777,10 @@
       "fl_keys": "F11",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Project info",
+      "status": "IMPLEMENTED",
       "feature": "APP-017",
-      "notes": "Opens: settings.json page 'Info' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "notes": "Settings window, Info tab (F11)."
     },
     {
       "id": "MENU-161",
@@ -4799,7 +4799,7 @@
       "limeshot": "Help › About LimeShot",
       "status": "DIFFERENT",
       "feature": "APP-032",
-      "notes": ""
+      "notes": "Opens the settings window's About tab; LimeShot names itself in the label."
     },
     {
       "id": "MENU-277",

@@ -65,11 +65,14 @@ pub struct UiState {
     pub browser: browser::State,
     /// Notes the Playback tool's scrub line is sounding: (channel, key).
     pub scrub: Vec<(ChannelId, u8)>,
+    /// The settings window, while open.
+    pub settings: Option<crate::settings_window::State>,
 }
 
 impl UiState {
     fn new(project: &Project) -> Self {
         Self {
+            settings: None,
             show_browser: true,
             workspace: Default::default(),
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
@@ -938,6 +941,7 @@ impl LimeShotApp {
         crate::plugin_window::show_all(self, &ctx);
         // Last, when every control has described itself.
         toolbar::hint_panel(self, ui);
+        crate::settings_window::show(self, &ctx);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
     }

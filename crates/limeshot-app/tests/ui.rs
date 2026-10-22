@@ -2937,6 +2937,63 @@ fn view_layout_commands_close_align_and_restore_windows() {
     );
 }
 
+/// APP-025: FL Studio's settings window — one window, a tab per page, opened on its page from
+/// the Options menu (and F11 for Project info); changes apply at once.
+#[test]
+fn the_settings_window_opens_on_its_page_and_edits_project_info_in_one_undo_step() {
+    use limeshot_ui::settings_window::Page;
+    let mut h = harness(true);
+    let page = |h: &Harness<'static, LimeShotApp>| h.state().ui.settings.as_ref().map(|s| s.page);
+    h.get_by_label("Options").click();
+    h.step();
+    h.get_by_label_contains("General settings").click();
+    h.step();
+    assert_eq!(page(&h), Some(Page::General));
+    assert!(h.query_by_label_contains("Settings – System / miscellaneous").is_some());
+    // The tabs switch pages (the File tab, not the File menu).
+    h.get_all_by_label("File")
+        .find(|n| n.rect().top() > 100.0)
+        .expect("File tab")
+        .click();
+    h.step();
+    h.step();
+    assert_eq!(page(&h), Some(Page::File));
+    assert!(h.query_by_label("Autosave unsaved changes").is_some());
+
+    // F11: Project info. Typing in Author edits the project; the whole edit is one undo step.
+    h.key_press(Key::F11);
+    h.step();
+    h.step();
+    assert_eq!(page(&h), Some(Page::Info));
+    let author = h.get_by_label("Author").rect();
+    click(
+        &mut h,
+        egui::pos2(author.left() + 40.0, author.bottom() + 12.0),
+        PointerButton::Primary,
+    );
+    h.event(Event::Text("Hodd".into()));
+    h.step();
+    h.event(Event::Text(" Lime".into()));
+    h.step();
+    assert_eq!(h.state().project().info.author, "Hodd Lime");
+    h.key_press(Key::Escape);
+    click(
+        &mut h,
+        egui::pos2(author.left() + 200.0, author.top() - 40.0),
+        PointerButton::Primary,
+    );
+    h.step();
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().info.author, "");
+
+    // Help › About shows the About page.
+    h.get_by_label("Help").click();
+    h.step();
+    h.get_by_label_contains("About LimeShot").click();
+    h.step();
+    assert_eq!(page(&h), Some(Page::About));
+}
+
 /// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
 #[test]
 fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {

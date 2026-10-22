@@ -32,6 +32,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Cmd+F12", "Close all unfocused windows"),
     ("Shift+F12", "Align all channel editors (plugin windows)"),
     ("F1", "This list"),
+    ("F11", "Project info (settings window)"),
     (
         "Cmd+Z / Cmd+Alt+Z / Cmd+Shift+Z",
         "Undo / redo (FL Studio: Cmd+Opt+Z; Cmd+Shift+Z and Cmd+Y also redo)",
@@ -179,6 +180,9 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, Modifiers::NONE, Key::F1) {
         app.dialog = Some(Dialog::Shortcuts);
+    }
+    if pressed(ctx, Modifiers::NONE, Key::F11) {
+        app.open_settings(crate::settings_window::Page::Info);
     }
     // FL Studio's Patterns menu keys.
     if pressed(ctx, Modifiers::SHIFT, Key::F4) {

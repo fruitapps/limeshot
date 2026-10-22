@@ -450,7 +450,7 @@ pub fn status_bar(app: &mut LimeShotApp, ui: &mut Ui) {
                 .hint("Audio settings")
                 .clicked()
             {
-                app.dialog = Some(Dialog::audio(app));
+                app.open_settings(crate::settings_window::Page::Audio);
             }
             ui.label(
                 RichText::new(format!("{} voices  ·", app.player.status().voices()))

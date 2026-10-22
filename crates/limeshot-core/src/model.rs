@@ -606,10 +606,51 @@ impl Default for Mixer {
     }
 }
 
+/// FL Studio's project credits (Options › Project info): who made the song and notes about it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ProjectInfo {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub author: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub genre: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub comments: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub url: String,
+}
+
+impl ProjectInfo {
+    pub fn is_empty(&self) -> bool {
+        self == &ProjectInfo::default()
+    }
+
+    /// Keep each field to a sane length (hostile files).
+    pub fn sanitize(&mut self) {
+        for (s, max) in [
+            (&mut self.author, 1024),
+            (&mut self.genre, 256),
+            (&mut self.comments, 64 * 1024),
+            (&mut self.url, 4096),
+        ] {
+            if s.len() > max {
+                let mut end = max;
+                while !s.is_char_boundary(end) {
+                    end -= 1;
+                }
+                s.truncate(end);
+            }
+        }
+    }
+}
+
 /// The whole document.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Project {
     pub title: String,
+    /// Author, genre, comments and web link.
+    #[serde(default, skip_serializing_if = "ProjectInfo::is_empty")]
+    pub info: ProjectInfo,
     pub tempo: Tempo,
     pub time_signature: TimeSignature,
     pub channels: Vec<Channel>,
@@ -640,6 +681,7 @@ impl Project {
     pub fn new() -> Self {
         let mut p = Self {
             title: "Untitled".into(),
+            info: ProjectInfo::default(),
             // FL Studio starts new projects at 140 BPM (observed, docs/research/fl-studio-analysis.md).
             tempo: Tempo::from_milli_bpm(140_000),
             time_signature: TimeSignature::default(),
@@ -780,6 +822,7 @@ impl Project {
     /// program can trust them: ranges are clamped, notes sorted, dangling references dropped and
     /// `next_id` moved past every id in use.
     pub fn sanitize(&mut self) {
+        self.info.sanitize();
         if self.mixer.tracks.is_empty() {
             self.mixer = Mixer::default();
         }

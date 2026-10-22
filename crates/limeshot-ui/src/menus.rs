@@ -576,9 +576,24 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
             });
             ui.menu_button("Options", |ui| {
+                use crate::settings_window::Page;
                 section(ui, "System");
-                if item(ui, "Audio settings…", "") {
-                    app.dialog = Some(Dialog::audio(app));
+                if item(ui, "Audio settings", "") {
+                    app.open_settings(Page::Audio);
+                }
+                if item(ui, "General settings", "") {
+                    app.open_settings(Page::General);
+                }
+                if item(ui, "File settings", "") {
+                    app.open_settings(Page::File);
+                }
+                ui.separator();
+                section(ui, "Project");
+                if item(ui, "Project general settings", "") {
+                    app.open_settings(Page::Project);
+                }
+                if item(ui, "Project info", &key("F11")) {
+                    app.open_settings(Page::Info);
                 }
                 ui.separator();
                 section(ui, "Switches");
@@ -655,7 +670,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     app.dialog = Some(Dialog::Shortcuts);
                 }
                 if item(ui, "About LimeShot", "") {
-                    app.dialog = Some(Dialog::About);
+                    app.open_settings(crate::settings_window::Page::About);
                 }
             })
             .response

@@ -621,3 +621,13 @@ workspace, Desktop (default), Custom and Save custom layout (kept in settings). 
 the user's settings (`persist_settings`; before, a test that saved a project added it to the real recent list).
 UI test for the commands and a saved layout.
 
+### Session 15, part 9: FL's settings window (APP-025, APP-017)
+
+`settings_window.rs`: one window, "Settings – <page title>", with FL's tab groups (MIDI, Audio, General, File, Theme |
+Project, Info | About; MIDI and Theme disabled for now) and titled sections; changes apply at once. Audio (device,
+rate, buffer, status with plugin delay compensation), General (UI scaling, delete confirmation), File (autosave,
+Browser folders, recent files), Project (time signature), Info (title, author, genre, comments, web link, statistics;
+new `Project::info` and `SetProjectInfo`, one undo step per field edit) and About. Options gained General settings,
+File settings, Project general settings and Project info (F11); the old Audio settings and About dialogs are gone.
+`ui_shot --prefs=<page>` shows a page. UI test added.
+

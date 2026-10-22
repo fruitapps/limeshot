@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 44, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 166, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 48, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 162, NOT_PLANNED 27
 
 ## Summary
 
@@ -17,7 +17,7 @@ Tracked: **277** — IMPLEMENTED 44, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 15 | 1 | 27 | 5 | 4 |
-| Options | 24 | 2 | 0 | 20 | 2 | 2 |
+| Options | 24 | 6 | 0 | 16 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 
@@ -37,13 +37,10 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
 | WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control |
 | APP-015 | P2 | NOT_STARTED | Project templates | MENU-002 File › New from template<br>MENU-003 File › New from template › Advanced<br>MENU-004 File › New from template › Minimal<br>MENU-005 File › New from template › Other<br>MENU-006 File › New from template › Performance<br>MENU-007 File › New from template › Power User<br>MENU-008 File › New from template › Utility<br>MENU-009 File › New from template › Empty<br>MENU-010 File › New from template › Change default template...<br>MENU-017 File › Save as template... |
-| APP-017 | P2 | IN_PROGRESS | Project info (title, author, comments) | MENU-160 Options › Project info |
 | APP-018 | P2 | NOT_STARTED | Save new version | MENU-014 File › Save new version |
 | APP-019 | P2 | NOT_STARTED | Project bundle (zip with samples) | MENU-040 File › Export › Zipped loop package... |
 | APP-021 | P2 | NOT_STARTED | Plugin manager | MENU-072 Add › Manage plugins<br>MENU-158 Options › Manage plugins |
-| APP-025 | P2 | IN_PROGRESS | Settings window | MENU-155 Options › General settings<br>MENU-156 Options › File settings |
 | APP-027 | P2 | NOT_STARTED | Revert to last backup | MENU-044 File › Revert to last backup |
-| APP-030 | P2 | NOT_STARTED | Project general settings | MENU-159 Options › Project general settings |
 | APP-032 | P2 | IN_PROGRESS | Help index, tutorials and about | MENU-261 Help › Help index<br>MENU-263 Help › Tutorials<br>MENU-264 Help › Tutorials › Loop starter tutorial<br>MENU-265 Help › Tutorials › Step sequencer tutorial<br>MENU-269 Help › What's new |
 | AUT-005 | P2 | NOT_STARTED | Event editor | MENU-211 Tools › Last tweaked › Edit events<br>MENU-212 Tools › Last tweaked › Edit events in new window<br>MENU-213 Tools › Last tweaked › Edit events in piano roll<br>MENU-226 Tools › Next to last tweaked › Edit events<br>MENU-227 Tools › Next to last tweaked › Edit events in new window<br>MENU-228 Tools › Next to last tweaked › Edit events in piano roll |
 | BR-008 | P2 | NOT_STARTED | Plugin and preset browser | MENU-060 Add › Categories<br>MENU-061 Add › Simple<br>MENU-062 Add › Tree<br>MENU-064 Add › Effect › More plugins...<br>MENU-065 Add › Effect › Plugin database<br>MENU-068 Add › Browse plugin database<br>MENU-069 Add › Browse all installed plugins<br>MENU-145 View › Plugin database |
@@ -273,13 +270,13 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | MENU-153 | MIDI settings | System | dialog | `F10` |  | — | NOT_STARTED | APP-020 | Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
-| MENU-154 | Audio settings | System | dialog |  |  | Options › Audio settings… | IMPLEMENTED | APP-012 | Opens: settings.json page 'Audio' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
-| MENU-155 | General settings | System | dialog |  |  | — | NOT_STARTED | APP-025 | Opens: settings.json page 'General' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
-| MENU-156 | File settings | System | dialog |  |  | — | NOT_STARTED | APP-025 | Opens: settings.json page 'File' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-154 | Audio settings | System | dialog |  |  | Options › Audio settings | IMPLEMENTED | APP-025 | Opens the settings window on the Audio tab. |
+| MENU-155 | General settings | System | dialog |  |  | Options › General settings | IMPLEMENTED | APP-025 | Settings window, General tab. |
+| MENU-156 | File settings | System | dialog |  |  | Options › File settings | IMPLEMENTED | APP-025 | Settings window, File tab. |
 | MENU-157 | Theme settings | System | dialog |  |  | — | NOT_STARTED | UI-006 | Opens: settings.json page 'Theme' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
 | MENU-158 | Manage plugins | System | dialog |  |  | — | NOT_STARTED | APP-021 | Opens: settings.json page 'Plugin Manager'. |
-| MENU-159 | Project general settings | Project | dialog |  |  | — | NOT_STARTED | APP-030 | Opens: settings.json page 'Project' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
-| MENU-160 | Project info | Project | dialog | `F11` |  | — | NOT_STARTED | APP-017 | Opens: settings.json page 'Info' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-159 | Project general settings | Project | dialog |  |  | Options › Project general settings | IMPLEMENTED | APP-025 | Settings window, Project tab (time signature). |
+| MENU-160 | Project info | Project | dialog | `F11` |  | Options › Project info | IMPLEMENTED | APP-017 | Settings window, Info tab (F11). |
 | MENU-161 | Debugging log | Info | dialog |  |  | — | NOT_STARTED | APP-031 | Opens: settings.json page 'Debug' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
 | MENU-162 | Account settings | Info | dialog |  |  | — | NOT_PLANNED |  | Opens: settings.json page 'Account' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
 | MENU-163 | Enable MIDI remote control | MIDI | toggle |  | checked | — | NOT_STARTED | WF-003 |  |
@@ -405,7 +402,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-273 | FL Studio tutorials | Internet links | link |  |  | — | NOT_PLANNED |  | Image-Line web page. LimeShot's counterpart would link the project's repository and docs. |
 | MENU-274 | Support - Forum | Internet links | link |  |  | — | NOT_PLANNED |  | Image-Line web page. LimeShot's counterpart would link the project's repository and docs. |
 | MENU-275 | Support - Knowledgebase | Internet links | link |  |  | — | NOT_PLANNED |  | Image-Line web page. LimeShot's counterpart would link the project's repository and docs. |
-| MENU-276 | About... |  | dialog |  |  | Help › About LimeShot | DIFFERENT | APP-032 |  |
+| MENU-276 | About... |  | dialog |  |  | Help › About LimeShot | DIFFERENT | APP-032 | Opens the settings window's About tab; LimeShot names itself in the label. |
 | MENU-277 | Keyboard shortcuts |  | dialog |  |  | Help › Keyboard shortcuts | LIMESHOT_ONLY | APP-013 | FL has no shortcut list in Help; LimeShot opens it with F1 (FL's F1 is context help). |
 
 ## Lists

@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -272,6 +272,24 @@ fn main() {
             .map(|c| c.id);
         if let Some(c) = tone {
             st.plugins.open_window(limeshot_ui::plugins::Target::Channel(c), None);
+            for _ in 0..4 {
+                harness.step();
+            }
+        }
+    }
+    if let Some(page) = args.iter().find_map(|a| a.strip_prefix("--prefs=")) {
+        // The settings window on a page ("Audio", "Info").
+        use limeshot_ui::settings_window::Page;
+        let pages = [
+            Page::Audio,
+            Page::General,
+            Page::File,
+            Page::Project,
+            Page::Info,
+            Page::About,
+        ];
+        if let Some(p) = pages.into_iter().find(|p| p.label().eq_ignore_ascii_case(page)) {
+            harness.state_mut().open_settings(p);
             for _ in 0..4 {
                 harness.step();
             }

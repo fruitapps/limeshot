@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED 15
+Tracked: **188** — IMPLEMENTED 17, IN_PROGRESS 1, NOT_STARTED 155, NOT_PLANNED 15
 
 ## MIDI
 
@@ -40,7 +40,7 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 | SET-004 | Input / output | Input device / ASIO inputs | dropdown | Default input device | Options › Audio settings › Input / output › Input device / ASIO inputs | OBSERVED | — | NOT_STARTED | REC-003 |  |
 | SET-002 | Input / output | Sample rate | dropdown | 48000 (device) | Options › Audio settings › Input / output › Sample rate | OBSERVED | `settings.audio.sample_rate` | IMPLEMENTED | APP-012 |  |
 | SET-007 | Input / output | Release the device when inactive | switch | off | Options › Audio settings › Input / output › Release the device when inactive | OBSERVED | — | NOT_STARTED | APP-012 | FL: 'Auto close'. |
-| SET-046 | Input / output | Device status and latency | info |  | Options › Audio settings › Input / output › Device status and latency | OBSERVED | `settings.audio.device` | IMPLEMENTED | APP-012 | FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Audio settings show the open device, rate and plugin delay compensation. |
+| SET-046 | Input / output | Device status and latency | info |  | Options › Audio settings › Input / output › Device status and latency | OBSERVED | `settings.audio.device` | IMPLEMENTED | APP-012 | FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Settings › Audio status shows the open device, rate, buffer and plugin delay compensation. |
 | SET-003 | Input / output | Buffer length | slider | 128smp (3ms) | Options › Audio settings › Input / output › Buffer length | OBSERVED | `settings.audio.buffer_size` | IMPLEMENTED | APP-012 |  |
 | SET-047 | Input / output | Priority | dropdown | Highest | Options › Audio settings › Input / output › Priority | OBSERVED | — | NOT_STARTED | APP-012 | Audio thread priority; an underrun counter sits on the same row. |
 | SET-048 | Input / output | Safe overloads | switch | on | Options › Audio settings › Input / output › Safe overloads | OBSERVED | — | NOT_STARTED | APP-012 |  |
@@ -60,7 +60,7 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-011 | Display (requires a restart to take effect) | UI scaling | dropdown | System | Options › General settings › Display (requires a restart to take effect) › UI scaling | OBSERVED | `settings.ui_scale` | IMPLEMENTED | UI-005 | FL: 'Main GUI scaling' plus a 'Define 1 inch / 2.54 cm or set display's PPI' slider; LimeShot scales live with View › Zoom. |
+| SET-011 | Display (requires a restart to take effect) | UI scaling | dropdown | System | Options › General settings › Display (requires a restart to take effect) › UI scaling | OBSERVED | `settings.ui_scale` | IMPLEMENTED | UI-005 | Settings › General › Display: 75–200 %; also Cmd+= / Cmd+- / Cmd+0. Applies at once (FL needs a restart). |
 | SET-058 | Display (requires a restart to take effect) | Pop-ups scaling | dropdown | Main | Options › General settings › Display (requires a restart to take effect) › Pop-ups scaling | OBSERVED | — | NOT_STARTED | UI-005 |  |
 | SET-059 | Display (requires a restart to take effect) | Toolbars scaling | dropdown | Main | Options › General settings › Display (requires a restart to take effect) › Toolbars scaling | OBSERVED | — | NOT_STARTED | UI-005 |  |
 | SET-060 | Display (requires a restart to take effect) | Transparent windows | dropdown | Off | Options › General settings › Display (requires a restart to take effect) › Transparent windows | OBSERVED | — | NOT_STARTED | UI-006 |  |
@@ -130,19 +130,19 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-019 | Backup | Backups / autosave | dropdown | Occasionally (every 10 minutes) | Options › File settings › Backup › Backups / autosave | OBSERVED | `settings.autosave_minutes` | IMPLEMENTED | APP-024 | LimeShot: Options › Autosave (off, 1, 2, 5, 10 minutes). |
+| SET-019 | Backup | Backups / autosave | dropdown | Occasionally (every 10 minutes) | Options › File settings › Backup › Backups / autosave | OBSERVED | `settings.autosave_minutes` | IMPLEMENTED | APP-024 | Settings › File › Backup: Off / every 1, 2, 5 or 10 minutes (FL's choices differ). |
 | SET-118 | Backup | Maximum backups | field | 100 | Options › File settings › Backup › Maximum backups | OBSERVED | — | NOT_STARTED | APP-016 |  |
 | SET-119 | Backup | Backup location | dropdown | Save to the project data folder if there is one | Options › File settings › Backup › Backup location | OBSERVED | — | NOT_STARTED | APP-016 |  |
 | SET-018 | Plugins | Plugin search folders | button |  | Options › File settings › Plugins › Plugin search folders | OBSERVED | — | NOT_STARTED | APP-021 | 'Manage plugins' opens the Plugin Manager (page 'Plugin Manager'). |
 | SET-120 | User data folder | User data folder | path + Reset + browse | ~/Documents/Image-Line/ | Options › File settings › User data folder › User data folder | OBSERVED | — | NOT_STARTED | BR-001 |  |
-| SET-017 | Browser extra search folders | Extra Browser folders | table (Folder, Browser name) | empty | Options › File settings › Browser extra search folders › Extra Browser folders | OBSERVED | `settings.browser_folders` | IMPLEMENTED | BR-001 | FL lets each folder carry its own Browser name. |
+| SET-017 | Browser extra search folders | Extra Browser folders | table (Folder, Browser name) | empty | Options › File settings › Browser extra search folders › Extra Browser folders | OBSERVED | `settings.browser_folders` | IMPLEMENTED | BR-001 | Settings › File: listed with × to remove and Add folder…; also the Browser's + button. |
 | SET-121 | External tools | External tools | table (File, Name) | empty | Options › File settings › External tools › External tools | OBSERVED | — | NOT_PLANNED | APP-025 | Options Launch with path / Launch with file / Default editor / Launch at startup. |
 | SET-122 | External tools | Script editor | path | TextEdit.app | Options › File settings › External tools › Script editor | OBSERVED | — | NOT_STARTED | WF-008 |  |
 | SET-123 | Troubleshooting | Set to current | button |  | Options › File settings › Troubleshooting › Set to current | OBSERVED | — | NOT_PLANNED | APP-025 | Points FL's plugin version at this install. |
 | SET-124 | Troubleshooting | Repair optional features | button |  | Options › File settings › Troubleshooting › Repair optional features | OBSERVED | — | NOT_PLANNED | APP-025 |  |
 | SET-125 | Troubleshooting | Reset browser cache | button |  | Options › File settings › Troubleshooting › Reset browser cache | OBSERVED | — | NOT_STARTED | BR-001 |  |
 | SET-126 | Troubleshooting | Reset FL Cloud cache | button |  | Options › File settings › Troubleshooting › Reset FL Cloud cache | OBSERVED | — | NOT_PLANNED | APP-025 |  |
-| SET-020 | Troubleshooting | Recent files | list |  | File menu › Recent projects | OBSERVED | `settings.recent` | IMPLEMENTED | APP-010 | Last 10 projects. |
+| SET-020 | Troubleshooting | Recent files | list |  | File menu › Recent projects | OBSERVED | `settings.recent` | IMPLEMENTED | APP-010 | Settings › File › Recent files lists them, with Clear list; also File › Recent projects. |
 
 ## Theme
 
@@ -181,9 +181,9 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-021 |  | Project info (title, author, genre, comments) | fields | empty | Options › Project info (F11) › Project info (title, author, genre, comments) | OBSERVED | — | IN_PROGRESS | APP-017 | Title, Author, Genre (with a list), Comments (multi-line), Web link. |
+| SET-021 |  | Project info (title, author, genre, comments) | fields | empty | Options › Project info (F11) › Project info (title, author, genre, comments) | OBSERVED | `project.info` | IMPLEMENTED | APP-017 | Settings › Info (F11): Title, Author, Genre, Comments, Web link; typing in a field is one undo step. Saved in the .lime. |
 | SET-146 |  | Show info on opening | switch | off | Options › Project info (F11) › Show info on opening | OBSERVED | — | NOT_STARTED | APP-017 |  |
-| SET-147 |  | Project statistics | info |  | Options › Project info (F11) › Project statistics | OBSERVED | — | NOT_STARTED | APP-033 | 'This project was started on …, last saved in <version>', total time spent, plugins/channels/mixer tracks, arrangements/playlist tracks/clips/notes. |
+| SET-147 |  | Project statistics | info |  | Options › Project info (F11) › Project statistics | OBSERVED | `project.info` | IMPLEMENTED | APP-033 | Counts of plugins, channels, mixer tracks, patterns, Playlist tracks and clips, and notes under the Info fields. No dates or working time (APP-033). |
 | SET-148 |  | Reset working time | button |  | Options › Project info (F11) › Reset working time | OBSERVED | — | NOT_STARTED | APP-033 |  |
 
 ## Debug
@@ -202,7 +202,7 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-151 |  | About page | page |  | Settings › About › About page | OBSERVED | — | IN_PROGRESS | APP-032 | LimeShot: Help › About LimeShot. |
+| SET-151 |  | About page | page |  | Settings › About › About page | OBSERVED | — | IN_PROGRESS | APP-032 | Settings › About: version, licence and the trademark note (Help › About LimeShot opens it). |
 
 ## Render
 
@@ -268,4 +268,4 @@ Tracked: **188** — IMPLEMENTED 15, IN_PROGRESS 2, NOT_STARTED 156, NOT_PLANNED
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-028 |  | Confirm channel deletion |  |  | Confirm dialog › Remember my choice | OBSERVED | `settings.confirm_channel_delete` | IMPLEMENTED | SEQ-007 | Turned off by ticking "Remember my choice"; no way to turn it back on yet except editing settings.json (APP-025). |
+| SET-028 |  | Confirm channel deletion |  |  | Confirm dialog › Remember my choice | OBSERVED | `settings.confirm_channel_delete` | IMPLEMENTED | SEQ-007 | Settings › General › Hints and warnings: 'Ask before deleting channels'. |

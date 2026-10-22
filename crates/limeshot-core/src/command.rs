@@ -52,6 +52,12 @@ pub struct ImportedChannel {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Command {
     SetTitle(String),
+    /// Options › Project info: the title and the credits at once (typing in a field merges into
+    /// one undo step).
+    SetProjectInfo {
+        title: String,
+        info: crate::model::ProjectInfo,
+    },
     SetTempo(Tempo),
     SetTimeSignature(TimeSignature),
     /// Global swing, 0–1.
@@ -501,6 +507,7 @@ impl Command {
         use Command::*;
         match self {
             SetTitle(_) => "Rename project",
+            SetProjectInfo { .. } => "Project info",
             SetTempo(_) => "Set tempo",
             SetTimeSignature(_) => "Set time signature",
             SetSwing(_) => "Swing",
@@ -594,6 +601,7 @@ impl Command {
         use Command::*;
         Some(match self {
             SetTempo(_) => "tempo".into(),
+            SetProjectInfo { .. } => "projinfo".into(),
             SetRoute {
                 from,
                 to,
@@ -639,6 +647,11 @@ impl Command {
         use Command::*;
         match self {
             SetTitle(t) => p.title = t,
+            SetProjectInfo { title, mut info } => {
+                info.sanitize();
+                p.title = title;
+                p.info = info;
+            }
             SetTempo(t) => p.tempo = t,
             SetTimeSignature(s) => p.time_signature = TimeSignature::new(s.numerator, s.denominator),
             SetSwing(v) => p.swing = finite(v)?.clamp(0.0, 1.0),

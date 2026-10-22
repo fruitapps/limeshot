@@ -175,8 +175,8 @@
       "action": "Project info",
       "fl_keys": "F11",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "F11",
+      "status": "IMPLEMENTED",
       "feature": "APP-017",
       "notes": "Seen in the main menu on macOS (session 13, menus.json)."
     },

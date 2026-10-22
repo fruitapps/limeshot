@@ -28,6 +28,7 @@ pub mod playlist;
 pub mod plugin_window;
 pub mod plugins;
 pub mod settings;
+pub mod settings_window;
 pub mod shortcuts;
 pub mod theme;
 pub mod toolbar;

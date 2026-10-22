@@ -3,7 +3,6 @@
 use crate::app::{LimeShotApp, Pending};
 use crate::theme::Theme;
 use egui::{Align2, ComboBox, Context, RichText, vec2};
-use limeshot_audio::DeviceInfo;
 use limeshot_core::{ChannelId, Command, PatternId};
 use limeshot_engine::{BitDepth, ExportRange, RenderReport, RenderSettings};
 use std::path::PathBuf;
@@ -29,11 +28,6 @@ pub struct ExportOptions {
     pub depth: BitDepth,
 }
 
-pub struct AudioOptions {
-    pub devices: Vec<DeviceInfo>,
-    pub config: limeshot_audio::AudioConfig,
-}
-
 pub enum Dialog {
     ConfirmDiscard(Pending),
     /// FL Studio asks before deleting channels; `remember` skips the question from then on.
@@ -42,7 +36,6 @@ pub enum Dialog {
         remember: bool,
     },
     Export(ExportOptions),
-    Audio(AudioOptions),
     Rename {
         target: RenameTarget,
         text: String,
@@ -54,7 +47,6 @@ pub enum Dialog {
         pattern: PatternId,
         semitones: i32,
     },
-    About,
     Shortcuts,
 }
 
@@ -69,13 +61,6 @@ impl Dialog {
             range,
             sample_rate: 44_100,
             depth: BitDepth::Int24,
-        })
-    }
-
-    pub fn audio(app: &LimeShotApp) -> Self {
-        Dialog::Audio(AudioOptions {
-            devices: limeshot_audio::list_output_devices(),
-            config: app.settings.audio.clone(),
         })
     }
 
@@ -403,98 +388,6 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                 });
             });
         }
-        Dialog::Audio(opts) => {
-            modal(ctx, "Audio settings", |ui| {
-                egui::Grid::new("audio_grid")
-                    .num_columns(2)
-                    .spacing(vec2(12.0, 6.0))
-                    .show(ui, |ui| {
-                        ui.label("Output device");
-                        let current = opts.config.device.clone().unwrap_or_else(|| "System default".into());
-                        ComboBox::from_id_salt("audio_dev")
-                            .width(220.0)
-                            .selected_text(current)
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut opts.config.device, None, "System default");
-                                for d in &opts.devices {
-                                    let label = if d.is_default {
-                                        format!("{} (default)", d.name)
-                                    } else {
-                                        d.name.clone()
-                                    };
-                                    ui.selectable_value(&mut opts.config.device, Some(d.name.clone()), label);
-                                }
-                            });
-                        ui.end_row();
-                        let dev = opts
-                            .devices
-                            .iter()
-                            .find(|d| Some(&d.name) == opts.config.device.as_ref())
-                            .or_else(|| opts.devices.iter().find(|d| d.is_default));
-                        ui.label("Sample rate");
-                        let sr_text = opts
-                            .config
-                            .sample_rate
-                            .map(|s| format!("{s} Hz"))
-                            .unwrap_or_else(|| "Device default".into());
-                        ComboBox::from_id_salt("audio_sr")
-                            .selected_text(sr_text)
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut opts.config.sample_rate, None, "Device default");
-                                for sr in dev.map(|d| d.sample_rates.clone()).unwrap_or_default() {
-                                    ui.selectable_value(&mut opts.config.sample_rate, Some(sr), format!("{sr} Hz"));
-                                }
-                            });
-                        ui.end_row();
-                        ui.label("Buffer size");
-                        let buf_text = opts
-                            .config
-                            .buffer_size
-                            .map(|b| format!("{b} frames"))
-                            .unwrap_or_else(|| "Device default".into());
-                        ComboBox::from_id_salt("audio_buf")
-                            .selected_text(buf_text)
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut opts.config.buffer_size, None, "Device default");
-                                for b in [64u32, 128, 256, 512, 1024, 2048] {
-                                    let ok = dev.is_none_or(|d| {
-                                        d.buffer_min.is_none_or(|lo| b >= lo) && d.buffer_max.is_none_or(|hi| b <= hi)
-                                    });
-                                    if ok {
-                                        ui.selectable_value(
-                                            &mut opts.config.buffer_size,
-                                            Some(b),
-                                            format!("{b} frames"),
-                                        );
-                                    }
-                                }
-                            });
-                        ui.end_row();
-                    });
-                let sr = app.player.sample_rate();
-                let pdc = app.player.status().latency();
-                let status = match app.player.output_description() {
-                    // FL Studio's device status also lists the plugin latency.
-                    Ok(n) => format!(
-                        "Now: {n}, {sr} Hz. Plugin delay compensation: {pdc} samples ({:.1} ms)",
-                        f64::from(pdc) * 1000.0 / f64::from(sr.max(1))
-                    ),
-                    Err(e) => format!("Now: no output ({e})"),
-                };
-                ui.label(RichText::new(status).small().color(Theme::current().text_dim));
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    if ui.button(RichText::new("Apply").strong()).clicked() {
-                        app.settings.audio = opts.config.clone();
-                        app.restart_audio();
-                        keep = false;
-                    }
-                    if ui.button("Cancel").clicked() {
-                        keep = false;
-                    }
-                });
-            });
-        }
         Dialog::Rename { target, text } => {
             let target = target.clone();
             let title = if matches!(target, RenameTarget::ChannelGroup(_)) {
@@ -570,21 +463,6 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         keep = false;
                     }
                 });
-            });
-        }
-        Dialog::About => {
-            modal(ctx, "About LimeShot", |ui| {
-                ui.vertical_centered(|ui| {
-                    let (r, _) = ui.allocate_exact_size(vec2(80.0, 80.0), egui::Sense::hover());
-                    crate::icons::logo(ui.painter(), r.center(), 36.0);
-                    ui.heading(format!("LimeShot {}", env!("CARGO_PKG_VERSION")));
-                    ui.label("An open-source, offline-first music workstation written in Rust.");
-                    ui.label(RichText::new("Pattern workflow inspired by FL Studio; independently implemented. FL Studio is a trademark of Image-Line, which is not affiliated with LimeShot.").small().color(Theme::current().text_dim));
-                    ui.label(RichText::new("MIT OR Apache-2.0").small());
-                });
-                if ui.button("Close").clicked() {
-                    keep = false;
-                }
             });
         }
         Dialog::Shortcuts => {
