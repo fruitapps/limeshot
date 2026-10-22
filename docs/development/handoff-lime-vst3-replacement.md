@@ -28,6 +28,9 @@ Done and tested (PLG-013 is IN_PROGRESS; decision D39):
 * P0 records PLG-014…PLG-023, known limitations, progress.
 
 Next, in order:
+0. GitHub Actions is blocked: jobs on PRs #7 and #8 end within seconds with "recent account payments have failed or
+   your spending limit needs to be increased". This is the owner's to fix, under Billing & plans. Until then,
+   verify locally and say so.
 1. PLG-023 is written but not yet run: CI builds debug bundles and sets `LIMESHOT_LIME_PLUGINS`, and
    `scripts/package-macos.sh` copies the release bundles into `Contents/PlugIns`. Check the PR's CI result and fix
    what fails, for example the build time on Windows and Linux or the 45-minute timeout.
