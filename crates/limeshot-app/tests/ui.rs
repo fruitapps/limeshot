@@ -778,6 +778,162 @@ fn led(h: &Harness<'static, LimeShotApp>, c: ChannelId) -> Pos2 {
     h.state().ui.rack.led_pos(c).expect("selector LED drawn")
 }
 
+#[test]
+fn rack_zip_shortcuts_compact_selected_rows_and_right_click_restores_them() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let pid = h.state().current_pattern();
+    let before_y = led(&h, ids[2]).y;
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    h.state_mut().ui.rack.graph = Some(NoteProp::Velocity);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), 2);
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_none());
+    assert!(h.state().ui.rack.led_pos(ids[0]).is_none());
+    assert!(h.state().ui.rack.graph_rect.is_none(), "no graph over another row");
+    assert!(led(&h, ids[2]).y < before_y - 20.0, "compact rows reclaim space");
+    let compact = |h: &Harness<'static, LimeShotApp>, id| {
+        h.state()
+            .ui
+            .rack
+            .zipped_buttons
+            .iter()
+            .find(|(c, _)| *c == id)
+            .unwrap()
+            .1
+            .center()
+    };
+    let p = compact(&h, ids[0]);
+    click(&mut h, p, PointerButton::Primary);
+    assert_eq!(h.state().selected_channels(), vec![ids[0]]);
+    let p = compact(&h, ids[1]);
+    click_with(&mut h, p, PointerButton::Primary, Modifiers::COMMAND);
+    assert_eq!(h.state().selected_channels(), vec![ids[0], ids[1]]);
+    let p = compact(&h, ids[0]);
+    click(&mut h, p, PointerButton::Secondary);
+    assert!(!h.state().ui.rack.zipped.contains(&ids[0]));
+    assert!(h.state().ui.rack.zipped.contains(&ids[1]));
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_some());
+    assert!(
+        h.query_by_label("Piano roll").is_none(),
+        "unzip does not open the channel menu"
+    );
+    let other_pattern = h.state().project().patterns[1].id;
+    h.state_mut().set_current_pattern(other_pattern);
+    h.step();
+    assert!(
+        h.state().ui.rack.zipped.contains(&ids[1]),
+        "zip follows the channel across patterns"
+    );
+    h.state_mut().set_current_pattern(pid);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty());
+    assert_eq!(led(&h, ids[2]).y, before_y);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(
+        h.state().doc.revision(),
+        revision,
+        "view changes leave undo history alone"
+    );
+}
+
+#[test]
+fn rack_zip_menu_and_filters_restore_hidden_rows_and_forget_deleted_channels() {
+    use limeshot_ui::channel_rack::RackFilter;
+    let mut h = harness(true);
+    let ids = order(&h);
+    h.state_mut().select_channel(ids[0]);
+    let button = h.state().ui.rack.menu_button.unwrap().center();
+    click(&mut h, button, PointerButton::Primary);
+    h.get_by_label_contains("Zip selected").click();
+    h.step();
+    assert!(h.state().ui.rack.zipped.contains(&ids[0]));
+    h.state_mut().exec(Command::SetChannelGroup {
+        channels: vec![ids[0]],
+        group: Some("Drums".into()),
+    });
+    h.state_mut().ui.rack.filter = RackFilter::Unsorted;
+    h.step();
+    assert!(h.state().ui.rack.zipped_buttons.is_empty());
+    let button = h.state().ui.rack.menu_button.unwrap().center();
+    click(&mut h, button, PointerButton::Primary);
+    h.get_by_label_contains("Unzip all").click();
+    h.step();
+    h.state_mut().ui.rack.filter = RackFilter::All;
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[0], 0).is_some(),
+        "unzip includes filtered-out rows"
+    );
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    h.state_mut().exec(Command::RemoveChannel(ids[0]));
+    h.step();
+    assert!(!h.state().ui.rack.zipped.contains(&ids[0]));
+    h.state_mut().doc.undo();
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[0], 0).is_some(),
+        "undo restores an accessible full row"
+    );
+    h.state_mut().ui.channel_selection = ids.clone();
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    assert!(h.state().ui.rack.step_strips.is_empty(), "all rows can be compacted");
+    assert_eq!(h.state().ui.rack.zipped_buttons.len(), ids.len());
+    h.state_mut().new_project();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty(), "new projects start expanded");
+}
+
+#[test]
+fn rack_zip_finishes_a_held_step_stroke_before_hiding_it() {
+    let mut h = harness(true);
+    let cid = h.state().project().channels[3].id;
+    let pid = h.state().current_pattern();
+    let p = h.state().ui.rack.step_pos(cid, 0).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    assert!(
+        h.state()
+            .project()
+            .pattern(pid)
+            .unwrap()
+            .step_note(cid, 60, 0)
+            .is_some()
+    );
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::Z);
+    h.step();
+    press(&mut h, p, PointerButton::Primary, false);
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    let p = h.state().ui.rack.step_pos(cid, 1).unwrap();
+    click(&mut h, p, PointerButton::Primary);
+    let pattern = h.state().project().pattern(pid).unwrap();
+    assert!(pattern.step_note(cid, 60, 0).is_some());
+    assert!(pattern.step_note(cid, 60, 1).is_some());
+    h.state_mut().doc.undo();
+    let pattern = h.state().project().pattern(pid).unwrap();
+    assert!(
+        pattern.step_note(cid, 60, 0).is_some(),
+        "the earlier stroke is a separate undo step"
+    );
+    assert!(pattern.step_note(cid, 60, 1).is_none());
+}
+
 fn order(h: &Harness<'static, LimeShotApp>) -> Vec<ChannelId> {
     h.state().project().channels.iter().map(|c| c.id).collect()
 }

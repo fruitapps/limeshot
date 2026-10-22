@@ -1035,3 +1035,28 @@ Validation: 335 workspace tests pass (125 headless UI tests), Clippy with warnin
 rustfmt, inventories, repository-reference check and diff checks. Git object check passes. Rebuilt the macOS app
 and DMG; signature/plist/image checks, packaged font-text comparison and bundled CLI demo/reload render comparison
 pass. Native UI checks were not attempted. Continue with the latest PR CI and remaining roadmap priorities.
+
+### 2026-10-22 — Separate continuation: Channel Rack Zip / Unzip (SEQ-013)
+
+Started from pushed `origin/s16-automation` (`6fd1f41`) in a new managed worktree on
+`codex/channel-rack-zip`; the primary checkout and PR #3's branch were left intact. PR #3 remained open when checked,
+so this continuation targets `s16-automation` and depends on that PR. Its latest CI run `39830009498` was still in
+progress; no live UI checks were attempted while the owner's Mac is locked.
+
+Implemented Channel Rack › Zip selected (Alt+Z) and Unzip all (Alt+U), using Image-Line's documented actions and the
+existing clean-room menu captures. Compact named buttons select channels (Cmd/Shift-click toggles multiselection);
+right-click restores one row. Unzip all includes filtered-out channels. Zipping hides the graph for that row and
+finishes a held step/graph edit gesture before hiding its surface. State follows stable channel IDs across patterns
+and reordering, is pruned on deletion, and starts expanded for new/open projects. It is session-only; automatic
+zipping of empty channels and saved zip state remain unavailable.
+
+Three new headless regressions cover menu and shortcut actions, row spacing, selection, graph hiding, filtered rows,
+deletion/undo, all rows compacted, new-project reset, unchanged project/revision and a held step stroke followed by
+an independent undo step. SEQ-013 is VERIFIED for this scope. Updated shortcut help, canonical inventories,
+architecture, research notes and limitations. `ui_shot --zip` renders a reproducible compact-row view; inspected
+`/tmp/limeshot-rack-zip.png` offscreen.
+
+Validation: 338 workspace tests pass, including 128 headless UI tests; workspace all-target Clippy with warnings
+denied, all-target build, rustfmt, inventory/reference checks and `git diff --check`. Live plugin embedding remains
+IMPLEMENTED, not VERIFIED. Continue remaining editor View/context-menu work and P1 production gaps according to
+dependencies; native GUI/audio verification is still separate from CI.

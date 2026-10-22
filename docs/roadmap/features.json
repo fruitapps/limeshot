@@ -1123,17 +1123,23 @@
       "name": "Zip / unzip channels",
       "description": "Compact view.",
       "fl_reference": "Alt+Z / Alt+U.",
-      "limeshot_behavior": "Collapse rows.",
+      "limeshot_behavior": "Channel Rack options › Zip selected (Alt+Z) compacts selected channels into thin named buttons; right-click a compact button to restore its row. Unzip all (Alt+U) restores every channel, including those hidden by a display filter. Compact buttons select channels; Cmd/Shift-click toggles multiselection. Zip state follows channel IDs across patterns and is session-only.",
       "priority": "P3",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::rack_zip_shortcuts_compact_selected_rows_and_right_click_restores_them",
+        "crates/limeshot-app/tests/ui.rs::rack_zip_menu_and_filters_restore_hidden_rows_and_forget_deleted_channels",
+        "crates/limeshot-app/tests/ui.rs::rack_zip_finishes_a_held_step_stroke_before_hiding_it"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1141,7 +1147,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: documented FL actions, independently designed compact rows. Project content/playback and undo are unchanged. No auto-zip empty channels or saved zip state. Headless interaction tests and offscreen layout review; no live verification while the Mac is locked."
     },
     {
       "id": "SEQ-014",

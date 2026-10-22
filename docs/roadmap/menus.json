@@ -6175,10 +6175,10 @@
       "fl_keys": "Opt+Z",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › Zip selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-013",
-      "notes": ""
+      "notes": "2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013)."
     },
     {
       "id": "MENU-355",
@@ -6193,10 +6193,10 @@
       "fl_keys": "Opt+U",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › Unzip all",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-013",
-      "notes": ""
+      "notes": "2026-10-22: Alt+Z / Alt+U; right-click a compact channel button restores it individually. Session-only view state (SEQ-013)."
     },
     {
       "id": "MENU-356",

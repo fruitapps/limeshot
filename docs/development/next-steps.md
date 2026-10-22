@@ -31,7 +31,7 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
 1. **Finish editor/context menus from the FL inventories.** Main menus, settings pages, toolbar menus and the core
    editor menus are in. Remaining work includes editor View options, Piano Roll Time markers / Target control /
    Group, Riff machine and chord progressions, Claw machine, Playlist picker options and performance mode, Mixer
-   groups/docking/multiselection, Channel Rack Zip / Unzip and display options. Playlist track modes, grouping,
+   groups/docking/multiselection, and Channel Rack display options (manual Zip / Unzip is complete). Playlist track modes, grouping,
    icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
    Continue documenting FL's Browser top bar, clip/note/control context menus and floating View windows before
    implementing them; preserve clean-room evidence in `docs/research/`.

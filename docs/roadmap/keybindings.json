@@ -1565,6 +1565,17 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "FL 2026.1.1 Channel Rack menu (menus.json). Session 16."
+    },
+    {
+      "id": "KB-143",
+      "context": "Channel Rack",
+      "action": "Zip selected / unzip all channels",
+      "fl_keys": "Alt+Z / Alt+U",
+      "confidence": "VERIFIED",
+      "limeshot_keys": "Alt+Z / Alt+U",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-013",
+      "notes": "Image-Line Channel Rack manual, Zip selected / Unzip all. Headless tests cover both bindings."
     }
   ]
 }
