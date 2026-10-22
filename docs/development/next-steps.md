@@ -50,6 +50,12 @@
    Then implement the menu bar (APP-026) from `menus.md`'s "open work by feature" table, highest priority first:
    SEQ-021 Pattern commands, Edit › Cut/Copy/Paste routed to the focused editor, a Tools menu with Macros, and
    View › Layout (UI-013). Keep `menus.json` in step with `menus.rs` (the check enforces labels).
+   * [x] Session 15: main menus (Patterns, Edit, Tools, View › Layout), settings window, toolbar menus.
+   * [x] Session 16: the editors' ⏵ menus — Piano Roll (Edit, Tools with FL's tool dialogs, Select, Zoom), Playlist
+     (Edit, Select, Zoom, Time markers), Mixer track menu, Channel Rack options menu. Still open in `menus.md`:
+     the editors' View submenus, Piano Roll Time markers / Target control / Group / Stamp, Riff machine and chord
+     progressions, Claw machine, Playlist picker panel options and performance mode, Mixer groups and docking,
+     Channel Rack Zip / Unzip and display options.
 
 4. **More live FL observation** (Accessibility is granted; session 4 settled clip looping, note length and step
    painting). Next: Playlist clip resize from the left edge and slip editing, Piano Roll right-click default length,
