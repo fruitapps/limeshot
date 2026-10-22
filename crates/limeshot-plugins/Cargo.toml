@@ -9,6 +9,7 @@ rust-version.workspace = true
 [dependencies]
 limeshot-dsp.workspace = true
 thiserror.workspace = true
+log.workspace = true
 rtrb.workspace = true
 vst3 = "0.3"
 libloading = "0.8"

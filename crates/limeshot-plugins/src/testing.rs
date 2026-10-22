@@ -23,6 +23,9 @@ const GAIN_CID: TUID = uid(0x4C494D45, 0x54474149, 0x4E000000, 0x00000001);
 const GAIN_CTRL_CID: TUID = uid(0x4C494D45, 0x54474149, 0x4E000000, 0x00000002);
 const TONE_CID: TUID = uid(0x4C494D45, 0x54544F4E, 0x45000000, 0x00000001);
 
+/// The path that stands for these plugins in a project or the plugin database.
+pub const BUILTIN_PATH: &str = "builtin:limeshot-test";
+
 /// The class id of Lime Test Gain.
 pub fn gain_class() -> String {
     tuid_to_hex(&GAIN_CID)

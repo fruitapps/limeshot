@@ -120,24 +120,7 @@ impl Document {
     }
 
     fn plugin_mut(&mut self, target: PluginTarget) -> Option<&mut crate::PluginRef> {
-        let p = &mut self.project;
-        match target {
-            PluginTarget::Channel(id) => {
-                p.channels
-                    .iter_mut()
-                    .find(|c| c.id == id)
-                    .and_then(|c| match &mut c.instrument {
-                        crate::Instrument::Plugin(p) => Some(p),
-                        _ => None,
-                    })
-            }
-            PluginTarget::Effect { track, effect } => p
-                .mixer
-                .tracks
-                .get_mut(usize::from(track))
-                .and_then(|t| t.effects.iter_mut().find(|e| e.id == effect))
-                .and_then(|e| e.plugin.as_mut()),
-        }
+        self.project.plugin_mut(target)
     }
 
     /// Start a continuous gesture (a drag). Until [`Document::end_gesture`], consecutive commands

@@ -5327,16 +5327,18 @@
       "id": "PLG-010",
       "category": "Plugins",
       "name": "Plugin crash isolation",
-      "description": "Plugin crash isolation.",
-      "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Scanning runs each bundle in a child process with a time limit (PLG-004). Running plugins are still in LimeShot's process, so one that crashes while playing takes LimeShot down.",
+      "description": "Keep LimeShot running when a plugin crashes or hangs.",
+      "fl_reference": "FL Studio runs a plugin 'bridged' (in a separate process) when chosen in its wrapper's Plugin options › Bit size; scanning is isolated as well (observed: fl-plugin-window-options.png).",
+      "limeshot_behavior": "Scanning runs each bundle in a child process with a time limit (PLG-004). A plugin channel or insert can be set to 'Run in a separate process' (a checkbox in its settings, under the plugin's name; undoable and saved in the .lime). LimeShot then starts a copy of itself as a plugin bridge for it and talks to it over two Unix-socket connections (control calls, and one request/reply per audio block with a 500 ms limit). If the bridge crashes, hangs or quits, the slot goes silent, LimeShot shows 'X (place) crashed; it is silent until reloaded', and the plugin's settings show 'The plugin crashed' with a Reload button, which starts it again with the state last saved in the project. Switching keeps the plugin's sound (its state moves along) and reopens its window. Differs from FL: a bridged plugin's own editor is not shown (its parameters are listed instead); macOS and Linux only; plugins not set to run separately still run inside LimeShot.",
       "priority": "P3",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PLG-004"
       ],
       "modules": [
+        "limeshot-plugins",
+        "limeshot-core",
         "limeshot-ui",
         "limeshot-app"
       ],
@@ -5344,16 +5346,22 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-plugins/tests/bridge.rs::a_bridged_plugin_processes_and_keeps_its_parameters_and_state",
+        "crates/limeshot-plugins/tests/bridge.rs::a_bridged_instrument_plays_notes_and_lists_its_programs",
+        "crates/limeshot-plugins/tests/bridge.rs::a_crashed_bridge_leaves_silence_and_the_host_running",
+        "crates/limeshot-plugins/tests/bridge.rs::a_hung_bridge_times_out",
+        "crates/limeshot-app/tests/ui.rs::a_plugin_in_its_own_process_crashes_without_taking_limeshot_down"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm",
-          "HelpAliases.scr (plugins\\wrapper.htm)"
+          "docs/research/evidence/screenshots/fl-plugin-window-options.png",
+          "docs/research/fl-studio-analysis.md#17-plugin-windows-fruity-wrapper"
         ]
       },
-      "notes": ""
+      "notes": "Session 15 (D34). Crashes are simulated by killing (SIGKILL) and hangs by stopping (SIGSTOP) the bridge process. `examples/bridge_probe` ran Vital, Surge XT, OTT and Elephant through the bridge on the dev Mac: they sound, report latency (OTT 2, Elephant 1080) and state; a 512-frame block took 0.07–0.14 ms round trip. Not yet exercised in the live app with a real plugin."
     },
     {
       "id": "EXP-001",

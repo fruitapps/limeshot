@@ -449,7 +449,8 @@ impl LimeShotApp {
     pub fn sync_engine(&mut self) {
         let loaded = self.samples.poll();
         let key = (self.doc.revision(), self.current_pattern());
-        if !loaded && self.compiled == Some(key) {
+        let resync = self.plugins.take_needs_sync();
+        if !loaded && !resync && self.compiled == Some(key) {
             return;
         }
         if self.compiled.map(|k| k.0) != Some(key.0) {
@@ -802,6 +803,12 @@ impl LimeShotApp {
         if self.ui.mode == PlayMode::Song && self.is_playing() {
             let tick = self.player.status().position();
             self.plugins.follow_automation(self.doc.project(), &self.snapshot, tick);
+        }
+        for target in self.plugins.take_crashes() {
+            let name = crate::plugins::place_name(self.doc.project(), target)
+                .map(|(n, place)| format!("{n} ({place})"))
+                .unwrap_or_else(|| "A plugin".into());
+            self.toast_error(format!("{name} crashed; it is silent until reloaded"));
         }
         if let Some(summary) = self.plugins.poll_scan() {
             self.toast(summary);

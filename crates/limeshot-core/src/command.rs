@@ -390,6 +390,12 @@ pub enum Command {
         track: u16,
         plugin: crate::PluginRef,
     },
+    /// Run a channel's or insert's plugin in a process of its own (FL Studio's bridged plugins),
+    /// or back in LimeShot's.
+    SetPluginSeparateProcess {
+        plugin: crate::PluginTarget,
+        on: bool,
+    },
     RemoveEffect {
         track: u16,
         effect: u32,
@@ -553,6 +559,7 @@ impl Command {
             SetRoute { .. } => "Route mixer track",
             AddEffect { .. } => "Add effect",
             AddPluginEffect { .. } => "Add plugin",
+            SetPluginSeparateProcess { .. } => "Plugin process",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
             SetEffectEnabled { .. } => "Bypass effect",
@@ -1352,6 +1359,11 @@ impl Command {
             AddPluginEffect { track, plugin } => {
                 let slot = |id| crate::effects::EffectSlot::plugin(id, plugin);
                 return add_effect(p, track, slot);
+            }
+            SetPluginSeparateProcess { plugin, on } => {
+                p.plugin_mut(plugin)
+                    .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?
+                    .separate_process = on;
             }
             RemoveEffect { track, effect } => {
                 let t = mixer_track(p, track)?;

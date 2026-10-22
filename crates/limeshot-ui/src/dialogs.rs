@@ -160,7 +160,7 @@ pub struct ExportJob {
     rx: Receiver<Result<RenderReport, String>>,
     /// The control halves of the export's own plugin instances, dropped on this thread when the
     /// job ends.
-    _plugins: Vec<limeshot_plugins::Vst3Instance>,
+    _plugins: Vec<limeshot_plugins::PluginInstance>,
 }
 
 pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) {

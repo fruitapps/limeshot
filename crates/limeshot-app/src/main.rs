@@ -34,9 +34,18 @@ fn main() -> eframe::Result {
     {
         std::process::exit(limeshot_ui::plugins::scan_child(bundle));
     }
+    // Plugins set to run in a separate process run in a copy of this binary (crash isolation).
+    #[cfg(unix)]
+    if let Some(socket) = limeshot_plugins::bridge::socket_arg(&args) {
+        std::process::exit(limeshot_plugins::bridge::child_main(
+            &socket,
+            &limeshot_plugins::load_module,
+        ));
+    }
     let samples = limeshot_app::bundled_samples_dir();
     let settings = Settings::load();
     let mut app = LimeShotApp::new(settings, samples.clone());
+    app.plugins.bridge_exe = std::env::current_exe().ok();
     if args.iter().any(|a| a == "--demo") {
         match samples.as_deref().map(limeshot_app::demo::build) {
             Some(Ok(doc)) => {

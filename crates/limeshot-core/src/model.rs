@@ -683,6 +683,25 @@ impl Project {
         self.channels.iter().find(|c| c.id == id)
     }
 
+    /// The plugin a channel or insert slot runs, to change.
+    pub fn plugin_mut(&mut self, target: crate::PluginTarget) -> Option<&mut crate::PluginRef> {
+        match target {
+            crate::PluginTarget::Channel(c) => match &mut self.channels.iter_mut().find(|ch| ch.id == c)?.instrument {
+                Instrument::Plugin(p) => Some(p),
+                _ => None,
+            },
+            crate::PluginTarget::Effect { track, effect } => self
+                .mixer
+                .tracks
+                .get_mut(usize::from(track))?
+                .effects
+                .iter_mut()
+                .find(|e| e.id == effect)?
+                .plugin
+                .as_mut(),
+        }
+    }
+
     /// The plugin a channel or insert slot runs.
     pub fn plugin(&self, target: crate::PluginTarget) -> Option<&crate::PluginRef> {
         match target {

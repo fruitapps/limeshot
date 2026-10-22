@@ -574,3 +574,17 @@ longer; the Audio settings show the total. Verification: an engine test where a 
 block sizes 64, 333 and 1024 (without compensation they land on 24 000, 24 300 and 25 000); the full suite, Clippy
 (also for Windows) and fmt pass. Not done: listening with a commercial latent plugin.
 
+### Session 15, part 4: plugin crash isolation (PLG-010, D34)
+
+A plugin can now run in a process of its own ("Run in a separate process" under its name in Channel Settings or the
+insert card; FL Studio's bridged plugins). `limeshot-plugins/src/bridge.rs` starts LimeShot with
+`--plugin-bridge <socket>`; the child serves control calls on one Unix-socket connection (main thread) and audio
+blocks on another (second thread). `PluginInstance`/`PluginProcessor` (`hosted.rs`) put in-process and bridged
+plugins behind one interface for the UI and engine. A broken connection or a block that takes over 500 ms marks the
+plugin crashed: silence, a one-time toast, "The plugin crashed" with Reload in its settings. Switching processes keeps
+the state and reopens the window; Reload re-syncs the engine although the project did not change.
+Verification: bridge tests (processing, parameters, state, automation points, programs, a killed and a stopped child),
+a UI test (checkbox, kill, toast, notice, Reload, undo), and `examples/bridge_probe` with Vital, Surge XT, OTT and
+Elephant (sound, latency, state; about 0.1 ms per 512-frame block). The full suite, Clippy (also for Windows, where
+the bridge is left out) and fmt pass.
+

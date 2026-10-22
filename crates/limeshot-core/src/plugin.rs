@@ -23,6 +23,10 @@ pub struct PluginRef {
     /// The plugin's own state (opaque), saved base64-encoded.
     #[serde(default, skip_serializing_if = "PluginState::is_empty")]
     pub state: PluginState,
+    /// Run the plugin in a process of its own, so a crash does not take LimeShot down (FL
+    /// Studio's bridged plugins).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub separate_process: bool,
     /// The plugin window's place, saved with the project as FL Studio does (not an edit).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub window: Option<PluginWindow>,
@@ -39,6 +43,7 @@ impl PluginRef {
             name: name.into(),
             vendor: String::new(),
             state: PluginState::default(),
+            separate_process: false,
             window: None,
             extra: crate::Extra::new(),
         }

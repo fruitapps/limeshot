@@ -20,8 +20,8 @@ use std::time::{Duration, Instant};
 
 use egui::{RichText, Ui, vec2};
 use limeshot_audio::Msg;
-use limeshot_core::{ChannelId, Document, EffectKind, Instrument, PluginRef, PluginState, Project};
-use limeshot_plugins::{PluginKind, Vst3Instance, Vst3Module};
+use limeshot_core::{ChannelId, Command, Document, EffectKind, Instrument, PluginRef, PluginState, Project};
+use limeshot_plugins::{PluginInstance, PluginKind, PluginProcessor, Vst3Instance};
 use serde::{Deserialize, Serialize};
 
 use crate::app::LimeShotApp;
@@ -31,7 +31,7 @@ use crate::widgets::section;
 pub use limeshot_core::PluginTarget as Target;
 
 /// The `path` of LimeShot's built-in test plugins (only listed when enabled, for tests).
-pub const BUILTIN_PATH: &str = "builtin:limeshot-test";
+pub const BUILTIN_PATH: &str = limeshot_plugins::testing::BUILTIN_PATH;
 /// How long one bundle may take to scan.
 const SCAN_TIMEOUT: Duration = Duration::from_secs(30);
 /// Parameters listed at once in a plugin's panel (plugins often have thousands).
@@ -222,9 +222,16 @@ impl Scan {
 }
 
 struct Live {
-    /// The plugin this instance runs (bundle, class); a different one replaces it.
-    key: (String, String),
-    instance: Vst3Instance,
+    /// The plugin this instance runs; a different one (or a change of process) replaces it.
+    key: Key,
+    instance: PluginInstance,
+}
+
+/// What a running plugin was made from: bundle, class, and whether it runs in its own process.
+type Key = (String, String, bool);
+
+fn key_of(p: &PluginRef) -> Key {
+    (p.path.clone(), p.class_id.clone(), p.separate_process)
 }
 
 /// Plugins of the open project, and the database.
@@ -235,7 +242,7 @@ pub struct PluginHost {
     pub scan: Option<Scan>,
     live: HashMap<Target, Live>,
     /// Plugins that failed to load, with the reason (cleared when the plugin changes).
-    errors: HashMap<Target, ((String, String), String)>,
+    errors: HashMap<Target, (Key, String)>,
     generation: Option<u64>,
     /// The parameter filter typed into each plugin's panel.
     filters: HashMap<Target, String>,
@@ -246,20 +253,21 @@ pub struct PluginHost {
     /// The plugin parameter changed last (in the plugin's editor or LimeShot's list), for FL's
     /// Add › Automation for last tweaked parameter.
     pub last_tweaked: Option<(Target, u32)>,
+    /// The program that runs plugins in a process of their own (LimeShot itself with
+    /// `--plugin-bridge`); without one, such plugins cannot load.
+    pub bridge_exe: Option<PathBuf>,
+    /// Plugins whose process crashed, already reported.
+    crashed: std::collections::HashSet<Target>,
+    /// Windows to open again once their plugin has been recreated (Reload, a change of process).
+    reopen: HashMap<Target, crate::plugin_window::Tab>,
+    /// A plugin must be created although the project did not change (Reload).
+    needs_sync: bool,
     /// Processors returned from an export thread, dropped here on the main thread.
-    returned: Option<(
-        Sender<limeshot_plugins::Vst3Processor>,
-        Receiver<limeshot_plugins::Vst3Processor>,
-    )>,
+    returned: Option<(Sender<PluginProcessor>, Receiver<PluginProcessor>)>,
 }
 
-fn load_module(path: &str) -> Result<Arc<Vst3Module>, String> {
-    if path == BUILTIN_PATH {
-        limeshot_plugins::testing::module()
-    } else {
-        Vst3Module::load(Path::new(path))
-    }
-    .map_err(|e| e.to_string())
+fn load_module(path: &str) -> Result<Arc<limeshot_plugins::Vst3Module>, String> {
+    limeshot_plugins::load_module(path).map_err(|e| e.to_string())
 }
 
 /// Every plugin the project uses, with where it runs.
@@ -287,14 +295,32 @@ fn wanted(project: &Project) -> Vec<(Target, &PluginRef)> {
     out
 }
 
-/// Create a plugin and restore its saved state.
-fn instantiate(p: &PluginRef, sample_rate: u32) -> Result<(Vst3Instance, limeshot_plugins::Vst3Processor), String> {
+/// Create a plugin (in a bridge process started from `bridge` when the plugin asks for one) and
+/// restore its saved state.
+fn instantiate(
+    p: &PluginRef,
+    sample_rate: u32,
+    bridge: Option<&Path>,
+) -> Result<(PluginInstance, PluginProcessor), String> {
     if p.format != "VST3" {
         return Err(format!("{} plugins are not supported yet", p.format));
     }
-    let module = load_module(&p.path)?;
-    let (mut inst, proc) = Vst3Instance::new(&module, &p.class_id, f64::from(sample_rate), limeshot_engine::MAX_BLOCK)
-        .map_err(|e| e.to_string())?;
+    let sr = f64::from(sample_rate);
+    let block = limeshot_engine::MAX_BLOCK;
+    let (mut inst, proc) = match (p.separate_process, bridge) {
+        #[cfg(unix)]
+        (true, Some(exe)) => {
+            let (i, pr) = limeshot_plugins::bridge::BridgedInstance::spawn(exe, &p.path, &p.class_id, sr, block)
+                .map_err(|e| e.to_string())?;
+            (PluginInstance::Bridged(i), PluginProcessor::Bridged(pr))
+        }
+        (true, _) if cfg!(unix) => return Err("no plugin bridge is available".into()),
+        _ => {
+            let module = load_module(&p.path)?;
+            let (i, pr) = Vst3Instance::new(&module, &p.class_id, sr, block).map_err(|e| e.to_string())?;
+            (PluginInstance::Local(i), PluginProcessor::Local(pr))
+        }
+    };
     if !p.state.is_empty()
         && let Err(e) = inst.set_state(p.state.bytes())
     {
@@ -387,25 +413,19 @@ impl PluginHost {
         }
         let wanted = wanted(project);
         let saved_windows: Vec<(Target, &PluginRef)> = if opened { wanted.clone() } else { Vec::new() };
-        self.live.retain(|t, l| {
-            wanted
-                .iter()
-                .any(|(w, p)| w == t && l.key == (p.path.clone(), p.class_id.clone()))
-        });
+        self.live
+            .retain(|t, l| wanted.iter().any(|(w, p)| w == t && l.key == key_of(p)));
         // A window whose plugin went (or was replaced) closes.
         let live = &self.live;
         self.windows.retain(|t, _| live.contains_key(t));
-        self.errors.retain(|t, (k, _)| {
-            wanted
-                .iter()
-                .any(|(w, p)| w == t && *k == (p.path.clone(), p.class_id.clone()))
-        });
+        self.errors
+            .retain(|t, (k, _)| wanted.iter().any(|(w, p)| w == t && *k == key_of(p)));
         for (target, p) in wanted {
             if self.live.contains_key(&target) || self.errors.contains_key(&target) {
                 continue;
             }
-            let key = (p.path.clone(), p.class_id.clone());
-            match instantiate(p, sample_rate) {
+            let key = key_of(p);
+            match instantiate(p, sample_rate, self.bridge_exe.as_deref()) {
                 Ok((instance, proc)) => {
                     match target {
                         Target::Channel(c) => send(Msg::Instrument(c.0, Box::new(proc))),
@@ -420,6 +440,18 @@ impl PluginHost {
             }
         }
         self.restore_windows(saved_windows);
+        let ready: Vec<(Target, crate::plugin_window::Tab)> = self
+            .reopen
+            .iter()
+            .filter(|(t, _)| self.live.contains_key(t))
+            .map(|(t, tab)| (*t, *tab))
+            .collect();
+        for (t, tab) in ready {
+            self.reopen.remove(&t);
+            self.open_window(t, Some(tab));
+        }
+        let errors = &self.errors;
+        self.reopen.retain(|t, _| !errors.contains_key(t));
     }
 
     pub fn is_loaded(&self, target: Target) -> bool {
@@ -430,11 +462,11 @@ impl PluginHost {
         self.errors.get(&target).map(|(_, e)| e.as_str())
     }
 
-    pub fn instance(&self, target: Target) -> Option<&Vst3Instance> {
+    pub fn instance(&self, target: Target) -> Option<&PluginInstance> {
         self.live.get(&target).map(|l| &l.instance)
     }
 
-    pub(crate) fn instance_mut(&mut self, target: Target) -> Option<&mut Vst3Instance> {
+    pub(crate) fn instance_mut(&mut self, target: Target) -> Option<&mut PluginInstance> {
         self.live.get_mut(&target).map(|l| &mut l.instance)
     }
 
@@ -446,6 +478,9 @@ impl PluginHost {
         }
         let mut changed = false;
         for (target, l) in &mut self.live {
+            if l.instance.crashed() {
+                continue;
+            }
             if let Some(&(id, _)) = l.instance.take_editor_edits().last() {
                 self.last_tweaked = Some((*target, id));
                 changed = true;
@@ -453,6 +488,49 @@ impl PluginHost {
             changed |= l.instance.take_restart();
         }
         changed
+    }
+
+    /// Plugins whose process crashed or hung since the last call (each reported once).
+    pub fn take_crashes(&mut self) -> Vec<Target> {
+        let mut out = Vec::new();
+        for (target, l) in &self.live {
+            if l.instance.is_bridged() && !self.crashed.contains(target) && l.instance.crashed() {
+                out.push(*target);
+            }
+        }
+        self.crashed.extend(out.iter().copied());
+        out
+    }
+
+    /// Whether the plugin at `target` runs in its own process and that process crashed.
+    pub fn has_crashed(&self, target: Target) -> bool {
+        self.crashed.contains(&target)
+    }
+
+    /// Start the plugin at `target` again (after a crash): the next sync creates it anew from the
+    /// project, with the state saved there.
+    pub fn reload(&mut self, target: Target) {
+        self.keep_window_open(target);
+        self.live.remove(&target);
+        self.errors.remove(&target);
+        self.crashed.remove(&target);
+        self.needs_sync = true;
+    }
+
+    /// Whether plugins must be synced (and the snapshot sent again) although the project did not
+    /// change. Clears the request.
+    pub fn take_needs_sync(&mut self) -> bool {
+        std::mem::take(&mut self.needs_sync)
+    }
+
+    /// Close the window of the plugin at `target` now and open it again, on the same tab, once
+    /// the plugin has been recreated.
+    pub(crate) fn keep_window_open(&mut self, target: Target) {
+        if let Some(w) = self.window(target) {
+            let tab = w.tab;
+            self.close_window(target);
+            self.reopen.insert(target, tab);
+        }
     }
 
     /// Move plugins' own controls to their automated values at `tick` (Song playback), as FL
@@ -523,7 +601,7 @@ impl PluginHost {
     /// Fresh plugin instances for an offline render of `project`, with the running plugins'
     /// current state. The control halves are returned for the caller to keep (and drop on this
     /// thread) until the render is done; the processors hand themselves back here when dropped.
-    pub fn offline(&self, project: &Project, sample_rate: u32) -> (limeshot_engine::Processors, Vec<Vst3Instance>) {
+    pub fn offline(&self, project: &Project, sample_rate: u32) -> (limeshot_engine::Processors, Vec<PluginInstance>) {
         let mut processors = limeshot_engine::Processors::default();
         let mut keep = Vec::new();
         let Some((tx, _)) = &self.returned else {
@@ -534,7 +612,7 @@ impl PluginHost {
             if let Some(Ok(s)) = self.live.get(&target).map(|l| l.instance.state()) {
                 p.state = PluginState::new(s);
             }
-            match instantiate(&p, sample_rate) {
+            match instantiate(&p, sample_rate, self.bridge_exe.as_deref()) {
                 Ok((inst, proc)) => {
                     let proc = ReturnOnDrop {
                         inner: Some(proc),
@@ -555,8 +633,8 @@ impl PluginHost {
 
 /// A processor used on another thread that sends itself back to be dropped on the main thread.
 struct ReturnOnDrop {
-    inner: Option<limeshot_plugins::Vst3Processor>,
-    tx: Sender<limeshot_plugins::Vst3Processor>,
+    inner: Option<PluginProcessor>,
+    tx: Sender<PluginProcessor>,
 }
 
 impl Drop for ReturnOnDrop {
@@ -766,14 +844,29 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             }
         });
     });
+    let crashed = app.plugins.has_crashed(target);
     match (app.plugins.instance(target), app.plugins.error(target)) {
+        (Some(_), _) if crashed => {
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("The plugin crashed; it is silent.").color(t.warning));
+                if ui
+                    .button("Reload")
+                    .hint("Start the plugin again with the state last saved in the project")
+                    .clicked()
+                {
+                    app.plugins.reload(target);
+                }
+            });
+        }
         (Some(inst), _) => {
             let latency = inst.latency_samples();
-            let text = if latency > 0 {
-                format!("{} · latency {latency} samples", p.format)
-            } else {
-                p.format.clone()
-            };
+            let mut text = p.format.clone();
+            if inst.is_bridged() {
+                text.push_str(" · own process");
+            }
+            if latency > 0 {
+                text.push_str(&format!(" · latency {latency} samples"));
+            }
             ui.label(RichText::new(text).color(t.text_faint).small());
         }
         (None, Some(e)) => {
@@ -783,6 +876,28 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             ui.label(RichText::new("Loading…").color(t.text_faint));
         }
     }
+    // FL Studio runs a plugin "bridged" (Plugin options › Bit size); LimeShot calls it what it
+    // does. Switching recreates the plugin with its current state.
+    if cfg!(unix) {
+        let mut on = p.separate_process;
+        if ui
+            .checkbox(&mut on, "Run in a separate process")
+            .hint("A crash of the plugin then leaves LimeShot running; its own editor is not shown")
+            .changed()
+        {
+            set_separate_process(app, target, on);
+        }
+    }
+}
+
+/// Move a plugin into a process of its own or back, keeping its sound: its state goes into the
+/// project first, and the new instance loads it.
+pub fn set_separate_process(app: &mut LimeShotApp, target: Target, on: bool) {
+    if let Some(Ok(s)) = app.plugins.instance(target).map(|i| i.state()) {
+        app.doc.store_plugin_state(target, PluginState::new(s));
+    }
+    app.plugins.keep_window_open(target);
+    app.exec(Command::SetPluginSeparateProcess { plugin: target, on });
 }
 
 /// The plugin's parameters as sliders, filtered by name.

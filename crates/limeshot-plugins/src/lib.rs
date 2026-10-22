@@ -29,8 +29,11 @@
 #![allow(clippy::unnecessary_cast)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+#[cfg(unix)]
+pub mod bridge;
 mod editor;
 mod host;
+mod hosted;
 mod instance;
 mod module;
 pub mod preset;
@@ -39,11 +42,23 @@ pub mod testing;
 mod util;
 
 pub use editor::{EditorSize, NativeWindow, Vst3Editor};
+pub use hosted::{PluginInstance, PluginProcessor};
 pub use instance::{NoteEvent, NoteEventKind, ParamInfo, Transport, Vst3Instance, Vst3Processor};
 pub use module::Vst3Module;
 pub use preset::VstPreset;
 
 use std::path::PathBuf;
+use std::sync::Arc;
+
+/// Load the bundle at `path`, or LimeShot's built-in test plugins for
+/// [`testing::BUILTIN_PATH`].
+pub fn load_module(path: &str) -> Result<Arc<Vst3Module>, PluginError> {
+    if path == testing::BUILTIN_PATH {
+        testing::module()
+    } else {
+        Vst3Module::load(std::path::Path::new(path))
+    }
+}
 
 /// What a plugin class is used as.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -81,6 +96,10 @@ pub enum PluginError {
     Call(&'static str),
     #[error("the plugin does not support {0}")]
     Unsupported(&'static str),
+    #[error("plugin process: could not {0}")]
+    Bridge(&'static str),
+    #[error("{0}")]
+    Remote(String),
     #[error("invalid plugin state")]
     State,
 }

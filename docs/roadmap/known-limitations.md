@@ -72,7 +72,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
   view directly. Plugin parameter changes are not undo steps; delay compensation covers up to about 340 ms per path and 64
   delayed paths, and its trimming in exports cannot be switched off,
-  no custom plugin folders, and a plugin that crashes while playing takes LimeShot down (only scanning is isolated).
+  no custom plugin folders, and a plugin that crashes takes LimeShot down unless it was set to run in a separate
+  process (macOS and Linux; such a plugin's own editor is not shown).
   Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
   channels do not play audio clips. No CLAP or Audio Units. Verified on macOS only.
 * Window positions, sizes and detached/maximised states are not remembered between sessions.

@@ -173,3 +173,20 @@ builder changes of immediate viewports only together with a command. The alterna
 window like FL's, needs its own key-window handling and was not needed: AppKit composites the plugin's layer-backed
 view above egui's surface. Windows (`HWND`) and Linux (`X11EmbedWindowID`, `IRunLoop`) need only the platform
 module; until then the Plugin tab lists the parameters.
+
+### D34. Crash isolation: an opt-in plugin bridge process per plugin
+**Why:** a plugin runs third-party native code; a crash in it ends the process, and catching a fault in-process is
+not sound in Rust. FL Studio's answer is the bridged plugin (Plugin options › Bit size), a per-plugin choice, so
+LimeShot does the same: "Run in a separate process" in a plugin's settings (`PluginRef::separate_process`, an undoable
+command). The plugin then runs in a copy of LimeShot started with `--plugin-bridge <socket>`; the child connects twice
+to a Unix socket: control calls (parameters, state, presets) on one connection, served by the child's main thread,
+and one request/reply per audio block on the other, served by a second thread, mirroring the in-process split
+(D32). Messages use a small fixed binary encoding over preallocated buffers, so the audio thread does not allocate;
+it does block on the socket, with a 500 ms limit, as plugin bridges must. A failed or late reply marks the plugin
+crashed: its slot is silent, the child is stopped, LimeShot reports it once and offers Reload (the state last saved
+in the project). Shared memory would save two copies per block but needs `mmap` and cross-process wake-ups that
+macOS does not offer with timeouts (no `sem_timedwait`); a 512-frame block round trip measured about 0.1 ms. The
+bridge is Unix only; on Windows the option is hidden until a named-pipe transport exists. A bridged plugin's own
+editor would live in the child process and is not shown yet (the Plugin tab lists parameters). Plugins that are not
+bridged still run in LimeShot's process.
+

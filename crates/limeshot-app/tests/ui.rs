@@ -3750,6 +3750,78 @@ fn right_click_on_an_effect_slider_offers_automation_without_moving_it() {
     );
 }
 
+/// PLG-010: a plugin set to run in a separate process survives as a silent slot when its process
+/// dies, and Reload brings it back.
+#[cfg(unix)]
+#[test]
+fn a_plugin_in_its_own_process_crashes_without_taking_limeshot_down() {
+    use limeshot_plugins::PluginInstance;
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.bridge_exe = Some(env!("CARGO_BIN_EXE_limeshot").into());
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let ch = h.state().project().channels.last().expect("channel").id;
+    let target = Target::Channel(ch);
+    h.state_mut().plugins.set_param(target, 0, 0.25);
+    h.state_mut()
+        .plugins
+        .open_window(target, Some(limeshot_ui::plugin_window::Tab::Settings));
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(!h.state().plugins.instance(target).expect("plugin").is_bridged());
+    h.get_by_label("Run in a separate process").click();
+    for _ in 0..3 {
+        h.step();
+    }
+    let inst = h.state().plugins.instance(target).expect("plugin in its own process");
+    assert!(inst.is_bridged());
+    assert_eq!(inst.param(0), 0.25, "the state moved with it");
+    let Instrument::Plugin(p) = &h.state().project().channel(ch).expect("ch").instrument else {
+        panic!("plugin channel");
+    };
+    assert!(p.separate_process, "saved with the project");
+
+    // The plugin's process dies: LimeShot reports it and keeps running.
+    let PluginInstance::Bridged(b) = h.state().plugins.instance(target).expect("plugin") else {
+        panic!("bridged");
+    };
+    let pid = b.process_id();
+    assert!(
+        std::process::Command::new("kill")
+            .arg("-KILL")
+            .arg(pid.to_string())
+            .status()
+            .expect("kill")
+            .success()
+    );
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(h.state().plugins.has_crashed(target));
+    assert!(h.state().toasts.iter().any(|t| t.text.contains("crashed")));
+    assert!(h.query_by_label_contains("The plugin crashed").is_some());
+
+    // Reload starts it again.
+    h.get_by_label("Reload").click();
+    for _ in 0..4 {
+        h.step();
+    }
+    let inst = h.state().plugins.instance(target).expect("reloaded");
+    assert!(inst.is_bridged() && !inst.crashed());
+    assert!(!h.state().plugins.has_crashed(target));
+
+    // Undo puts it back into LimeShot's process.
+    h.state_mut().doc.undo();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(!h.state().plugins.instance(target).expect("plugin").is_bridged());
+}
+
 #[test]
 fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
     use limeshot_ui::plugin_window::Tab;
