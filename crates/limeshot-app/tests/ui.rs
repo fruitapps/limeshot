@@ -4954,9 +4954,30 @@ fn typing_keyboard_targets_selected_channel_and_releases_the_original() {
     });
     h.step();
     assert_eq!(h.state().typing_notes, vec![(Key::Q, b, 60)]);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press(Key::ArrowUp);
+    h.step();
+    assert_eq!(h.state().selected_channel(), Some(a), "arrow keys still reach the rack");
     h.state_mut().keyboard_notes = false;
     h.step();
     assert!(h.state().typing_notes.is_empty());
+}
+
+#[test]
+fn typing_keyboard_keeps_note_keys_from_tools_and_allows_delete() {
+    let (mut h, pat, ch) = melody_piano_roll();
+    let note = pattern_notes(&h, pat, ch)[0].id;
+    h.state_mut().ui.piano.selection = vec![note];
+    h.state_mut().ui.piano.tool = limeshot_ui::piano_roll::Tool::Draw;
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::PianoRoll;
+    h.state_mut().keyboard_notes = true;
+    h.key_down(Key::D);
+    h.step();
+    assert_eq!(h.state().ui.piano.tool, limeshot_ui::piano_roll::Tool::Draw);
+    assert_eq!(h.state().typing_notes, vec![(Key::D, ch, 51)]);
+    h.key_press(Key::Delete);
+    h.step();
+    assert!(pattern_notes(&h, pat, ch).iter().all(|n| n.id != note));
 }
 
 #[test]
@@ -5045,6 +5066,22 @@ fn automation_points_can_be_placed_far_from_the_existing_curve() {
     assert_eq!(a.points.len(), 2);
     assert_eq!(a.points[1].tick, PPQ * 2);
     assert!(a.points[1].value < 0.2);
+}
+
+#[test]
+fn short_pattern_lengths_are_displayed_without_padding_the_length_control() {
+    let mut h = harness(true);
+    let pattern = h.state().current_pattern();
+    for steps in [1, 8, 15, 16, 32, 512] {
+        h.state_mut().exec(Command::SetPatternLength {
+            pattern,
+            steps: Some(steps),
+        });
+        h.step();
+        assert!(h.query_by_value(&format!("{steps} steps")).is_some());
+        assert!(h.state().ui.rack.step_strips.iter().all(|s| s.2 == steps.max(16)));
+        assert_eq!(h.state().project().pattern(pattern).unwrap().length_steps, Some(steps));
+    }
 }
 
 #[test]

@@ -107,7 +107,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         return;
     };
     let pat_len = pattern.length(sig);
-    let steps = (pat_len / STEP_TICKS).clamp(16, 512) as u32;
+    let steps = (pat_len / STEP_TICKS).clamp(1, 512) as u32;
+    let strip_steps = steps.max(16);
     let length_steps = pattern.length_steps;
     let pat_name = pattern.name.clone();
     let pat_color = pattern.color;
@@ -316,9 +317,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     .pattern(pid)
                     .is_some_and(|p| p.is_step_sequence(ch.id, ch.root_key));
                 if is_steps {
-                    step_strip(app, ui, ch, pid, steps);
+                    step_strip(app, ui, ch, pid, strip_steps);
                 } else {
-                    note_preview(app, ui, ch, pid, steps, pat_len);
+                    note_preview(app, ui, ch, pid, strip_steps, pat_len);
                 }
             });
         }

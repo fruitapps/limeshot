@@ -304,6 +304,7 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         step_pattern(app, -1);
     }
     if app.keyboard_notes && !ctx.input(|i| i.modifiers.command || i.modifiers.alt || i.modifiers.ctrl) {
+        let mut handled = false;
         if let Some(channel) = app.selected_channel() {
             for (key, offset) in [
                 (Key::Z, 0),
@@ -331,15 +332,20 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
                 (Key::Num7, 22),
                 (Key::U, 23),
             ] {
-                if ctx.input(|i| i.key_pressed(key)) && !app.typing_notes.iter().any(|n| n.0 == key) {
-                    let note = 48 + offset;
-                    app.preview_on(channel, note, 0.78);
-                    app.auditions.retain(|n| *n != (channel, note));
-                    app.typing_notes.push((key, channel, note));
+                if ctx.input(|i| i.key_pressed(key)) {
+                    handled = true;
+                    if !app.typing_notes.iter().any(|n| n.0 == key) {
+                        let note = 48 + offset;
+                        app.preview_on(channel, note, 0.78);
+                        app.auditions.retain(|n| *n != (channel, note));
+                        app.typing_notes.push((key, channel, note));
+                    }
                 }
             }
         }
-        return;
+        if handled {
+            return;
+        }
     }
     match app.ui.focus {
         Focus::PianoRoll => crate::piano_roll::keys(app, ctx),

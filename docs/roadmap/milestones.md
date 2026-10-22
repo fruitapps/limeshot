@@ -3,7 +3,7 @@
 | # | Milestone | Deliverable | State |
 |---|---|---|---|
 | 0 | Research and architecture | ArtCraft and FL Studio research, REA set up, inventory, decisions | **Done** (research evidence and live observation recorded; permissions vary by execution host) |
-| 1 | Native app foundation | Workspace, window, layout, theme tokens, menus, commands, project model, CI | **Done** on macOS; CI defined, not yet run |
+| 1 | Native app foundation | Workspace, window, layout, theme tokens, menus, commands, project model, CI | **Done** on macOS; CI jobs have run; remote macOS/Windows reruns pending |
 | 2 | Sequencer and audio | Device output, clock, patterns, channels, step sequencer, WAV playback, transport, tempo | **Done** (tests + realtime check) |
 | 3 | Piano Roll and synth | Notes, editing, velocity, polyphonic synth, envelope, scheduling | **Done** |
 | 4 | Arrangement | Multiple patterns, Playlist clips, Song mode, navigation | **Done** |

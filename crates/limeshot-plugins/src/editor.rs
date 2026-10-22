@@ -59,6 +59,8 @@ struct FrameState {
     container: Option<platform::Container>,
     top_inset: f64,
     size: EditorSize,
+    /// The host's last embedded size request, before the plugin applies its constraints.
+    embedded_request: EditorSize,
     /// The plugin resized itself since the host last asked.
     resized: bool,
 }
@@ -162,6 +164,7 @@ impl Vst3Editor {
                     container: None,
                     top_inset: 0.0,
                     size,
+                    embedded_request: size,
                     resized: false,
                 }),
             });
@@ -235,14 +238,14 @@ impl Vst3Editor {
     /// Position a native child view in the main window's content coordinates. Resize-capable
     /// plugins receive onSize; fixed-size plugins retain their natural dimensions.
     pub fn layout_embedded(&self, x: f64, y: f64, width: f64, height: f64) {
-        if self.can_resize()
-            && (self.size().width != width.max(1.0) as u32 || self.size().height != height.max(1.0) as u32)
-        {
-            let mut rect = EditorSize {
-                width: width.max(1.0) as u32,
-                height: height.max(1.0) as u32,
-            }
-            .rect();
+        let requested = EditorSize {
+            width: width.max(1.0) as u32,
+            height: height.max(1.0) as u32,
+        };
+        if self.can_resize() && self.frame.state.borrow().embedded_request != requested {
+            // Cache the request before calling the plugin, which may constrain it or resize itself.
+            self.frame.state.borrow_mut().embedded_request = requested;
+            let mut rect = requested.rect();
             // SAFETY: plain size negotiation with a live plugin; the rectangle lives for both calls.
             unsafe {
                 self.view.checkSizeConstraint(&mut rect);
