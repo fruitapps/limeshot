@@ -168,23 +168,7 @@ impl Renderer {
         self.plan_pdc(true);
         self.design_eqs();
         if tempo_changed {
-            // Keep the musical position; continue at the new tempo from here.
-            let tick = self.timeline.tick_at_sample(self.now);
-            self.timeline = Timeline {
-                origin_tick: tick,
-                origin_sample: self.now,
-                tempo: self.snapshot.tempo,
-                sample_rate: self.sample_rate,
-            };
-            for v in self
-                .voices
-                .iter_mut()
-                .filter(|v| v.sequenced && v.release_at != u64::MAX)
-            {
-                v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
-            }
-            let tl = self.timeline;
-            self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+            self.retime(self.snapshot.tempo);
         }
         for v in &mut self.voices {
             if v.channel != NO_CHANNEL && usize::from(v.channel) >= channels {
@@ -196,6 +180,37 @@ impl Renderer {
 
     pub fn is_playing(&self) -> bool {
         self.playing
+    }
+
+    /// Continue at `tempo` from the current sample, keeping the musical position: scheduled
+    /// note ends move with it.
+    fn retime(&mut self, tempo: limeshot_core::Tempo) {
+        let tick = self.timeline.tick_at_sample(self.now);
+        self.timeline = Timeline {
+            origin_tick: tick,
+            origin_sample: self.now,
+            tempo,
+            sample_rate: self.sample_rate,
+        };
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| v.sequenced && v.release_at != u64::MAX)
+        {
+            v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
+        }
+        let tl = self.timeline;
+        self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+    }
+
+    /// The tempo the transport runs at now (tempo automation included).
+    pub fn current_tempo(&self) -> limeshot_core::Tempo {
+        self.timeline.tempo
+    }
+
+    /// Frames from now until tick `t` at the current tempo (0 when it has passed).
+    pub fn frames_until(&self, t: Tick) -> u64 {
+        self.timeline.sample_of_tick(t).saturating_sub(self.now)
     }
 
     pub fn mode(&self) -> PlayMode {
@@ -512,7 +527,7 @@ impl Renderer {
     /// The transport as plugins see it, at the current position.
     fn transport(&self) -> limeshot_dsp::Transport {
         let tick = self.position();
-        let bpm = f64::from(self.snapshot.tempo.milli_bpm()) / 1000.0;
+        let bpm = f64::from(self.timeline.tempo.milli_bpm()) / 1000.0;
         let quarters = tick as f64 / limeshot_core::PPQ as f64;
         let sig = self.snapshot.time_signature;
         limeshot_dsp::Transport {
@@ -552,13 +567,25 @@ impl Renderer {
         for (m, t) in self.track_mix.iter_mut().zip(&snapshot.mixer) {
             *m = (t.gain, t.pan);
         }
+        // Tempo automation re-times the transport (Song mode only, like all automation).
+        let tick = self.position();
+        let tempo = snapshot
+            .automation
+            .iter()
+            .filter(|_| self.mode == PlayMode::Song)
+            .find(|l| l.target == LaneTarget::Tempo)
+            .and_then(|l| l.value_at(tick))
+            .map_or(snapshot.tempo, |bpm| limeshot_core::Tempo::from_bpm(f64::from(bpm)));
+        if tempo != self.timeline.tempo {
+            self.retime(tempo);
+        }
         if self.mode != PlayMode::Song {
             return;
         }
-        let tick = self.position();
         for lane in &snapshot.automation {
             let Some(v) = lane.value_at(tick) else { continue };
             match lane.target {
+                LaneTarget::Tempo => {}
                 LaneTarget::ChannelVolume(i) => {
                     if let Some(m) = self.chan_mix.get_mut(i) {
                         m.0 = v;

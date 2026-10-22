@@ -1090,3 +1090,12 @@ checks pass. Reused the existing `limeshot-s16/target` build cache. Prior PR run
 were still in progress when checked; no CI failure was observed. Live/native checks remain deferred while the Mac
 is locked, and PLG-006 remains IMPLEMENTED, not VERIFIED. Continue current priorities in next-steps.md using a new
 branch and NEW draft PR for each future development session.
+
+### Session 16 continuation: tempo automation (AUT-008)
+
+Branch `claude/s16-synth-tempo` (draft PR stacked on `s16-automation`). `AutomationTarget::Tempo` (60–180 BPM) and
+`LaneTarget::Tempo`; the renderer's `retime()` (shared with project tempo changes) runs whenever the tempo lane's
+value differs from the transport's, every automation interval in Song mode, so the position and scheduled note ends
+carry over; `current_tempo()` and `frames_until()`. Offline export renders until the end tick is reached at the
+playing tempo (re-read every block, stopping before Pattern mode wraps). The tempo field's right-click has Create
+automation clip and shows the automated tempo while playing. Engine and UI tests added.

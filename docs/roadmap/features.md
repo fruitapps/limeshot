@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 81, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 149, DEFERRED 4
+- By status: NOT_STARTED 80, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 150, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 8 | 1 | 1 | 4 |
 | Effects | 15 | 11 | 1 | 0 | 3 |
-| Automation | 13 | 4 | 1 | 0 | 8 |
+| Automation | 13 | 5 | 1 | 0 | 7 |
 | Recording | 11 | 1 | 1 | 1 | 8 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
@@ -235,7 +235,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | AUT-005 | Event editor | P2 |  | NOT_STARTED | Planned. | — |
 | AUT-006 | Parameter linking to controllers | P2 |  | NOT_STARTED | Planned. | — |
 | AUT-007 | LFO / formula / peak controllers | P3 |  | NOT_STARTED | Planned. | — |
-| AUT-008 | Tempo automation | P2 |  | NOT_STARTED | Planned: the engine timeline assumes one tempo; tempo automation needs a tempo map. | — |
+| AUT-008 | Tempo automation | P2 |  | VERIFIED | A tempo automation clip (tempo field right-click › Create automation clip, 60–180 BPM like FL's) re-times the transport during Song playback: the renderer evaluates the tempo lane every automation interval (64 frames) and continues at the new tempo from the current position; scheduled note ends follow. Offline export runs to the song's end at the automated tempo. The tempo field shows the automated tempo while the song plays; Pattern mode and the stored project tempo are unaffected.<br>*Session 16 continuation. Tempo changes step every 64 frames (not sample-continuous). The song position in minutes:seconds and clip lengths in the Playlist use the tempo playing now, not an integrated tempo map; audio clips are not time-stretched; a project tempo outside 60–180 BPM is clamped where a new tempo clip starts.* | `limeshot-engine tests/audio.rs::tempo_automation_changes_the_song_length`<br>`crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip` |
 | AUT-009 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned (after plugin hosting). | — |
 | AUT-010 | Automation clip channels in the Channel Rack | P2 |  | NOT_STARTED | Planned. Automations are listed in the Playlist picker instead. | — |
 | AUT-011 | Init song with this position | P3 |  | NOT_STARTED | Planned. | — |

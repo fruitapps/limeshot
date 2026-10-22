@@ -1828,3 +1828,68 @@ fn skipped_sampler_advances_envelope_in_output_time() {
         }
     }
 }
+
+/// AUT-008: a tempo automation re-times the transport during Song playback; the export runs
+/// to the song's end at the automated tempo. Bar 1 holds 120 BPM, then the clip ends at 180 BPM,
+/// which holds for bar 2.
+#[test]
+fn tempo_automation_changes_the_song_length() {
+    let (mut doc, _) = dc_clip_doc();
+    let clip = ClipId(
+        doc.execute(Command::AddAutomationClip {
+            target: AutomationTarget::Tempo,
+            track: 3,
+            start: 0,
+            length: 3840,
+            value: None,
+            name: None,
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    let a = doc.project().clip(clip).unwrap().automation().unwrap();
+    // 60–180 BPM: 0.5 is 120 BPM, 1.0 is 180 BPM.
+    doc.execute(Command::SetAutomationPoints {
+        automation: a,
+        points: vec![
+            AutomationPoint {
+                tick: 0,
+                value: 0.5,
+                tension: 0.0,
+                mode: PointMode::Hold,
+            },
+            AutomationPoint {
+                tick: 3840,
+                value: 1.0,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+        ],
+    })
+    .unwrap();
+    let snap = dc_snapshot(&doc);
+    for block in [64, 512] {
+        let (_, report) = render(snap.clone(), ExportRange::Song, block, SR);
+        // Bar 1: 2 s at 120 BPM; bar 2: 4/3 s at 180 BPM.
+        let want = 96_000 + 64_000;
+        assert!(
+            report.music_frames.abs_diff(want) <= 64,
+            "block {block}: {} frames, want {want}",
+            report.music_frames
+        );
+    }
+    // Live: during bar 2 the renderer plays at 180 BPM; in Pattern mode the project tempo holds.
+    let mut r = Renderer::new(SR, snap.clone());
+    r.set_mode(PlayMode::Song);
+    r.locate(3840 + 100);
+    r.play();
+    let mut buf = vec![0.0; 2 * 256];
+    r.render(&mut buf);
+    assert_eq!(r.current_tempo(), Tempo::from_bpm(180.0));
+    r.set_mode(PlayMode::Pattern);
+    r.render(&mut buf);
+    assert_eq!(r.current_tempo(), Tempo::from_bpm(120.0));
+    // The project tempo itself is untouched.
+    assert_eq!(doc.project().tempo, Tempo::from_bpm(120.0));
+}

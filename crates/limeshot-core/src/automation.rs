@@ -32,6 +32,8 @@ pub enum AutomationTarget {
         plugin: PluginTarget,
         id: u32,
     },
+    /// The project tempo (FL Studio's tempo automation clip, 60–180 BPM by default).
+    Tempo,
 }
 
 /// How a normalised value maps to the parameter's own units.
@@ -111,6 +113,7 @@ impl AutomationTarget {
             AutomationTarget::PluginParam { plugin, .. } => {
                 p.plugin(plugin).map(|_| Mapping::Linear { min: 0.0, max: 1.0 })
             }
+            AutomationTarget::Tempo => Some(Mapping::Linear { min: 60.0, max: 180.0 }),
         }
     }
 
@@ -133,6 +136,7 @@ impl AutomationTarget {
                 .copied(),
             // The value lives in the plugin, not the project.
             AutomationTarget::PluginParam { .. } => None,
+            AutomationTarget::Tempo => Some(p.tempo.bpm() as f32),
         }
     }
 
@@ -185,6 +189,7 @@ impl AutomationTarget {
                 .map_or_else(|| format!("Track {t}"), |t| t.name.clone())
         };
         match *self {
+            AutomationTarget::Tempo => "Tempo".into(),
             AutomationTarget::ChannelVolume(c) => format!("{} – Volume", chan(c)),
             AutomationTarget::ChannelPan(c) => format!("{} – Pan", chan(c)),
             AutomationTarget::MixerVolume(t) => format!("{} – Volume", track(t)),

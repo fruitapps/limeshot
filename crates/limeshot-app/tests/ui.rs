@@ -6098,3 +6098,36 @@ fn save_new_version_from_file_menu_keeps_previous_project_and_undo_history() {
     assert_eq!(h.state().path.as_ref(), Some(&unavailable));
     assert!(h.state().doc.is_modified());
 }
+
+/// AUT-008: the tempo field's right-click creates a tempo automation clip, starting at the
+/// project tempo.
+#[test]
+fn the_tempo_field_creates_a_tempo_automation_clip() {
+    let mut h = harness(true);
+    let tempo = h.state().project().tempo.bpm() as f32;
+    let bpm_label = h.get_by_label("BPM").rect();
+    click(
+        &mut h,
+        bpm_label.left_center() - vec2(30.0, 0.0),
+        PointerButton::Secondary,
+    );
+    h.step();
+    h.get_by_label("Create automation clip").click();
+    h.step();
+    let p = h.state().project();
+    let a = p
+        .automations
+        .iter()
+        .find(|a| a.target == AutomationTarget::Tempo)
+        .expect("a tempo automation");
+    assert!(
+        p.playlist.clips.iter().any(|c| c.automation() == Some(a.id)),
+        "placed on the Playlist"
+    );
+    let mapping = AutomationTarget::Tempo.mapping(p).expect("mapping");
+    let start = mapping.to_value(a.points[0].value);
+    assert!(
+        (start - tempo).abs() < 0.01,
+        "starts at the project tempo: {start} vs {tempo}"
+    );
+}

@@ -207,6 +207,8 @@ pub enum LaneTarget {
         effect: u32,
         id: u32,
     },
+    /// The tempo in BPM: the renderer re-times the transport as it changes.
+    Tempo,
 }
 
 /// Where one clip plays its automation: song ticks `start..end`, reading the curve from
@@ -526,6 +528,7 @@ fn automation_lanes(project: &Project) -> Vec<AutomationLane> {
             continue;
         };
         let target = match a.target {
+            AutomationTarget::Tempo => Some(LaneTarget::Tempo),
             AutomationTarget::ChannelVolume(c) => channel(c).map(LaneTarget::ChannelVolume),
             AutomationTarget::ChannelPan(c) => channel(c).map(LaneTarget::ChannelPan),
             AutomationTarget::MixerVolume(t) => track(t).map(LaneTarget::MixerVolume),

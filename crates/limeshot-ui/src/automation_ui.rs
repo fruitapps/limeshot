@@ -75,6 +75,8 @@ fn default_value(app: &LimeShotApp, target: AutomationTarget) -> Option<f32> {
             .get(index)
             .map(|s| s.default),
         PluginParam { .. } => None,
+        // A new project's tempo.
+        Tempo => Some(140.0),
     }
 }
 
@@ -98,6 +100,7 @@ pub(crate) fn set_value(app: &mut LimeShotApp, target: AutomationTarget, value: 
             value,
         },
         PluginParam { .. } => return,
+        Tempo => Command::SetTempo(limeshot_core::Tempo::from_bpm(f64::from(value))),
     };
     app.exec(command);
 }
@@ -134,6 +137,7 @@ pub(crate) fn input_value(app: &LimeShotApp, target: AutomationTarget) -> Option
             Some((v.to_string(), spec.unit))
         }
         PluginParam { .. } => None,
+        Tempo => Some((format!("{v:.3}"), "BPM")),
     }
 }
 
@@ -157,6 +161,8 @@ pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &st
         MixerVolume(_) => 10f32.powf(typed / 20.0),
         PluginParam { .. } => return None,
         EffectParam { .. } => typed,
+        // Any tempo LimeShot plays (10–522 BPM), not just the automation's 60–180 range.
+        Tempo => return (10.0..=522.0).contains(&typed).then_some(typed),
     };
     (value.is_finite() && (mapping.to_value(0.0)..=mapping.to_value(1.0)).contains(&value)).then_some(value)
 }

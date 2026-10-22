@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **730** — IMPLEMENTED 200, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 380, NOT_PLANNED 41
+Tracked: **731** — IMPLEMENTED 200, DIFFERENT 96, LIMESHOT_ONLY 14, NOT_STARTED 380, NOT_PLANNED 41
 
 ## Summary
 
@@ -20,7 +20,7 @@ Tracked: **730** — IMPLEMENTED 200, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTE
 | Options | 24 | 9 | 0 | 13 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
-| Toolbar | 52 | 24 | 8 | 17 | 3 | 2 |
+| Toolbar | 52 | 24 | 8 | 17 | 3 | 3 |
 | Channel Rack | 72 | 27 | 12 | 29 | 4 | 2 |
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
@@ -447,6 +447,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-294 | Tempo | Transport | control |  |  | Toolbar › tempo field | DIFFERENT | TR-002 | Drag or type, as in FL. Right-click: Tempo tapper and BPM presets 80–180 (LimeShot). FL's menu also has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…); LimeShot has no tempo automation (AUT-008). |
 | MENU-295 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Tempo tapper | Tempo menu | dialog | `Cmd+F5` |  | Toolbar › Tempo tapper | IMPLEMENTED | TR-012 | Also View › Tempo tapper and Cmd+F5. Tapping sets the project tempo from the last taps (one undo step while the window is open); a two-second pause starts over. |
 | MENU-296 | &nbsp;&nbsp;&nbsp;&nbsp;↳ <BPM presets> | Tempo menu | list |  |  | Toolbar › tempo menu presets | IMPLEMENTED | TR-002 | LimeShot: 80 to 180 BPM in steps of 10; FL's list continues past the capture. |
+| MENU-731 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create automation clip | Tempo menu | action |  |  | Toolbar › tempo menu › Create automation clip | LIMESHOT_ONLY | AUT-008 | Session 16: not seen in FL's tempo menu during the toolbar pass (FL creates tempo automation from Tools › Last tweaked); LimeShot offers it here too. |
 | MENU-297 | Song position | Song position | display |  |  | Toolbar › song position | DIFFERENT | TR-008 | A right-click chooses which format is large (Bar : Beat : Tick or Minute : Second : Centisecond); the other is shown small below, as before. A click returns to the start. No SMPTE. |
 | MENU-298 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Mode | Song position menu | radio |  |  | Toolbar › Bar : Beat : Tick / Minute : Second : Centisecond | DIFFERENT | TR-008 | LimeShot has two of FL's modes; no SMPTE. |
 | MENU-299 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Middle unit | Song position menu | radio |  |  | — | NOT_STARTED | TR-008 | Step (selected) / Beat. |

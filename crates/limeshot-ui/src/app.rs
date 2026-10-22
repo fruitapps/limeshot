@@ -701,6 +701,7 @@ impl LimeShotApp {
                 index,
             },
             A::PluginParam { .. } => return None,
+            A::Tempo => L::Tempo,
         };
         let pos = self.player.status().position();
         self.snapshot

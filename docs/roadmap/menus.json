@@ -5168,6 +5168,24 @@
       "notes": "LimeShot: 80 to 180 BPM in steps of 10; FL's list continues past the capture."
     },
     {
+      "id": "MENU-731",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Tempo",
+        "Create automation clip"
+      ],
+      "section": "Tempo menu",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "INFERRED",
+      "limeshot": "Toolbar › tempo menu › Create automation clip",
+      "status": "LIMESHOT_ONLY",
+      "feature": "AUT-008",
+      "notes": "Session 16: not seen in FL's tempo menu during the toolbar pass (FL creates tempo automation from Tools › Last tweaked); LimeShot offers it here too."
+    },
+    {
       "id": "MENU-297",
       "menu": "Toolbar",
       "path": [

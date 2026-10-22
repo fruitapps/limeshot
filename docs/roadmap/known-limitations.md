@@ -125,3 +125,5 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The macOS package (`scripts/package-macos.sh`) is signed ad hoc: other Macs need a Developer ID signature and
   notarisation. Double-clicking a .lime file in Finder starts LimeShot without opening the file. No Windows or Linux
   packages yet.
+* Tempo automation steps every 64 frames and works in Song mode only; minutes:seconds displays and new audio clip
+  lengths use the tempo playing now (no integrated tempo map), and audio clips do not stretch with the tempo.

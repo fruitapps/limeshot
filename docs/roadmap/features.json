@@ -4552,19 +4552,27 @@
       "name": "Tempo automation",
       "description": "Tempo automation.",
       "fl_reference": "Tempo automation clip",
-      "limeshot_behavior": "Planned: the engine timeline assumes one tempo; tempo automation needs a tempo map.",
+      "limeshot_behavior": "A tempo automation clip (tempo field right-click › Create automation clip, 60–180 BPM like FL's) re-times the transport during Song playback: the renderer evaluates the tempo lane every automation interval (64 frames) and continues at the new tempo from the current position; scheduled note ends follow. Offline export runs to the song's end at the automated tempo. The tempo field shows the automated tempo while the song plays; Pattern mode and the stored project tempo are unaffected.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "AUT-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::tempo_automation_changes_the_song_length",
+        "crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4573,7 +4581,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 continuation. Tempo changes step every 64 frames (not sample-continuous). The song position in minutes:seconds and clip lengths in the Playlist use the tempo playing now, not an integrated tempo map; audio clips are not time-stretched; a project tempo outside 60–180 BPM is clamped where a new tempo clip starts."
     },
     {
       "id": "AUT-009",
