@@ -443,6 +443,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if ui.add_enabled(has_notes, Button::new("Transpose…")).clicked() {
                     app.dialog = Some(Dialog::Transpose {
                         pattern: cur,
+                        channels: Vec::new(),
                         semitones: 0,
                     });
                     ui.close();

@@ -5779,10 +5779,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": "The ▸ at the rack's top left. LimeShot has no rack-wide menu; per-channel commands are on the channel button's right-click and in Tools."
+      "notes": "The ▸ at the rack's top left. LimeShot has no rack-wide menu; per-channel commands are on the channel button's right-click and in Tools. Session 16: LimeShot's ⏵ at the left of the Channel Rack header, with the commands on the selected channels."
     },
     {
       "id": "MENU-333",
@@ -5797,10 +5797,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › + Add channel",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Add one",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-002",
-      "notes": "FL lists its generators; LimeShot's + Add channel offers Sampler, LimeSynth and plugins."
+      "notes": "FL lists its generators; LimeShot's + Add channel offers Sampler, LimeSynth and plugins. Session 16: Sampler, LimeSynth and plugin instruments."
     },
     {
       "id": "MENU-334",
@@ -5869,8 +5869,8 @@
       "fl_keys": "Opt+C",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Clone",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Clone selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "LimeShot clones one channel from its menu; no key."
     },
@@ -5887,8 +5887,8 @@
       "fl_keys": "Opt+Del",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Delete…",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Delete selected…",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "Alt+Delete deletes the selected channels (asks first, as FL)."
     },
@@ -5923,8 +5923,8 @@
       "fl_keys": "Opt+Up",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Move up",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Move selected up",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "Alt+↑ moves the selected channels."
     },
@@ -5941,8 +5941,8 @@
       "fl_keys": "Opt+Down",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Move down",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Move selected down",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "Alt+↓."
     },
@@ -5959,10 +5959,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › ⏵ › Sort by",
+      "status": "DIFFERENT",
       "feature": "SEQ-007",
-      "notes": ""
+      "notes": "Session 16: by name, type (sampler, synth, plugin) or colour (hue); FL's own sort list not checked."
     },
     {
       "id": "MENU-343",
@@ -5977,7 +5977,7 @@
       "fl_keys": "Opt+G",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Group selected…",
+      "limeshot": "Channel Rack › ⏵ › Group selected…",
       "status": "IMPLEMENTED",
       "feature": "SEQ-012",
       "notes": "Also Alt+G."
@@ -5995,10 +5995,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Color",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Color selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": "LimeShot colours one channel at a time."
+      "notes": "LimeShot colours one channel at a time. Session 16: a swatch submenu."
     },
     {
       "id": "MENU-345",
@@ -6013,8 +6013,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › ⏵ › Mute selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-003",
       "notes": ""
     },
@@ -6031,8 +6031,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › ⏵ › Unmute selected",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-003",
       "notes": ""
     },
@@ -6049,10 +6049,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Channel Rack › ⏵ › Transpose selected…",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": "Session 16: the selected channels' notes in the current pattern."
     },
     {
       "id": "MENU-348",
@@ -6121,8 +6121,8 @@
       "fl_keys": "Cmd+L",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Channel Rack › channel menu › Route to free mixer track",
-      "status": "DIFFERENT",
+      "limeshot": "Channel Rack › ⏵ › Assign selected to free mixer track(s)",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-005",
       "notes": "Cmd+L routes the selected channels, as in FL."
     },
@@ -6139,10 +6139,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › ⏵ › Select mixer tracks for the selected channels",
+      "status": "DIFFERENT",
       "feature": "SEQ-005",
-      "notes": ""
+      "notes": "Session 16: selects the first channel's track and shows the Mixer (LimeShot's Mixer selects one track)."
     },
     {
       "id": "MENU-353",
@@ -6606,10 +6606,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Channel Rack › channel menu › Random color",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-007",
-      "notes": ""
+      "notes": "Session 16."
     },
     {
       "id": "MENU-379",

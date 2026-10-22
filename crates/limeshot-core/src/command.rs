@@ -90,6 +90,9 @@ pub enum Command {
         channel: ChannelId,
         pan: f32,
     },
+    /// Put the channels in this order (a permutation of the project's channels; FL Studio's
+    /// Sort by).
+    ReorderChannels(Vec<ChannelId>),
     SetChannelMute {
         channel: ChannelId,
         muted: bool,
@@ -608,6 +611,7 @@ impl Command {
             SetChannelVolume { .. } => "Channel volume",
             SetChannelPan { .. } => "Channel pan",
             SetChannelMute { .. } => "Mute channel",
+            ReorderChannels(_) => "Sort channels",
             SetChannelSolo { .. } => "Solo channel",
             SetChannelMixerTrack { .. } => "Route channel",
             SetChannelRootKey { .. } => "Set root key",
@@ -818,6 +822,19 @@ impl Command {
             SetChannelVolume { channel: id, volume } => channel(p, id)?.volume = finite(volume)?.clamp(0.0, 1.25),
             SetChannelPan { channel: id, pan } => channel(p, id)?.pan = finite(pan)?.clamp(-1.0, 1.0),
             SetChannelMute { channel: id, muted } => channel(p, id)?.muted = muted,
+            ReorderChannels(order) => {
+                let mut ids: Vec<ChannelId> = p.channels.iter().map(|c| c.id).collect();
+                let mut want = order.clone();
+                ids.sort_by_key(|c| c.0);
+                want.sort_by_key(|c| c.0);
+                if ids != want {
+                    return Err(CommandError::Invalid(
+                        "the new order must list every channel once".into(),
+                    ));
+                }
+                p.channels
+                    .sort_by_key(|c| order.iter().position(|o| *o == c.id).unwrap_or(usize::MAX));
+            }
             SetChannelSolo { channel: id, solo } => channel(p, id)?.solo = solo,
             SetChannelMixerTrack { channel: id, track } => {
                 if usize::from(track) >= p.mixer.tracks.len() {

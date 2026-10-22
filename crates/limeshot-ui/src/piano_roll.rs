@@ -192,6 +192,8 @@ pub struct State {
     pub sounding: Vec<NoteId>,
     /// The open tool dialog (Strum…, Arpeggiate… …), previewing on the notes.
     pub tool_dialog: Option<crate::piano_tools::ToolDialog>,
+    /// Where the ⏵ menu button was drawn in the last frame (for tests).
+    pub menu_button: Option<Rect>,
 }
 
 impl Default for State {
@@ -213,6 +215,7 @@ impl Default for State {
             cursor: None,
             sounding: Vec::new(),
             tool_dialog: None,
+            menu_button: None,
         }
     }
 }
@@ -314,9 +317,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
-                ui.menu_button("⏵", |ui| crate::piano_menu::menu(app, ui))
-                    .response
-                    .hint("Piano Roll options: Edit, Tools, Select, Zoom");
+                let menu = ui.menu_button("⏵", |ui| crate::piano_menu::menu(app, ui)).response;
+                app.ui.piano.menu_button = Some(menu.rect);
+                menu.hint("Piano Roll options: Edit, Tools, Select, Zoom");
                 for tool in Tool::ALL {
                     if icon_button(ui, tool.icon(), app.ui.piano.tool == tool, 22.0, tool.tip()).clicked() {
                         app.ui.piano.tool = tool;

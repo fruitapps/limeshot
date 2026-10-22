@@ -42,9 +42,11 @@ pub enum Dialog {
     },
     /// A previous session left unsaved work behind.
     Recover(crate::autosave::SessionInfo),
-    /// FL Studio's Patterns › Transpose…: move every note of a pattern by semitones.
+    /// FL Studio's Patterns › Transpose…: move every note of a pattern by semitones; with
+    /// `channels`, only theirs (the Channel Rack's Transpose selected…).
     Transpose {
         pattern: PatternId,
+        channels: Vec<ChannelId>,
         semitones: i32,
     },
     Shortcuts,
@@ -433,8 +435,13 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                 });
             });
         }
-        Dialog::Transpose { pattern, semitones } => {
+        Dialog::Transpose {
+            pattern,
+            channels,
+            semitones,
+        } => {
             let pattern = *pattern;
+            let channels = channels.clone();
             modal(ctx, "Transpose", |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Semitones");
@@ -447,7 +454,13 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         let notes: Vec<_> = app
                             .project()
                             .pattern(pattern)
-                            .map(|p| p.notes.iter().map(|n| n.id).collect())
+                            .map(|p| {
+                                p.notes
+                                    .iter()
+                                    .filter(|n| channels.is_empty() || channels.contains(&n.channel))
+                                    .map(|n| n.id)
+                                    .collect()
+                            })
                             .unwrap_or_default();
                         if *semitones != 0 && !notes.is_empty() {
                             app.exec(Command::MoveNotes {

@@ -144,6 +144,7 @@ pub const EDITING: &[(&str, &str)] = &[
         "Channel Rack: route the selected channels to free mixer tracks",
     ),
     ("Alt+↑ / Alt+↓", "Channel Rack: move the selected channels"),
+    ("Alt+C", "Channel Rack: clone the selected channels"),
     ("Alt+Delete", "Channel Rack: delete the selected channels"),
     ("F2", "Channel Rack: rename the current pattern"),
     (

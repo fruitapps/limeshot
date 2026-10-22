@@ -72,6 +72,8 @@ pub struct State {
     pub step_strips: Vec<(ChannelId, Rect, u32)>,
     /// Screen rectangles of each channel's selector LED in the last frame.
     pub leds: Vec<(ChannelId, Rect)>,
+    /// Where the ⏵ menu button was drawn in the last frame (for tests).
+    pub menu_button: Option<Rect>,
     /// The graph editor's lane, when it is open.
     pub graph: Option<NoteProp>,
     /// The graph editor's drawing area in the last frame.
@@ -122,6 +124,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
+                let menu = ui.menu_button("⏵", |ui| crate::rack_menu::menu(app, ui)).response;
+                app.ui.rack.menu_button = Some(menu.rect);
+                menu.hint("Channel Rack options: the selected channels' commands");
                 let current = app.ui.rack.filter.clone();
                 egui::ComboBox::from_id_salt("rack_filter")
                     .selected_text(current.label().to_string())
@@ -694,6 +699,11 @@ fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
             ui.close();
         }
     });
+    if ui.button("Random color").clicked() {
+        app.select_channel(ch.id);
+        crate::rack_menu::run(app, crate::rack_menu::Act::RandomColor);
+        ui.close();
+    }
     if matches!(ch.instrument, Instrument::Sampler(_)) && ui.button("Load sample…").clicked() {
         if let Some(p) = rfd::FileDialog::new()
             .add_filter("WAV audio", &["wav", "WAV"])
@@ -1011,6 +1021,7 @@ pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
+    crate::rack_menu::keys(app, ctx);
     if key(ctx, Modifiers::ALT, Key::ArrowUp) {
         move_selected(app, -1);
     }

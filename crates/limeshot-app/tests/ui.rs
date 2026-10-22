@@ -4283,25 +4283,26 @@ fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
 
 /// Open the Piano Roll's ⏵ menu, then `submenu` (hovered, as a person would), then click `item`.
 fn piano_menu(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
-    let grid = piano_geometry(h).grid;
-    editor_menu(h, grid, submenu, item);
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(h, button, submenu, item);
 }
 
-/// The ⏵ menu nearest the top-left of `grid` (each editor has one), then `submenu` › `item`.
-fn editor_menu(h: &mut Harness<'static, LimeShotApp>, grid: egui::Rect, submenu: &str, item: &str) {
-    let at = h
-        .get_all_by_label("⏵")
-        .map(|n| {
-            let c = n.rect().center();
-            Pos2::new(c.x, c.y)
-        })
-        .min_by(|a, b| {
-            let d = |p: &Pos2| (p.x - grid.left()).abs() + (p.y - grid.top()).abs();
-            d(a).total_cmp(&d(b))
-        })
-        .expect("a ⏵ menu");
+/// Click an editor's ⏵ menu button (its rectangle from the editor's state), then
+/// `submenu` › `item`.
+fn editor_menu(h: &mut Harness<'static, LimeShotApp>, button: Option<egui::Rect>, submenu: &str, item: &str) {
+    let at = button.expect("the editor's ⏵ menu").center();
     click(h, at, PointerButton::Primary);
     open_item(h, submenu, item);
+}
+
+fn playlist_menu(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
+    let button = h.state().ui.playlist.menu_button;
+    editor_menu(h, button, submenu, item);
+}
+
+fn rack_menu(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
+    let button = h.state().ui.rack.menu_button;
+    editor_menu(h, button, submenu, item);
 }
 
 fn open_item(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
@@ -4524,7 +4525,6 @@ fn piano_roll_tool_dialogs_preview_accept_and_cancel() {
 fn playlist_menu_edit_select_zoom_and_markers() {
     let mut h = playlist_harness();
     let bar = h.state().project().time_signature.ticks_per_bar();
-    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     let spans = |h: &Harness<'static, LimeShotApp>| -> Vec<(u32, Tick, Tick, bool)> {
         let mut v: Vec<_> = h
             .state()
@@ -4551,7 +4551,7 @@ fn playlist_menu_edit_select_zoom_and_markers() {
             .any(|c| c.id == first.id && c.muted)
     );
     h.state_mut().ui.playlist.selection.clear();
-    editor_menu(&mut h, g.grid, "Select", "Select muted");
+    playlist_menu(&mut h, "Select", "Select muted");
     assert_eq!(h.state().ui.playlist.selection, vec![first.id]);
     h.key_press_modifiers(Modifiers::ALT | Modifiers::SHIFT, Key::M);
     h.step();
@@ -4569,7 +4569,7 @@ fn playlist_menu_edit_select_zoom_and_markers() {
             .all(|(a, b)| if a.1 >= bar { b.1 == a.1 + bar } else { b.1 == a.1 }),
         "{before:?} → {moved:?}"
     );
-    editor_menu(&mut h, g.grid, "Edit", "Delete space");
+    playlist_menu(&mut h, "Edit", "Delete space");
     assert_eq!(spans(&h), before);
     // Select time around selection (Cmd+Enter), then Shift+5 zooms on it.
     h.state_mut().ui.playlist.selection = vec![first.id];
@@ -4607,9 +4607,9 @@ fn playlist_menu_edit_select_zoom_and_markers() {
     assert_eq!(h.state().doc.undo_label(), Some("Merge clips"));
     // Time markers › Add auto, then Delete (the one at the position).
     h.state_mut().ui.playlist.time_sel = None;
-    editor_menu(&mut h, g.grid, "Time markers", "Add auto");
+    playlist_menu(&mut h, "Time markers", "Add auto");
     assert_eq!(h.state().project().playlist.markers.len(), 1);
-    editor_menu(&mut h, g.grid, "Time markers", "Delete");
+    playlist_menu(&mut h, "Time markers", "Delete");
     assert!(h.state().project().playlist.markers.is_empty());
 }
 
@@ -4670,4 +4670,80 @@ fn mixer_track_menu_moves_colors_deletes_and_inserts() {
     limeshot_ui::mixer_menu::run(h.state_mut(), limeshot_ui::mixer_menu::Act::RandomColor);
     let sel = h.state().ui.mixer.selected;
     assert!(h.state().project().mixer.tracks[usize::from(sel)].color.is_some());
+}
+
+/// FL's Channel Rack options menu: sort, mute / unmute, clone (Opt+C), transpose and colour the
+/// selected channels.
+#[test]
+fn channel_rack_menu_acts_on_the_selected_channels() {
+    let mut h = harness(true);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.step();
+    let names = |h: &Harness<'static, LimeShotApp>| -> Vec<String> {
+        h.state().project().channels.iter().map(|c| c.name.clone()).collect()
+    };
+    // Sort by › Name.
+    rack_menu(&mut h, "Sort by", "Name");
+    let mut sorted = names(&h);
+    sorted.sort_by_key(|n| n.to_lowercase());
+    assert_eq!(names(&h), sorted);
+    // Select two channels: mute, unmute, clone (Opt+C), transpose.
+    let ids: Vec<ChannelId> = h.state().project().channels.iter().take(2).map(|c| c.id).collect();
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    h.step();
+    assert_eq!(h.state().selected_channels().len(), 2);
+    limeshot_ui::rack_menu::run(h.state_mut(), limeshot_ui::rack_menu::Act::MuteSelected);
+    assert!(
+        ids.iter()
+            .all(|c| h.state().project().channel(*c).is_some_and(|c| c.muted))
+    );
+    limeshot_ui::rack_menu::run(h.state_mut(), limeshot_ui::rack_menu::Act::UnmuteSelected);
+    assert!(
+        ids.iter()
+            .all(|c| h.state().project().channel(*c).is_some_and(|c| !c.muted))
+    );
+    let n = h.state().project().channels.len();
+    h.key_press_modifiers(Modifiers::ALT, Key::C);
+    h.step();
+    assert_eq!(h.state().project().channels.len(), n + 2, "Opt+C clones both");
+    h.state_mut().select_channel(ids[0]);
+    h.state_mut().toggle_channel_selection(ids[1]);
+    h.step();
+    let pat = h.state().current_pattern();
+    let keys = |h: &Harness<'static, LimeShotApp>, c: ChannelId| -> Vec<u8> {
+        h.state()
+            .project()
+            .pattern(pat)
+            .map(|p| p.notes_for(c).map(|n| n.key).collect())
+            .unwrap_or_default()
+    };
+    let before: Vec<Vec<u8>> = h.state().project().channels.iter().map(|c| keys(&h, c.id)).collect();
+    rack_menu(&mut h, "Color selected", "Color selected");
+    h.key_press(Key::Escape);
+    h.step();
+    limeshot_ui::rack_menu::run(h.state_mut(), limeshot_ui::rack_menu::Act::TransposeSelected);
+    h.step();
+    if let Some(limeshot_ui::dialogs::Dialog::Transpose {
+        semitones, channels, ..
+    }) = &mut h.state_mut().dialog
+    {
+        assert_eq!(channels, &ids);
+        *semitones = 2;
+    } else {
+        panic!("the Transpose dialog");
+    }
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    let chans: Vec<ChannelId> = h.state().project().channels.iter().map(|c| c.id).collect();
+    for (c, was) in chans.iter().zip(before) {
+        let now = keys(&h, *c);
+        let want: Vec<u8> = if ids.contains(c) {
+            was.iter().map(|k| k + 2).collect()
+        } else {
+            was
+        };
+        assert_eq!(now, want);
+    }
 }

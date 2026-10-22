@@ -711,3 +711,12 @@ selected track, Solo (S), Move left / right (Alt+←/→), Delete (Delete) and I
 `UnrouteMixerTrack`, `SetMixerTrackColor` and `MixerTrack::color`; `remap_mixer` renumbers channels' tracks, routes,
 automation targets (`AutomationTarget::remap_mixer`) and compressor sidechains, and default "Insert N" names. The
 Mixer now has keys when focused (`mixer_menu::keys`, not while typing a name).
+
+### Session 16, part 5: the Channel Rack's options menu (SEQ-007, SEQ-003)
+
+A ⏵ at the left of the Channel Rack header with FL's options-menu commands on the selected channels: Add one,
+Clone selected (Alt+C), Delete selected…, Move selected up / down, Sort by (name, type, colour; new
+`Command::ReorderChannels`), Group selected…, Color selected, Random color (also in each channel's menu), Mute /
+Unmute selected, Transpose selected… (the Transpose dialog now takes channels), Assign selected to free mixer
+track(s), Select mixer tracks for the selected channels. Not done: Zip / Unzip, layers, swing mix per channel,
+display options (button width, name alignment …), declicking and plugin-editor switches.

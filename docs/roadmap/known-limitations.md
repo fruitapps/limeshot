@@ -48,7 +48,8 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   (no audio scrubbing). Notes start from their beginning when the line reaches them. FL Studio's Playback tool plays
   on from the pointer instead; LimeShot scrubs at the owner's request.
 * Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
-* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog.
+* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Its ⏵ menu has no Zip /
+  Unzip, layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
 * The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is

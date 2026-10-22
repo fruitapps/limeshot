@@ -1554,6 +1554,17 @@
       "status": "IMPLEMENTED",
       "feature": "MIX-006",
       "notes": "FL 2026.1.1 Mixer menu (menus.json). Session 16."
+    },
+    {
+      "id": "KB-142",
+      "context": "Channel Rack",
+      "action": "Clone selected channels",
+      "fl_keys": "Opt+C",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+C",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": "FL 2026.1.1 Channel Rack menu (menus.json). Session 16."
     }
   ]
 }

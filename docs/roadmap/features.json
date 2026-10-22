@@ -774,7 +774,7 @@
       "name": "Channel mute and solo",
       "description": "Silence or isolate channels.",
       "fl_reference": "Left-click mute; Ctrl/right-click solo.",
-      "limeshot_behavior": "LED: left-click mutes, right-click or Cmd+click solos.",
+      "limeshot_behavior": "LED: left-click mutes, right-click or Cmd+click solos. ⏵ menu: Mute / Unmute selected.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -790,7 +790,8 @@
       ],
       "tests": [
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
-        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master"
+        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
+        "crates/limeshot-app/tests/ui.rs::channel_rack_menu_acts_on_the_selected_channels"
       ],
       "reference": {
         "application": "FL Studio",
@@ -904,7 +905,7 @@
       "name": "Rename, recolor, clone, delete, reorder channels",
       "description": "Channel management.",
       "fl_reference": "Channel button right-click menu (Rename, color and icon…, Clone, Delete…); Alt+Up/Down moves the selected channels; Alt+Del deletes them after a confirmation.",
-      "limeshot_behavior": "Right-click on a channel button selects only that channel and opens its menu: rename, color, clone, Delete… (asks first), move up/down. Alt+Up/Down moves every selected channel one row (the block stops at the edge); Alt+Delete deletes the selected channels after FL's confirmation (\"Remember my choice\" turns it off). Each is one undo step.",
+      "limeshot_behavior": "Right-click on a channel button selects only that channel and opens its menu: rename, color, clone, Delete… (asks first), move up/down. Alt+Up/Down moves every selected channel one row (the block stops at the edge); Alt+Delete deletes the selected channels after FL's confirmation (\"Remember my choice\" turns it off). Each is one undo step. The ⏵ options menu (FL Studio's Channel Rack menu) acts on the selected channels: Add one, Clone selected (Alt+C), Delete selected…, Move up / down, Sort by name / type / colour, Group selected…, Color selected, Random color (also in the channel menu), Mute / Unmute selected, Transpose selected…, Assign to free mixer tracks (Cmd+L), Select mixer tracks.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -921,7 +922,8 @@
         "limeshot-core document::tests::removing_channel_removes_its_notes",
         "crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels",
         "crates/limeshot-app/tests/ui.rs::deleting_channels_asks_first_and_is_one_undo_step",
-        "crates/limeshot-app/tests/ui.rs::right_click_on_a_channel_button_selects_it_and_opens_its_menu"
+        "crates/limeshot-app/tests/ui.rs::right_click_on_a_channel_button_selects_it_and_opens_its_menu",
+        "crates/limeshot-app/tests/ui.rs::channel_rack_menu_acts_on_the_selected_channels"
       ],
       "reference": {
         "application": "FL Studio",
@@ -933,7 +935,7 @@
           "docs/research/evidence/screenshots/fl-rack-channel-menu.png"
         ]
       },
-      "notes": "Observed live in FL Studio 2026.1.1 (session 7): Alt+Up moves each selected channel up one row and the mixer track stays with the channel; the channel menu's Delete… and Alt+Del (forward delete; Alt+Backspace does nothing) ask \"The selected channel(s) is/are about to be deleted.\" with \"Remember my choice\". FL's menu also has Fill each 2/4/8 steps and Rotate left/right (SEQ-014), Graph editor (SEQ-011), Random color and icons (not tracked)."
+      "notes": "Observed live in FL Studio 2026.1.1 (session 7): Alt+Up moves each selected channel up one row and the mixer track stays with the channel; the channel menu's Delete… and Alt+Del (forward delete; Alt+Backspace does nothing) ask \"The selected channel(s) is/are about to be deleted.\" with \"Remember my choice\". FL's menu also has Fill each 2/4/8 steps and Rotate left/right (SEQ-014), Graph editor (SEQ-011), Random color and icons (not tracked). Session 16: options menu from FL 2026.1.1's (menus.json)."
     },
     {
       "id": "SEQ-008",

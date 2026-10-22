@@ -140,6 +140,8 @@ pub struct State {
     pub drop_ghost: Option<(u32, Tick, Tick)>,
     /// The length of the sample being dragged, by path (decoded once per drag).
     drop_len: Option<(std::path::PathBuf, Option<Tick>)>,
+    /// Where the ⏵ menu button was drawn in the last frame (for tests).
+    pub menu_button: Option<Rect>,
 }
 
 /// The clip picker's tabs.
@@ -176,6 +178,7 @@ impl Default for State {
             last_len: None,
             drop_ghost: None,
             drop_len: None,
+            menu_button: None,
         }
     }
 }
@@ -279,9 +282,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         // The tool strip on the left, as in FL Studio.
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
-            ui.menu_button("⏵", |ui| crate::playlist_menu::menu(app, ui))
-                .response
-                .hint("Playlist options: Edit, Tools, Select, Zoom, Time markers");
+            let menu = ui.menu_button("⏵", |ui| crate::playlist_menu::menu(app, ui)).response;
+            app.ui.playlist.menu_button = Some(menu.rect);
+            menu.hint("Playlist options: Edit, Tools, Select, Zoom, Time markers");
             app.ui.playlist.tool_rects.clear();
             for tool in Tool::PLAYLIST {
                 let resp = icon_button(ui, tool.icon(), app.ui.playlist.tool == tool, 22.0, tool_tip(tool));
