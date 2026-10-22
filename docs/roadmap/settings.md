@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **189** — IMPLEMENTED 22, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED 15
+Tracked: **189** — IMPLEMENTED 23, IN_PROGRESS 1, NOT_STARTED 150, NOT_PLANNED 15
 
 ## MIDI
 
@@ -95,7 +95,7 @@ Tracked: **189** — IMPLEMENTED 22, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED
 | SET-086 | Updates and privacy | Send usage data | switch | on | Options › General settings › Updates and privacy › Send usage data | OBSERVED | — | NOT_PLANNED | APP-025 | LimeShot collects no usage data. |
 | SET-087 | Miscellaneous | Auto name channels | switch | on | Options › General settings › Miscellaneous › Auto name channels | OBSERVED | — | NOT_STARTED | SEQ-002 |  |
 | SET-088 | Miscellaneous | Auto name effect slots | switch | off | Options › General settings › Miscellaneous › Auto name effect slots | OBSERVED | — | NOT_STARTED | MIX-007 |  |
-| SET-089 | Miscellaneous | Auto zip empty channels | switch | off | Options › General settings › Miscellaneous › Auto zip empty channels | OBSERVED | — | NOT_STARTED | SEQ-013 |  |
+| SET-089 | Miscellaneous | Auto zip empty channels | switch | off | Options › General settings › Miscellaneous › Auto zip empty channels | OBSERVED | `settings.auto_zip_empty_channels` | IMPLEMENTED | SEQ-013 | Saved application setting, off by default. Pattern switches collapse channels without note data and expand populated ones (including muted notes). Enabling waits for the next switch; manual restoration remains until then. Headless interaction tests listed under SEQ-013. |
 | SET-090 | Miscellaneous | Auto select linked modules | switch | on | Options › General settings › Miscellaneous › Auto select linked modules | OBSERVED | — | NOT_STARTED | SEQ-005 |  |
 | SET-091 | Miscellaneous | Auto zoom in piano roll | switch | off | Options › General settings › Miscellaneous › Auto zoom in piano roll | OBSERVED | — | NOT_STARTED | PR-005 |  |
 | SET-092 | Miscellaneous | Small scrollbars in editors | switch | off | Options › General settings › Miscellaneous › Small scrollbars in editors | OBSERVED | — | NOT_STARTED | UI-006 |  |

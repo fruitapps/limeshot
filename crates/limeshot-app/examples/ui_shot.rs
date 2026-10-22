@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -27,6 +27,12 @@ fn main() {
     }
     if args.iter().any(|a| a == "--auto-scroll") {
         app.set_auto_scroll(true);
+    }
+    if args.iter().any(|a| a == "--auto-zip") {
+        app.settings.auto_zip_empty_channels = true;
+        if let Some(id) = app.project().patterns.get(1).map(|p| p.id) {
+            app.set_current_pattern(id);
+        }
     }
     if args.iter().any(|a| a == "--zip") {
         app.ui

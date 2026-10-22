@@ -448,7 +448,13 @@ impl LimeShotApp {
     }
 
     pub fn set_current_pattern(&mut self, id: PatternId) {
+        if self.settings.auto_zip_empty_channels && id != self.ui.current_pattern {
+            crate::channel_rack::auto_zip(self, id);
+        }
         self.ui.current_pattern = id;
+        if self.project().pattern(id).is_some() {
+            self.ui.rack.viewed_pattern = Some(id);
+        }
         self.ui.piano.selection.clear();
     }
 

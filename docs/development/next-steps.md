@@ -4,6 +4,12 @@ Current as of 2026-10-22, session 17. Read the feature record and its dependenci
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
+## Standing session policy
+Every new development session must use a new isolated branch and create a NEW draft PR, rather than adding
+feature work to an earlier session’s PR. Inspect merge state and stack on the latest unmerged continuation.
+Finish implementation, validation, documentation, commit and push, attach the new PR, and do not merge automatically.
+Repeat this policy in every future session handoff before these docs merge. Do not create further sessions unless asked.
+
 ## Immediate verification
 
 1. **Native plugin embedding (PLG-006).** Internal Plugin / Settings windows are implemented, but final live checks
@@ -31,7 +37,7 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
 1. **Finish editor/context menus from the FL inventories.** Main menus, settings pages, toolbar menus and the core
    editor menus are in. Remaining work includes editor View options, Piano Roll Time markers / Target control /
    Group, Riff machine and chord progressions, Claw machine, Playlist picker options and performance mode, Mixer
-   groups/docking/multiselection, and Channel Rack display options (manual Zip / Unzip is complete). Playlist track modes, grouping,
+   groups/docking/multiselection, and Channel Rack display options (manual Zip / Unzip and Auto zip empty channels are complete). Playlist track modes, grouping,
    icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
    Continue documenting FL's Browser top bar, clip/note/control context menus and floating View windows before
    implementing them; preserve clean-room evidence in `docs/research/`.
