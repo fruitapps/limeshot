@@ -25,8 +25,9 @@ cargo fmt --all
 python3 scripts/features.py check        # or `generate`; also checks keybindings.json and settings.json
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
 ```
-**Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. On the dev Mac, Screen Recording and
-Accessibility are granted: `screencapture -l <window id>` captures the live app and CoreGraphics events can drive it
+**Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. Permissions depend on the execution host;
+verify Screen Recording and Accessibility before live automation.
+When granted, `screencapture -l <window id>` captures the live app and CoreGraphics events can drive it
 (keyboard layout is QWERTZ). The
 headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions from geometry the editors record.
 
@@ -46,8 +47,8 @@ headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions fr
 ## Coding conventions
 * Every project change is a `Command` executed on the `Document`; UI code never mutates `Project` directly. Continuous
   controls use `LimeShotApp::exec_gesture` so a drag is one undo step. Add a `merge_key` for new continuous commands.
-* Colors come from `theme::Theme::current()`; icons are painter code in `icons.rs`. No image or font assets beyond
-  egui's defaults. Every bundled asset gets a row in `ATTRIBUTION.md`.
+* Colors come from `theme::Theme::current()`; icons are painter code in `icons.rs`. Use painter icons and the
+  existing bundled fonts; avoid adding assets without a need. Every bundled asset gets a row in `ATTRIBUTION.md`.
 * No panics in production code: crate roots deny `unwrap/expect/panic/todo/unimplemented` (allowed in tests). Use
   typed errors (`thiserror`). Treat file input as hostile (`Project::sanitize`). `unsafe` is forbidden workspace-wide, except in `limeshot-plugins` (FFI; every block has a `SAFETY:` comment).
 * Visible controls must work. Unimplemented features are shown disabled ("not implemented yet") or left out.
@@ -69,21 +70,20 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-21, session 7)
-* Milestones 0–6 done on macOS: every MVP feature is VERIFIED except the platform builds (PF-002…004), which wait for
-  CI. Session 7 verified the MVP editors with headless UI tests (FL behaviour observed live first), then added FL's
-  Piano Roll tools, Playlist time selection (looped in Song mode) and time markers.
-* UI: FL Studio's window model (workspace windows: maximise, detach, F-keys) with ArtCraft-like styling (`docs/architecture/ui.md`,
-  decision D24). **FL Studio is the source for UI/UX; ArtCraft only for the broad visual style.**
-* Feature, shortcut and settings counts: see `docs/roadmap/features.md`, `keybindings.md`, `settings.md`.
-* Known problems: see `docs/roadmap/known-limitations.md`.
+## Current state (2026-10-22, session 17)
+* The macOS MVP workflow passes automated tests; Windows/Linux runtime validation and Intel GUI/audio remain open.
+* Editors include Playlist tools, audio/automation clips, track mute locks and menus, Piano Roll stamps and scale
+  highlighting, Channel Rack selection gestures, and Mixer EQ/sidechain/pre-fader sends.
+* VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
+  Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
+  native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
+* The workspace has 111 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
 
 ## Immediate next tasks
-FL Studio is being documented outside → in, one UI layer per session (main menu bar: session 13; the dialogs it opens:
-session 14; next: the toolbar; `next-steps.md`, Then 0). See `docs/development/next-steps.md` (Mandatory section): CI on Windows and Linux (blocked on the org's GitHub
-Actions settings), the rest of the session 7 plan (Playlist slip/slice, Mixer EQ + sidechain, Channel Rack depth),
-then **VST3 plugin hosting** (session 10: hosting, plugin channels and inserts, scanning and state are in; session 12:
-plugin windows on macOS; parameter automation, delay compensation and plugin windows on Windows/Linux are next).
+Follow `docs/development/next-steps.md`: verify native plugin embedding, run platform CI, then continue the remaining
+editor menus and production features by priority and dependencies. Keep unverified behavior and disabled actions in
+`docs/roadmap/known-limitations.md`.
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

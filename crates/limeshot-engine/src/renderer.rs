@@ -362,18 +362,30 @@ impl Renderer {
 
     /// Audition a channel's instrument (piano keys, step clicks).
     pub fn preview_note_on(&mut self, channel: u16, key: u8, velocity: f32) {
+        self.preview_note_for(channel, key, velocity, f64::INFINITY);
+    }
+
+    /// A free-running audition, released by the audio clock even while transport is stopped.
+    pub fn preview_note_for(&mut self, channel: u16, key: u8, velocity: f32, seconds: f64) {
+        let off_at = if seconds.is_finite() {
+            self.now
+                .saturating_add((seconds.max(0.0) * self.sample_rate as f64).round() as u64)
+        } else {
+            u64::MAX
+        };
         let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
             return;
         };
         if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
             let at = (0, self.now);
             self.instruments
-                .note_on(usize::from(channel), id, key, velocity, at, u64::MAX, 0, false);
+                .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false);
             return;
         }
         if let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, self.sample_rate as f32)
         {
             v.channel = channel;
+            v.release_at = off_at;
             self.alloc_voice(v);
         }
     }

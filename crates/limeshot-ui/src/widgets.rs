@@ -231,6 +231,14 @@ pub fn knob(
     let frac = if max > min { (*v - min) / (max - min) } else { 0.0 };
     let a0 = PI * 0.75;
     let sweep = PI * 1.5;
+    let def = a0 + sweep * ((default - min) / (max - min).max(f32::EPSILON)).clamp(0.0, 1.0);
+    let direction = vec2(def.cos(), def.sin());
+    let at_default = (*v - default).abs() <= (max - min).abs() * 0.00001;
+    p.circle_filled(
+        c + direction * (rad + 2.5),
+        if at_default { 2.0 } else { 1.0 },
+        if at_default { t.accent } else { t.text_faint },
+    );
     let arc = |from: f32, to: f32, color: Color32, w: f32| {
         let n = 24;
         let pts: Vec<_> = (0..=n)

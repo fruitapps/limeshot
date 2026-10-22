@@ -8,6 +8,11 @@ use egui::{Context, Key, KeyboardShortcut, Modifiers};
 /// Every global shortcut, for the help dialog: (keys, action).
 pub const GLOBAL: &[(&str, &str)] = &[
     ("Space", "Play / stop"),
+    ("Cmd+T", "Typing keyboard to piano (outside Playlist)"),
+    (
+        "Z–M / Q–U",
+        "Play selected channel when Typing keyboard to piano is enabled",
+    ),
     ("Cmd+Space", "Play / pause"),
     ("L", "Switch Pattern / Song mode"),
     ("Cmd+M", "Metronome on/off"),
@@ -257,6 +262,9 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     } else if pressed(ctx, Modifiers::NONE, Key::F12) {
         crate::menus::close_all_windows(app);
     }
+    if !typing && app.ui.focus != Focus::Playlist && pressed(ctx, cmd, Key::T) {
+        app.keyboard_notes = !app.keyboard_notes;
+    }
     if typing || app.dialog.is_some() {
         return;
     }
@@ -294,6 +302,44 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, Modifiers::NONE, Key::Minus) {
         step_pattern(app, -1);
+    }
+    if app.keyboard_notes && !ctx.input(|i| i.modifiers.command || i.modifiers.alt || i.modifiers.ctrl) {
+        if let Some(channel) = app.selected_channel() {
+            for (key, offset) in [
+                (Key::Z, 0),
+                (Key::S, 1),
+                (Key::X, 2),
+                (Key::D, 3),
+                (Key::C, 4),
+                (Key::V, 5),
+                (Key::G, 6),
+                (Key::B, 7),
+                (Key::H, 8),
+                (Key::N, 9),
+                (Key::J, 10),
+                (Key::M, 11),
+                (Key::Q, 12),
+                (Key::Num2, 13),
+                (Key::W, 14),
+                (Key::Num3, 15),
+                (Key::E, 16),
+                (Key::R, 17),
+                (Key::Num5, 18),
+                (Key::T, 19),
+                (Key::Num6, 20),
+                (Key::Y, 21),
+                (Key::Num7, 22),
+                (Key::U, 23),
+            ] {
+                if ctx.input(|i| i.key_pressed(key)) && !app.typing_notes.iter().any(|n| n.0 == key) {
+                    let note = 48 + offset;
+                    app.preview_on(channel, note, 0.78);
+                    app.auditions.retain(|n| *n != (channel, note));
+                    app.typing_notes.push((key, channel, note));
+                }
+            }
+        }
+        return;
     }
     match app.ui.focus {
         Focus::PianoRoll => crate::piano_roll::keys(app, ctx),

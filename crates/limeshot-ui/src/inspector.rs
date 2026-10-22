@@ -140,14 +140,23 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
             browser::assign_sample(app, cid, &path);
         }
     });
-    // Waveform with start/end markers. Pressing it plays the channel (FL Studio's sampler);
-    // the audition ends with the mouse button (`LimeShotApp::auditions`).
-    let (r, wave) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::click());
+    // Waveform clicks audition the full region; dragging carries the sample to another editor.
+    let (r, wave) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::click_and_drag());
     if wave.is_pointer_button_down_on()
         && ui.input(|i| i.pointer.primary_pressed())
         && let Some(key) = app.project().channel(cid).map(|c| c.root_key)
+        && let Some(limeshot_audio::assets::SampleStatus::Ready(s)) = &status
     {
-        app.preview_on(cid, key, 0.78);
+        let duration =
+            s.duration_secs() * f64::from((p.end - p.start).max(0.0)) / 2.0_f64.powf(f64::from(p.pitch) / 12.0);
+        app.preview_for(cid, key, 0.78, duration);
+        app.sampler_preview = Some((cid, std::time::Instant::now(), duration));
+    }
+    if wave.drag_started()
+        && let Some(sample) = &p.sample
+    {
+        let path = app.samples.resolve(&sample.path);
+        wave.dnd_set_drag_payload(browser::DraggedSample(path));
     }
     if wave.hovered() && p.sample.is_some() {
         app.hint("Sample: press to hear it through the channel");
@@ -175,6 +184,17 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
                 let x = r.left() + f * r.width();
                 ui.painter()
                     .line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, c));
+            }
+            if let Some(progress) = sample_progress(app, cid, p, s.duration_secs()) {
+                let f = if p.reverse {
+                    p.end - progress * (p.end - p.start)
+                } else {
+                    p.start + progress * (p.end - p.start)
+                };
+                let x = r.left() + f * r.width();
+                ui.painter()
+                    .line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, t.playhead));
+                ui.ctx().request_repaint();
             }
             ui.label(
                 RichText::new(format!("{:.2} s · {} Hz", s.duration_secs(), s.sample_rate))
@@ -497,4 +517,75 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
         });
         app.exec_gesture(&r, cmd);
     }
+}
+
+fn sample_progress(app: &LimeShotApp, cid: ChannelId, params: &SamplerParams, sample_seconds: f64) -> Option<f32> {
+    if let Some((channel, began, duration)) = app.sampler_preview
+        && channel == cid
+        && duration > 0.0
+        && began.elapsed().as_secs_f64() < duration
+    {
+        return Some((began.elapsed().as_secs_f64() / duration) as f32);
+    }
+    if !app.is_playing() {
+        return None;
+    }
+    let tick = app.player.status().position();
+    let seconds_per_tick = 60.0 / (app.project().tempo.bpm() * PPQ as f64);
+    let span = sample_seconds * f64::from(params.end - params.start);
+    if span <= 0.0 {
+        return None;
+    }
+    let channel = app.project().channel(cid)?;
+    let progress = |start: Tick, key: u8| {
+        let ratio = 2.0_f64.powf((f64::from(key) - f64::from(channel.root_key) + f64::from(params.pitch)) / 12.0);
+        ((tick - start) as f64 * seconds_per_tick * ratio / span) as f32
+    };
+    let mut candidates = Vec::new();
+    if app.ui.mode == limeshot_engine::PlayMode::Pattern {
+        let pattern = app.project().pattern(app.current_pattern())?;
+        for n in pattern
+            .notes_for(cid)
+            .filter(|n| !n.muted && n.start <= tick && (params.one_shot || tick < n.end()))
+        {
+            candidates.push((n.start, progress(n.start, n.key)));
+        }
+    } else {
+        for clip in app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .filter(|c| !c.muted && c.start <= tick && tick < c.end())
+        {
+            if app
+                .project()
+                .playlist
+                .tracks
+                .get(clip.track as usize)
+                .is_some_and(|t| t.muted)
+            {
+                continue;
+            }
+            if clip.audio_channel() == Some(cid) {
+                let elapsed = (tick - clip.start + clip.offset) as f64 * seconds_per_tick;
+                candidates.push((
+                    clip.start,
+                    (elapsed * 2.0_f64.powf(f64::from(params.pitch) / 12.0) / span) as f32,
+                ));
+            } else if let Some(pattern) = clip.pattern().and_then(|p| app.project().pattern(p)) {
+                for n in pattern.notes_for(cid).filter(|n| !n.muted && n.start >= clip.offset) {
+                    let start = clip.start + n.start - clip.offset;
+                    if start <= tick && (params.one_shot || tick < start + n.length) {
+                        candidates.push((start, progress(start, n.key)));
+                    }
+                }
+            }
+        }
+    }
+    candidates
+        .into_iter()
+        .filter(|(_, p)| (0.0..1.0).contains(p))
+        .max_by_key(|(start, _)| *start)
+        .map(|(_, p)| p)
 }

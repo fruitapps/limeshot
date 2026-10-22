@@ -190,3 +190,12 @@ bridge is Unix only; on Windows the option is hidden until a named-pipe transpor
 editor would live in the child process and is not shown yet (the Plugin tab lists parameters). Plugins that are not
 bridged still run in LimeShot's process.
 
+
+
+### D35. Plugin wrappers inside the workspace (supersedes D33's separate viewports)
+**Why:** the owner requested plugin editors in LimeShot windows, resizable on both tabs. Wrappers now use ordinary
+egui windows and attach their NSView container to the main NSWindow. Embedded containers never resize the OS window;
+IPlugView size constraints and onSize handle resizable plugins, while fixed-size views retain a minimum window size and align at the top.
+The container keeps the editor's natural dimensions so its subviews cannot extend upward across the tabs. Native views hide while covered by another
+workspace window, a popup or a dialog. Other platforms retain the parameter-list fallback. The old attach API remains
+available for detached host-window clients and its tests.

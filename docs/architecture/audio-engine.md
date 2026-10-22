@@ -94,7 +94,8 @@ is still running, part-way through. Notes are not chased (as in FL Studio).
 song-time points (a clip's end point holds its value until the next clip). Before every chunk — at most 64 frames while
 lanes exist — `apply_controls` loads channel volume/pan and mixer gain/pan from the snapshot into preallocated arrays,
 then overrides them with the lanes' values at the current tick; effect parameters go through `FxRack::set_param`,
-which keeps each processor's parameter array so one value can change. Evaluation is a binary search, allocation-free.
+which keeps each processor's parameter array so one value can change. Hosted plugin parameter lanes send parameter changes to the instrument/effect processor; plugin channel volume/pan
+is applied once per block. Evaluation is a binary search, allocation-free.
 
 ## Voices
 
@@ -121,15 +122,15 @@ previews always sound.
 
 Per insert, in `snapshot.mix_order` (a topological order from `Mixer::processing_order`: every track before the
 tracks it routes to): insert effects, then `× volume × pan_gains(pan)` when audible, peak-metered, then added into each
-destination of its routes at the route's level (post-fader; the master by default, other inserts as buses, several at
-once for parallel processing). Routing cycles cannot exist: `SetRoute` refuses them and `Project::sanitize` drops them
+destination of its routes at the route's level (pre- or post-fader per route; the master by default, other inserts as
+buses, several at once for parallel processing). Routing cycles cannot exist: `SetRoute` refuses them and `Project::sanitize` drops them
 from files. Master:
 `× volume × pan_gains(pan)`, peak-metered, written to the output. A master peak above 1.0 sets the clip flag.
 
 Pan law (`limeshot_dsp::pan_gains`): balance. `L = min(1, 1 − p)`, `R = min(1, 1 + p)`. Centre is unity, the far side
 fades linearly, and panning never boosts.
 
-Solo: if any channel is soloed, only soloed channels are audible. If any insert is soloed, only soloed inserts are
+Solo: if any channel is soloed, soloed channels and unmuted channels with a mute lock are audible. If any insert is soloed, only soloed inserts are
 audible. The master is never solo-muted.
 
 ### Insert effects
@@ -154,7 +155,13 @@ reused), `Msg::ClearEffects` retires every processor first. Restarting the strea
 Offline export builds all processors directly (`fx::build_all`) and keeps rendering the tail while the output is above
 −80 dBFS (`Renderer::is_ringing`), up to `max_tail_secs`.
 
-Routing is post-fader only; there are no pre-fader sends or sidechain inputs yet.
+Routes read a pre-fader bus: post-fader routes apply track gain and pan, while pre-fader routes apply only send
+level. A muted track sends nothing in either mode. Meters and compressor sidechain keys read the post-fader bus.
+Lime Comp can take another track as its sidechain source; track EQ follows the insert chain.
+
+`pdc.rs` plans delay compensation from plugin instrument and insert latency, aligning routed paths with
+preallocated delay rings. Capacity is bounded (about 340 ms per path, 64 delayed paths); exports trim the compensated
+latency. Lime Delay resolves tempo-synced timing when the snapshot is compiled.
 
 ### Plugin instruments
 
@@ -198,3 +205,11 @@ Measured on an Apple M-series laptop (debug and release builds):
 
 No profiling-driven optimisation has been done yet. Voices are rendered sample by sample with a per-frame release
 check.
+
+
+## Editor auditions
+
+Held piano keys and scrub notes use `Msg::NoteOn` / `NoteOff`. Drawn or moved notes and sampler waveform
+previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
+the message. That deadline runs while transport is stopped, for built-in voices and hosted instruments alike;
+UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.

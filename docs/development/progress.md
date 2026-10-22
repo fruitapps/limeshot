@@ -751,3 +751,56 @@ and Channel Settings have a Presets menu (factory, then the user's, then Save pr
 `Command::SetEffectParams` makes loading one undo step; a sampler preset keeps the channel's sample. Headless apps
 have no presets folder (`presets_dir`), so tests use a temporary one. Test lesson: an egui popup's first frame is a
 sizing pass, so a test must step twice after opening a menu before clicking in it.
+
+
+## 2026-10-22 — Session 17: owner interaction fixes
+
+* Drawn/moved notes now use an audio-clock `NoteFor` deadline instead of the mouse lifetime. Piano keys and scrub
+  notes retain explicit note-off handling. The timed plugin audition test verifies exact release at block sizes
+  1, 64, 333 and 1024 while transport is stopped.
+* Piano Roll right-click background deselects; right-delete paints a red delete cursor in both editors. Rack
+  selector drags select crossed rows without moving the window; four-to-eight-beat width bounds are independent
+  of MIDI length and preserve horizontal scrolling. Mixer meters/whitespace select strips; control drags do not.
+  Effect presets/reorder buttons use separate rows. Export, tapper, rename and quit dialogs have bounded widths.
+* Sample drops show waveform ghosts and a pointer waveform. Sampler preview clicks play the whole trimmed/pitched
+  region; a playback head follows previews and sequencing, and dragging the waveform drops the sample. Picker
+  patterns/audio/automation drag onto the grid. Browser channels have dragging, double-click and context actions.
+* Shift-click locks channel/Playlist mute states. Playlist headers expose supported FL track actions, including
+  color, solo, clip selection/merge/mute, clone, reorder, insert and delete; unsupported advanced actions are disabled.
+  Clone preserves clip offsets, mute/lock states and linked sources. + Track follows the last track.
+* Background toolbar/F-key windows raise before toggling closed; pinned windows stay above. Typing keyboard input
+  targets the selected channel (Z–M / Q–U), releases the original channel on key-up after selection changes, and
+  stops on lost focus/text entry. The toolbar button, Options menu and Cmd+T toggle it; Playlist Cmd+T still adds a marker.
+* Automation points can be placed away from the line, with custom placement/move/tension cursors. Rotary defaults
+  have an illuminated marker. Stop while stopped rewinds to zero or the selected range start.
+* Plugin wrappers are resizable internal egui windows (D35), sharing the main NSWindow. Embedded resize requests
+  never resize the OS window. Fixed-size native views keep natural dimensions/minimum wrapper size; resizable
+  plugins negotiate onSize. Both tabs, presets, window state and keyboard forwarding are retained.
+
+Validation: `cargo build -p limeshot-app`; `cargo test --workspace` (111 UI tests, plus core track edit/clone and
+engine audition regressions); `cargo clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all`;
+`scripts/features.py check`. The bridge tests need sandbox escalation for local Unix sockets. UI rendered and
+inspected: Mixer/FX controls, export/tapper and embedded wrapper parameter fallback; `ui_shot` now supports
+`--dialog=export|quit|marker` and `--tapper` for repeatable layout review.
+
+**Not verified:** final live native plugin embedding. Vital appeared inside the main window in the first pass,
+but subsequent per-window captures showed a blank editor. The app-control tool stalled repeatedly; the terminal
+fallback reports Accessibility unavailable (`AXIsProcessTrusted() == false`), so activation/input/resize could not
+be validated. PLG-006 is IMPLEMENTED pending that pass, not VERIFIED. The advanced FL track menu features listed
+in `known-limitations.md` remain disabled. No CI/remote changes or commits were made; the pre-existing `.claude/`
+directory was left untouched.
+
+
+## 2026-10-22 — Session 17 documentation and PR preparation
+
+Audited the current-facing documentation against the source and feature inventory. Updated README, agent guidance,
+architecture, milestones, screenshots guidance and known limitations; reduced next steps to open verification and
+implementation tasks. Marked START.md as the original brief, preserving its requirements and historical research.
+Regenerated feature/menu/shortcut/setting views and checked every relative Markdown file link. Removed generated
+Python caches and ignored them plus local `.claude` tooling; no tracked scratch files were found. Retained fixtures,
+reference screenshots, licenses and chronological evidence.
+
+Final checks passed: `cargo test --workspace` (including 111 headless UI tests and Playlist track model tests),
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace`, formatting, inventory validation
+and `git diff --check`. Earlier Session 17 offscreen reviews cover editor/dialog layout. Native plugin embedding
+still requires live verification; the PR must retain this limitation and the disabled advanced Playlist track actions.

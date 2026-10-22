@@ -150,6 +150,12 @@ fn f_keys_toggle_windows() {
     assert!(!h.state().is_window_open(Win::Mixer), "pressing again closes it");
     h.key_press(Key::F6);
     h.step();
+    assert!(
+        h.state().is_window_open(Win::ChannelRack),
+        "a background window comes forward"
+    );
+    h.key_press(Key::F6);
+    h.step();
     assert!(!h.state().is_window_open(Win::ChannelRack));
 }
 
@@ -1352,6 +1358,9 @@ fn playlist_clips_select_resize_and_move_with_shift_arrows() {
         "plain arrows do not move clips"
     );
 
+    // Bring the top track back into view before resizing its clip.
+    h.state_mut().ui.playlist.scroll.y = 0.0;
+    h.step();
     // Dragging the right edge resizes (to the snap: a step).
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
     let edge = g.pos(a.start + a.length, 0) - vec2(2.0, 0.0);
@@ -3597,22 +3606,23 @@ fn a_wide_row_does_not_stop_a_window_from_being_resized() {
     assert!(h.query_by_label("LimeSynth").is_none());
 }
 
-/// Owner's list item 8: every audition note-on gets its note-off. Drawing, moving and the
-/// keyboard end their audition on release, and any audition left once no mouse button is down
-/// is released by the app (the engine side: `limeshot-engine` tests/plugins.rs).
+/// Drawn/moved notes have timed releases; held piano keys retain the mouse-release safety net.
 #[test]
-fn auditions_end_when_the_mouse_button_is_released() {
+fn drawing_auditions_have_a_duration_and_keyboard_auditions_are_held() {
     let (mut h, pat, ch) = empty_piano_roll();
     let g = piano_geometry(&h);
     let p = g.pos(STEP_TICKS * 2, 60);
     h.event(Event::PointerMoved(p));
     h.step();
     press(&mut h, p, PointerButton::Primary, true);
-    assert_eq!(h.state().auditions, vec![(ch, 60)], "drawing auditions the note");
+    assert!(
+        h.state().auditions.is_empty(),
+        "drawn notes use the audio clock, not the mouse lifetime"
+    );
     // Dragged up two keys: the first audition ends, the new key sounds.
     h.event(Event::PointerMoved(g.pos(STEP_TICKS * 2, 62)));
     h.step();
-    assert_eq!(h.state().auditions, vec![(ch, 62)]);
+    assert!(h.state().auditions.is_empty());
     press(&mut h, g.pos(STEP_TICKS * 2, 62), PointerButton::Primary, false);
     h.step();
     assert!(h.state().auditions.is_empty());
@@ -3667,14 +3677,17 @@ fn samples_preview_from_the_browser_panel_the_picker_and_channel_settings() {
     for _ in 0..3 {
         h.step();
     }
-    let key = h.state().project().channel(ch).expect("ch").root_key;
     // The waveform is the 64 px strip under the sample's name and Load… button.
     let load = h.get_by_label("Load…").rect();
     let wave = egui::pos2(load.left(), load.bottom() + 36.0);
     h.event(Event::PointerMoved(wave));
     h.step();
     press(&mut h, wave, PointerButton::Primary, true);
-    assert_eq!(h.state().auditions, vec![(ch, key)]);
+    assert_eq!(h.state().sampler_preview.map(|p| p.0), Some(ch));
+    assert!(
+        h.state().auditions.is_empty(),
+        "sampler preview is independent of mouse release"
+    );
     press(&mut h, wave, PointerButton::Primary, false);
     h.step();
     assert!(h.state().auditions.is_empty());
@@ -4092,6 +4105,11 @@ fn a_plugin_parameter_is_automated_from_its_menu_and_as_the_last_tweaked_paramet
 
     // FL Studio's Add › Automation for last tweaked parameter: off until a parameter changes.
     assert_eq!(h.state().plugins.last_tweaked, None);
+    h.state_mut().plugins.open_window(target, None);
+    h.step();
+    h.step();
+    let label = h.get_by_label("Level").rect();
+    let slider = egui::pos2(label.left() + 140.0, label.center().y);
     click(&mut h, slider, PointerButton::Primary);
     assert_eq!(h.state().plugins.last_tweaked, Some((target, 0)));
     let before = h.state().project().automations.len();
@@ -4191,7 +4209,11 @@ fn a_plugin_in_its_own_process_crashes_without_taking_limeshot_down() {
     for _ in 0..3 {
         h.step();
     }
-    let inst = h.state().plugins.instance(target).expect("plugin in its own process");
+    let inst = h
+        .state()
+        .plugins
+        .instance(target)
+        .unwrap_or_else(|| panic!("plugin in its own process: {:?}", h.state().plugins.error(target)));
     assert!(inst.is_bridged());
     assert_eq!(inst.param(0), 0.25, "the state moved with it");
     let Instrument::Plugin(p) = &h.state().project().channel(ch).expect("ch").instrument else {
@@ -4861,4 +4883,207 @@ fn effect_and_instrument_presets_load_and_save() {
     };
     assert!(now.reverse);
     assert_eq!(now.sample, was.sample);
+}
+
+#[test]
+fn piano_right_click_deselects_and_shows_red_delete_cursor() {
+    let (mut h, pat, ch) = empty_piano_roll();
+    let g = piano_geometry(&h);
+    click(&mut h, g.pos(PPQ, 60), PointerButton::Primary);
+    assert!(!h.state().ui.piano.selection.is_empty());
+    let empty = g.pos(PPQ * 2, 64);
+    h.event(Event::PointerMoved(empty));
+    h.step();
+    press(&mut h, empty, PointerButton::Secondary, true);
+    assert!(h.state().ui.piano.selection.is_empty());
+    assert_eq!(h.state().ui.piano.cursor, Some(limeshot_ui::piano_roll::Tool::Delete));
+    press(&mut h, empty, PointerButton::Secondary, false);
+    assert_eq!(notes_by_start(&h, pat, ch).len(), 1);
+}
+
+#[test]
+fn rack_selector_drag_selects_channels_without_moving_the_window() {
+    let mut h = harness(true);
+    let ids: Vec<_> = h.state().project().channels.iter().take(3).map(|c| c.id).collect();
+    h.state_mut().select_channel(ids[0]);
+    let before = window_rect(&h, Win::ChannelRack);
+    let from = led(&h, ids[0]);
+    let to = led(&h, ids[2]);
+    drag(&mut h, from, to);
+    for id in ids {
+        assert!(h.state().ui.channel_selection.contains(&id));
+    }
+    assert_eq!(before, window_rect(&h, Win::ChannelRack));
+}
+
+#[test]
+fn typing_keyboard_targets_selected_channel_and_releases_the_original() {
+    let mut h = harness(true);
+    let a = h.state().project().channels[0].id;
+    let b = h.state().project().channels[1].id;
+    h.state_mut().keyboard_notes = true;
+    h.state_mut().select_channel(a);
+    h.event(Event::Key {
+        key: Key::Z,
+        physical_key: Some(Key::Z),
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    h.step();
+    assert_eq!(h.state().typing_notes, vec![(Key::Z, a, 48)]);
+    h.state_mut().select_channel(b);
+    h.event(Event::Key {
+        key: Key::Z,
+        physical_key: Some(Key::Z),
+        pressed: false,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    h.step();
+    assert!(h.state().typing_notes.is_empty());
+    h.event(Event::Key {
+        key: Key::Q,
+        physical_key: Some(Key::Q),
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    h.step();
+    assert_eq!(h.state().typing_notes, vec![(Key::Q, b, 60)]);
+    h.state_mut().keyboard_notes = false;
+    h.step();
+    assert!(h.state().typing_notes.is_empty());
+}
+
+#[test]
+fn picker_entries_drag_into_the_playlist() {
+    let mut h = playlist_harness();
+    let source = ClipSource::Pattern(h.state().current_pattern());
+    let from = h
+        .state()
+        .ui
+        .playlist
+        .picker_rows
+        .iter()
+        .find(|r| r.0 == source)
+        .unwrap()
+        .1
+        .center();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let track = empty_track(&h, 3);
+    let n = h.state().project().playlist.clips.len();
+    drag(&mut h, from, g.pos(PPQ * 8, track));
+    assert_eq!(h.state().project().playlist.clips.len(), n + 1);
+    let clip = last_clip(&h);
+    assert_eq!((clip.source, clip.start, clip.track), (source, PPQ * 8, track));
+}
+
+#[test]
+fn mixer_meter_and_background_select_but_control_drags_do_not() {
+    let mut h = mixer_harness(1);
+    let pan = h.state().ui.mixer.pan_rects.iter().find(|r| r.0 == 2).unwrap().1;
+    drag(&mut h, pan.center(), pan.center() - vec2(0.0, 25.0));
+    assert_eq!(h.state().ui.mixer.selected, 1);
+    let meter = h.state().ui.mixer.meter_rects.iter().find(|r| r.0 == 2).unwrap().1;
+    click(&mut h, meter.center(), PointerButton::Primary);
+    assert_eq!(h.state().ui.mixer.selected, 2);
+    let strip = h.state().ui.mixer.strip_rects.iter().find(|r| r.0 == 3).unwrap().1;
+    click(
+        &mut h,
+        strip.min + vec2(2.0, strip.height() * 0.5),
+        PointerButton::Primary,
+    );
+    assert_eq!(h.state().ui.mixer.selected, 3);
+}
+
+#[test]
+fn channel_and_playlist_mute_locks_preserve_state_when_soloing() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    let step = h.state().ui.rack.step_pos(channel, 0).unwrap();
+    let rack = window_rect(&h, Win::ChannelRack);
+    let mute = egui::pos2(rack.left() + 14.0, step.y);
+    click_with(&mut h, mute, PointerButton::Primary, Modifiers::SHIFT);
+    assert!(h.state().project().channel(channel).unwrap().mute_locked);
+    let other = h.state().project().channels[1].id;
+    h.state_mut().exec(Command::SetChannelSolo {
+        channel: other,
+        solo: true,
+    });
+    h.state_mut().sync_engine();
+    assert!(h.state().snapshot().channels[0].audible);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let mute = egui::pos2(g.grid.left() - 14.0, g.pos(0, 0).y);
+    click_with(&mut h, mute, PointerButton::Primary, Modifiers::SHIFT);
+    assert!(h.state().project().playlist.tracks[0].mute_locked);
+    let other = mute + vec2(0.0, g.track_h);
+    click(&mut h, other, PointerButton::Secondary);
+    assert!(!h.state().project().playlist.tracks[0].muted);
+    assert!(!h.state().project().playlist.tracks[1].muted);
+    assert!(h.state().project().playlist.tracks[2].muted);
+}
+
+#[test]
+fn automation_points_can_be_placed_far_from_the_existing_curve() {
+    let mut h = playlist_harness();
+    let clip = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerVolume(1)).unwrap();
+    h.step();
+    h.step();
+    let c = h.state().project().clip(clip).unwrap().clone();
+    let id = c.automation().unwrap();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let top = g.grid.top() + c.track as f32 * g.track_h - g.scroll.y;
+    let p = egui::pos2(g.pos(PPQ * 2, c.track).x, top + g.track_h - 7.0);
+    click(&mut h, p, PointerButton::Primary);
+    let a = h.state().project().automation(id).unwrap();
+    assert_eq!(a.points.len(), 2);
+    assert_eq!(a.points[1].tick, PPQ * 2);
+    assert!(a.points[1].value < 0.2);
+}
+
+#[test]
+fn long_midi_patterns_do_not_increase_the_rack_minimum_width() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[3].id;
+    let pattern = h.state().current_pattern();
+    h.state_mut().exec(Command::SetPatternLength { pattern, steps: None });
+    let before = h.state().ui.workspace.min_size(Win::ChannelRack).x;
+    h.state_mut().exec(Command::AddNote {
+        pattern,
+        note: NewNote {
+            channel,
+            key: 72,
+            start: PPQ * 64,
+            length: PPQ,
+            velocity: 0.8,
+        },
+    });
+    h.step();
+    h.step();
+    assert_eq!(h.state().ui.workspace.min_size(Win::ChannelRack).x, before);
+    assert!(window_rect(&h, Win::ChannelRack).width() < 1060.0);
+    let strip = h.state().ui.rack.step_strips.iter().find(|r| r.0 == channel).unwrap();
+    assert!(
+        strip.1.width() > window_rect(&h, Win::ChannelRack).width(),
+        "long MIDI stays scrollable"
+    );
+}
+
+#[test]
+fn stopping_twice_returns_to_song_or_selection_start() {
+    let mut h = playlist_harness();
+    h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+    h.state_mut().locate(PPQ * 8);
+    wait_for(&mut h, "locate", |a| a.player.status().position() == PPQ * 8);
+    h.state_mut().stop();
+    wait_for(&mut h, "rewind", |a| a.player.status().position() == 0);
+    h.state_mut().ui.playlist.time_sel = Some((PPQ * 4, PPQ * 12));
+    h.step();
+    h.state_mut().locate(PPQ * 8);
+    wait_for(&mut h, "locate", |a| a.player.status().position() == PPQ * 8);
+    h.state_mut().stop();
+    wait_for(&mut h, "selection rewind", |a| a.player.status().position() == PPQ * 4);
 }

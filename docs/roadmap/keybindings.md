@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **142** — IMPLEMENTED 107, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 23, NOT_PLANNED 3
+Tracked: **142** — IMPLEMENTED 108, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 22, NOT_PLANNED 3
 
 ## Global
 
@@ -21,7 +21,7 @@ Tracked: **142** — IMPLEMENTED 107, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-005 | Metronome | `Ctrl+M` | VERIFIED | `Cmd+M` | IMPLEMENTED | TR-008 |  |
 | KB-006 | Panic (stop all sound) | `Ctrl+H` | VERIFIED | `Cmd+H` | IMPLEMENTED | TR-010 |  |
 | KB-007 | Step edit mode | `Ctrl+E` | OBSERVED | — | NOT_STARTED | REC-009 | Seen in the main menu on macOS (session 13, menus.json). |
-| KB-008 | Typing keyboard to piano | `Ctrl+T` | INFERRED | — | NOT_STARTED | WF-002 |  |
+| KB-008 | Typing keyboard to piano | `Ctrl+T` | INFERRED | `Cmd+T` | IMPLEMENTED | WF-002 | Outside Playlist; Playlist Cmd+T still adds an automatic time marker. Toolbar button works in every editor. |
 | KB-009 | Playlist | `F5` | VERIFIED | `F5` | IMPLEMENTED | UI-002 |  |
 | KB-010 | Channel Rack | `F6` | VERIFIED | `F6` | IMPLEMENTED | UI-002 |  |
 | KB-011 | Piano Roll | `F7` | VERIFIED | `F7` | IMPLEMENTED | UI-002 |  |

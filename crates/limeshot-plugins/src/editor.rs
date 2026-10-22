@@ -214,6 +214,53 @@ impl Vst3Editor {
         Ok(())
     }
 
+    /// Attach as a child of the main window without changing the OS window's size.
+    pub fn attach_embedded(&mut self, window: &NativeWindow) -> Result<(), PluginError> {
+        if self.attached {
+            return Ok(());
+        }
+        let container = platform::Container::new(&window.0, self.size(), 0.0)?;
+        container.embed();
+        // SAFETY: the container stays alive until after the editor is removed in detach.
+        if unsafe { self.view.attached(container.parent(), PLATFORM_TYPE) } != kResultOk {
+            return Err(PluginError::Call("open its embedded editor"));
+        }
+        if let Ok(mut state) = self.frame.state.try_borrow_mut() {
+            state.container = Some(container);
+        }
+        self.attached = true;
+        Ok(())
+    }
+
+    /// Position a native child view in the main window's content coordinates. Resize-capable
+    /// plugins receive onSize; fixed-size plugins retain their natural dimensions.
+    pub fn layout_embedded(&self, x: f64, y: f64, width: f64, height: f64) {
+        if self.can_resize()
+            && (self.size().width != width.max(1.0) as u32 || self.size().height != height.max(1.0) as u32)
+        {
+            let mut rect = EditorSize {
+                width: width.max(1.0) as u32,
+                height: height.max(1.0) as u32,
+            }
+            .rect();
+            // SAFETY: plain size negotiation with a live plugin; the rectangle lives for both calls.
+            unsafe {
+                self.view.checkSizeConstraint(&mut rect);
+                self.view.onSize(&mut rect);
+            }
+            if let Some(size) = EditorSize::from_rect(&rect)
+                && let Ok(mut state) = self.frame.state.try_borrow_mut()
+            {
+                state.size = size;
+            }
+        }
+        if let Ok(state) = self.frame.state.try_borrow()
+            && let Some(c) = &state.container
+        {
+            c.place_rect(x, y, width, height, state.size);
+        }
+    }
+
     /// Attach without a window. Only LimeShot's built-in test plugins accept this (headless tests).
     pub fn attach_headless(&mut self) -> Result<(), PluginError> {
         if !self.builtin {
@@ -319,6 +366,7 @@ mod platform {
     pub(super) struct Container {
         view: Retained<NSView>,
         window: Retained<NSWindow>,
+        embedded: std::cell::Cell<bool>,
     }
 
     impl Container {
@@ -334,7 +382,11 @@ mod platform {
             );
             let view = NSView::initWithFrame(NSView::alloc(mtm), frame);
             content.addSubview(&view);
-            let c = Self { view, window };
+            let c = Self {
+                view,
+                window,
+                embedded: std::cell::Cell::new(false),
+            };
             c.place(size, top_inset);
             Ok(c)
         }
@@ -359,6 +411,9 @@ mod platform {
 
         /// Resize the window so its content is the editor plus the inset, keeping its top left.
         pub(super) fn resize(&self, size: EditorSize, top_inset: f64) {
+            if self.embedded.get() {
+                return;
+            }
             let old = self.window.frame();
             let content = NSRect::new(
                 old.origin,
@@ -370,6 +425,27 @@ mod platform {
                 self.window.setFrame_display(new, true);
             }
             self.place(size, top_inset);
+        }
+
+        pub(super) fn embed(&self) {
+            self.embedded.set(true);
+        }
+
+        pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
+            let Some(content) = self.window.contentView() else {
+                return;
+            };
+            let width = f64::from(natural.width);
+            let height = f64::from(natural.height);
+            let title_inset = (content.bounds().size.height - self.window.contentLayoutRect().size.height).max(0.0);
+            let top = y + title_inset;
+            let y = if content.isFlipped() {
+                top
+            } else {
+                content.bounds().size.height - top - height
+            };
+            self.view
+                .setFrame(NSRect::new(NSPoint::new(x, y), NSSize::new(width, height)));
         }
 
         pub(super) fn set_hidden(&self, hidden: bool) {
@@ -410,6 +486,8 @@ mod platform {
         }
         pub(super) fn place(&self, _size: EditorSize, _top_inset: f64) {}
         pub(super) fn resize(&self, _size: EditorSize, _top_inset: f64) {}
+        pub(super) fn embed(&self) {}
+        pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}
     }
 }

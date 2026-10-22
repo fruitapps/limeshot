@@ -27,6 +27,7 @@ pub struct State {
     /// Put the keyboard in the search field on the next frame (Tools › Browser find…).
     pub focus_search: bool,
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
+    drag_peaks: HashMap<PathBuf, std::sync::Arc<crate::playlist::Peaks>>,
     pending_preview: Option<PathBuf>,
     pub selected: Option<PathBuf>,
     /// Screen rectangles of the files listed in the last frame (for tests and tools).
@@ -363,7 +364,16 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
         ui.label(RichText::new("No channels yet").color(t.text_faint));
     }
     for (id, name, color, kind) in chans {
-        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click());
+        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click_and_drag());
+        if resp.drag_started() {
+            if let Some(Instrument::Sampler(s)) = app.project().channel(id).map(|c| &c.instrument)
+                && let Some(sample) = &s.sample
+            {
+                resp.dnd_set_drag_payload(DraggedSample(app.samples.resolve(&sample.path)));
+            } else {
+                resp.dnd_set_drag_payload(id);
+            }
+        }
         if Some(id) == sel {
             ui.painter()
                 .rect_filled(r, CornerRadius::same(t.radius_sm), mix(t.surface, t.accent, 0.12));
@@ -389,9 +399,23 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
             crate::theme::prop(10.5),
             t.text_faint,
         );
-        if resp.clicked() {
+        if resp.clicked() || resp.secondary_clicked() {
             app.select_channel(id);
         }
+        if resp.double_clicked() {
+            app.select_channel(id);
+            let target = crate::plugins::Target::Channel(id);
+            if app.plugins.is_loaded(target) {
+                app.plugins.open_window(target, None);
+            } else {
+                app.show_window(crate::workspace::Win::ChannelSettings);
+            }
+        }
+        resp.context_menu(|ui| {
+            if let Some(ch) = app.project().channel(id).cloned() {
+                crate::channel_rack::channel_menu(app, ui, &ch);
+            }
+        });
     }
 }
 
@@ -481,4 +505,70 @@ fn load_into_selected(app: &mut LimeShotApp, path: &Path) {
             new_sampler_channel(app, path);
         }
     }
+}
+
+/// Waveform shared by the sample drag's pointer preview and its snapped Playlist ghost.
+pub(crate) fn paint_sample_wave(
+    app: &mut LimeShotApp,
+    painter: &egui::Painter,
+    rect: Rect,
+    path: &Path,
+    color: egui::Color32,
+) {
+    if rect.width() < 1.0 || rect.height() < 1.0 {
+        return;
+    }
+    let stored = path.to_string_lossy().into_owned();
+    let Some(SampleStatus::Ready(sample)) = app.samples.status(&stored).cloned() else {
+        return;
+    };
+    let peaks = app
+        .ui
+        .browser
+        .drag_peaks
+        .entry(path.to_path_buf())
+        .or_insert_with(|| std::sync::Arc::new(crate::playlist::Peaks::of(&sample)))
+        .clone();
+    let painter = painter.with_clip_rect(rect.intersect(painter.clip_rect()));
+    let cols = rect.width().ceil().min(4096.0) as usize;
+    for x in 0..cols {
+        let a = x as f64 / cols as f64 * sample.frames() as f64;
+        let b = (x + 1) as f64 / cols as f64 * sample.frames() as f64;
+        if let Some((lo, hi)) = peaks.range(a, b) {
+            let x = rect.left() + x as f32;
+            let h = rect.height() * 0.48;
+            painter.line_segment(
+                [pos2(x, rect.center().y - hi * h), pos2(x, rect.center().y - lo * h)],
+                Stroke::new(1.0, color),
+            );
+        }
+    }
+}
+
+pub(crate) fn drag_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
+    let sample = egui::DragAndDrop::payload::<DraggedSample>(ctx)
+        .map(|s| s.0.clone())
+        .or_else(|| {
+            let source = egui::DragAndDrop::payload::<limeshot_core::ClipSource>(ctx)?;
+            let limeshot_core::ClipSource::Audio(channel) = *source else {
+                return None;
+            };
+            let Instrument::Sampler(params) = &app.project().channel(channel)?.instrument else {
+                return None;
+            };
+            Some(app.samples.resolve(&params.sample.as_ref()?.path))
+        });
+    let Some(sample) = sample else { return };
+    app.samples.request_path(sample.clone());
+    let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) else {
+        return;
+    };
+    let rect = Rect::from_min_size(pos + vec2(12.0, 18.0), vec2(160.0, 48.0));
+    let t = Theme::current();
+    let painter = ctx.layer_painter(egui::LayerId::new(
+        egui::Order::Tooltip,
+        egui::Id::new("sample-drag-wave"),
+    ));
+    painter.rect_filled(rect, 3.0, t.raised.gamma_multiply(0.95));
+    paint_sample_wave(app, &painter, rect.shrink(3.0), &sample, t.accent);
 }

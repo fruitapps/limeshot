@@ -183,6 +183,7 @@ pub struct State {
     pub last_vel: f32,
     pub tool: Tool,
     audition: Option<(ChannelId, u8)>,
+    timed_audition: Option<(ChannelId, u8)>,
     scrolled_once: bool,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
@@ -214,6 +215,7 @@ impl Default for State {
             last_vel: 0.78,
             tool: Tool::Draw,
             audition: None,
+            timed_audition: None,
             scrolled_once: false,
             geometry: None,
             cursor: None,
@@ -744,7 +746,11 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
     match (down, key, app.ui.piano.audition) {
         (true, Some(k), prev) if prev != Some((cid, k)) => {
             let v = app.ui.piano.last_vel;
-            audition(app, cid, k, v);
+            if let Some((c, k)) = prev {
+                app.preview_off(c, k);
+            }
+            app.preview_on(cid, k, v);
+            app.ui.piano.audition = Some((cid, k));
         }
         (false, _, Some((c, pk))) => {
             app.preview_off(c, pk);
@@ -821,7 +827,16 @@ pub fn tool_cursor(ctx: &Context, tool: Tool, at: Pos2, special: Option<egui::Cu
     ] {
         crate::icons::paint(&painter, r.translate(d), tool.icon(), outline);
     }
-    crate::icons::paint(&painter, r, tool.icon(), Color32::WHITE);
+    crate::icons::paint(
+        &painter,
+        r,
+        tool.icon(),
+        if tool == Tool::Delete {
+            Theme::current().danger
+        } else {
+            Color32::WHITE
+        },
+    );
     true
 }
 
@@ -844,11 +859,12 @@ pub fn playback_line(ui: &Ui, grid: Rect, x: f32, held: bool) {
 
 /// Sound `key` on `channel` as the Piano Roll's audition, ending the one before.
 fn audition(app: &mut LimeShotApp, channel: ChannelId, key: u8, velocity: f32) {
-    if let Some((c, k)) = app.ui.piano.audition.take() {
+    if let Some((c, k)) = app.ui.piano.timed_audition.take() {
         app.preview_off(c, k);
     }
-    app.preview_on(channel, key, velocity);
-    app.ui.piano.audition = Some((channel, key));
+    let seconds = app.ui.piano.last_len.max(1) as f64 / PPQ as f64 * 60.0 / app.project().tempo.bpm();
+    app.preview_for(channel, key, velocity, seconds);
+    app.ui.piano.timed_audition = Some((channel, key));
 }
 
 /// The Playback tool's scrub: start the notes in `want` that are not sounding yet and stop the
@@ -883,6 +899,11 @@ fn grid_input(
     pattern: Option<&Pattern>,
 ) {
     let resp = ui.interact(grid, ui.id().with("pr_grid"), Sense::click_and_drag());
+    if resp.dnd_hover_payload::<ChannelId>().is_some()
+        && let Some(channel) = resp.dnd_release_payload::<ChannelId>()
+    {
+        app.select_channel(*channel);
+    }
     let notes: &[Note] = pattern.map(|p| p.notes.as_slice()).unwrap_or(&[]);
     let sig = app.project().time_signature;
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
@@ -899,8 +920,10 @@ fn grid_input(
             (Tool::Draw | Tool::Paint | Tool::Select, Some(_)) => Some(egui::CursorIcon::Grab),
             _ => None,
         };
-        if tool_cursor(ui.ctx(), app.ui.piano.tool, p, special) {
-            app.ui.piano.cursor = Some(app.ui.piano.tool);
+        let erase = ui.input(|i| i.pointer.secondary_down());
+        let cursor = if erase { Tool::Delete } else { app.ui.piano.tool };
+        if tool_cursor(ui.ctx(), cursor, p, if erase { None } else { special }) {
+            app.ui.piano.cursor = Some(cursor);
         }
         let k = view.key_at(p.y).clamp(0, 127) as u8;
         let tk = view.tick_at(p.x).max(0) as u64;
@@ -1117,6 +1140,9 @@ fn grid_input(
         st.zoom_x = (st.zoom_x / 2.0).max(12.0);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
     } else if secondary_pressed {
+        if pointer.is_some_and(|p| hit(view, notes, cid, p).is_none()) {
+            app.ui.piano.selection.clear();
+        }
         app.doc.begin_gesture();
         app.ui.piano.drag = Some(Drag::Erase);
     }

@@ -522,3 +522,34 @@ fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
         );
     }
 }
+
+#[test]
+fn timed_auditions_release_on_the_audio_clock_while_stopped() {
+    let (doc, ch) = project();
+    let snap = Arc::new(compile(doc.project(), doc.project().patterns[0].id, &NoSamples));
+    for block in [1, 64, 333, 1024] {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let mut renderer = Renderer::new(SR, snap.clone());
+        renderer.adopt_instrument(
+            ch.0,
+            Box::new(Gate {
+                held: 0,
+                frame: 0,
+                log: log.clone(),
+            }),
+        );
+        renderer.set_snapshot(snap.clone());
+        renderer.preview_note_for(0, 72, 1.0, 0.05);
+        let mut rendered = 0;
+        let mut buf = vec![0.0; block * 2];
+        while rendered < 4800 {
+            renderer.render(&mut buf);
+            rendered += block;
+        }
+        assert_eq!(
+            *log.lock().unwrap(),
+            vec![(0, true, 72), (2400, false, 72)],
+            "block {block}"
+        );
+    }
+}

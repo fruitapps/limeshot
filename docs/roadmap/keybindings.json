@@ -87,10 +87,10 @@
       "action": "Typing keyboard to piano",
       "fl_keys": "Ctrl+T",
       "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+T",
+      "status": "IMPLEMENTED",
       "feature": "WF-002",
-      "notes": ""
+      "notes": "Outside Playlist; Playlist Cmd+T still adds an automatic time marker. Toolbar button works in every editor."
     },
     {
       "id": "KB-009",

@@ -181,6 +181,9 @@ pub struct LimeShotApp {
     /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
     /// button, so any left once no button is down are released (`logic`).
     pub auditions: Vec<(ChannelId, u8)>,
+    pub typing_notes: Vec<(egui::Key, ChannelId, u8)>,
+    pub keyboard_notes: bool,
+    pub sampler_preview: Option<(ChannelId, std::time::Instant, f64)>,
 }
 
 impl LimeShotApp {
@@ -242,6 +245,9 @@ impl LimeShotApp {
             persist_settings: false,
             presets_dir: None,
             auditions: Vec::new(),
+            sampler_preview: None,
+            keyboard_notes: false,
+            typing_notes: Vec::new(),
         }
     }
 
@@ -436,7 +442,17 @@ impl LimeShotApp {
     /// Browser preview still loading.
     pub fn stop(&mut self) {
         self.ui.browser.cancel_preview();
+        self.sampler_preview = None;
+        let stopped = !self.is_playing();
         self.send(Msg::Stop);
+        if stopped {
+            let start = if self.ui.mode == PlayMode::Song {
+                self.ui.playlist.time_sel.map_or(0, |r| r.0)
+            } else {
+                0
+            };
+            self.locate(start);
+        }
     }
 
     pub fn set_mode(&mut self, mode: PlayMode) {
@@ -485,6 +501,23 @@ impl LimeShotApp {
             if !self.auditions.contains(&(channel, key)) {
                 self.auditions.push((channel, key));
             }
+        }
+    }
+
+    /// Preview for its musical duration, independent of pointer release.
+    pub fn preview_for(&mut self, channel: ChannelId, key: u8, velocity: f32, seconds: f64) {
+        if let Some(i) = self
+            .project()
+            .channel_index(channel)
+            .and_then(|i| u16::try_from(i).ok())
+        {
+            self.sync_engine();
+            self.send(Msg::NoteFor {
+                channel: i,
+                key,
+                velocity,
+                seconds,
+            });
         }
     }
 
@@ -851,6 +884,18 @@ impl LimeShotApp {
                 self.preview_off(c, k);
             }
         }
+        let mut held = std::mem::take(&mut self.typing_notes);
+        held.retain(|(key, channel, note)| {
+            let keep = self.keyboard_notes
+                && !ctx.egui_wants_keyboard_input()
+                && self.dialog.is_none()
+                && ctx.input(|i| i.focused && i.key_down(*key));
+            if !keep {
+                self.preview_off(*channel, *note);
+            }
+            keep
+        });
+        self.typing_notes = held;
         self.sync_engine();
         if self.plugins.poll() {
             self.doc.mark_unsaved();
@@ -907,7 +952,9 @@ impl LimeShotApp {
             return;
         }
         self.ui.hint.clear();
-        shortcuts::handle(self, &ctx);
+        if !crate::plugin_window::handle_keys(self, &ctx) {
+            shortcuts::handle(self, &ctx);
+        }
         let flat = |fill| egui::Frame::new().fill(fill);
         egui::Panel::top("header")
             .exact_size(30.0)
@@ -952,6 +999,7 @@ impl LimeShotApp {
         crate::toolbar::tapper(self, &ctx);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
+        crate::browser::drag_preview(self, &ctx);
     }
 }
 

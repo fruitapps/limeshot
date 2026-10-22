@@ -1,31 +1,13 @@
-//! Plugin windows (FL Studio's Fruity Wrapper, observed in `docs/research/fl-studio-analysis.md`
-//! §17): one OS window per plugin channel and plugin insert, titled like FL's ("Vital (Master)").
-//!
-//! * A row of tabs at the top: **Plugin**, the plugin's own editor (its native view, placed below
-//!   the tabs), and **Settings**, LimeShot's page for that channel (the Channel Settings) or insert
-//!   (the parameter list). FL has a third page, the wrapper's options; LimeShot shows the plugin's
-//!   format and latency on the Settings page instead.
-//! * On the Plugin tab the window is exactly the editor plus the tabs and follows the editor when
-//!   the plugin resizes itself (FL: no resize handle of its own); the Settings tab can be resized.
-//! * A click on a plugin channel's button (or a plugin insert's name) opens the window and a second
-//!   click closes it. It reopens where it was, on the tab it was on.
-//! * A plugin without an editor, or one this platform cannot show yet, gets LimeShot's parameter
-//!   list on the Plugin tab.
-//! * The window floats above LimeShot's main window and hides while another application is active.
-//! * On the right of the tab row, as in FL's title bar: the presets menu (the plugin's factory
-//!   programs, then its `.vstpreset` files; Save preset as…), Presets ◀ ▶ (channels only) and the
-//!   keyboard toggle, which lets the plugin handle keystrokes before LimeShot's shortcuts.
-//! * Each window's place, tab, keyboard toggle and whether it is open are saved in the project
-//!   (FL does the same) and come back when the project opens.
-//!
-//! On backends without separate windows (headless tests) the wrapper is an egui window inside the
-//! main one, and the Plugin tab shows the parameter list.
+//! Resizable plugin wrappers inside the LimeShot workspace. The Plugin tab embeds the native
+//! editor as a child of the main window; Settings shows the channel/insert controls. Presets,
+//! keyboard forwarding, tab, position and size are remembered with the project. Platforms that
+//! cannot embed a native view show the parameter list instead.
 
 use std::collections::HashMap;
 use std::hash::{Hash as _, Hasher as _};
 use std::path::PathBuf;
 
-use egui::{Context, Pos2, RichText, Ui, Vec2, ViewportBuilder, ViewportClass, ViewportId, vec2};
+use egui::{Context, Pos2, RichText, Ui, Vec2, vec2};
 use limeshot_core::{PluginRef, PluginWindow};
 use limeshot_plugins::{NativeWindow, Vst3Editor, VstPreset};
 
@@ -128,6 +110,7 @@ impl Preset {
 /// An open plugin window.
 pub struct Wrapper {
     pub tab: Tab,
+    raise: bool,
     // Declared before `native`: the editor leaves the window before LimeShot lets go of it.
     editor: Option<Vst3Editor>,
     native: Option<NativeWindow>,
@@ -140,11 +123,6 @@ pub struct Wrapper {
     open_at: Option<Pos2>,
     position: Option<Pos2>,
     settings_size: Vec2,
-    /// The size and resizability last asked of the window.
-    applied: Option<(Vec2, bool)>,
-    /// Frames left until a size LimeShot asked for has taken effect (the window's size is only
-    /// remembered as the user's after that).
-    settling: u8,
     /// A hash of the plugin's state when the window opened, to notice changes the plugin did not
     /// report.
     state_at_open: Option<u64>,
@@ -163,6 +141,7 @@ impl Wrapper {
         let m = memory.unwrap_or_default();
         Self {
             tab: m.tab,
+            raise: true,
             editor: None,
             native: None,
             asked: false,
@@ -171,8 +150,6 @@ impl Wrapper {
             open_at: m.position,
             position: m.position,
             settings_size: m.settings_size,
-            applied: None,
-            settling: 0,
             state_at_open: None,
             keyboard_to_plugin: m.keyboard_to_plugin,
             presets: None,
@@ -226,6 +203,7 @@ impl PluginHost {
         }
         let memory = self.window_memory.get(&target).copied();
         let w = self.windows.entry(target).or_insert_with(|| Wrapper::new(memory));
+        w.raise = true;
         if let Some(tab) = tab {
             w.tab = tab;
         }
@@ -461,17 +439,8 @@ pub fn show_all(app: &mut LimeShotApp, ctx: &Context) {
     }
 }
 
-struct Frame {
-    close: bool,
-    tab: Option<Tab>,
-    outer: Option<Pos2>,
-    inner: Option<Vec2>,
-    class: ViewportClass,
-}
-
 fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     let zoom = ctx.zoom_factor();
-    // The first frame: ask the plugin for its editor.
     if app.plugins.windows.get(&target).is_some_and(|w| !w.asked) {
         let editor = app.plugins.instance(target).and_then(|i| i.create_editor());
         let state = state_hash(&app.plugins, target);
@@ -487,120 +456,125 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     let Some(w) = app.plugins.windows.get(&target) else {
         return;
     };
-    let editor_size = w.editor.as_ref().filter(|_| !w.fallback).map(|e| e.size());
-    let fits_editor = w.tab == Tab::Editor && editor_size.is_some();
-    let size = match editor_size {
-        Some(s) if fits_editor => vec2(s.width as f32 / zoom, s.height as f32 / zoom + HEADER),
-        _ => w.settings_size,
-    };
-    let mut builder = ViewportBuilder::default()
-        .with_title(title)
-        .with_inner_size(size)
-        .with_resizable(!fits_editor)
-        .with_min_inner_size(if fits_editor {
-            vec2(80.0, HEADER + 40.0)
-        } else {
-            vec2(320.0, 240.0)
-        });
-    if let Some(p) = w.open_at {
-        builder = builder.with_position(p);
-    }
-    // eframe applies changes to an immediate viewport's builder only along with a command, so
-    // a new size (another tab, the plugin resized itself) is sent as one.
-    let wanted = (size, !fits_editor);
-    let resize = w.applied.is_some_and(|a| a != wanted);
-    let id = ViewportId::from_hash_of(("limeshot-plugin", order(&target)));
-    let move_to = app.plugins.windows.get_mut(&target).and_then(|w| w.move_to.take());
-    let frame = ctx.show_viewport_immediate(id, builder, |ui, class| {
-        let vctx = ui.ctx().clone();
-        if resize {
-            vctx.send_viewport_cmd(egui::ViewportCommand::Resizable(wanted.1));
-            vctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(wanted.0));
-        }
-        if let Some(p) = move_to {
-            vctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(p));
-        }
-        if class != ViewportClass::EmbeddedWindow && !keys_to_plugin(app, &vctx, target) {
-            crate::shortcuts::handle(app, &vctx);
-        }
-        let t = Theme::current();
-        let mut tab = None;
-        egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(t.surface))
-            .show(ui, |ui| {
-                tab = tabs(app, ui, target);
-                body(app, ui, target);
-            });
-        vctx.input(|i| Frame {
-            close: i.viewport().close_requested(),
-            tab,
-            outer: i.viewport().outer_rect.map(|r| r.min),
-            inner: i.viewport().inner_rect.map(|r| r.size()),
-            class,
-        })
+    let editor_size = w
+        .editor
+        .as_ref()
+        .filter(|_| !w.fallback && w.tab == Tab::Editor)
+        .map(|e| e.size());
+    let size = editor_size.map_or(w.settings_size, |s| {
+        vec2(s.width as f32 / zoom, s.height as f32 / zoom + HEADER)
     });
-    if frame.close {
+    let id = egui::Id::new(("limeshot-plugin", order(&target)));
+    let mut window = egui::Window::new(title)
+        .id(id)
+        .resizable(true)
+        .collapsible(false)
+        .min_size(
+            w.editor
+                .as_ref()
+                .filter(|e| w.tab == Tab::Editor && !w.fallback && !e.can_resize())
+                .map_or(vec2(320.0, 200.0), |e| {
+                    let size = e.size();
+                    vec2(
+                        size.width as f32 / zoom + 24.0,
+                        size.height as f32 / zoom + HEADER + 72.0,
+                    )
+                }),
+        )
+        .default_size(size)
+        .constrain_to(app.ui.workspace.area);
+    if let Some(p) = w.open_at {
+        window = window.default_pos(p);
+    }
+    let move_to = app.plugins.windows.get_mut(&target).and_then(|w| w.move_to.take());
+    if let Some(p) = move_to {
+        window = window.current_pos(p);
+    }
+    let mut open = true;
+    let response = window.open(&mut open).show(ctx, |ui| {
+        let tab = tabs(app, ui, target);
+        let area = ui.available_rect_before_wrap();
+        let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(area).layout(*ui.layout()));
+        inner.set_clip_rect(area.intersect(ui.clip_rect()));
+        body(app, &mut inner, target);
+        ui.advance_cursor_after_rect(area);
+        (tab, area)
+    });
+    if !open {
         close(app, target);
         return;
     }
+    let main_title = app.window_title();
     let Some(w) = app.plugins.windows.get_mut(&target) else {
         return;
     };
-    if resize || w.applied.is_none() {
-        w.settling = 10;
+    let Some(response) = response else { return };
+    w.position = Some(response.response.rect.min);
+    if std::mem::take(&mut w.raise) {
+        ctx.move_to_top(response.response.layer_id);
     }
-    w.settling = w.settling.saturating_sub(1);
-    w.applied = Some(wanted);
-    if let Some(tab) = frame.tab {
-        w.tab = tab;
-        w.settling = 10;
-    }
-    if frame.class == ViewportClass::EmbeddedWindow {
-        // No window of its own: the parameter list stands in for the editor.
-        w.fallback = true;
-        return;
-    }
-    if frame.outer.is_some() {
-        w.position = frame.outer;
-    }
-    if w.tab == Tab::Settings
-        && w.settling == 0
-        && let Some(inner) = frame.inner
-    {
-        w.settings_size = inner;
-    }
-    if w.native.is_none() {
-        match NativeWindow::find(title) {
-            Some(n) => {
-                n.make_tool_window();
-                w.native = Some(n);
-            }
-            None => {
+    if let Some((tab, area)) = response.inner {
+        w.settings_size = vec2(area.width(), area.height() + HEADER);
+        if let Some(tab) = tab {
+            w.tab = tab;
+        }
+        if w.native.is_none() && !w.fallback {
+            w.native = NativeWindow::find(&main_title);
+            if w.native.is_none() {
                 w.attach_tries += 1;
                 if w.attach_tries > ATTACH_TRIES {
                     w.fallback = true;
                 }
             }
         }
-    }
-    let inset = f64::from(HEADER * zoom);
-    if let (Some(ed), Some(native)) = (&mut w.editor, &w.native)
-        && !w.fallback
-    {
-        if !ed.is_attached()
-            && w.tab == Tab::Editor
-            && let Err(e) = ed.attach(native, inset)
-        {
-            log::warn!("{title}: {e}");
-            w.fallback = true;
+        if let (Some(editor), Some(native)) = (&mut w.editor, &w.native) {
+            if !editor.is_attached()
+                && w.tab == Tab::Editor
+                && !w.fallback
+                && let Err(e) = editor.attach_embedded(native)
+            {
+                log::warn!("{title}: {e}");
+                w.fallback = true;
+            }
+            let visible = w.tab == Tab::Editor
+                && !w.fallback
+                && app.dialog.is_none()
+                && !ctx.any_popup_open()
+                && [
+                    area.shrink(3.0).left_top(),
+                    area.shrink(3.0).right_top(),
+                    area.shrink(3.0).left_bottom(),
+                    area.shrink(3.0).right_bottom(),
+                    area.center(),
+                ]
+                .iter()
+                .all(|p| ctx.layer_id_at(*p) == Some(response.response.layer_id));
+            editor.set_visible(visible);
+            if visible {
+                editor.layout_embedded(
+                    f64::from(area.left() * zoom),
+                    f64::from(area.top() * zoom),
+                    f64::from(area.width() * zoom),
+                    f64::from(area.height() * zoom),
+                );
+            }
+            if editor.take_resized().is_some() {
+                ctx.request_repaint();
+            }
         }
-        if ed.is_attached() {
-            ed.set_visible(w.tab == Tab::Editor && !w.fallback);
-            ed.layout(inset);
-            // The next frame's size follows the editor; nothing else to do.
-            let _ = ed.take_resized();
-        }
     }
+}
+
+/// Forward keys before global shortcuts now that wrappers share the main viewport.
+pub(crate) fn handle_keys(app: &LimeShotApp, ctx: &Context) -> bool {
+    if app.keyboard_notes || app.dialog.is_some() || ctx.egui_wants_keyboard_input() {
+        return false;
+    }
+    let top = ctx.memory(|m| m.areas().top_layer_id(egui::Order::Middle));
+    app.plugins.windows.keys().copied().any(|target| {
+        let id = egui::Id::new(("limeshot-plugin", order(&target)));
+        top.is_some_and(|layer| layer.id == id) && keys_to_plugin(app, ctx, target)
+    })
 }
 
 /// With the keyboard toggle on, typed characters go to the plugin's editor first. Returns true
@@ -806,7 +780,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
         return;
     };
     match w.tab {
-        Tab::Editor if w.shows_native_editor() || (!w.fallback && w.editor.is_some()) => {
+        Tab::Editor if w.shows_native_editor() => {
             // The plugin's view covers this area (or will on the next frame).
         }
         Tab::Editor => {

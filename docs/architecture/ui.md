@@ -65,12 +65,12 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Where | Action |
 |---|---|
 | Step buttons | left- or right-click toggles; a drag paints the state of the first step (FL Studio 2026); turning a step on auditions it |
-| Piano Roll | left on empty adds a note (snapped) and keeps dragging it; drag a note moves; drag right edge resizes; right-click/drag deletes; Cmd+click toggles selection; Cmd+drag rectangle; double-click a note selects its pitch row; Alt bypasses snap |
+| Piano Roll | left on empty adds a note (snapped) and keeps dragging it; drag a note moves; drag right edge resizes; right-click/drag deletes with a red cursor; right-click on empty deselects; Cmd+click toggles selection; Cmd+drag rectangle; double-click a note selects its pitch row; Alt bypasses snap |
 | Piano keys | click/drag auditions |
 | Velocity lane | click/drag sets the nearest stem (and the whole selection if that note is selected) |
 | Playlist | left on empty places the current pattern and keeps dragging it; drag moves (time and track); right edge resizes; right-click/drag deletes; ▾ on a clip opens its menu (Make unique, Edit, Rename, Mute, Fit, Duplicate, Delete); double-click opens the pattern in the Piano Roll; ruler click/drag sets the song position |
-| Knobs and faders | drag vertically, Shift for fine control, wheel steps, double-click resets |
-| Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos |
+| Knobs and faders | drag vertically, Shift for fine control, wheel steps, double-click resets; a small marker lights at the default |
+| Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
@@ -91,10 +91,22 @@ Alt+Up/Down move, Alt+Delete delete (with FL's confirmation) and Cmd+L route the
 current pattern.
 
 The Channel Rack's selector LEDs are FL Studio's channel selection (`UiState::channel_selection`): a click selects one
-channel, Cmd/Shift/right-click toggles one. `selected_channel` stays the current channel that the Piano Roll and
+channel, Cmd/Shift/right-click toggles one; dragging the selector LEDs selects crossed rows without moving the window. `selected_channel` stays the current channel that the Piano Roll and
 Channel Settings edit; it is the last channel selected.
 
-Single-key shortcuts are ignored while a text field has focus.
+The toolbar typing-keyboard toggle (Cmd+T outside Playlist) maps Z–M and Q–U to notes for the selected channel.
+Key release targets the original channel even after selection changes; dialogs, text fields and focus loss release
+held notes. Playlist Cmd+T retains its marker action. Single-key shortcuts are ignored while a text field has focus.
+
+Browser sample and channel drags, sampler waveform drags, and Playlist picker sources share drop payloads. Audio
+drops show waveform ghosts on the snapped destination and beneath the pointer. Sampler previews finish independently
+of mouse release; their playback head estimates the latest voice from preview/transport time. The rack displays
+4–8 beats of horizontal content with scrolling, including long MIDI previews. Automation points can be placed
+throughout a clip body; headers and trim edges keep their clip gestures. Repeated Stop rewinds to song/selection start.
+
+An open background workspace window is raised before toolbar/F-key toggles close it; pinned windows retain priority.
+Playlist track headers have supported rename/color, mute/solo/lock, selection, merge, clone and ordering actions;
+unsupported advanced FL actions are disabled. + Track sits beneath the last track.
 
 ## Theme
 
@@ -116,7 +128,7 @@ docked layout, small upper-case headers, saturated clips with solid title strips
   and that opening windows never edits the project. Pointer positions come from geometry the editors record while drawing
   (`channel_rack::State::step_pos`, `piano_roll::Geometry::pos`, `playlist::Geometry::pos`), so layout changes do not
   break them.
-* `cargo run -p limeshot-app --example ui_shot -- out.png [--piano] [--mixer] [--fx] [--settings] [--melody] [--empty]` renders
+* `cargo run -p limeshot-app --example ui_shot -- out.png [--piano] [--mixer] [--fx] [--settings] [--melody] [--empty] [--plugin --plugin-window] [--dialog=export|quit|marker] [--tapper]` renders
   the window offscreen with wgpu. It is used to review layout without a display or screen-recording permission
   (`docs/screenshots/`).
 
@@ -124,11 +136,13 @@ Manual test procedure for what automation does not cover: see `docs/development/
 
 ## Known UI gaps
 
-**Plugin windows** (`plugin_window.rs`, D33) are separate: one egui viewport per open plugin channel or insert, with a
-Plugin / Settings tab row; on the Plugin tab `limeshot-plugins` places the plugin's native view in the window below
-the tabs and resizes the window when the plugin resizes itself. Their state lives in `PluginHost` next to the running
-instance, so a plugin that goes away closes its window.
+**Plugin windows** (`plugin_window.rs`, D35) are resizable egui windows inside the workspace with Plugin /
+Settings tabs. On macOS, the plugin's native view is a child of the main NSWindow's content view;
+resize-capable plugins receive size negotiation, while fixed-size editors retain a minimum window size.
+Native editors hide when another window or popup covers them; final live rendering, resize, tab and keyboard
+verification is pending (PLG-006 is IMPLEMENTED). Window state lives beside the running instance
+and is saved in the project. Windows and Linux show the parameter list until their native embedding exists.
 
-Window positions and the detached state are not saved with the project or settings; the Piano Roll has FL's tool strip
-(`piano_roll::Tool`, keys P B D T C E Z Y) but the Playlist has the Draw tool only; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
+Editor layouts can be explicitly saved/restored through View › Arrange windows; they are not automatically persisted. The Piano Roll has FL's tool strip
+(`piano_roll::Tool`, keys P B D T C E Z Y); the Playlist has nine tools; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
 custom-painted editors expose no accessibility labels.

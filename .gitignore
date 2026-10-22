@@ -2,3 +2,8 @@
 *.tmp-*
 .DS_Store
 /out
+
+# Local agent configuration and generated Python caches
+/.claude/
+__pycache__/
+*.py[cod]

@@ -565,6 +565,7 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
             pan: c.pan.unwrap_or(0.0),
             muted: false,
             solo: false,
+            mute_locked: false,
             mixer_track: mixer as u16,
             root_key: 60,
             group: None,
@@ -660,6 +661,8 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
     p.playlist = Playlist {
         tracks: (1..=u32::from(max_track) + 1)
             .map(|i| PlaylistTrack {
+                color: None,
+                mute_locked: false,
                 name: format!("Track {i}"),
                 muted: false,
             })

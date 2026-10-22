@@ -107,7 +107,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         return;
     };
     let pat_len = pattern.length(sig);
-    let steps = (pat_len / STEP_TICKS).clamp(1, 512) as u32;
+    let steps = (pat_len / STEP_TICKS).clamp(16, 512) as u32;
     let length_steps = pattern.length_steps;
     let pat_name = pattern.name.clone();
     let pat_color = pattern.color;
@@ -229,9 +229,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let tracks = app.project().mixer.tracks.len();
     let sel = app.selected_channel();
     let rows_top = ui.cursor().top();
-    let mut content_w = None;
-    egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
-        let content_left = ui.max_rect().left();
+
+    let body_left = ui.max_rect().left();
+    let scroll = egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
         ui.add_space(2.0);
         let filter = app.ui.rack.filter.clone();
         for ch in channels.iter().filter(|c| filter.shows(c)) {
@@ -246,23 +246,34 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.spacing_mut().item_spacing.x = 5.0;
                 ui.add_space(8.0);
                 // Mute / solo LED.
-                let active = !ch.muted && (!any_solo || ch.solo);
+                let active = !ch.muted && (!any_solo || ch.solo || ch.mute_locked);
                 let led_color = if ch.solo { t.warning } else { t.accent };
                 let r = toggle_label(
                     ui,
                     active,
-                    if ch.solo { "S" } else { "" },
+                    if ch.mute_locked {
+                        "L"
+                    } else if ch.solo {
+                        "S"
+                    } else {
+                        ""
+                    },
                     led_color,
                     vec2(10.0, 18.0),
                     "Left-click: mute · Ctrl+click or right-click: solo",
                 );
                 let solo_click = r.secondary_clicked() || (r.clicked() && ui.input(|i| i.modifiers.command));
-                if solo_click {
+                if r.clicked() && ui.input(|i| i.modifiers.shift) {
+                    app.exec(Command::SetChannelMuteLock {
+                        channel: ch.id,
+                        locked: !ch.mute_locked,
+                    });
+                } else if !ch.mute_locked && solo_click {
                     app.exec(Command::SetChannelSolo {
                         channel: ch.id,
                         solo: !ch.solo,
                     });
-                } else if r.clicked() {
+                } else if r.clicked() && !ch.mute_locked {
                     app.exec(Command::SetChannelMute {
                         channel: ch.id,
                         muted: !ch.muted,
@@ -311,20 +322,26 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
             });
         }
-        content_w = app.ui.rack.step_strips.first().map(|s| s.1.right() - content_left);
     });
     app.ui.rack.graph_rect = None;
     if let (Some(prop), Some(ch)) = (app.ui.rack.graph, sel.and_then(|c| channels.iter().find(|x| x.id == c))) {
         graph_overlay(app, ui, ch, pid, prop);
     }
-    // The window always shows every step and at least five channels (owner's hands-on test).
+    // Long patterns scroll inside the same four-to-eight-beat window; keep five rows visible.
     let row_pitch = ROW_H + ui.spacing().item_spacing.y;
-    let w = content_w.map_or(Win::ChannelRack.min_size().x, |w| w + 18.0);
+    let w = app.ui.rack.step_strips.first().map_or(700.0, |(_, strip, _)| {
+        strip.left() + scroll.state.offset.x - body_left + 16.0 * STEP_W + 18.0
+    });
     let h = crate::workspace::TITLE_H + (rows_top - body_top) + 2.0 + 5.0 * row_pitch + 10.0;
     app.ui.workspace.set_content_min(Win::ChannelRack, vec2(w, h));
     // Dropping a sample anywhere else in the rack makes a new channel.
     let rack_rect = ui.min_rect();
     let drop = ui.interact(rack_rect, ui.id().with("drop"), Sense::hover());
+    if drop.dnd_hover_payload::<ChannelId>().is_some()
+        && let Some(channel) = drop.dnd_release_payload::<ChannelId>()
+    {
+        app.exec(Command::CloneChannel(*channel));
+    }
     if let Some(p) = drop.dnd_release_payload::<DraggedSample>() {
         browser::new_sampler_channel(app, &p.0);
     }
@@ -588,7 +605,7 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
 
 fn selector_led(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let t = Theme::current();
-    let (r, resp) = ui.allocate_exact_size(vec2(LED_W, 22.0), Sense::click());
+    let (r, resp) = ui.allocate_exact_size(vec2(LED_W, 22.0), Sense::click_and_drag());
     app.ui.rack.leds.push((ch.id, r));
     let on = app.ui.channel_selection.contains(&ch.id);
     ui.painter().rect_filled(r, CornerRadius::same(2), t.sunken);
@@ -603,6 +620,24 @@ fn selector_led(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         );
     }
     let mods = ui.input(|i| i.modifiers);
+    let stroke = egui::Id::new("channel-selection-stroke");
+    if resp.drag_started() {
+        let origin = ui.input(|i| i.pointer.press_origin()).unwrap_or(r.center()).y;
+        ui.ctx().data_mut(|d| d.insert_temp(stroke, origin));
+    }
+    if let Some(origin) = ui.ctx().data(|d| d.get_temp::<f32>(stroke)) {
+        if ui.input(|i| i.pointer.primary_down()) {
+            if let Some(pointer) = ui.input(|i| i.pointer.interact_pos())
+                && (origin.min(pointer.y)..=origin.max(pointer.y)).contains(&r.center().y)
+                && !app.ui.channel_selection.contains(&ch.id)
+            {
+                app.ui.channel_selection.push(ch.id);
+                app.ui.selected_channel = Some(ch.id);
+            }
+        } else {
+            ui.ctx().data_mut(|d| d.remove::<f32>(stroke));
+        }
+    }
     if resp.secondary_clicked() || (resp.clicked() && (mods.command || mods.shift)) {
         app.toggle_channel_selection(ch.id);
     } else if resp.clicked() {
@@ -666,7 +701,7 @@ pub fn move_selected(app: &mut LimeShotApp, delta: i32) {
     }
 }
 
-fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
+pub(crate) fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     let pid = app.current_pattern();
     if ui.button("Piano Roll").clicked() {
         app.select_channel(ch.id);

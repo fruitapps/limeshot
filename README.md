@@ -37,17 +37,17 @@ Every workflow below is covered by automated tests, and the core loop runs end t
 | --- | --- |
 | **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a WAV Sampler, with bundled Lime samples |
 | **Effects** | Lime EQ, Filter, Delay, Room (reverb), Comp (with sidechain), Limiter and Utility |
-| **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and the plugin's own editor window on macOS |
+| **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
 | **Automation** | Automation clips for channel and mixer volume and pan and effect parameters, in Song mode |
 | **Files** | `.lime` projects (versioned, atomic save), WAV export, MIDI import and export, and FL Studio `.flp` import |
 
 <details>
 <summary><strong>Not there yet</strong></summary>
 
-Recording and audio input, MIDI devices, tempo and plugin-parameter automation, plugin delay compensation, CLAP and
-Audio Units, MP3/FLAC/OGG, stems and templates. The full list is in
-[known-limitations.md](docs/roadmap/known-limitations.md). The inventory tracks 239 features in
-[features.md](docs/roadmap/features.md), and 130 of them are verified by tests.
+Recording and audio input, MIDI devices, tempo automation, CLAP and Audio Units, MP3/FLAC/OGG, stems and templates.
+VST3 parameter automation and delay compensation are implemented; the latest native editor embedding still needs a live verification pass. The full list is in
+[known-limitations.md](docs/roadmap/known-limitations.md). The inventory tracks 272 features in
+[features.md](docs/roadmap/features.md), and 136 of them are verified by tests.
 
 </details>
 
@@ -55,7 +55,7 @@ Audio Units, MP3/FLAC/OGG, stems and templates. The full list is in
 
 | Platform | State |
 | --- | --- |
-| macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 plugins verified |
+| macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 processing tested; new native editor embedding unverified |
 | macOS Intel | Release build runs under Rosetta; headless render is bit-identical to arm64; GUI not exercised |
 | Windows x86-64 / ARM64 | Type-checks; CI jobs defined, not yet run |
 | Linux x86-64 / ARM64 | CI jobs defined, not yet run |
@@ -76,7 +76,8 @@ cargo run --release -p limeshot-app -- --demo
 ```
 
 Press **Space** to play, **L** to switch between Pattern and Song mode, **F5–F9** to toggle windows and **F1** to see
-every shortcut.
+every shortcut. Enable typing-keyboard notes in the toolbar to play the selected Channel Rack instrument;
+Cmd+T toggles this outside the Playlist (where it adds a marker).
 
 <details>
 <summary><strong>Headless CLI</strong></summary>
@@ -102,6 +103,8 @@ applies a JSON list of the same typed commands the UI uses:
 ```bash
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all -- --check
+python3 scripts/features.py check
 ```
 
 The suite covers musical timing, scheduling across buffer sizes and sample rates, synth and sampler behaviour,
