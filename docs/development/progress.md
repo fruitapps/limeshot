@@ -868,3 +868,10 @@ notes of the current pattern (`Command::EditNotes` with `NoteTool::Record`; the 
 arrive, so a take is one undo step unless another edit comes in between). Right-click: FL's record menu with
 Recording starts playback, Disarm on stop and start/end quantize. Song mode records into the current pattern's clip
 under the song position. `ui_shot --record` shows the armed button.
+
+### Session 16, part 14: macOS packaging (PF-006; next-steps Then 12)
+
+`scripts/package-macos.sh`: release build, `dist/LimeShot.app` (both binaries, samples in `Contents/Resources`,
+`LimeShot.icns` from the new `make_icon` example, Info.plist with the `.lime` document type), ad-hoc `codesign`, and
+`dist/LimeShot-<version>-macos-<arch>.dmg` with an Applications link. Checked: signature, plist and DMG verify; the
+bundled CLI renders the demo with the bundled samples; the app launches from the bundle. `/dist` is ignored by git.

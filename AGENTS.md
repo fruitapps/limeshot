@@ -24,6 +24,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 python3 scripts/features.py check        # or `generate`; also checks keybindings.json and settings.json
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
+scripts/package-macos.sh                           # dist/LimeShot.app and a DMG (ad-hoc signed)
 ```
 **Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. Permissions depend on the execution host;
 verify Screen Recording and Accessibility before live automation.

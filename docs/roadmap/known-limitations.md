@@ -112,3 +112,6 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   terminal helper reports `AXIsProcessTrusted() == false`, so activation and input could not be verified reliably.
   Repeat with Accessibility enabled for the Codex execution host; test Vital and a resize-capable plugin, both tabs,
   covering/pinning windows, typing keyboard input, and reopening saved wrappers before calling this VERIFIED.
+* The macOS package (`scripts/package-macos.sh`) is signed ad hoc: other Macs need a Developer ID signature and
+  notarisation. Double-clicking a .lime file in Finder starts LimeShot without opening the file. No Windows or Linux
+  packages yet.

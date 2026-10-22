@@ -6856,17 +6856,21 @@
       "name": "Packaging (DMG, MSI, AppImage/deb)",
       "description": "Installers.",
       "fl_reference": "Installers per platform.",
-      "limeshot_behavior": "Signed bundles with the samples folder next to the binary.",
+      "limeshot_behavior": "scripts/package-macos.sh builds dist/LimeShot.app (limeshot and limeshot-cli, the bundled samples in Resources, an icon drawn from the same code as the window icon, Info.plist with the .lime document type, ad-hoc signature) and a DMG with an Applications link. Windows (MSI) and Linux (AppImage/deb) packages wait for CI on those platforms.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on."
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6874,7 +6878,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 12). Not: Developer ID signing and notarisation (needs the owner's certificate), opening .lime files from Finder (macOS sends them as Apple Events, not arguments), MSI, AppImage/deb."
     },
     {
       "id": "PL-025",

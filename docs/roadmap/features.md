@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 20, VERIFIED 140, DEFERRED 4
+- By status: NOT_STARTED 94, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 20, VERIFIED 140, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -29,7 +29,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 8 | 2 | 1 | 7 |
-| Platform | 6 | 1 | 1 | 3 | 1 |
+| Platform | 6 | 1 | 1 | 4 | 0 |
 
 ## Application
 
@@ -381,4 +381,4 @@ automated tests or recorded manual verification. Everything else is not done.
 | PF-003 | Windows x86-64 | P0 | ✓ | IN_PROGRESS | `cargo check --target x86_64-pc-windows-msvc` passes locally; CI job defined but not yet run. | — |
 | PF-004 | Linux x86-64 | P0 | ✓ | IN_PROGRESS | CI job defined (ALSA, X11/Wayland, GTK deps); not yet run. Local cross-check stops at alsa-sys (needs target pkg-config). | — |
 | PF-005 | Windows ARM64 / Linux ARM64 | P2 |  | IN_PROGRESS | `cargo check --target aarch64-pc-windows-msvc` passes locally; CI jobs defined. | — |
-| PF-006 | Packaging (DMG, MSI, AppImage/deb) | P1 |  | NOT_STARTED | Signed bundles with the samples folder next to the binary. | — |
+| PF-006 | Packaging (DMG, MSI, AppImage/deb) | P1 |  | IN_PROGRESS | scripts/package-macos.sh builds dist/LimeShot.app (limeshot and limeshot-cli, the bundled samples in Resources, an icon drawn from the same code as the window icon, Info.plist with the .lime document type, ad-hoc signature) and a DMG with an Applications link. Windows (MSI) and Linux (AppImage/deb) packages wait for CI on those platforms.<br>*Session 16 (next-steps Then 12). Not: Developer ID signing and notarisation (needs the owner's certificate), opening .lime files from Finder (macOS sends them as Apple Events, not arguments), MSI, AppImage/deb.* | `Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.` |

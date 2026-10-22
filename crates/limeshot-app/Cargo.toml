@@ -33,6 +33,7 @@ env_logger.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [lints]
 workspace = true
