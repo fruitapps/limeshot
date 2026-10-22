@@ -53,6 +53,7 @@ pub fn header(app: &mut LimeShotApp, ui: &mut Ui) {
     );
 }
 
+/// Draw the main toolbar and handle transport, pattern, snap, window, and keyboard-note controls.
 pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.max_rect();
@@ -69,6 +70,16 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
         snap_and_options(app, ui);
         vrule(ui, B);
         panels(app, ui);
+        let typing = icon_button(
+            ui,
+            Icon::PianoRoll,
+            app.keyboard_notes,
+            B,
+            "Typing keyboard to piano (Cmd+T) — Z–M and Q–U play the selected channel",
+        );
+        if typing.clicked() {
+            app.keyboard_notes = !app.keyboard_notes;
+        }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
             output(app, ui);
@@ -211,10 +222,13 @@ pub fn tapper(app: &mut LimeShotApp, ctx: &egui::Context) {
     let now = ctx.input(|i| i.time);
     egui::Window::new("Tempo tapper")
         .id(egui::Id::new("limeshot-tempo-tapper"))
+        .default_width(190.0)
         .open(&mut open)
         .collapsible(false)
         .resizable(false)
         .show(ctx, |ui| {
+            ui.set_width(190.0);
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
             ui.label(format!("{:.3} BPM", app.project().tempo.bpm()));
             let tap = ui.add_sized(vec2(160.0, 60.0), egui::Button::new(RichText::new("Tap").size(20.0)));
             ui.label(RichText::new("Click in time; a two-second pause starts over.").small());

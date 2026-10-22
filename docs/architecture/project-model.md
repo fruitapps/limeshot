@@ -8,7 +8,7 @@ Source: `crates/limeshot-core/src/{model,command,document,time}.rs`, `crates/lim
 Project
 ├── title, tempo (milli-BPM), time_signature, next_id, extra{}
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
-│     id, name, color, instrument, volume, pan, muted, solo, mixer_track, root_key, extra{}
+│     id, name, color, instrument, volume, pan, muted, solo, mute_locked, mixer_track, root_key, extra{}
 │     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, release_ms, one_shot}
 │                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
 │                        cutoff_hz, resonance, filter_env, filter_decay_ms, lfo_rate_hz, vibrato_cents, lfo_cutoff}
@@ -17,7 +17,7 @@ Project
 │     id, name, color, length_steps (None = auto), notes: [Note], extra{}
 │     Note = {id, channel, key, start, length, velocity, muted}   (ticks; muted omitted when false)
 ├── playlist
-│     tracks: [{name, muted}]
+│     tracks: [{name, muted, mute_locked, color?}]
 │     clips:  [{id, source, track, start, length, offset, muted, extra{}}]
 │     source = Pattern(id) | Audio(channel id) | Automation(id)
 ├── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
@@ -56,9 +56,17 @@ insert slot as `EffectKind::Plugin` with `EffectSlot::plugin`. The running plugi
 `Document::store_plugin_state` before saving; that is not an edit (no undo step, same revision). A state that is too
 large or not valid base64 loads as empty, so a damaged plugin blob never stops a project from opening.
 
+## Playlist track operations
+
+Track mute locks persist with a default of false for older files; a locked active channel/track remains audible
+when another is soloed. Track colors are optional. `InsertPlaylistTrack`, `RemovePlaylistTrack` and
+`MovePlaylistTrack` remap clip track indices. Track cloning preserves clip timing, offset and mute state while
+sharing source patterns, audio channels and automations; it does not duplicate instruments or effects.
+`crates/limeshot-core/tests/playlist_tracks.rs` covers index remapping, undo, save/reload and clone metadata.
+
 ## Commands, undo and gestures
 
-Every mutation is a variant of `limeshot_core::Command` (serde-serialisable; about 50 variants, including `Batch`).
+Every mutation is a variant of `limeshot_core::Command` (serde-serialisable, including `Batch`).
 `Command::apply(self, &mut Project)` validates its inputs: missing ids give a `CommandError`, numbers are clamped,
 and NaN is rejected.
 

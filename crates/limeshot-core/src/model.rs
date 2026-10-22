@@ -238,6 +238,8 @@ pub struct Channel {
     pub pan: f32,
     pub muted: bool,
     pub solo: bool,
+    #[serde(default)]
+    pub mute_locked: bool,
     /// Mixer track index; 0 is the master.
     pub mixer_track: u16,
     /// The MIDI key that plays the sample unpitched and that new steps use (60 = C5).
@@ -394,6 +396,10 @@ impl Clip {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaylistTrack {
     pub name: String,
+    #[serde(default)]
+    pub color: Option<Rgb>,
+    #[serde(default)]
+    pub mute_locked: bool,
     #[serde(default)]
     pub muted: bool,
 }
@@ -705,6 +711,8 @@ impl Project {
             playlist: Playlist {
                 tracks: (1..=16)
                     .map(|i| PlaylistTrack {
+                        color: None,
+                        mute_locked: false,
                         name: format!("Track {i}"),
                         muted: false,
                     })
@@ -951,6 +959,8 @@ impl Project {
         while self.playlist.tracks.len() <= max_track as usize && self.playlist.tracks.len() < 500 {
             let n = self.playlist.tracks.len() + 1;
             self.playlist.tracks.push(PlaylistTrack {
+                color: None,
+                mute_locked: false,
                 name: format!("Track {n}"),
                 muted: false,
             });
@@ -1084,6 +1094,7 @@ mod tests {
             pan: f32::INFINITY,
             muted: false,
             solo: false,
+            mute_locked: false,
             mixer_track: 999,
             root_key: 200,
             group: None,

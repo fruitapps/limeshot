@@ -7,6 +7,7 @@ use crate::widgets::{section, segmented, toggle_label};
 use egui::{CornerRadius, RichText, Stroke, Ui, vec2};
 use limeshot_core::{AutomationTarget, COMPRESSOR_SIDECHAIN, Command, EffectKind, EffectSlot, MAX_EFFECTS};
 
+/// Draw a mixer track's insert chain with controls for adding, editing, bypassing, and reordering effects.
 pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
     let t = Theme::current();
     ui.add_space(10.0);
@@ -84,6 +85,8 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             crate::plugin_window::toggle(app, target);
                         }
                     }
+                });
+                ui.horizontal(|ui| {
                     crate::presets_ui::menu(app, ui, crate::presets_ui::Target::Effect { track, effect: e.id });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.small_button("×").hint("Remove").clicked() {

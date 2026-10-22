@@ -601,6 +601,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
                 ui.separator();
                 section(ui, "Switches");
+                if toggle(ui, app.keyboard_notes, "Typing keyboard to piano", &key("Cmd+T")) {
+                    app.keyboard_notes = !app.keyboard_notes;
+                }
                 if toggle(ui, app.ui.metronome, "Metronome", &key("Cmd+M")) {
                     let m = !app.ui.metronome;
                     app.set_metronome(m);

@@ -1,77 +1,52 @@
 # Next steps (prioritised)
 
-## Mandatory
+Current as of 2026-10-22, session 17. Read the feature record and its dependencies before implementation.
+Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
+[features.json](../roadmap/features.json).
 
-1. **Run CI on all platforms.** `.github/workflows/ci.yml` is on `fruitapps/limeshot`, but every run stays "pending"
-   with no jobs (session 7): an org admin must check the org's Actions and billing settings. Then push, fix what
-   Windows and Linux report, and update PF-002…PF-005 in `features.json`. `gh` is installed and logged in.
-2. **Done (session 9):** the 16 issues from the owner's hands-on test (2026-10-21) are fixed and tested
-   (`progress.md`, Session 9). Left open: a live FL check of Alt+wheel vertical zoom and a real-input pass over the
-   new gestures in the live app.
-3. **Done (session 11):** the owner's 19-item list (Playlist audio clips in the picker, Shift+drag, remembered clip
-   length, drop ghost, plugin settings width, audition note-offs, graph overlay, Stop/Play silence, Browser preview,
-   tool cursors, window raising/pinning, hint panel, detents, 1/3-step snap; `progress.md`, Session 11).
-4. **VST support** (required by the project owner, 2026-10-21; in progress). Session 10 added `limeshot-plugins`
-   (loading, scanning, instancing, processing, state, latency; tested with built-in plugins and all 36 bundles
-   installed on the dev Mac), plugin channels and plugin inserts in the model, engine and UI, a child-process scan
-   into a plugin database, and state in `.lime`. Session 12 added plugin windows (PLG-006: the plugin's own editor
-   and a Settings tab, macOS; checked live with Vital, Serum 2, Surge XT and OTT). Next: plugin windows on Windows
-   (`HWND`) and Linux (`X11EmbedWindowID` + `IRunLoop`) once CI runs there. Session 15 added FL's wrapper extras
-   (presets ◀ ▶ and a presets menu with factory programs and `.vstpreset` files, the keyboard toggle, window places
-   saved in the project) and plugin parameter automation (PLG-007); a live pass with a real plugin is still open.
-   Delay compensation (PLG-009/MIX-012) and crash isolation (PLG-010, opt-in plugin bridge) are in too. Next:
-   a live pass with real plugins over sessions 12–15 (presets, automation, PDC, bridge), showing a bridged plugin's
-   editor, a live pass of Find plugins…. Host VST3 plugins as instruments (Channel Rack) and
-   effects (mixer insert slots): PLG-002 VST3 hosting, PLG-004 scanning, PLG-005 state saved in the `.lime` file,
-   PLG-006 editor windows, PLG-007 parameter automation, PLG-009 latency. Put the FFI in its own crate (e.g.
-   `limeshot-plugins`), the only crate allowed `unsafe`; record that exception and the chosen bindings in
-   `decisions.md`. Keep the real-time rules (no allocation or locks in the audio callback) and plan crash isolation
-   (PLG-010). Check the VST3 SDK's current licence against LimeShot's MIT/Apache licence before adding it, and test with
-   a freely redistributable plugin. CLAP (PLG-001) and AU (PLG-003) can share the same host layer afterwards.
-   **Lime Native VSTs** (owner, 2026-10-21): once hosting works, turn LimeSynth, the Sampler and every built-in effect
-   (Lime EQ, Filter, Delay, Room, Comp, Limiter, Utility) into simple VST3 plugins built from the same DSP code, so
-   they run in other hosts too and LimeShot can load them like any other plugin.
+## Immediate verification
 
-## Then
+1. **Native plugin embedding (PLG-006).** Internal Plugin / Settings windows are implemented, but final live checks
+   are pending. Vital appeared during the first pass; later captures showed an empty native view. The terminal
+   helper reported `AXIsProcessTrusted() == false`, so activation and synthetic input were unreliable. Verify the
+   execution host's permissions, then test Vital and a resize-capable editor: visibility, resizing, tab changes,
+   covering/pinned windows, keyboard forwarding and reopening saved wrappers. Do not mark VERIFIED from a build or
+   headless fallback screenshot. See D35 and known limitations.
+2. **Platform CI (PF-002…PF-005).** CI definitions exist in `.github/workflows/ci.yml`; jobs now run (the owner supplied a
+   macOS test failure on 2026-10-22). The Playlist selection-loop test no longer assumes a full loop fits a fixed
+   wall-clock window. Recheck remote results and fix remaining failures; record evidence separately for Apple
+   Silicon, Intel, Windows and Linux. Earlier pending-job reports remain historical.
+3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
+   compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
+   embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.
+4. **Hands-on interaction regression.** Repeat the owner's note drawing, sampler previews/dragging, waveform drops,
+   rack multiselection and bounded scrolling, mixer selection, track mute locks, window raising and typing-keyboard
+   workflows. Automated coverage and offscreen layout review exist; they do not replace audible/native checks.
 
-0. **FL Studio documentation, outside → in** (owner, 2026-10-22). Document each layer of FL's UI before building it,
-   one layer per session, into machine-readable inventories under `docs/roadmap/` plus evidence screenshots:
-   * [x] Main menu bar (session 13): `menus.json` / `menus.md`, every item and submenu.
-   * [x] Dialogs and windows the main menus open (session 14): the settings window (10 tabs), render dialog, Plugin
-     Manager, Patterns dialogs, Welcome — `settings.json` / `settings.md` (188 records). Not yet: the floating
-     windows View opens (Project picker, Tempo tapper, Touch controller, Plugin performance monitor, Script output).
-   Implementing from it: APP-025 should become FL's tabbed settings window (MIDI, Audio, General, File, Theme,
-   Project, Info), starting with the pages LimeShot already has settings for.
-   * [x] Toolbar (session 15): 54 records under the menu "Toolbar" in `menus.json` (names and keys from FL's hint
-     panel, the right-click menus). Not yet: the Browser's top bar.
-   * [x] Each editor's own menus (session 15): Channel Rack, Piano Roll, Playlist and Mixer menus in `menus.json`
-     (394 records, `fl-studio-analysis.md` §21). Not yet: context menus on clips, notes and mixer controls, the
-     Browser's top bar, and the floating View windows (Project picker, Script output, Plugin performance monitor).
-   Then implement the menu bar (APP-026) from `menus.md`'s "open work by feature" table, highest priority first:
-   SEQ-021 Pattern commands, Edit › Cut/Copy/Paste routed to the focused editor, a Tools menu with Macros, and
-   View › Layout (UI-013). Keep `menus.json` in step with `menus.rs` (the check enforces labels).
-   * [x] Session 15: main menus (Patterns, Edit, Tools, View › Layout), settings window, toolbar menus.
-   * [x] Session 16: the editors' ⏵ menus — Piano Roll (Edit, Tools with FL's tool dialogs, Select, Zoom), Playlist
-     (Edit, Select, Zoom, Time markers), Mixer track menu, Channel Rack options menu. Still open in `menus.md`:
-     the editors' View submenus, Piano Roll Time markers / Target control / Group / Stamp, Riff machine and chord
-     progressions, Claw machine, Playlist picker panel options and performance mode, Mixer groups and docking,
-     Channel Rack Zip / Unzip and display options.
+## Next implementation work
 
-4. **More live FL observation** (Accessibility is granted; session 4 settled clip looping, note length and step
-   painting). Next: Playlist clip resize from the left edge and slip editing, Piano Roll right-click default length,
-   Mixer send/route gestures, and Channel Settings layout. Repeat the real-input pass after UI changes (notes in the
-   session 4 entry of `progress.md`).
-5. **Keybindings and settings** (`docs/roadmap/keybindings.json`, `settings.json`): check the INFERRED bindings
-   against the FL manual or the app, add the missing ones that are cheap (F12, Esc, Ctrl+Q dialog), then a Settings window with pages (APP-025) and remappable shortcuts (UI-011).
-6. **Mixer:** pre-fader sends and remembering window layout per project/settings (sidechain is in Mandatory 2).
-7. **Effects polish:** delay tempo sync, EQ curve display, presets for effects and instruments (FX-014, INS-010).
-8. **Audio and automation follow-ups:** more decoders (INS-008, symphonia), clip fades, automated controls moving on
-   screen (AUT-013), point modes (AUT-012), tempo automation (AUT-008), taller tracks or a curve editor for automation.
-9. **MIDI input** (WF-003, `midir`) and MIDI recording (REC-002). Open an exported `.mid` in another program once.
-10. **Piano Roll:** stamp tool (PR-027), scale highlighting (PR-013), quantize and chop dialogs.
-11. **Detachable panels** (UI-007) so the Channel Rack and Piano Roll can be seen together.
-12. **Packaging** (PF-006).
-    Also: `.flp` import follow-ups (APP-022, `docs/research/flp-format.md`): automation clip curves into LimeShot
-    automation clips, FL's mixer effects that have a LimeShot equivalent, further arrangements, and test files made
-    in an older FL version.
-13. **More plugin formats:** CLAP (PLG-001) and Audio Units (PLG-003) on the VST host layer.
+1. **Finish editor/context menus from the FL inventories.** Main menus, settings pages, toolbar menus and the core
+   editor menus are in. Remaining work includes editor View options, Piano Roll Time markers / Target control /
+   Group, Riff machine and chord progressions, Claw machine, Playlist picker options and performance mode, Mixer
+   groups/docking/multiselection, Channel Rack Zip / Unzip and display options. Playlist track modes, grouping,
+   icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
+   Continue documenting FL's Browser top bar, clip/note/control context menus and floating View windows before
+   implementing them; preserve clean-room evidence in `docs/research/`.
+2. **Audio and automation.** More decoders (INS-008), clip fades, visible automated controls (AUT-013), point modes
+   (AUT-012), tempo automation (AUT-008), and a larger automation editing surface.
+3. **MIDI devices and recording.** MIDI input (WF-003), MIDI recording (REC-002), then audio input/recording according
+   to dependencies. Open an exported MIDI file in another application and record the result.
+4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining inferred FL bindings, and automatic layout
+   persistence. Detachable panels and explicitly saved custom layouts already exist.
+5. **Packaging (PF-006)** and `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
+   further arrangements and value-checked fixtures from older FL versions.
+6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); the owner's Lime Native VST request remains
+   open: package LimeSynth, Sampler and built-in effects as VST3 plugins sharing the existing DSP implementation.
+
+## Research and verification rules
+
+FL Studio is the behavior reference; ArtCraft informs visual styling only. Confirm permissions for the current host
+before synthetic live input. Outstanding observations include Alt+wheel vertical zoom, in-clip automation point
+interaction, FL's STEP/SLIDE automation options, and bindings marked INFERRED. Maintain `menus.json`,
+`keybindings.json` and `settings.json` with code, then regenerate their Markdown views. Historical session notes
+remain evidence of what was tested at that time, not a promise that later changes were manually reverified.

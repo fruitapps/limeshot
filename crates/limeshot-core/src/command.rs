@@ -97,6 +97,10 @@ pub enum Command {
         channel: ChannelId,
         muted: bool,
     },
+    SetChannelMuteLock {
+        channel: ChannelId,
+        locked: bool,
+    },
     SetChannelSolo {
         channel: ChannelId,
         solo: bool,
@@ -377,6 +381,7 @@ pub enum Command {
     /// new clip's id.
     MergeClips(Vec<ClipId>),
     AddPlaylistTrack,
+    ClonePlaylistTrack(u32),
     /// A time marker on the Playlist; returns its id.
     AddMarker {
         tick: Tick,
@@ -394,6 +399,24 @@ pub enum Command {
     RenamePlaylistTrack {
         track: u32,
         name: String,
+    },
+    SetPlaylistTrackMuteLock {
+        track: u32,
+        locked: bool,
+    },
+    SetPlaylistTrackColor {
+        track: u32,
+        color: Option<Rgb>,
+    },
+    MovePlaylistTrack {
+        track: u32,
+        delta: i32,
+    },
+    InsertPlaylistTrack {
+        track: u32,
+    },
+    RemovePlaylistTrack {
+        track: u32,
     },
     SetPlaylistTrackMute {
         track: u32,
@@ -624,6 +647,7 @@ impl Command {
             SetChannelPan { .. } => "Channel pan",
             SetChannelMute { .. } => "Mute channel",
             ReorderChannels(_) => "Sort channels",
+            SetChannelMuteLock { .. } => "Lock channel mute",
             SetChannelSolo { .. } => "Solo channel",
             SetChannelMixerTrack { .. } => "Route channel",
             SetChannelRootKey { .. } => "Set root key",
@@ -677,11 +701,17 @@ impl Command {
             DeleteSpace { .. } => "Delete space",
             MergeClips(_) => "Merge clips",
             AddPlaylistTrack => "Add playlist track",
+            ClonePlaylistTrack(_) => "Clone playlist track",
             RenamePlaylistTrack { .. } => "Rename track",
             AddMarker { .. } => "Add marker",
             RemoveMarker(_) => "Delete marker",
             RenameMarker { .. } => "Rename marker",
             MoveMarker { .. } => "Move marker",
+            SetPlaylistTrackMuteLock { .. } => "Lock track mute",
+            SetPlaylistTrackColor { .. } => "Track color",
+            MovePlaylistTrack { .. } => "Move playlist track",
+            InsertPlaylistTrack { .. } => "Insert playlist track",
+            RemovePlaylistTrack { .. } => "Delete playlist track",
             SetPlaylistTrackMute { .. } => "Mute track",
             AddMixerTrack => "Add mixer track",
             RenameMixerTrack { .. } => "Rename mixer track",
@@ -762,6 +792,10 @@ impl Command {
     }
 
     /// Apply to `p`. On error `p` may be partially modified; [`crate::Document`] applies to a copy.
+    ///
+    /// Returns the created id or index when the command supplies one, otherwise `Created(None)`.
+    /// Returns [`CommandError`] for missing targets or invalid values and operations, including
+    /// errors propagated from nested commands in a batch.
     pub fn apply(self, p: &mut Project) -> R {
         use Command::*;
         match self {
@@ -788,6 +822,7 @@ impl Command {
                     pan: 0.0,
                     muted: false,
                     solo: false,
+                    mute_locked: false,
                     mixer_track,
                     root_key: 60,
                     group: None,
@@ -850,6 +885,7 @@ impl Command {
                 p.channels
                     .sort_by_key(|c| order.iter().position(|o| *o == c.id).unwrap_or(usize::MAX));
             }
+            SetChannelMuteLock { channel: id, locked } => channel(p, id)?.mute_locked = locked,
             SetChannelSolo { channel: id, solo } => channel(p, id)?.solo = solo,
             SetChannelMixerTrack { channel: id, track } => {
                 if usize::from(track) >= p.mixer.tracks.len() {
@@ -1593,12 +1629,31 @@ impl Command {
                 return Ok(Created(Some(new.0)));
             }
             SetClipMuted { clip, muted } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.muted = muted,
+            ClonePlaylistTrack(track) => {
+                let mut source = p
+                    .playlist
+                    .tracks
+                    .get(track as usize)
+                    .cloned()
+                    .ok_or(CommandError::NoPlaylistTrack(track))?;
+                let clips: Vec<Clip> = p.playlist.clips.iter().filter(|c| c.track == track).cloned().collect();
+                InsertPlaylistTrack { track: track + 1 }.apply(p)?;
+                source.name = format!("{} (copy)", source.name);
+                p.playlist.tracks[(track + 1) as usize] = source;
+                for mut clip in clips {
+                    clip.id = ClipId(p.alloc_id());
+                    clip.track = track + 1;
+                    p.playlist.clips.push(clip);
+                }
+            }
             AddPlaylistTrack => {
                 if p.playlist.tracks.len() >= 500 {
                     return Err(CommandError::Invalid("the playlist holds at most 500 tracks".into()));
                 }
                 let n = p.playlist.tracks.len() + 1;
                 p.playlist.tracks.push(PlaylistTrack {
+                    color: None,
+                    mute_locked: false,
                     name: format!("Track {n}"),
                     muted: false,
                 });
@@ -1627,6 +1682,73 @@ impl Command {
                     .get_mut(track as usize)
                     .ok_or(CommandError::NoPlaylistTrack(track))?
                     .name = name
+            }
+            SetPlaylistTrackMuteLock { track, locked } => {
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .mute_locked = locked;
+            }
+            SetPlaylistTrackColor { track, color } => {
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .color = color;
+            }
+            MovePlaylistTrack { track, delta } => {
+                let i = track as usize;
+                if i >= p.playlist.tracks.len() {
+                    return Err(CommandError::NoPlaylistTrack(track));
+                }
+                let j = (i as i64 + i64::from(delta)).clamp(0, p.playlist.tracks.len() as i64 - 1) as usize;
+                let item = p.playlist.tracks.remove(i);
+                p.playlist.tracks.insert(j, item);
+                for c in &mut p.playlist.clips {
+                    let n = c.track as usize;
+                    c.track = if n == i {
+                        j as u32
+                    } else if i < j && n > i && n <= j {
+                        c.track - 1
+                    } else if j < i && n >= j && n < i {
+                        c.track + 1
+                    } else {
+                        c.track
+                    };
+                }
+            }
+            InsertPlaylistTrack { track } => {
+                if p.playlist.tracks.len() >= 500 {
+                    return Err(CommandError::Invalid("the playlist holds at most 500 tracks".into()));
+                }
+                let i = (track as usize).min(p.playlist.tracks.len());
+                p.playlist.tracks.insert(
+                    i,
+                    PlaylistTrack {
+                        name: format!("Track {}", i + 1),
+                        color: None,
+                        muted: false,
+                        mute_locked: false,
+                    },
+                );
+                for c in &mut p.playlist.clips {
+                    if c.track >= i as u32 {
+                        c.track += 1;
+                    }
+                }
+            }
+            RemovePlaylistTrack { track } => {
+                if track as usize >= p.playlist.tracks.len() {
+                    return Err(CommandError::NoPlaylistTrack(track));
+                }
+                p.playlist.tracks.remove(track as usize);
+                p.playlist.clips.retain(|c| c.track != track);
+                for c in &mut p.playlist.clips {
+                    if c.track > track {
+                        c.track -= 1;
+                    }
+                }
             }
             SetPlaylistTrackMute { track, muted } => {
                 p.playlist

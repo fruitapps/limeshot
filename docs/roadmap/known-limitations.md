@@ -1,18 +1,18 @@
 # Known limitations
 
-Current as of 2026-10-21 (session 9). Everything here is either not implemented or not verified.
+Current as of 2026-10-22 (session 17). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
   headless under Rosetta, but its GUI and audio were not exercised.
-* Windows and Linux: CI jobs exist, but no CI run has happened yet (there is no remote repository). Windows type-checks
+* Windows and Linux: CI jobs exist, but complete CI runtime verification is pending (jobs now run; the owner supplied a macOS test failure on 2026-10-22). Windows type-checks
   locally. Linux was not built.
 
 ## Audio
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
 * Switching output devices was tested only with the default device.
 * WAV is the only sample format (no MP3/FLAC/OGG/AIFF); this includes audio clips.
-* Insert effects are built in only (EQ, filter, delay, reverb, compressor, limiter, utility). A route is pre- or
+* Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter and utility; VST3 inserts are supported. A route is pre- or
   post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input
   (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
 * Presets for the built-in effects and instruments are LimeShot's own JSON files (no FL .fst import), and only
@@ -64,9 +64,9 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
 
 ## Project and app
 * No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
-  (`docs/roadmap/keybindings.json`); settings are spread over menus and dialogs (`docs/roadmap/settings.json`).
-* The menu bar has a subset of FL Studio's menus: no Tools menu, no section headers, no template, layout,
-  recording-switch or pattern-management commands (`docs/roadmap/menus.md` lists all 194 missing items).
+  (`docs/roadmap/keybindings.json`). The tabbed Settings window exposes implemented settings; FL-only controls remain absent or disabled (`docs/roadmap/settings.json`).
+* The main menus and editor menus implement a subset of FL Studio actions. Tools, pattern commands and layouts exist;
+  recording, templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
 * One autosave slot per user: two LimeShot instances share it.
 * `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
   pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer
@@ -74,9 +74,10 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
-* VST3 plugins: plugin editor windows work on macOS only (on Windows and Linux the Plugin tab lists the
-  parameters); the windows have no ▸ menu, captionize or wrapper options page (FL's), the user cannot resize a
-  resizable editor by its window edge (only by the plugin's own handle, as in FL). The presets menu lists factory
+* VST3 plugins: native plugin editor embedding is implemented for macOS only and awaits final live verification (on Windows and Linux the Plugin tab lists the
+  parameters); the internal windows have no ▸ menu, captionize or wrapper options page (FL's). Fixed-size plugins
+  retain a minimum wrapper size; resizable plugins negotiate their editor size. Native views hide completely
+  when another window or popup covers them (partial native-view occlusion is not implemented). The presets menu lists factory
   programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
   their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
   characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
@@ -85,7 +86,7 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   no custom plugin folders, and a plugin that crashes takes LimeShot down unless it was set to run in a separate
   process (macOS and Linux; such a plugin's own editor is not shown).
   Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
-  channels do not play audio clips. No CLAP or Audio Units. Verified on macOS only.
+  channels do not play audio clips. No CLAP or Audio Units. Processing tests and prior native OS-window checks were on macOS; the replacement embedded view is not yet verified.
 * Window positions, sizes and detached/maximised states are not remembered between sessions unless saved as the
   custom layout (View › Arrange windows › Save custom layout, applied with Custom).
 * Accessibility: custom-painted editors expose no accessibility labels.
@@ -94,4 +95,17 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
 * FL Studio and LimeShot are now driven with synthetic input (Accessibility granted, session 4). Still unobserved in
   FL: in-clip automation point dragging (synthetic drags did not register), the Playlist's STEP/SLIDE automation
   options, and many shortcuts marked INFERRED in `docs/roadmap/keybindings.json`.
-* No person has used the GUI yet; synthetic real-input passes are recorded in `docs/development/progress.md`.
+* Owner hands-on feedback informed the interaction fixes; reproducible synthetic real-input passes are recorded in `docs/development/progress.md`.
+
+* Session 17's Playlist track header menu exposes rename/color, auto name/reset, mute/solo/lock, selection, merge
+  patterns, clip mute, clone linked sources, reorder, insert and delete. FL's track modes, grouping, icons, per-track
+  heights, lock-to-content and consolidation are visible but disabled pending their model/engine implementations.
+  Cloning tracks shares the clip sources; it does not clone instrument channels, plugins or mixer effects.
+* Sampler playback heads use the transport/preview time, rather than a per-voice audio-thread playhead; when a sample
+  is polyphonic the most recently started visible voice is shown. Previews honor trim, pitch and reverse.
+
+* Session 17 native embedding is IMPLEMENTED, with final live resize/tab/keyboard verification pending. A native
+  Vital view appeared during the first live pass, but subsequent window captures showed an empty editor. The
+  terminal helper reports `AXIsProcessTrusted() == false`, so activation and input could not be verified reliably.
+  Repeat with Accessibility enabled for the Codex execution host; test Vital and a resize-capable plugin, both tabs,
+  covering/pinning windows, typing keyboard input, and reopening saved wrappers before calling this VERIFIED.

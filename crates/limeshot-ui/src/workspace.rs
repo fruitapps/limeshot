@@ -150,6 +150,7 @@ pub struct Workspace {
     pub reset_layout: bool,
     /// Bring this window to the front on the next frame.
     raise: Option<Win>,
+    front: Option<Win>,
     /// Each window's last floating (not maximised) rectangle, to restore after maximising.
     normal_rect: [Option<Rect>; 5],
     /// Put the window back at `normal_rect` on the next frame (it was just restored).
@@ -160,6 +161,7 @@ pub struct Workspace {
 }
 
 impl Default for Workspace {
+    /// Open a maximized Playlist with the Channel Rack in front, requesting the initial layout.
     fn default() -> Self {
         let mut states = [WinState::default(); 5];
         // FL Studio's new-project layout: the Playlist maximised and the Channel Rack on top.
@@ -177,6 +179,7 @@ impl Default for Workspace {
             area: Rect::NOTHING,
             reset_layout: true,
             raise: Some(Win::ChannelRack),
+            front: Some(Win::ChannelRack),
             normal_rect: [None; 5],
             restore: [false; 5],
             content_min: [None; 5],
@@ -201,11 +204,12 @@ impl Workspace {
     pub fn show(&mut self, w: Win) {
         self.state_mut(w).open = true;
         self.raise = Some(w);
+        self.front = Some(w);
     }
 
-    /// F5/F6/F7/F9: open and raise a closed window, close an open one.
+    /// F5/F6/F7/F9: close an open window if it is frontmost or pinned; otherwise open and raise it.
     pub fn toggle(&mut self, w: Win) {
-        if self.is_open(w) {
+        if self.is_open(w) && (self.front == Some(w) || self.state(w).pinned) {
             self.state_mut(w).open = false;
         } else {
             self.show(w);
@@ -458,8 +462,22 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             .movable(!st.maximized)
             .min_size(app.ui.workspace.min_size(w))
             .constrain_to(area);
+        if w == Win::ChannelRack {
+            win = win.max_width(app.ui.workspace.min_size(w).x + 16.0 * 22.0);
+        }
         if st.maximized {
-            win = win.fixed_rect(area);
+            let rect = if w == Win::ChannelRack {
+                Rect::from_min_size(
+                    area.min,
+                    vec2(
+                        area.width().min(app.ui.workspace.min_size(w).x + 16.0 * 22.0),
+                        area.height(),
+                    ),
+                )
+            } else {
+                area
+            };
+            win = win.fixed_rect(rect);
         } else {
             let def = w.default_rect(area);
             win = win.default_rect(def);
@@ -494,6 +512,9 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             // A press anywhere in the window (not covered by another) brings it to the front.
             if r.response.contains_pointer() && ctx.input(|i| i.pointer.any_pressed()) {
                 app.ui.focus = w.focus();
+                if !st.pinned {
+                    app.ui.workspace.front = Some(w);
+                }
                 ctx.move_to_top(r.response.layer_id);
             }
             if let Some(a) = r.inner {

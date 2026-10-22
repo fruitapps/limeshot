@@ -2879,10 +2879,10 @@
       "fl_keys": "Cmd+T",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Typing keyboard to piano",
+      "status": "IMPLEMENTED",
       "feature": "WF-002",
-      "notes": ""
+      "notes": "Session 17: toolbar button; Cmd+T outside Playlist."
     },
     {
       "id": "MENU-167",
@@ -5232,10 +5232,10 @@
       "fl_keys": "Cmd+T",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Typing keyboard to piano",
+      "status": "IMPLEMENTED",
       "feature": "WF-002",
-      "notes": ""
+      "notes": "Session 17: toolbar button; Cmd+T outside Playlist."
     },
     {
       "id": "MENU-301",

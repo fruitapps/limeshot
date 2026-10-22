@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-22 (session 15)",
+  "updated": "2026-10-22 (session 17)",
   "features": [
     {
       "id": "APP-001",
@@ -791,7 +791,8 @@
       "tests": [
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
         "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
-        "crates/limeshot-app/tests/ui.rs::channel_rack_menu_acts_on_the_selected_channels"
+        "crates/limeshot-app/tests/ui.rs::channel_rack_menu_acts_on_the_selected_channels",
+        "crates/limeshot-app/tests/ui.rs::channel_and_playlist_mute_locks_preserve_state_when_soloing"
       ],
       "reference": {
         "application": "FL Studio",
@@ -800,7 +801,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 17: Shift-click the mute LED locks its state; locked active channels remain audible when another channel is soloed."
     },
     {
       "id": "SEQ-004",
@@ -956,7 +957,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::clicking_a_note_preview_in_the_rack_opens_the_piano_roll"
+        "crates/limeshot-app/tests/ui.rs::clicking_a_note_preview_in_the_rack_opens_the_piano_roll",
+        "crates/limeshot-app/tests/ui.rs::long_midi_patterns_do_not_increase_the_rack_minimum_width"
       ],
       "reference": {
         "application": "FL Studio",
@@ -965,7 +967,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 17: Long MIDI content scrolls inside a rack whose minimum width is independent of the pattern length; width is bounded to four-to-eight beats of visible steps."
     },
     {
       "id": "SEQ-009",
@@ -1306,7 +1308,8 @@
       "tests": [
         "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes",
         "limeshot-core document::tests::notes_move_resize_and_duplicate",
-        "limeshot-app tests/ui.rs::piano_roll_right_edge_resizes_both_ways"
+        "limeshot-app tests/ui.rs::piano_roll_right_edge_resizes_both_ways",
+        "limeshot-engine tests/plugins.rs::timed_auditions_release_on_the_audio_clock_while_stopped"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1315,7 +1318,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png). Session 9: dragging a note's edge past its other end stops at one snap step (it collapsed to one tick and the drag then lost track of the note)."
+      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png). Session 9: dragging a note's edge past its other end stops at one snap step (it collapsed to one tick and the drag then lost track of the note). Session 17: Drawn and moved notes audition for their remembered note length on the audio clock, independent of mouse release; right-delete uses a red cursor."
     },
     {
       "id": "PR-002",
@@ -1337,7 +1340,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::piano_roll_selection_gestures",
-        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom",
+        "crates/limeshot-app/tests/ui.rs::piano_right_click_deselects_and_shows_red_delete_cursor"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1347,7 +1351,7 @@
           "docs/research/evidence/screenshots/fl-piano-select-menu.png"
         ]
       },
-      "notes": "Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Session 16: random, odd, muted, overlapping and stacked from the ⏵ menu. Not implemented: select by colour (no note colours yet), select time around selection / previous / next time, magic lasso."
+      "notes": "Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Session 16: random, odd, muted, overlapping and stacked from the ⏵ menu. Not implemented: select by colour (no note colours yet), select time around selection / previous / next time, magic lasso. Session 17: Right-click empty space deselects without deleting other notes."
     },
     {
       "id": "PR-003",
@@ -1469,7 +1473,7 @@
       "tests": [
         "limeshot-engine tests/audio.rs::preview_plays_without_transport",
         "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_ruler_ghosts_and_channel_selector",
-        "limeshot-app tests/ui.rs::auditions_end_when_the_mouse_button_is_released",
+        "limeshot-app tests/ui.rs::drawing_auditions_have_a_duration_and_keyboard_auditions_are_held",
         "limeshot-engine tests/plugins.rs::an_audition_released_in_the_block_it_started_still_ends"
       ],
       "reference": {
@@ -2455,7 +2459,9 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves"
+        "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
+        "crates/limeshot-app/tests/ui.rs::channel_and_playlist_mute_locks_preserve_state_when_soloing",
+        "limeshot-core tests/playlist_tracks.rs (clip remapping, clone metadata, undo and lock persistence)"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2464,7 +2470,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 17: Track header context menu: rename, color, auto name, reset, mute, solo, mute lock, select clips, merge patterns, mute/unmute clips, clone linked clips, reorder, insert, delete. Shift-click mute locks its state. + Track is below the last track. FL features not yet supported by LimeShot are disabled in this menu."
     },
     {
       "id": "PL-013",
@@ -2536,7 +2542,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008."
+      "notes": "No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008. Session 17: Sample drops show waveforms both in the snapped ghost and beneath the pointer; sampler waveform drags share the Browser payload."
     },
     {
       "id": "PL-015",
@@ -2609,7 +2615,7 @@
           "docs/research/evidence/screenshots/fl-playlist-time-markers-menu.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project."
+      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project. CI regression (2026-10-22): the UI loop test locates near the selection end and waits for audio-clock progress rather than requiring a full loop in 4.5 wall-clock seconds; deterministic engine tests retain full-loop coverage across buffer sizes."
     },
     {
       "id": "PL-017",
@@ -3034,7 +3040,8 @@
       "tests": [
         "limeshot-app tests/ui.rs::mixer_names_are_typed_in_place",
         "limeshot-core document::tests::mixer_tracks_move_insert_and_delete_with_their_references",
-        "crates/limeshot-app/tests/ui.rs::mixer_track_menu_moves_colors_deletes_and_inserts"
+        "crates/limeshot-app/tests/ui.rs::mixer_track_menu_moves_colors_deletes_and_inserts",
+        "crates/limeshot-app/tests/ui.rs::mixer_meter_and_background_select_but_control_drags_do_not"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3043,7 +3050,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels. Session 16: from FL 2026.1.1's Mixer menu (menus.json). Plugins on moved tracks restart from their stored state."
+      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels. Session 16: from FL 2026.1.1's Mixer menu (menus.json). Plugins on moved tracks restart from their stored state. Session 17: Clicking strip whitespace or meters selects a Mixer track; dragging controls leaves the selection alone. Presets and reorder arrows occupy their own row."
     },
     {
       "id": "MIX-007",
@@ -3405,7 +3412,8 @@
         "limeshot-dsp sample::tests::mono_is_duplicated",
         "limeshot-audio assets::tests::loads_in_the_background_and_reports_failures",
         "limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid",
-        "limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end"
+        "limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end",
+        "crates/limeshot-app/tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3415,7 +3423,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample."
     },
     {
       "id": "INS-002",
@@ -4260,7 +4268,8 @@
         "limeshot-core automation::tests::curve_holds_outside_and_interpolates_inside",
         "limeshot-core automation::tests::normalize_sorts_clamps_and_dedups",
         "limeshot-engine tests/audio.rs::automation_sweeps_channel_pan_during_song_playback",
-        "limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist"
+        "limeshot-app tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist",
+        "crates/limeshot-app/tests/ui.rs::automation_points_can_be_placed_far_from_the_existing_curve"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4270,7 +4279,7 @@
           "HelpAliases.scr (automation_*.htm)"
         ]
       },
-      "notes": "Evidence: docs/research/evidence/screenshots/fl-automation-clip.png. FL also adds an automation-clip channel to the Channel Rack; LimeShot lists automations in the Playlist picker instead (known limitation)."
+      "notes": "Evidence: docs/research/evidence/screenshots/fl-automation-clip.png. FL also adds an automation-clip channel to the Channel Rack; LimeShot lists automations in the Playlist picker instead (known limitation). Session 17: Custom point/move/tension cursors; click anywhere in the clip body to add a point at that value, preserving resize edges and clip header."
     },
     {
       "id": "AUT-002",
@@ -5193,7 +5202,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. No custom plugin folders yet."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. No custom plugin folders yet. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
     },
     {
       "id": "PLG-005",
@@ -5241,7 +5250,7 @@
       "fl_reference": "Fruity Wrapper (observed live, session 12): one floating window per plugin titled 'Plugin (mixer target)'; opened by a click on the channel button or the insert slot (a second click closes it); the gear shows a page strip with Plugin editor, Plugin options and (channels) Miscellaneous functions = channel settings, plus ON/PAN/VOL/PITCH/TRACK (effects: ON/MIX LEVEL); the window resizes to the page and follows the plugin's own resizing (no wrapper resize handle); position, size and page are kept when it is closed and reopened; title bar: menu, gear, keyboard-focus toggle, Presets ◀ ▶, captionize, close. Details: docs/research/fl-studio-analysis.md §17.",
       "limeshot_behavior": "Each plugin channel and plugin insert has one plugin window, its own OS window titled like FL's (\"Vital (Bass)\", \"OTT (Lead)\"), floating above the main window and hidden while another application is active. A click on a plugin channel's button (FL) or a plugin insert's name in the insert chain opens it and a second click closes it; the Editor button in Channel Settings and the insert card opens it too, and the channel menu's Channel Settings opens it on the Settings tab. A tab row at the top: Plugin shows the plugin's own editor (VST3 IPlugView, attached below the tabs on macOS); Settings shows LimeShot's Channel Settings for the channel (name, mixer target, root key, plugin info, parameter list) or the insert's card. On the Plugin tab the window is the editor's size plus the tab row and follows the editor when the plugin resizes itself (IPlugFrame::resizeView); the Settings tab is resizable. The window reopens where it was and on the tab it was on; each window's position, tab, Settings size, keyboard toggle and whether it is open are saved in the .lime with its plugin (not an edit, like the plugin state), and windows that were open reopen with the project (FL does both). On the right of the tab row, as in FL's title bar: the presets menu (PLG-008), Presets ◀ ▶ (channels only, as in FL) and the keyboard toggle (FL: 'Allow the plugin to handle keystrokes before the host does'): when on, characters typed in the window go to the plugin's editor first (IPlugView::onKeyDown) and LimeShot's shortcuts act only on keys the plugin did not take. Edits made in the editor reach the audio thread, are not undo steps and mark the project modified (performEdit, restartComponent, and a state comparison when the window closes); the state is saved in the .lime as before. A plugin without an editor (or where the platform cannot show one: Windows and Linux so far, headless backends) gets the parameter list on the Plugin tab. Differs from FL: two tabs instead of FL's three pages (FL's Plugin options page is left out; format and latency are on Settings), no title-bar ▸ menu or captionize, and FL's page strip with ON/PAN/VOL/PITCH/TRACK is not there (those are in the Channel Rack and Mixer).",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PLG-004"
@@ -5278,7 +5287,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window."
+      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass."
     },
     {
       "id": "PLG-007",
@@ -5848,7 +5857,8 @@
         "limeshot-app tests/ui.rs::space_starts_and_stops_the_transport",
         "limeshot-engine tests/audio.rs::realtime_transport_loops_pattern_and_reports_position",
         "limeshot-engine tests/audio.rs::stop_while_stopped_and_play_silence_tails_and_previews",
-        "limeshot-engine tests/plugins.rs::stop_while_stopped_ends_plugin_auditions"
+        "limeshot-engine tests/plugins.rs::stop_while_stopped_ends_plugin_auditions",
+        "crates/limeshot-app/tests/ui.rs::stopping_twice_returns_to_song_or_selection_start"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5858,7 +5868,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": "Session 11 (owner's list item 10). Voices fade over 5 ms; plugins get their note-offs in a one-frame block and are reset (VST3: setProcessing off and on); after Stop the effects are cleared once the fade is over, at Play at once (so the song keeps its first reverb tail)."
+      "notes": "Session 11 (owner's list item 10). Voices fade over 5 ms; plugins get their note-offs in a one-frame block and are reset (VST3: setProcessing off and on); after Stop the effects are cleared once the fade is over, at Play at once (so the song keeps its first reverb tail). Session 17: Stop while stopped returns to the song beginning or selected range start; the first stop keeps the playback start position."
     },
     {
       "id": "TR-003",
@@ -6248,17 +6258,21 @@
       "name": "Typing keyboard to piano",
       "description": "Play notes from the computer keyboard.",
       "fl_reference": "Ctrl+T.",
-      "limeshot_behavior": "—",
+      "limeshot_behavior": "Toolbar piano button and Options > Typing keyboard to piano toggle note input to the selected Channel Rack instrument (including plugins); Z–M / Q–U map two chromatic octaves starting at MIDI 48. Key-up releases the original channel even after selection changes; text fields, dialogs and loss of focus release notes. Cmd+T toggles outside Playlist, where it adds a marker.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::typing_keyboard_targets_selected_channel_and_releases_the_original"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6266,7 +6280,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 17: Toolbar piano button and Options > Typing keyboard to piano toggle note input to the selected Channel Rack instrument (including plugins); Z–M / Q–U map two chromatic octaves starting at MIDI 48. Key-up releases the original channel even after selection changes; text fields, dialogs and loss of focus release notes. Cmd+T toggles outside Playlist, where it adds a marker."
     },
     {
       "id": "WF-003",
@@ -6485,7 +6499,8 @@
         "limeshot-app tests/ui.rs::restoring_a_maximised_window_brings_back_its_old_size",
         "limeshot-app tests/ui.rs::rack_and_mixer_windows_keep_their_content_visible",
         "limeshot-app tests/ui.rs::a_wide_row_does_not_stop_a_window_from_being_resized",
-        "limeshot-app tests/ui.rs::windows_raise_on_click_pin_on_top_and_maximise_on_double_click"
+        "limeshot-app tests/ui.rs::windows_raise_on_click_pin_on_top_and_maximise_on_double_click",
+        "crates/limeshot-app/tests/ui.rs::f_keys_toggle_windows"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6495,7 +6510,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": "Session 9: restoring a maximised window brings back its old rectangle (egui kept the maximised size); the Channel Rack never shrinks below every step and five channels, the Mixer below the master, two strips and the full-width track panel. Session 11: window bodies can no longer grow their window (an overwide row is clipped), so every window stays resizable. Session 11 (owner's list items 14 and 15), observed live in FL 2026.1.1: clicking the maximised Playlist raised it over the Channel Rack (LimeShot had kept a maximised Playlist as a backdrop below every window); double-clicking the Channel Rack's title maximised it and again restored it. Differs: FL's Playlist and Channel Rack title bars have no pin; LimeShot adds one at the owner's request (pinned windows are kept above the others every frame; menus and popups still open above them)."
+      "notes": "Session 9: restoring a maximised window brings back its old rectangle (egui kept the maximised size); the Channel Rack never shrinks below every step and five channels, the Mixer below the master, two strips and the full-width track panel. Session 11: window bodies can no longer grow their window (an overwide row is clipped), so every window stays resizable. Session 11 (owner's list items 14 and 15), observed live in FL 2026.1.1: clicking the maximised Playlist raised it over the Channel Rack (LimeShot had kept a maximised Playlist as a backdrop below every window); double-clicking the Channel Rack's title maximised it and again restored it. Differs: FL's Playlist and Channel Rack title bars have no pin; LimeShot adds one at the owner's request (pinned windows are kept above the others every frame; menus and popups still open above them). Session 17: A toolbar/F-key activation raises an already-open background window; a foreground or pinned window toggles closed. Pinned windows retain their ordering."
     },
     {
       "id": "UI-003",
@@ -6558,7 +6573,7 @@
           "docs/research/fl-studio-analysis.md"
         ]
       },
-      "notes": "Session 11 (owner's list item 18). FL 2026.1.1's hint panel (top left, observed live) shows the hovered control's name or value with its shortcut on the right (\"Graph editor   Cmd+K\", \"Channel panning: 2% right\") and the Playlist position and clip (\"9:12:05 for 1:00:00  Pattern 1\"). Differs: LimeShot's panel sits in the header row after the menus (FL's toolbar layout differs), and its first line is LimeShot's activity rather than FL's account name. Icon buttons now carry accessible labels."
+      "notes": "Session 11 (owner's list item 18). FL 2026.1.1's hint panel (top left, observed live) shows the hovered control's name or value with its shortcut on the right (\"Graph editor   Cmd+K\", \"Channel panning: 2% right\") and the Playlist position and clip (\"9:12:05 for 1:00:00  Pattern 1\"). Differs: LimeShot's panel sits in the header row after the menus (FL's toolbar layout differs), and its first line is LimeShot's activity rather than FL's account name. Icon buttons now carry accessible labels. CI regression (2026-10-22): the hover/transport test uses an empty project, avoiding asynchronous demo sample loading that correctly takes priority over the stopped activity label."
     },
     {
       "id": "UI-005",
@@ -7094,7 +7109,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns"
+        "limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns",
+        "crates/limeshot-app/tests/ui.rs::picker_entries_drag_into_the_playlist"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7103,7 +7119,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'."
+      "notes": "Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'. Session 17: Picker patterns, audio and automation can be dragged onto the Playlist using their remembered length."
     },
     {
       "id": "PL-028",
@@ -7186,7 +7202,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::selector_leds_select_toggle_and_move_channels",
-        "crates/limeshot-app/tests/ui.rs::cmd_l_routes_each_selected_channel_to_its_own_free_track"
+        "crates/limeshot-app/tests/ui.rs::cmd_l_routes_each_selected_channel_to_its_own_free_track",
+        "crates/limeshot-app/tests/ui.rs::rack_selector_drag_selects_channels_without_moving_the_window"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7196,7 +7213,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "Observed live (session 7). Neither Ctrl+A nor Cmd+A selects all channels in FL's Channel Rack. FL also saves the selection in the project; LimeShot does not. Channel filter groups (SEQ-012) are not implemented."
+      "notes": "Observed live (session 7). Neither Ctrl+A nor Cmd+A selects all channels in FL's Channel Rack. FL also saves the selection in the project; LimeShot does not. Channel filter groups (SEQ-012) are not implemented. Session 17: Drag across selector LEDs to add all crossed channels without dragging the rack window."
     },
     {
       "id": "PR-026",
@@ -7484,7 +7501,7 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": "Session 11 (owner's list item 19).",
+      "notes": "Session 11 (owner's list item 19). Session 17: Each rotary dial has a small default marker that lights when the value reaches its default.",
       "id": "UI-012",
       "category": "UI",
       "name": "Soft detent at a control's default",

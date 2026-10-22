@@ -208,6 +208,8 @@ fn drag_value(ui: &Ui, resp: &Response, v: &mut f32, min: f32, max: f32, default
 }
 
 /// A rotary knob drawn as a thin arc. `bipolar` draws the value from the centre (pan).
+/// Drag or scroll to change `v`, or double-click to reset it to `default`, whose position is
+/// marked on the dial. The returned response is marked changed when `v` changes.
 pub fn knob(
     ui: &mut Ui,
     v: &mut f32,
@@ -231,6 +233,14 @@ pub fn knob(
     let frac = if max > min { (*v - min) / (max - min) } else { 0.0 };
     let a0 = PI * 0.75;
     let sweep = PI * 1.5;
+    let def = a0 + sweep * ((default - min) / (max - min).max(f32::EPSILON)).clamp(0.0, 1.0);
+    let direction = vec2(def.cos(), def.sin());
+    let at_default = (*v - default).abs() <= (max - min).abs() * 0.00001;
+    p.circle_filled(
+        c + direction * (rad + 2.5),
+        if at_default { 2.0 } else { 1.0 },
+        if at_default { t.accent } else { t.text_faint },
+    );
     let arc = |from: f32, to: f32, color: Color32, w: f32| {
         let n = 24;
         let pts: Vec<_> = (0..=n)

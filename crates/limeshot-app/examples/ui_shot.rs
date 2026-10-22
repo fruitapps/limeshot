@@ -6,6 +6,7 @@ use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 
+/// Render the requested UI state offscreen to the first positional PNG path (default `ui.png`).
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let out = args
@@ -210,6 +211,18 @@ fn main() {
     if args.iter().any(|a| a == "--detach") {
         // Without multi-viewport support the detached window renders embedded; this checks it draws.
         app.ui.workspace.state_mut(Win::ChannelRack).detached = true;
+    }
+    if let Some(dialog) = args.iter().find_map(|a| a.strip_prefix("--dialog=")) {
+        use limeshot_ui::dialogs::Dialog;
+        app.dialog = match dialog {
+            "export" => Some(Dialog::export(&app)),
+            "quit" => Some(Dialog::ConfirmDiscard(limeshot_ui::app::Pending::Quit)),
+            "marker" => limeshot_ui::playlist::add_marker(&mut app, 0).map(|id| Dialog::rename_marker(&app, id)),
+            _ => None,
+        };
+    }
+    if args.iter().any(|a| a == "--tapper") {
+        app.ui.toolbar.tapper = Some(limeshot_ui::toolbar::Tapper::default());
     }
     let mut harness = Harness::builder()
         .with_size(egui::vec2(1440.0, 900.0))

@@ -367,7 +367,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             },
             volume: c.volume,
             pan: c.pan,
-            audible: !c.muted && (!any_solo || c.solo),
+            audible: !c.muted && (!any_solo || c.solo || c.mute_locked),
             mixer_track: usize::from(c.mixer_track).min(tracks - 1),
             root_key: c.root_key,
         })

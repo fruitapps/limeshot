@@ -59,6 +59,8 @@ struct FrameState {
     container: Option<platform::Container>,
     top_inset: f64,
     size: EditorSize,
+    /// The host's last embedded size request, before the plugin applies its constraints.
+    embedded_request: EditorSize,
     /// The plugin resized itself since the host last asked.
     resized: bool,
 }
@@ -162,6 +164,7 @@ impl Vst3Editor {
                     container: None,
                     top_inset: 0.0,
                     size,
+                    embedded_request: size,
                     resized: false,
                 }),
             });
@@ -212,6 +215,59 @@ impl Vst3Editor {
         }
         self.attached = true;
         Ok(())
+    }
+
+    /// Attach as a child of the main window without changing the OS window's size.
+    /// Does nothing if already attached.
+    ///
+    /// Returns `PluginError::Unsupported` if a native container cannot be created (including off
+    /// macOS), or `PluginError::Call` if the plugin rejects attachment.
+    pub fn attach_embedded(&mut self, window: &NativeWindow) -> Result<(), PluginError> {
+        if self.attached {
+            return Ok(());
+        }
+        let container = platform::Container::new(&window.0, self.size(), 0.0)?;
+        container.embed();
+        // SAFETY: the container stays alive until after the editor is removed in detach.
+        if unsafe { self.view.attached(container.parent(), PLATFORM_TYPE) } != kResultOk {
+            return Err(PluginError::Call("open its embedded editor"));
+        }
+        if let Ok(mut state) = self.frame.state.try_borrow_mut() {
+            state.container = Some(container);
+        }
+        self.attached = true;
+        Ok(())
+    }
+
+    /// Position a native child view from the top left of the main window's content layout area,
+    /// in platform view units (points on macOS). Resize-capable plugins receive a size request
+    /// clamped to at least one unit per dimension, subject to their constraints; fixed-size
+    /// plugins retain their natural dimensions.
+    pub fn layout_embedded(&self, x: f64, y: f64, width: f64, height: f64) {
+        let requested = EditorSize {
+            width: width.max(1.0) as u32,
+            height: height.max(1.0) as u32,
+        };
+        if self.can_resize() && self.frame.state.borrow().embedded_request != requested {
+            // Cache the request before calling the plugin, which may constrain it or resize itself.
+            self.frame.state.borrow_mut().embedded_request = requested;
+            let mut rect = requested.rect();
+            // SAFETY: plain size negotiation with a live plugin; the rectangle lives for both calls.
+            unsafe {
+                self.view.checkSizeConstraint(&mut rect);
+                self.view.onSize(&mut rect);
+            }
+            if let Some(size) = EditorSize::from_rect(&rect)
+                && let Ok(mut state) = self.frame.state.try_borrow_mut()
+            {
+                state.size = size;
+            }
+        }
+        if let Ok(state) = self.frame.state.try_borrow()
+            && let Some(c) = &state.container
+        {
+            c.place_rect(x, y, width, height, state.size);
+        }
     }
 
     /// Attach without a window. Only LimeShot's built-in test plugins accept this (headless tests).
@@ -319,9 +375,12 @@ mod platform {
     pub(super) struct Container {
         view: Retained<NSView>,
         window: Retained<NSWindow>,
+        embedded: std::cell::Cell<bool>,
     }
 
     impl Container {
+        /// Add a child view sized for the editor, `top_inset` points below the content view's top.
+        /// Returns `PluginError::Unsupported` off the main thread or if the window has no content view.
         pub(super) fn new(window: &Window, size: EditorSize, top_inset: f64) -> Result<Self, PluginError> {
             let mtm = MainThreadMarker::new().ok_or(PluginError::Unsupported("editors off the main thread"))?;
             let window = window.0.clone();
@@ -334,7 +393,11 @@ mod platform {
             );
             let view = NSView::initWithFrame(NSView::alloc(mtm), frame);
             content.addSubview(&view);
-            let c = Self { view, window };
+            let c = Self {
+                view,
+                window,
+                embedded: std::cell::Cell::new(false),
+            };
             c.place(size, top_inset);
             Ok(c)
         }
@@ -358,7 +421,11 @@ mod platform {
         }
 
         /// Resize the window so its content is the editor plus the inset, keeping its top left.
+        /// Does nothing for an embedded container.
         pub(super) fn resize(&self, size: EditorSize, top_inset: f64) {
+            if self.embedded.get() {
+                return;
+            }
             let old = self.window.frame();
             let content = NSRect::new(
                 old.origin,
@@ -370,6 +437,30 @@ mod platform {
                 self.window.setFrame_display(new, true);
             }
             self.place(size, top_inset);
+        }
+
+        /// Keep subsequent editor resize requests from resizing the host window.
+        pub(super) fn embed(&self) {
+            self.embedded.set(true);
+        }
+
+        /// Place the child at `(x, y)` points from the content layout area's top left.
+        /// Use `natural` for its size; the requested width and height are ignored.
+        pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
+            let Some(content) = self.window.contentView() else {
+                return;
+            };
+            let width = f64::from(natural.width);
+            let height = f64::from(natural.height);
+            let title_inset = (content.bounds().size.height - self.window.contentLayoutRect().size.height).max(0.0);
+            let top = y + title_inset;
+            let y = if content.isFlipped() {
+                top
+            } else {
+                content.bounds().size.height - top - height
+            };
+            self.view
+                .setFrame(NSRect::new(NSPoint::new(x, y), NSSize::new(width, height)));
         }
 
         pub(super) fn set_hidden(&self, hidden: bool) {
@@ -410,6 +501,10 @@ mod platform {
         }
         pub(super) fn place(&self, _size: EditorSize, _top_inset: f64) {}
         pub(super) fn resize(&self, _size: EditorSize, _top_inset: f64) {}
+        /// Do nothing on platforms without native editor embedding.
+        pub(super) fn embed(&self) {}
+        /// Do nothing on platforms without native editor embedding.
+        pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}
     }
 }

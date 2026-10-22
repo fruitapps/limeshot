@@ -234,6 +234,50 @@ fn an_editor_opens_takes_edits_and_resizes_itself() {
 }
 
 #[test]
+fn embedded_layout_preserves_plugin_resizes_until_the_host_request_changes() {
+    let (inst, _proc) = gain(64);
+    let mut editor = inst.create_editor().unwrap();
+    editor.attach_headless().unwrap();
+    editor.layout_embedded(0.0, 0.0, 500.0, 320.0);
+    assert_eq!(
+        editor.size(),
+        limeshot_plugins::EditorSize {
+            width: 500,
+            height: 320
+        }
+    );
+
+    assert!(editor.key_down('r'));
+    let (w, h) = testing::EDITOR_RESIZED;
+    let resized = limeshot_plugins::EditorSize {
+        width: w as u32,
+        height: h as u32,
+    };
+    editor.layout_embedded(10.0, 20.0, 500.0, 320.0);
+    assert_eq!(
+        editor.size(),
+        resized,
+        "an unchanged host request keeps the plugin's size"
+    );
+    assert_eq!(editor.take_resized(), Some(resized));
+    assert_eq!(editor.take_resized(), None);
+
+    editor.layout_embedded(10.0, 20.0, 520.0, 340.0);
+    assert_eq!(
+        editor.size(),
+        limeshot_plugins::EditorSize {
+            width: 520,
+            height: 340
+        }
+    );
+    assert_eq!(
+        editor.take_resized(),
+        None,
+        "host resizes are not plugin resize requests"
+    );
+}
+
+#[test]
 fn a_plugin_without_an_editor_has_none() {
     let m = testing::module().unwrap();
     let (inst, _proc) = Vst3Instance::new(&m, &testing::tone_class(), SR, 64).unwrap();

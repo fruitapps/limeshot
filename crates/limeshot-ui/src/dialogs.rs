@@ -216,16 +216,23 @@ pub fn poll_export(app: &mut LimeShotApp) {
     }
 }
 
+/// Show `add` in a centered, fixed-width dialog window under the shared dialog id.
 fn modal(ctx: &Context, title: &str, add: impl FnOnce(&mut egui::Ui)) {
     egui::Window::new(RichText::new(title).strong())
         .id(egui::Id::new("dialog"))
         .collapsible(false)
         .resizable(false)
         .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
-        .default_width(360.0)
-        .show(ctx, add);
+        .default_width(320.0)
+        .show(ctx, |ui| {
+            ui.set_width(320.0);
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+            add(ui);
+        });
 }
 
+/// Draw export progress and the active dialog, applying actions chosen by the user.
+/// Keep unfinished dialogs open; Escape dismisses all except the save-changes prompt.
 pub fn show(app: &mut LimeShotApp, ctx: &Context) {
     if let Some(job) = &app.export_job {
         let secs = job.started.elapsed().as_secs_f32();
@@ -324,13 +331,14 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
         Dialog::Export(opts) => {
             modal(ctx, "Export WAV", |ui| {
                 egui::Grid::new("export_grid")
+                    .min_col_width(82.0)
                     .num_columns(2)
                     .spacing(vec2(12.0, 6.0))
                     .show(ui, |ui| {
                         ui.label("Range");
                         ui.horizontal(|ui| {
-                            ui.selectable_value(&mut opts.range, ExportRange::Song, "Song (Playlist)");
-                            ui.selectable_value(&mut opts.range, ExportRange::Pattern, "Current pattern");
+                            ui.selectable_value(&mut opts.range, ExportRange::Song, "Song");
+                            ui.selectable_value(&mut opts.range, ExportRange::Pattern, "Pattern");
                         });
                         ui.end_row();
                         ui.label("Sample rate");
@@ -400,7 +408,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                 _ => "Rename",
             };
             modal(ctx, title, |ui| {
-                let r = ui.add(egui::TextEdit::singleline(text).desired_width(300.0));
+                let r = ui.add(egui::TextEdit::singleline(text).desired_width(310.0));
                 r.request_focus();
                 let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
                 ui.horizontal(|ui| {

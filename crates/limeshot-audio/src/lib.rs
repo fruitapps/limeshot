@@ -56,6 +56,12 @@ pub enum Msg {
         key: u8,
         velocity: f32,
     },
+    NoteFor {
+        channel: u16,
+        key: u8,
+        velocity: f32,
+        seconds: f64,
+    },
     NoteOff {
         channel: u16,
         key: u8,
@@ -175,6 +181,8 @@ struct AudioState {
 }
 
 impl AudioState {
+    /// Apply up to 256 queued control messages and return retired processors to the control thread.
+    /// Retired processors that do not fit in the return queue are kept for a later callback.
     fn drain(&mut self) {
         // Bounded so a flood of messages cannot stall a callback.
         for _ in 0..256 {
@@ -196,6 +204,12 @@ impl AudioState {
                 Msg::LoopRange(range) => r.set_loop_range(range),
                 Msg::Metronome(b) => r.set_metronome(b),
                 Msg::NoteOn { channel, key, velocity } => r.preview_note_on(channel, key, velocity),
+                Msg::NoteFor {
+                    channel,
+                    key,
+                    velocity,
+                    seconds,
+                } => r.preview_note_for(channel, key, velocity, seconds),
                 Msg::NoteOff { channel, key } => r.preview_note_off(channel, key),
                 Msg::PreviewSample(s) => r.preview_sample(s),
                 Msg::StopPreview => r.stop_sample_preview(),

@@ -19,6 +19,9 @@ const SIDE_W: f32 = 300.0;
 #[derive(Default)]
 pub struct State {
     pub selected: u16,
+    pub strip_rects: Vec<(u16, Rect)>,
+    pub pan_rects: Vec<(u16, Rect)>,
+    pub meter_rects: Vec<(u16, Rect)>,
     /// Route buttons drawn in the last frame: (strip, rectangle). For tests and tools.
     pub route_buttons: Vec<(u16, Rect)>,
     /// The EQ graph drawn in the last frame.
@@ -70,9 +73,13 @@ fn pos_gain(p: f32) -> f32 {
     p.clamp(0.0, 1.0).powi(3) * MAX_GAIN
 }
 
+/// Draw the Mixer strips and selected track's controls, updating peak holds from audio status.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.mixer.route_buttons.clear();
     app.ui.mixer.name_rects.clear();
+    app.ui.mixer.strip_rects.clear();
+    app.ui.mixer.pan_rects.clear();
+    app.ui.mixer.meter_rects.clear();
     app.ui.mixer.send_knobs.clear();
     let n = app.project().mixer.tracks.len();
     if app.ui.mixer.rename.as_ref().is_some_and(|r| usize::from(r.track) >= n) {
@@ -147,6 +154,8 @@ fn routed(app: &LimeShotApp, i: u16) -> Vec<(String, egui::Color32)> {
         .collect()
 }
 
+/// Draw a mixer strip with meters, routing, and undoable controls; ignore a missing track.
+/// Clicks on its background select it without making control drags change the selection.
 fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     let t = Theme::current();
     let Some(track) = app.project().mixer.tracks.get(usize::from(i)).cloned() else {
@@ -162,6 +171,11 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         .or_else(|| routed.first().map(|r| r.1))
         .unwrap_or(if i == 0 { t.accent } else { t.text_faint });
     let (rect, _) = ui.allocate_exact_size(vec2(STRIP_W, height.max(220.0)), Sense::hover());
+    app.ui.mixer.strip_rects.push((i, rect));
+    let background = ui.interact(rect, ui.id().with(("strip-background", i)), Sense::click());
+    if background.clicked() {
+        select(app, i);
+    }
     let p = ui.painter();
     p.rect_filled(
         rect,
@@ -282,6 +296,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
             format!("Pan {:+.0}%", v * 100.0)
         }
     });
+    app.ui.mixer.pan_rects.push((i, r.rect));
     let cmd = r.changed().then_some(Command::SetMixerPan { track: i, pan });
     app.exec_gesture(&r, cmd);
     crate::automation_ui::menu(app, &r, AutomationTarget::MixerPan(i));
@@ -291,7 +306,8 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         ui.add_space(4.0);
         let (l, r) = app.meter_hold.get(usize::from(i)).copied().unwrap_or_default();
         let clipped = i == 0 && app.clip_until.is_some_and(|u| u > std::time::Instant::now());
-        meter(ui, vec2(12.0, fader_h), l, r, clipped);
+        let meter = meter(ui, vec2(12.0, fader_h), l, r, clipped);
+        app.ui.mixer.meter_rects.push((i, meter.rect));
         let mut v = track.volume;
         // Every track defaults to 0 dB, as in FL Studio's Mixer.
         let r = fader(ui, &mut v, MAX_GAIN, 1.0, vec2(24.0, fader_h), "Volume");

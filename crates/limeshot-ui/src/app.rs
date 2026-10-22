@@ -181,6 +181,9 @@ pub struct LimeShotApp {
     /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
     /// button, so any left once no button is down are released (`logic`).
     pub auditions: Vec<(ChannelId, u8)>,
+    pub typing_notes: Vec<(egui::Key, ChannelId, u8)>,
+    pub keyboard_notes: bool,
+    pub sampler_preview: Option<(ChannelId, std::time::Instant, f64)>,
 }
 
 impl LimeShotApp {
@@ -202,6 +205,8 @@ impl LimeShotApp {
         app
     }
 
+    /// Create an empty app using `player` to start playback from its initial snapshot.
+    /// Settings persistence, autosave storage, and user preset storage start disabled.
     fn new_with_player(
         settings: Settings,
         bundled_samples: Option<PathBuf>,
@@ -242,6 +247,9 @@ impl LimeShotApp {
             persist_settings: false,
             presets_dir: None,
             auditions: Vec::new(),
+            sampler_preview: None,
+            keyboard_notes: false,
+            typing_notes: Vec::new(),
         }
     }
 
@@ -432,11 +440,22 @@ impl LimeShotApp {
         }
     }
 
-    /// Stop; stopping while stopped silences everything (see `Renderer::stop`), including a
-    /// Browser preview still loading.
+    /// Stop and return to where playback started, canceling pending Browser and sampler previews.
+    /// Stopping while stopped also silences everything (see `Renderer::stop`) and rewinds to zero,
+    /// or to the Playlist selection's start in Song mode.
     pub fn stop(&mut self) {
         self.ui.browser.cancel_preview();
+        self.sampler_preview = None;
+        let stopped = !self.is_playing();
         self.send(Msg::Stop);
+        if stopped {
+            let start = if self.ui.mode == PlayMode::Song {
+                self.ui.playlist.time_sel.map_or(0, |r| r.0)
+            } else {
+                0
+            };
+            self.locate(start);
+        }
     }
 
     pub fn set_mode(&mut self, mode: PlayMode) {
@@ -485,6 +504,25 @@ impl LimeShotApp {
             if !self.auditions.contains(&(channel, key)) {
                 self.auditions.push((channel, key));
             }
+        }
+    }
+
+    /// Queue a channel audition for `seconds`, independent of pointer release.
+    /// Synchronizes the engine first; ignores a missing channel or an index that cannot fit in `u16`.
+    /// Release timing and nonfinite durations follow [`limeshot_engine::Renderer::preview_note_for`].
+    pub fn preview_for(&mut self, channel: ChannelId, key: u8, velocity: f32, seconds: f64) {
+        if let Some(i) = self
+            .project()
+            .channel_index(channel)
+            .and_then(|i| u16::try_from(i).ok())
+        {
+            self.sync_engine();
+            self.send(Msg::NoteFor {
+                channel: i,
+                key,
+                velocity,
+                seconds,
+            });
         }
     }
 
@@ -851,6 +889,18 @@ impl LimeShotApp {
                 self.preview_off(c, k);
             }
         }
+        let mut held = std::mem::take(&mut self.typing_notes);
+        held.retain(|(key, channel, note)| {
+            let keep = self.keyboard_notes
+                && !ctx.egui_wants_keyboard_input()
+                && self.dialog.is_none()
+                && ctx.input(|i| i.focused && i.key_down(*key));
+            if !keep {
+                self.preview_off(*channel, *note);
+            }
+            keep
+        });
+        self.typing_notes = held;
         self.sync_engine();
         if self.plugins.poll() {
             self.doc.mark_unsaved();
@@ -907,7 +957,9 @@ impl LimeShotApp {
             return;
         }
         self.ui.hint.clear();
-        shortcuts::handle(self, &ctx);
+        if !crate::plugin_window::handle_keys(self, &ctx) {
+            shortcuts::handle(self, &ctx);
+        }
         let flat = |fill| egui::Frame::new().fill(fill);
         egui::Panel::top("header")
             .exact_size(30.0)
@@ -952,6 +1004,7 @@ impl LimeShotApp {
         crate::toolbar::tapper(self, &ctx);
         dialogs::show(self, &ctx);
         dialogs::toasts(self, &ctx);
+        crate::browser::drag_preview(self, &ctx);
     }
 }
 
