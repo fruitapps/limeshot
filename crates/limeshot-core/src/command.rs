@@ -424,6 +424,29 @@ pub enum Command {
         track: u16,
         solo: bool,
     },
+    /// Move an insert track to another position (FL Studio's Move left / right, Opt+←/→); every
+    /// reference to a track index (channels, routes, automation, sidechains) follows.
+    MoveMixerTrack {
+        track: u16,
+        to: u16,
+    },
+    /// Insert an empty track at `at` (FL Studio's Insert one); later tracks move up one.
+    InsertMixerTrack(u16),
+    /// Delete an insert track (FL Studio's Delete). Its channels go to the master, routes to it
+    /// are dropped, automation of it is deleted; later tracks move down one.
+    RemoveMixerTrack(u16),
+    /// Volume, pan, EQ, mute, solo and colour back to their defaults (FL Studio's Reset
+    /// selected track(s) to default); effects and routing stay.
+    ResetMixerTrack(u16),
+    /// Send only to the master (FL Studio's Reset selected track(s) routing).
+    ResetMixerRouting(u16),
+    /// Drop every route into `track` (FL Studio's Unroute tracks routed to the selected track);
+    /// a track left without routes goes to the master.
+    UnrouteMixerTrack(u16),
+    SetMixerTrackColor {
+        track: u16,
+        color: Option<Rgb>,
+    },
     /// Route mixer track `from` to `to` at `level` (linear), update an existing route's level,
     /// or (with `None`) remove the route. Routes that would create a feedback loop are refused.
     SetRoute {
@@ -525,6 +548,43 @@ fn offset(t: Tick, d: i64) -> Tick {
     }
 }
 
+/// Renumber every reference to a mixer track after tracks moved, were inserted or deleted.
+/// `map` gives a track's new index, or `None` when it was deleted: its channels then play on the
+/// master, routes to it are dropped (a track left without routes goes to the master) and
+/// sidechains keyed by it fall back to the compressor's own input.
+fn remap_mixer(p: &mut Project, map: impl Fn(u16) -> Option<u16>) {
+    for c in &mut p.channels {
+        c.mixer_track = map(c.mixer_track).unwrap_or(0);
+    }
+    for (k, t) in p.mixer.tracks.iter_mut().enumerate() {
+        t.routes = t
+            .routes
+            .iter()
+            .filter_map(|r| map(r.to).map(|to| Route { to, ..*r }))
+            .collect();
+        if t.routes.is_empty() && k != 0 {
+            t.routes.push(Route { to: 0, level: 1.0 });
+        }
+        for e in &mut t.effects {
+            if e.kind == crate::effects::EffectKind::Compressor
+                && let Some(v) = e.params.get_mut(crate::effects::COMPRESSOR_SIDECHAIN)
+                && *v >= 1.0
+            {
+                *v = map(*v as u16).map_or(0.0, f32::from);
+            }
+        }
+    }
+    for a in &mut p.automations {
+        a.target = a.target.remap_mixer(&map);
+    }
+    // Default names follow the position, as FL Studio's unnamed inserts do.
+    for (k, t) in p.mixer.tracks.iter_mut().enumerate().skip(1) {
+        if t.name.strip_prefix("Insert ").is_some_and(|n| n.parse::<u32>().is_ok()) {
+            t.name = format!("Insert {k}");
+        }
+    }
+}
+
 fn sort_notes(p: &mut Pattern) {
     p.notes.sort_by_key(|n| (n.start, n.key, n.id));
 }
@@ -614,6 +674,13 @@ impl Command {
             SetMixerEq { .. } => "Mixer EQ",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
+            MoveMixerTrack { .. } => "Move mixer track",
+            InsertMixerTrack(_) => "Insert mixer track",
+            RemoveMixerTrack(_) => "Delete mixer track",
+            ResetMixerTrack(_) => "Reset mixer track",
+            ResetMixerRouting(_) => "Reset routing",
+            UnrouteMixerTrack(_) => "Unroute",
+            SetMixerTrackColor { .. } => "Mixer track color",
             SetRoute { level: None, .. } => "Remove route",
             SetRoute { .. } => "Route mixer track",
             AddEffect { .. } => "Add effect",
@@ -1549,6 +1616,84 @@ impl Command {
                 return Ok(Created(Some(n as u32)));
             }
             RenameMixerTrack { track, name } => mixer_track(p, track)?.name = name,
+            MoveMixerTrack { track, to } => {
+                let n = p.mixer.tracks.len() as u16;
+                if track == 0 || to == 0 || track >= n || to >= n {
+                    return Err(CommandError::Invalid("only insert tracks move".into()));
+                }
+                let t = p.mixer.tracks.remove(usize::from(track));
+                p.mixer.tracks.insert(usize::from(to), t);
+                remap_mixer(p, |i| {
+                    Some(if i == track {
+                        to
+                    } else if track < to && (track + 1..=to).contains(&i) {
+                        i - 1
+                    } else if to < track && (to..track).contains(&i) {
+                        i + 1
+                    } else {
+                        i
+                    })
+                });
+            }
+            InsertMixerTrack(at) => {
+                let n = p.mixer.tracks.len();
+                if at == 0 || usize::from(at) > n || n >= Mixer::MAX_TRACKS {
+                    return Err(CommandError::Invalid("no room for a mixer track there".into()));
+                }
+                p.mixer
+                    .tracks
+                    .insert(usize::from(at), MixerTrack::new(format!("Insert {at}")));
+                // Its own route goes to the master, which does not move.
+                remap_mixer(p, |i| Some(if i >= at { i + 1 } else { i }));
+                return Ok(Created(Some(u32::from(at))));
+            }
+            RemoveMixerTrack(track) => {
+                if track == 0 {
+                    return Err(CommandError::Invalid("the master cannot be deleted".into()));
+                }
+                mixer_track(p, track)?;
+                p.mixer.tracks.remove(usize::from(track));
+                let gone: Vec<AutomationId> = p
+                    .automations
+                    .iter()
+                    .filter(|a| a.target.mixer_track() == Some(track))
+                    .map(|a| a.id)
+                    .collect();
+                p.automations.retain(|a| !gone.contains(&a.id));
+                p.playlist
+                    .clips
+                    .retain(|c| c.automation().is_none_or(|a| !gone.contains(&a)));
+                remap_mixer(p, |i| match i.cmp(&track) {
+                    std::cmp::Ordering::Less => Some(i),
+                    std::cmp::Ordering::Equal => None,
+                    std::cmp::Ordering::Greater => Some(i - 1),
+                });
+            }
+            ResetMixerTrack(track) => {
+                let t = mixer_track(p, track)?;
+                let fresh = MixerTrack::new("");
+                t.volume = fresh.volume;
+                t.pan = fresh.pan;
+                t.muted = false;
+                t.solo = false;
+                t.eq = fresh.eq;
+                t.color = None;
+            }
+            ResetMixerRouting(track) => {
+                if track != 0 {
+                    mixer_track(p, track)?.routes = vec![Route { to: 0, level: 1.0 }];
+                }
+            }
+            UnrouteMixerTrack(track) => {
+                mixer_track(p, track)?;
+                for t in p.mixer.tracks.iter_mut().skip(1) {
+                    t.routes.retain(|r| r.to != track);
+                    if t.routes.is_empty() {
+                        t.routes.push(Route { to: 0, level: 1.0 });
+                    }
+                }
+            }
+            SetMixerTrackColor { track, color } => mixer_track(p, track)?.color = color,
             SetMixerVolume { track, volume } => mixer_track(p, track)?.volume = finite(volume)?.clamp(0.0, 2.0),
             SetMixerPan { track, pan } => mixer_track(p, track)?.pan = finite(pan)?.clamp(-1.0, 1.0),
             SetMixerEq { track, band, value } => {

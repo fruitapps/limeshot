@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **139** — IMPLEMENTED 102, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 25, NOT_PLANNED 3
+Tracked: **141** — IMPLEMENTED 106, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 23, NOT_PLANNED 3
 
 ## Global
 
@@ -173,8 +173,10 @@ Tracked: **139** — IMPLEMENTED 102, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
 | KB-072 | Link selected channels to the selected track | `Ctrl+L` | INFERRED | — | NOT_STARTED | SEQ-005 | LimeShot's Cmd+L works from the Channel Rack. |
-| KB-073 | Move track left / right | `Alt+Left / Alt+Right` | INFERRED | — | NOT_STARTED | MIX-006 |  |
-| KB-074 | Rename track | `F2` | INFERRED | — | NOT_STARTED | MIX-006 | Double-click the name to rename. |
+| KB-073 | Move track left / right | `Alt+Left / Alt+Right` | OBSERVED | `Alt+← / Alt+→` | IMPLEMENTED | MIX-006 | FL 2026.1.1 Mixer menu: Move left / right Opt+Left/Right (menus.json). Session 16. |
+| KB-074 | Rename track | `F2` | INFERRED | `F2` | IMPLEMENTED | MIX-006 | Session 16: F2 with the Mixer focused, or double-click the name. |
+| KB-140 | Delete the selected track | `Del` | OBSERVED | `Delete` | IMPLEMENTED | MIX-006 | FL 2026.1.1 Mixer menu (menus.json). Session 16. |
+| KB-141 | Solo the selected track | `S` | OBSERVED | `S` | IMPLEMENTED | MIX-006 | FL 2026.1.1 Mixer menu (menus.json). Session 16. |
 
 ## Controls
 

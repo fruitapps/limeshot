@@ -156,9 +156,10 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
     let audible = !track.muted && (i == 0 || !any_solo || track.solo);
     let selected = app.ui.mixer.selected == i;
     let routed = routed(app, i);
-    let color = routed
-        .first()
-        .map(|r| r.1)
+    let color = track
+        .color
+        .map(crate::theme::rgb)
+        .or_else(|| routed.first().map(|r| r.1))
         .unwrap_or(if i == 0 { t.accent } else { t.text_faint });
     let (rect, _) = ui.allocate_exact_size(vec2(STRIP_W, height.max(220.0)), Sense::hover());
     let p = ui.painter();
@@ -220,9 +221,10 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
                 )
             });
         app.ui.mixer.name_rects.push((i, name.rect));
-        if name.clicked() {
+        if name.clicked() || name.secondary_clicked() {
             select(app, i);
         }
+        name.context_menu(|ui| crate::mixer_menu::menu(app, ui));
         if name.double_clicked() {
             select(app, i);
             app.ui.mixer.start_rename(i, &track.name, false);
@@ -538,6 +540,9 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         return;
     };
     panel_header(ui, "Track", |ui| {
+        ui.menu_button("⏵", |ui| crate::mixer_menu::menu(app, ui))
+            .response
+            .hint("Mixer track menu: rename, colour, reset, routing, move, delete, insert");
         ui.label(
             RichText::new(if i == 0 { "Master".into() } else { format!("Insert {i}") })
                 .font(mono(10.5))

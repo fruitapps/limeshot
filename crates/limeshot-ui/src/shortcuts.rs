@@ -120,6 +120,10 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("Shift+0", "Piano Roll / Playlist: center on the playback position"),
     ("Alt+M / Shift+Alt+M", "Playlist: mute / unmute the selected clips"),
+    ("Alt+← / Alt+→", "Mixer: move the selected track left / right"),
+    ("Delete", "Mixer: delete the selected track"),
+    ("S", "Mixer: solo the selected track"),
+    ("F2", "Mixer: rename the selected track"),
     ("Cmd+G", "Playlist: merge the selected pattern clips into one"),
     (
         "Cmd+Insert / Cmd+Alt+Insert / Cmd+Delete",
@@ -294,7 +298,8 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
         Focus::PianoRoll => crate::piano_roll::keys(app, ctx),
         Focus::Playlist => crate::playlist::keys(app, ctx),
         Focus::ChannelRack => crate::channel_rack::keys(app, ctx),
-        Focus::Mixer | Focus::None => {}
+        Focus::Mixer => crate::mixer_menu::keys(app, ctx),
+        Focus::None => {}
     }
 }
 

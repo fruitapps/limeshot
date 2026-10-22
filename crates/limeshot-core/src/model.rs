@@ -444,6 +444,10 @@ pub struct MixerTrack {
     /// fader. Saved only when changed.
     #[serde(default = "default_eq", skip_serializing_if = "is_default_eq")]
     pub eq: [EqBand; 3],
+    /// The strip's colour (FL Studio's Change color… / Random color); `None`: the routed
+    /// channels' colour. Saved only when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Rgb>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -524,6 +528,7 @@ impl MixerTrack {
             effects: Vec::new(),
             routes: default_routes(),
             eq: EqBand::DEFAULTS,
+            color: None,
             extra: Extra::new(),
         }
     }

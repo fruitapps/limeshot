@@ -701,3 +701,13 @@ Select (by selected source Shift+C, muted, overlapping, stacked, invert, time ar
 (PgUp / PgDn, Shift+1 … 5), Time markers (Add one…, Add auto, Delete) and Center. New core commands `InsertSpace`,
 `DeleteSpace` (clips cut at the edges, markers move) and `MergeClips` (a new pattern with the clips' notes where they
 sounded). `playlist_menu.rs` mirrors `piano_menu.rs`; the Playlist checks the menu's keys before its own.
+
+### Session 16, part 4: the Mixer's track menu (MIX-006, MIX-007)
+
+FL's Mixer menu: a ⏵ in the track panel's header (and on a strip name's right-click) with Rename… (F2), Change
+color (swatches) and Random color, Reset selected track(s) to default, Reset routing, Unroute tracks routed to the
+selected track, Solo (S), Move left / right (Alt+←/→), Delete (Delete) and Insert one. New core commands
+`MoveMixerTrack`, `InsertMixerTrack`, `RemoveMixerTrack`, `ResetMixerTrack`, `ResetMixerRouting`,
+`UnrouteMixerTrack`, `SetMixerTrackColor` and `MixerTrack::color`; `remap_mixer` renumbers channels' tracks, routes,
+automation targets (`AutomationTarget::remap_mixer`) and compressor sidechains, and default "Insert N" names. The
+Mixer now has keys when focused (`mixer_menu::keys`, not while typing a name).

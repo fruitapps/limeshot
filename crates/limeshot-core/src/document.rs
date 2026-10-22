@@ -227,6 +227,7 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AutomationTarget;
     use crate::command::NewNote;
     use crate::effects::EffectKind;
     use crate::model::*;
@@ -392,6 +393,135 @@ mod tests {
         d.execute(Command::RemoveMarker(b)).unwrap();
         assert!(d.execute(Command::RemoveMarker(b)).is_err());
         assert_eq!(names(&d), ["Intro"]);
+    }
+
+    #[test]
+    fn mixer_tracks_move_insert_and_delete_with_their_references() {
+        let (mut d, ch, _) = doc_with_channel();
+        let x = |d: &mut Document, c: Command| d.execute(c).unwrap();
+        x(&mut d, Command::SetChannelMixerTrack { channel: ch, track: 2 });
+        x(
+            &mut d,
+            Command::SetRoute {
+                from: 1,
+                to: 2,
+                level: Some(0.5),
+            },
+        );
+        x(
+            &mut d,
+            Command::RenameMixerTrack {
+                track: 2,
+                name: "Drums".into(),
+            },
+        );
+        let fx = x(
+            &mut d,
+            Command::AddEffect {
+                track: 3,
+                kind: EffectKind::Compressor,
+            },
+        )
+        .0
+        .unwrap();
+        x(
+            &mut d,
+            Command::SetRoute {
+                from: 2,
+                to: 3,
+                level: Some(1.0),
+            },
+        );
+        x(
+            &mut d,
+            Command::SetEffectParam {
+                track: 3,
+                effect: fx,
+                index: crate::COMPRESSOR_SIDECHAIN,
+                value: 2.0,
+            },
+        );
+        x(
+            &mut d,
+            Command::AddAutomationClip {
+                target: AutomationTarget::MixerVolume(2),
+                track: 0,
+                start: 0,
+                length: 960,
+                value: None,
+                name: None,
+            },
+        );
+        let state = |d: &Document| {
+            let p = d.project();
+            let drums = p.mixer.tracks.iter().position(|t| t.name == "Drums").map(|i| i as u16);
+            let sc = p
+                .mixer
+                .tracks
+                .iter()
+                .flat_map(|t| &t.effects)
+                .find(|e| e.id == fx)
+                .map(|e| e.params[crate::COMPRESSOR_SIDECHAIN]);
+            (
+                drums,
+                p.channels[0].mixer_track,
+                p.automations.first().map(|a| a.target),
+                sc,
+            )
+        };
+        // Move left: Drums to 1, the old track 1 (named "Insert 1") becomes "Insert 2".
+        x(&mut d, Command::MoveMixerTrack { track: 2, to: 1 });
+        assert_eq!(
+            state(&d),
+            (Some(1), 1, Some(AutomationTarget::MixerVolume(1)), Some(1.0))
+        );
+        assert_eq!(d.project().mixer.tracks[2].name, "Insert 2");
+        assert_eq!(
+            d.project().mixer.tracks[2].routes,
+            vec![Route { to: 0, level: 1.0 }, Route { to: 1, level: 0.5 }]
+        );
+        // Insert one at 1: everything moves up.
+        x(&mut d, Command::InsertMixerTrack(1));
+        assert_eq!(
+            state(&d),
+            (Some(2), 2, Some(AutomationTarget::MixerVolume(2)), Some(2.0))
+        );
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 0, level: 1.0 }]);
+        // Delete Drums: its channel plays on the master, routes to it fall back, its automation goes.
+        x(&mut d, Command::RemoveMixerTrack(2));
+        assert_eq!(state(&d), (None, 0, None, Some(0.0)));
+        assert!(d.project().playlist.clips.is_empty());
+        assert_eq!(d.project().mixer.tracks[2].routes, vec![Route { to: 0, level: 1.0 }]);
+        assert!(d.execute(Command::RemoveMixerTrack(0)).is_err());
+        assert!(d.execute(Command::MoveMixerTrack { track: 1, to: 0 }).is_err());
+        // Reset, colour, routing.
+        x(&mut d, Command::SetMixerVolume { track: 1, volume: 0.3 });
+        x(
+            &mut d,
+            Command::SetMixerTrackColor {
+                track: 1,
+                color: Some(Rgb(1, 2, 3)),
+            },
+        );
+        x(&mut d, Command::ResetMixerTrack(1));
+        let t = &d.project().mixer.tracks[1];
+        assert_eq!((t.volume, t.color), (1.0, None));
+        x(
+            &mut d,
+            Command::SetRoute {
+                from: 3,
+                to: 1,
+                level: Some(1.0),
+            },
+        );
+        x(&mut d, Command::UnrouteMixerTrack(1));
+        assert!(
+            d.project()
+                .mixer
+                .tracks
+                .iter()
+                .all(|t| t.routes.iter().all(|r| r.to != 1))
+        );
     }
 
     #[test]

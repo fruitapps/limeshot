@@ -3007,10 +3007,10 @@
     {
       "id": "MIX-006",
       "category": "Mixer",
-      "name": "Rename and add mixer tracks",
+      "name": "Rename, add, move and delete mixer tracks",
       "description": "Track management.",
       "fl_reference": "F2 rename, add tracks.",
-      "limeshot_behavior": "Double-click name to rename; + adds a track.",
+      "limeshot_behavior": "Double-click name to rename; + adds a track. The track menu (⏵ in the track panel, or right-click a strip's name; FL Studio's Mixer menu): Rename… (F2), Change color / Random color, Reset to default, Reset routing, Unroute tracks routed here, Solo (S), Move left / right (Alt+←/→), Delete (Delete), Insert one. Moving, inserting and deleting renumber every reference (channels, routes, automation, sidechains); default \"Insert N\" names follow the position.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -3024,7 +3024,9 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::mixer_names_are_typed_in_place"
+        "limeshot-app tests/ui.rs::mixer_names_are_typed_in_place",
+        "limeshot-core document::tests::mixer_tracks_move_insert_and_delete_with_their_references",
+        "crates/limeshot-app/tests/ui.rs::mixer_track_menu_moves_colors_deletes_and_inserts"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3033,7 +3035,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels."
+      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels. Session 16: from FL 2026.1.1's Mixer menu (menus.json). Plugins on moved tracks restart from their stored state."
     },
     {
       "id": "MIX-007",
@@ -3041,7 +3043,7 @@
       "name": "Insert effect slots",
       "description": "Per-track effect chains.",
       "fl_reference": "10 FX slots per track.",
-      "limeshot_behavior": "Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips.",
+      "limeshot_behavior": "Up to 10 insert effects per mixer track (master included), processed in order before the fader. The Mixer window's right-hand panel (FL layout) shows the selected track's slots: add, bypass, reorder, remove, edit; slot names also show on the strips. Track menu: Reset routing (master only) and Unroute tracks routed to the selected track.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -3063,7 +3065,8 @@
         "limeshot-core effects::tests",
         "limeshot-core document::tests::effect_chain_commands",
         "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail",
-        "limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed"
+        "limeshot-engine tests/audio.rs::effects_without_processors_are_bypassed",
+        "limeshot-core document::tests::mixer_tracks_move_insert_and_delete_with_their_references"
       ],
       "reference": {
         "application": "FL Studio",

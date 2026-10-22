@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 159, DIFFERENT 100, LIMESHOT_ONLY 13, NOT_STARTED 412, NOT_PLANNED 41
+Tracked: **725** — IMPLEMENTED 168, DIFFERENT 99, LIMESHOT_ONLY 13, NOT_STARTED 404, NOT_PLANNED 41
 
 ## Summary
 
@@ -24,7 +24,7 @@ Tracked: **725** — IMPLEMENTED 159, DIFFERENT 100, LIMESHOT_ONLY 13, NOT_START
 | Channel Rack | 72 | 13 | 18 | 37 | 4 | 2 |
 | Piano Roll | 137 | 44 | 20 | 70 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
-| Mixer | 44 | 0 | 10 | 30 | 4 | 0 |
+| Mixer | 44 | 9 | 9 | 22 | 4 | 0 |
 
 ## Open work by feature
 
@@ -33,7 +33,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | Feature | Pri | Status | Name | Menu items |
 |---|---|---|---|---|
 | EXP-001 | P0 | VERIFIED | WAV export (offline bounce) | MENU-580 Playlist › Options › Tools › Export all playlist tracks |
-| MIX-001 | P0 | VERIFIED | Master and insert tracks | MENU-692 Mixer › Options › Change color...<br>MENU-693 Mixer › Options › Random color<br>MENU-701 Mixer › Options › Reset selected track(s) to default<br>MENU-708 Mixer › Options › Alt solo selected track(s)<br>MENU-716 Mixer › Options › Move left<br>MENU-717 Mixer › Options › Move right<br>MENU-718 Mixer › Options › Delete |
+| MIX-001 | P0 | VERIFIED | Master and insert tracks | MENU-708 Mixer › Options › Alt solo selected track(s) |
 | SEQ-002 | P0 | VERIFIED | Add sampler / synth channels | MENU-383 Channel Rack › Channel menu › Insert<br>MENU-384 Channel Rack › Channel menu › Replace |
 | SEQ-003 | P0 | VERIFIED | Channel mute and solo | MENU-345 Channel Rack › Options › Mute selected<br>MENU-346 Channel Rack › Options › Unmute selected |
 | SEQ-005 | P0 | VERIFIED | Channel → mixer track routing | MENU-352 Channel Rack › Options › Select mixer tracks for the selected channels |
@@ -42,7 +42,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
-| MIX-007 | P1 | VERIFIED | Insert effect slots | MENU-705 Mixer › Options › Reset selected track(s) routing<br>MENU-706 Mixer › Options › Unroute tracks routed to the selected track(s) |
 | PL-014 | P1 | VERIFIED | Audio clips | MENU-572 Playlist › Options › Edit › Reverse selected audio clips |
 | PL-015 | P1 | VERIFIED | Automation clips | MENU-568 Playlist › Options › Edit › Merge automation clips |
 | PL-016 | P1 | VERIFIED | Markers and loop region / time selection | MENU-635 Playlist › Options › Time markers › Add two...<br>MENU-636 Playlist › Options › Time markers › Add one every<br>MENU-637 Playlist › Options › Time markers › Add jump to next bar<br>MENU-639 Playlist › Options › Time markers › Add key marker<br>MENU-640 Playlist › Options › Time markers › Place loop<br>MENU-642 Playlist › Options › Time markers › Change to marker loop |
@@ -862,7 +861,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| MENU-682 | Options |  | submenu |  |  | Mixer › track menu | DIFFERENT | MIX-001 | The ▸ at the Mixer's top left (also a track's right-click). LimeShot's mixer track menu has fewer items. |
+| MENU-682 | Options |  | submenu |  |  | Mixer › ⏵ | DIFFERENT | MIX-001 | The ▸ at the Mixer's top left (also a track's right-click). LimeShot's mixer track menu has fewer items. Session 16: LimeShot's ⏵ sits in the track panel's header (and on a strip name's right-click) and has the track commands: rename, colour, reset, routing, solo, move, delete, insert. |
 | MENU-683 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Disk recording | Options | submenu |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-684 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Plugin delay compensation | Options | submenu |  |  | Mixer › automatic delay compensation | DIFFERENT | MIX-012 | LimeShot compensates automatically; no per-track settings. |
 | MENU-685 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Link all parameters... | Options | dialog |  |  | — | NOT_STARTED | WF-004 |  |
@@ -871,9 +870,9 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-688 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Trim unused tracks | Options | action |  |  | — | NOT_STARTED |  |  |
 | MENU-689 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Switch smart disable for all plugins | Options | action |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-690 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Remove all Edison instances | Options | action |  |  | — | NOT_PLANNED |  | FL's Edison. |
-| MENU-691 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Rename, color and icon... | Mixer track | dialog | `F2` |  | Mixer › track menu rename | DIFFERENT | MIX-001 | LimeShot renames from the track's menu; no icon. |
-| MENU-692 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change color... | Mixer track | dialog |  |  | — | NOT_STARTED | MIX-001 |  |
-| MENU-693 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Random color | Mixer track | action |  |  | — | NOT_STARTED | MIX-001 |  |
+| MENU-691 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Rename, color and icon... | Mixer track | dialog | `F2` |  | Mixer › ⏵ › Rename… | DIFFERENT | MIX-001 | LimeShot renames from the track's menu; no icon. Session 16: F2 or the menu renames in place; no colour or icon in that dialog. |
+| MENU-692 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change color... | Mixer track | dialog |  |  | Mixer › ⏵ › Change color | DIFFERENT | MIX-001 | Session 16: a swatch submenu, not FL's colour dialog; the strip's colour bar shows it. |
+| MENU-693 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Random color | Mixer track | action |  |  | Mixer › ⏵ › Random color | IMPLEMENTED | MIX-001 |  |
 | MENU-694 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Gradient color... | Mixer track | dialog |  | disabled | — | NOT_STARTED |  |  |
 | MENU-695 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change icon... | Mixer track | dialog |  |  | — | NOT_STARTED |  |  |
 | MENU-696 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Assign to new Audio track(s) | Mixer track | action |  | disabled | — | NOT_STARTED |  |  |
@@ -881,13 +880,13 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-698 | &nbsp;&nbsp;&nbsp;&nbsp;↳ File | Mixer track | submenu |  |  | — | NOT_STARTED |  |  |
 | MENU-699 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Open audio editor | Mixer track | action | `Cmd+E` |  | — | NOT_PLANNED |  | FL's Edison. |
 | MENU-700 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Open audio editor and record | Mixer track | action | `Shift+E` |  | — | NOT_PLANNED |  |  |
-| MENU-701 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Reset selected track(s) to default | Mixer track | action |  |  | — | NOT_STARTED | MIX-001 |  |
+| MENU-701 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Reset selected track(s) to default | Mixer track | action |  |  | Mixer › ⏵ › Reset selected track(s) to default | IMPLEMENTED | MIX-001 | Session 16: volume, pan, EQ, mute, solo and colour; effects and routing stay (FL's exact scope not checked). |
 | MENU-702 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Channel routing | Routing | submenu |  |  | Channel Rack › mixer track numbers | DIFFERENT | SEQ-005 | LimeShot routes channels from the Channel Rack and Cmd+L. |
 | MENU-703 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Track routing | Routing | submenu |  | disabled | Mixer › route buttons | DIFFERENT | MIX-007 | LimeShot's route buttons under each strip. |
 | MENU-704 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select | Routing | submenu |  |  | — | NOT_STARTED |  |  |
-| MENU-705 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Reset selected track(s) routing | Routing | action |  |  | — | NOT_STARTED | MIX-007 |  |
-| MENU-706 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unroute tracks routed to the selected track(s) | Routing | action |  |  | — | NOT_STARTED | MIX-007 |  |
-| MENU-707 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Solo selected track(s) | Routing | action | `S` |  | Mixer › solo button | DIFFERENT | MIX-001 |  |
+| MENU-705 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Reset selected track(s) routing | Routing | action |  |  | Mixer › ⏵ › Reset selected track(s) routing | IMPLEMENTED | MIX-007 |  |
+| MENU-706 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unroute tracks routed to the selected track(s) | Routing | action |  |  | Mixer › ⏵ › Unroute tracks routed to the selected track(s) | IMPLEMENTED | MIX-007 |  |
+| MENU-707 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Solo selected track(s) | Routing | action | `S` |  | Mixer › ⏵ › Solo selected track(s) | IMPLEMENTED | MIX-001 | Session 16: S toggles it. |
 | MENU-708 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Alt solo selected track(s) | Routing | action | `Opt+S` |  | — | NOT_STARTED | MIX-001 |  |
 | MENU-709 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Arm selected track(s) | Routing | action |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-710 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Disarm selected track(s) | Routing | action |  |  | — | NOT_STARTED | REC-001 |  |
@@ -896,10 +895,10 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-713 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create group... | Group | dialog |  |  | — | NOT_STARTED |  |  |
 | MENU-714 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto color group | Group | action |  | disabled | — | NOT_STARTED |  |  |
 | MENU-715 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Dock to | Layout | submenu |  |  | — | NOT_STARTED |  |  |
-| MENU-716 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move left | Layout | action | `Opt+Left` |  | — | NOT_STARTED | MIX-001 |  |
-| MENU-717 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move right | Layout | action | `Opt+Right` |  | — | NOT_STARTED | MIX-001 |  |
-| MENU-718 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Delete | Layout | action | `Del` | disabled | — | NOT_STARTED | MIX-001 | Disabled on the master. |
-| MENU-719 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Insert one | Layout | action |  | disabled | Add › Mixer track | DIFFERENT | MIX-001 | LimeShot adds tracks at the end. |
+| MENU-716 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move left | Layout | action | `Opt+Left` |  | Mixer › ⏵ › Move left | IMPLEMENTED | MIX-006 | Session 16: channels, routes, automation and sidechains follow; default "Insert N" names follow the position. |
+| MENU-717 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move right | Layout | action | `Opt+Right` |  | Mixer › ⏵ › Move right | IMPLEMENTED | MIX-006 | Session 16: channels, routes, automation and sidechains follow; default "Insert N" names follow the position. |
+| MENU-718 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Delete | Layout | action | `Del` | disabled | Mixer › ⏵ › Delete | IMPLEMENTED | MIX-006 | Disabled on the master. Session 16: its channels go to the master, its automation is deleted. |
+| MENU-719 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Insert one | Layout | action |  | disabled | Mixer › ⏵ › Insert one | IMPLEMENTED | MIX-006 | Session 16: an empty track after the selected one. Add › Mixer track still adds at the end. |
 | MENU-720 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Insert multiple... | Layout | dialog |  | disabled | — | NOT_STARTED |  |  |
 | MENU-721 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Insert from state | Layout | submenu |  | disabled | — | NOT_STARTED |  |  |
 | MENU-722 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Allow threaded processing | CPU | toggle |  | checked | — | NOT_STARTED |  |  |

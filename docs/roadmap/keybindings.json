@@ -801,11 +801,11 @@
       "context": "Mixer",
       "action": "Move track left / right",
       "fl_keys": "Alt+Left / Alt+Right",
-      "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+← / Alt+→",
+      "status": "IMPLEMENTED",
       "feature": "MIX-006",
-      "notes": ""
+      "notes": "FL 2026.1.1 Mixer menu: Move left / right Opt+Left/Right (menus.json). Session 16."
     },
     {
       "id": "KB-074",
@@ -813,10 +813,10 @@
       "action": "Rename track",
       "fl_keys": "F2",
       "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "F2",
+      "status": "IMPLEMENTED",
       "feature": "MIX-006",
-      "notes": "Double-click the name to rename."
+      "notes": "Session 16: F2 with the Mixer focused, or double-click the name."
     },
     {
       "id": "KB-075",
@@ -1532,6 +1532,28 @@
       "status": "DIFFERENT",
       "feature": "PL-008",
       "notes": "FL 2026.1.1 Playlist menu (menus.json). LimeShot's zoom levels."
+    },
+    {
+      "id": "KB-140",
+      "context": "Mixer",
+      "action": "Delete the selected track",
+      "fl_keys": "Del",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Delete",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "FL 2026.1.1 Mixer menu (menus.json). Session 16."
+    },
+    {
+      "id": "KB-141",
+      "context": "Mixer",
+      "action": "Solo the selected track",
+      "fl_keys": "S",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "S",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "FL 2026.1.1 Mixer menu (menus.json). Session 16."
     }
   ]
 }

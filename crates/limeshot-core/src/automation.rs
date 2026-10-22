@@ -136,6 +136,45 @@ impl AutomationTarget {
         }
     }
 
+    /// The mixer track this target belongs to, if any.
+    pub fn mixer_track(&self) -> Option<u16> {
+        match *self {
+            AutomationTarget::MixerVolume(t) | AutomationTarget::MixerPan(t) => Some(t),
+            AutomationTarget::EffectParam { track, .. } => Some(track),
+            AutomationTarget::PluginParam {
+                plugin: PluginTarget::Effect { track, .. },
+                ..
+            } => Some(track),
+            _ => None,
+        }
+    }
+
+    /// The same target after mixer tracks were renumbered (a deleted track keeps its index; its
+    /// automations are removed first).
+    pub fn remap_mixer(self, map: impl Fn(u16) -> Option<u16>) -> Self {
+        let m = |t: u16| map(t).unwrap_or(t);
+        match self {
+            AutomationTarget::MixerVolume(t) => AutomationTarget::MixerVolume(m(t)),
+            AutomationTarget::MixerPan(t) => AutomationTarget::MixerPan(m(t)),
+            AutomationTarget::EffectParam { track, effect, index } => AutomationTarget::EffectParam {
+                track: m(track),
+                effect,
+                index,
+            },
+            AutomationTarget::PluginParam {
+                plugin: PluginTarget::Effect { track, effect },
+                id,
+            } => AutomationTarget::PluginParam {
+                plugin: PluginTarget::Effect {
+                    track: m(track),
+                    effect,
+                },
+                id,
+            },
+            other => other,
+        }
+    }
+
     /// A name such as "Kick – Volume" or "Insert 2 – Delay: Feedback".
     pub fn label(&self, p: &Project) -> String {
         let chan = |c: ChannelId| p.channel(c).map_or_else(|| "(deleted)".to_string(), |c| c.name.clone());

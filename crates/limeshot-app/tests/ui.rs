@@ -4612,3 +4612,62 @@ fn playlist_menu_edit_select_zoom_and_markers() {
     editor_menu(&mut h, g.grid, "Time markers", "Delete");
     assert!(h.state().project().playlist.markers.is_empty());
 }
+
+/// FL's Mixer track menu: move right / left, colour, solo, delete and insert, with the keys.
+#[test]
+fn mixer_track_menu_moves_colors_deletes_and_inserts() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Mixer;
+    h.state_mut().ui.mixer.selected = 1;
+    for _ in 0..3 {
+        h.step();
+    }
+    let kick = h.state().project().channels[0].id;
+    let routed = |h: &Harness<'static, LimeShotApp>| h.state().project().channel(kick).map(|c| c.mixer_track);
+    let was = routed(&h).expect("kick");
+    h.state_mut().ui.mixer.selected = was;
+    h.step();
+    let name = h.state().project().mixer.tracks[usize::from(was)].name.clone();
+    // ⏵ › Move right: the track and its channel move one place, the selection follows.
+    let panel = h.state().ui.mixer.panel_name.expect("track panel");
+    let at = h
+        .get_all_by_label("⏵")
+        .map(|n| {
+            let c = n.rect().center();
+            Pos2::new(c.x, c.y)
+        })
+        .min_by(|a, b| a.distance(panel.center()).total_cmp(&b.distance(panel.center())))
+        .expect("menu");
+    click(&mut h, at, PointerButton::Primary);
+    h.get_by(|n| n.label().is_some_and(|l| l.starts_with("Move right")))
+        .click();
+    h.step();
+    assert_eq!(routed(&h), Some(was + 1));
+    assert_eq!(h.state().ui.mixer.selected, was + 1);
+    assert_eq!(h.state().project().mixer.tracks[usize::from(was + 1)].name, name);
+    // Alt+← moves it back.
+    h.key_press_modifiers(Modifiers::ALT, Key::ArrowLeft);
+    h.step();
+    assert_eq!(routed(&h), Some(was));
+    // S solos, again unsolos.
+    h.key_press(Key::S);
+    h.step();
+    assert!(h.state().project().mixer.tracks[usize::from(was)].solo);
+    h.key_press(Key::S);
+    h.step();
+    // Delete: its channel plays on the master; Insert one puts an empty track after the selection.
+    let n = h.state().project().mixer.tracks.len();
+    h.key_press(Key::Delete);
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks.len(), n - 1);
+    assert_eq!(routed(&h), Some(0));
+    limeshot_ui::mixer_menu::run(h.state_mut(), limeshot_ui::mixer_menu::Act::InsertOne);
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks.len(), n);
+    limeshot_ui::mixer_menu::run(h.state_mut(), limeshot_ui::mixer_menu::Act::RandomColor);
+    let sel = h.state().ui.mixer.selected;
+    assert!(h.state().project().mixer.tracks[usize::from(sel)].color.is_some());
+}

@@ -12307,10 +12307,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Mixer › track menu",
+      "limeshot": "Mixer › ⏵",
       "status": "DIFFERENT",
       "feature": "MIX-001",
-      "notes": "The ▸ at the Mixer's top left (also a track's right-click). LimeShot's mixer track menu has fewer items."
+      "notes": "The ▸ at the Mixer's top left (also a track's right-click). LimeShot's mixer track menu has fewer items. Session 16: LimeShot's ⏵ sits in the track panel's header (and on a strip name's right-click) and has the track commands: rename, colour, reset, routing, solo, move, delete, insert."
     },
     {
       "id": "MENU-683",
@@ -12469,10 +12469,10 @@
       "fl_keys": "F2",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Mixer › track menu rename",
+      "limeshot": "Mixer › ⏵ › Rename…",
       "status": "DIFFERENT",
       "feature": "MIX-001",
-      "notes": "LimeShot renames from the track's menu; no icon."
+      "notes": "LimeShot renames from the track's menu; no icon. Session 16: F2 or the menu renames in place; no colour or icon in that dialog."
     },
     {
       "id": "MENU-692",
@@ -12487,10 +12487,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Mixer › ⏵ › Change color",
+      "status": "DIFFERENT",
       "feature": "MIX-001",
-      "notes": ""
+      "notes": "Session 16: a swatch submenu, not FL's colour dialog; the strip's colour bar shows it."
     },
     {
       "id": "MENU-693",
@@ -12505,8 +12505,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Mixer › ⏵ › Random color",
+      "status": "IMPLEMENTED",
       "feature": "MIX-001",
       "notes": ""
     },
@@ -12649,10 +12649,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Mixer › ⏵ › Reset selected track(s) to default",
+      "status": "IMPLEMENTED",
       "feature": "MIX-001",
-      "notes": ""
+      "notes": "Session 16: volume, pan, EQ, mute, solo and colour; effects and routing stay (FL's exact scope not checked)."
     },
     {
       "id": "MENU-702",
@@ -12721,8 +12721,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Mixer › ⏵ › Reset selected track(s) routing",
+      "status": "IMPLEMENTED",
       "feature": "MIX-007",
       "notes": ""
     },
@@ -12739,8 +12739,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Mixer › ⏵ › Unroute tracks routed to the selected track(s)",
+      "status": "IMPLEMENTED",
       "feature": "MIX-007",
       "notes": ""
     },
@@ -12757,10 +12757,10 @@
       "fl_keys": "S",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Mixer › solo button",
-      "status": "DIFFERENT",
+      "limeshot": "Mixer › ⏵ › Solo selected track(s)",
+      "status": "IMPLEMENTED",
       "feature": "MIX-001",
-      "notes": ""
+      "notes": "Session 16: S toggles it."
     },
     {
       "id": "MENU-708",
@@ -12919,10 +12919,10 @@
       "fl_keys": "Opt+Left",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "MIX-001",
-      "notes": ""
+      "limeshot": "Mixer › ⏵ › Move left",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "Session 16: channels, routes, automation and sidechains follow; default \"Insert N\" names follow the position."
     },
     {
       "id": "MENU-717",
@@ -12937,10 +12937,10 @@
       "fl_keys": "Opt+Right",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "MIX-001",
-      "notes": ""
+      "limeshot": "Mixer › ⏵ › Move right",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "Session 16: channels, routes, automation and sidechains follow; default \"Insert N\" names follow the position."
     },
     {
       "id": "MENU-718",
@@ -12955,10 +12955,10 @@
       "fl_keys": "Del",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "MIX-001",
-      "notes": "Disabled on the master."
+      "limeshot": "Mixer › ⏵ › Delete",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "Disabled on the master. Session 16: its channels go to the master, its automation is deleted."
     },
     {
       "id": "MENU-719",
@@ -12973,10 +12973,10 @@
       "fl_keys": "",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Add › Mixer track",
-      "status": "DIFFERENT",
-      "feature": "MIX-001",
-      "notes": "LimeShot adds tracks at the end."
+      "limeshot": "Mixer › ⏵ › Insert one",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-006",
+      "notes": "Session 16: an empty track after the selected one. Add › Mixer track still adds at the end."
     },
     {
       "id": "MENU-720",

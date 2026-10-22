@@ -23,6 +23,7 @@ pub mod icons;
 pub mod inspector;
 pub mod menus;
 pub mod mixer;
+pub mod mixer_menu;
 pub mod piano_menu;
 pub mod piano_roll;
 pub mod piano_tools;

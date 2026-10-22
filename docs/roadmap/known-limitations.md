@@ -37,6 +37,9 @@ Current as of 2026-10-21 (session 9). Everything here is either not implemented 
   tool (PR-027), no scale highlighting, no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
 * Piano Roll ghost notes only show other channels in the same pattern.
+* The Mixer's track menu acts on one selected track (FL selects several). Moving, inserting or deleting a track
+  restarts the plugins on the tracks that move (from their state, read just before). No FL colour dialog, gradient
+  colours, icons, groups, docking, arming or Insert multiple….
 * The Playlist's ⏵ menu covers Edit, Select, Zoom and Time markers in part: no Merge similar pattern clips, Merge
   automation clips, audio clip pitch/reverse keys, crossfade options, Consolidate, track groups, picker panel options
   or performance mode. Merged clips get a new pattern named "<first> (merged)" (FL's naming not checked). Insert space
