@@ -262,22 +262,22 @@
       "context": "Global",
       "action": "Undo",
       "fl_keys": "Ctrl+Z",
-      "confidence": "VERIFIED",
+      "confidence": "OBSERVED",
       "limeshot_keys": "Cmd+Z",
-      "status": "DIFFERENT",
+      "status": "IMPLEMENTED",
       "feature": "APP-005",
-      "notes": "FL's Ctrl+Z toggles the last undo/redo and Ctrl+Alt+Z steps back; LimeShot's Cmd+Z steps back through the history."
+      "notes": "FL 2026 (observed session 15): Cmd+Z steps back through the history, as LimeShot's does."
     },
     {
       "id": "KB-025",
       "context": "Global",
       "action": "Redo",
-      "fl_keys": "Ctrl+Shift+Z",
-      "confidence": "INFERRED",
-      "limeshot_keys": "Cmd+Shift+Z",
+      "fl_keys": "Cmd+Opt+Z",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Cmd+Alt+Z / Cmd+Shift+Z",
       "status": "IMPLEMENTED",
       "feature": "APP-005",
-      "notes": "Cmd+Y also redoes."
+      "notes": "FL 2026's Edit menu shows Redo on Cmd+Opt+Z (observed session 15). LimeShot also redoes with Cmd+Shift+Z and Cmd+Y."
     },
     {
       "id": "KB-026",

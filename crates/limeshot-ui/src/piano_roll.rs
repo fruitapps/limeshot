@@ -16,6 +16,7 @@
 //! follows the pointer and, while held, the notes under it sound. Draw (P) also resizes from a
 //! note's left edge. Each tool's icon follows the pointer over the grid as its cursor.
 
+use crate::app::ClipOp;
 use crate::app::LimeShotApp;
 use crate::icons::Icon;
 use crate::theme::{Theme, mix, mono, rgb};
@@ -1557,6 +1558,28 @@ pub fn quantize(app: &mut LimeShotApp, pid: PatternId, channel: ChannelId) {
     }
 }
 
+/// Edit › Cut / Copy / Paste (and Cmd+X / C / V) in the Piano Roll: the selected notes of the
+/// current channel.
+pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
+    let pid = app.current_pattern();
+    let Some(cid) = app.selected_channel() else { return };
+    let sel = app.ui.piano.selection.clone();
+    match op {
+        ClipOp::Cut | ClipOp::Copy if !sel.is_empty() => {
+            copy_notes(app, pid, &sel);
+            if op == ClipOp::Cut {
+                app.exec(Command::RemoveNotes {
+                    pattern: pid,
+                    notes: sel,
+                });
+                app.ui.piano.selection.clear();
+            }
+        }
+        ClipOp::Paste => paste_notes(app, pid, cid),
+        _ => {}
+    }
+}
+
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
     let pid = app.current_pattern();
@@ -1579,19 +1602,10 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.piano.selection.clear();
     }
-    let cut = key(ctx, Modifiers::COMMAND, Key::X);
-    if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {
-        copy_notes(app, pid, &sel);
-        if cut {
-            app.exec(Command::RemoveNotes {
-                pattern: pid,
-                notes: sel.clone(),
-            });
-            app.ui.piano.selection.clear();
+    for (k, op) in [(Key::X, ClipOp::Cut), (Key::C, ClipOp::Copy), (Key::V, ClipOp::Paste)] {
+        if key(ctx, Modifiers::COMMAND, k) {
+            clipboard(app, op);
         }
-    }
-    if key(ctx, Modifiers::COMMAND, Key::V) {
-        paste_notes(app, pid, cid);
     }
     if key(ctx, Modifiers::ALT, Key::Q) {
         quantize(app, pid, cid);

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 72, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 37, NOT_PLANNED 2
+Tracked: **118** — IMPLEMENTED 73, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 37, NOT_PLANNED 2
 
 ## Global
 
@@ -37,8 +37,8 @@ Tracked: **118** — IMPLEMENTED 72, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-021 | Help | `F1` | INFERRED | `F1` | DIFFERENT | UI-004 | LimeShot's F1 lists the keyboard shortcuts (no manual). |
 | KB-022 | Next / previous pattern | `Numpad + / −` | INFERRED | `+ / −` | IMPLEMENTED | SEQ-018 |  |
 | KB-023 | Find next empty pattern (asks for a name) | `F4` | OBSERVED | `F4` | IMPLEMENTED | SEQ-021 | Patterns › Find next empty… (MENU-080). LimeShot: the first pattern without notes after the current one, else a new one at the end; then the rename dialog. Session 15 (until then F4 added a pattern without asking). |
-| KB-024 | Undo | `Ctrl+Z` | VERIFIED | `Cmd+Z` | DIFFERENT | APP-005 | FL's Ctrl+Z toggles the last undo/redo and Ctrl+Alt+Z steps back; LimeShot's Cmd+Z steps back through the history. |
-| KB-025 | Redo | `Ctrl+Shift+Z` | INFERRED | `Cmd+Shift+Z` | IMPLEMENTED | APP-005 | Cmd+Y also redoes. |
+| KB-024 | Undo | `Ctrl+Z` | OBSERVED | `Cmd+Z` | IMPLEMENTED | APP-005 | FL 2026 (observed session 15): Cmd+Z steps back through the history, as LimeShot's does. |
+| KB-025 | Redo | `Cmd+Opt+Z` | OBSERVED | `Cmd+Alt+Z / Cmd+Shift+Z` | IMPLEMENTED | APP-005 | FL 2026's Edit menu shows Redo on Cmd+Opt+Z (observed session 15). LimeShot also redoes with Cmd+Shift+Z and Cmd+Y. |
 | KB-026 | UI zoom | `—` | VERIFIED | `Cmd+= / Cmd+- / Cmd+0` | LIMESHOT_ONLY | UI-005 | FL scales through Options. |
 | KB-097 | Plugin database in the Browser | `Shift+F8` | OBSERVED | — | NOT_STARTED | BR-008 | View › Plugin database (MENU-145); also Add › Effect › Plugin database. |
 | KB-098 | Find first empty pattern (asks for a name) | `Shift+F4` | OBSERVED | `Shift+F4` | IMPLEMENTED | SEQ-021 | Patterns › Find first empty... (MENU-079). |

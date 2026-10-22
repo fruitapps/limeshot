@@ -2752,6 +2752,65 @@ fn editor_tools_show_their_cursor() {
     }
 }
 
+/// APP-026: FL Studio's Edit menu (observed live, session 15): "Undo <action>", a "Redo <action>"
+/// item only while there is something to redo (Cmd+Opt+Z), and Cut / Copy / Paste acting on the
+/// focused editor.
+#[test]
+fn the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor() {
+    let mut h = harness(true);
+    let clips = |h: &Harness<'static, LimeShotApp>| h.state().project().playlist.clips.len();
+    h.state_mut().exec(Command::AddPlaylistTrack);
+    h.step();
+    h.get_by_label("Edit").click();
+    h.step();
+    assert!(h.query_by_label_contains("Undo add playlist track").is_some());
+    assert!(
+        h.query_by_label_contains("Redo").is_none(),
+        "no Redo item with nothing to redo"
+    );
+    h.get_by_label_contains("Undo add playlist track").click();
+    h.step();
+    h.get_by_label("Edit").click();
+    h.step();
+    assert!(h.query_by_label_contains("Redo add playlist track").is_some());
+    h.key_press(Key::Escape);
+    h.step();
+    // Cmd+Opt+Z redoes, as in FL Studio.
+    let tracks = h.state().project().playlist.tracks.len();
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::ALT, Key::Z);
+    h.step();
+    assert_eq!(h.state().project().playlist.tracks.len(), tracks + 1);
+
+    // With the Playlist focused, Edit › Copy and Paste act on its selected clips.
+    let n = clips(&h);
+    let first = h.state().project().playlist.clips[0].id;
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    h.state_mut().ui.playlist.selection = vec![first];
+    h.step();
+    h.get_by_label("Edit").click();
+    h.step();
+    h.get_by_label_contains("Copy").click();
+    h.step();
+    assert!(matches!(
+        h.state().clipboard,
+        Some(limeshot_ui::app::Clipboard::Clips(_))
+    ));
+    h.get_by_label("Edit").click();
+    h.step();
+    h.get_by_label_contains("Paste").click();
+    h.step();
+    assert_eq!(clips(&h), n + 1);
+    // Edit › Cut removes the pasted (now selected) clip.
+    h.get_by_label("Edit").click();
+    h.step();
+    h.get_by_label_contains("Cut").click();
+    h.step();
+    assert_eq!(clips(&h), n);
+    // Nothing focused: Cut / Copy / Paste are disabled.
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::None;
+    assert!(!h.state().can_clipboard(limeshot_ui::app::ClipOp::Paste));
+}
+
 /// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
 #[test]
 fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {

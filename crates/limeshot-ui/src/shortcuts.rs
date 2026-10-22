@@ -28,7 +28,10 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Alt+F8", "Browser"),
     ("Cmd+Shift+H", "Arrange windows"),
     ("F1", "This list"),
-    ("Cmd+Z / Cmd+Shift+Z", "Undo / redo"),
+    (
+        "Cmd+Z / Cmd+Alt+Z / Cmd+Shift+Z",
+        "Undo / redo (FL Studio: Cmd+Opt+Z; Cmd+Shift+Z and Cmd+Y also redo)",
+    ),
     ("Cmd+N / Cmd+O", "New / open project"),
     ("Cmd+S / Cmd+Shift+S", "Save / save as"),
     ("Cmd+R", "Export WAV"),
@@ -127,7 +130,7 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     let cmd = Modifiers::COMMAND;
     let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
 
-    if pressed(ctx, cmd_shift, Key::Z) || pressed(ctx, cmd, Key::Y) {
+    if pressed(ctx, cmd_shift, Key::Z) || pressed(ctx, cmd | Modifiers::ALT, Key::Z) || pressed(ctx, cmd, Key::Y) {
         app.doc.redo();
     }
     if !typing && pressed(ctx, cmd, Key::Z) {

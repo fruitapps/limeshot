@@ -94,6 +94,14 @@ impl UiState {
     }
 }
 
+/// Edit › Cut / Copy / Paste (Cmd+X / C / V), applied to the focused editor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClipOp {
+    Cut,
+    Copy,
+    Paste,
+}
+
 /// What Cmd+C / Cmd+X put on the (app-internal) clipboard.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Clipboard {
@@ -363,6 +371,31 @@ impl LimeShotApp {
     }
 
     // ----- transport -----
+
+    /// Run Edit › Cut / Copy / Paste on the focused editor (FL Studio's Edit menu does the same).
+    pub fn clipboard_op(&mut self, op: ClipOp) {
+        match self.ui.focus {
+            Focus::PianoRoll => crate::piano_roll::clipboard(self, op),
+            Focus::Playlist => crate::playlist::clipboard(self, op),
+            Focus::ChannelRack => crate::channel_rack::clipboard(self, op),
+            Focus::Mixer | Focus::None => {}
+        }
+    }
+
+    /// Whether Edit › Cut / Copy / Paste has something to act on in the focused editor.
+    pub fn can_clipboard(&self, op: ClipOp) -> bool {
+        let clip = &self.clipboard;
+        match (self.ui.focus, op) {
+            (Focus::PianoRoll, ClipOp::Paste) | (Focus::ChannelRack, ClipOp::Paste) => {
+                matches!(clip, Some(Clipboard::Notes(n)) if !n.is_empty()) && self.selected_channel().is_some()
+            }
+            (Focus::Playlist, ClipOp::Paste) => matches!(clip, Some(Clipboard::Clips(c)) if !c.is_empty()),
+            (Focus::PianoRoll, _) => !self.ui.piano.selection.is_empty(),
+            (Focus::Playlist, _) => !self.ui.playlist.selection.is_empty(),
+            (Focus::ChannelRack, _) => self.selected_channel().is_some(),
+            (Focus::Mixer | Focus::None, _) => false,
+        }
+    }
 
     pub fn is_playing(&self) -> bool {
         self.player.status().is_playing()

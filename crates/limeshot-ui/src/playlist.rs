@@ -18,6 +18,7 @@
 //! Zoom (Z) and Playback (Y), which scrubs: a line follows the pointer and, while held, the notes
 //! of the pattern clips under it sound. Each tool's icon follows the pointer over the grid.
 
+use crate::app::ClipOp;
 use crate::app::{Focus, LimeShotApp};
 use crate::icons::Icon;
 use crate::piano_roll::{TimeAxis, Tool, draw_ruler, draw_time_grid};
@@ -2254,36 +2255,11 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
 /// The Playlist's track height range (vertical zoom).
 pub const TRACK_H: (f32, f32) = (20.0, 160.0);
 
-pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
-    use crate::shortcuts::key;
+/// Edit › Cut / Copy / Paste (and Cmd+X / C / V) in the Playlist: the selected clips; pasting
+/// puts them at the song position in Song mode, else where they were.
+pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
     let sel = app.ui.playlist.selection.clone();
-    if (key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace)) && !sel.is_empty() {
-        app.exec(Command::RemoveClips(sel.clone()));
-        app.ui.playlist.selection.clear();
-    }
-    if key(ctx, Modifiers::COMMAND, Key::A) {
-        app.ui.playlist.selection = app.project().playlist.clips.iter().map(|c| c.id).collect();
-    }
-    if key(ctx, Modifiers::COMMAND, Key::D) {
-        app.ui.playlist.selection.clear();
-        app.ui.playlist.time_sel = None;
-    }
-    // Time markers at the song position (FL Studio: Add auto Cmd+T, Add one… Opt+T asks a name).
-    let at = if app.ui.mode == PlayMode::Song {
-        app.player.status().position()
-    } else {
-        app.ui.playlist.time_sel.map_or(0, |s| s.0)
-    };
-    if key(ctx, Modifiers::COMMAND, Key::T) {
-        add_marker(app, at);
-    }
-    if key(ctx, Modifiers::ALT, Key::T)
-        && let Some(id) = add_marker(app, at)
-    {
-        app.dialog = Some(crate::dialogs::Dialog::rename_marker(app, id));
-    }
-    let cut = key(ctx, Modifiers::COMMAND, Key::X);
-    if (cut || key(ctx, Modifiers::COMMAND, Key::C)) && !sel.is_empty() {
+    if matches!(op, ClipOp::Cut | ClipOp::Copy) && !sel.is_empty() {
         let clips: Vec<crate::app::CopiedClip> = app
             .project()
             .playlist
@@ -2299,12 +2275,12 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             })
             .collect();
         app.clipboard = Some(crate::app::Clipboard::Clips(clips));
-        if cut {
+        if op == ClipOp::Cut {
             app.exec(Command::RemoveClips(sel.clone()));
             app.ui.playlist.selection.clear();
         }
     }
-    if key(ctx, Modifiers::COMMAND, Key::V)
+    if op == ClipOp::Paste
         && let Some(crate::app::Clipboard::Clips(clips)) = app.clipboard.clone()
     {
         let sig = app.project().time_signature;
@@ -2334,6 +2310,41 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             .map(|c| c.id)
             .filter(|id| !before.contains(id))
             .collect();
+    }
+}
+
+pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
+    use crate::shortcuts::key;
+    let sel = app.ui.playlist.selection.clone();
+    if (key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace)) && !sel.is_empty() {
+        app.exec(Command::RemoveClips(sel.clone()));
+        app.ui.playlist.selection.clear();
+    }
+    if key(ctx, Modifiers::COMMAND, Key::A) {
+        app.ui.playlist.selection = app.project().playlist.clips.iter().map(|c| c.id).collect();
+    }
+    if key(ctx, Modifiers::COMMAND, Key::D) {
+        app.ui.playlist.selection.clear();
+        app.ui.playlist.time_sel = None;
+    }
+    // Time markers at the song position (FL Studio: Add auto Cmd+T, Add one… Opt+T asks a name).
+    let at = if app.ui.mode == PlayMode::Song {
+        app.player.status().position()
+    } else {
+        app.ui.playlist.time_sel.map_or(0, |s| s.0)
+    };
+    if key(ctx, Modifiers::COMMAND, Key::T) {
+        add_marker(app, at);
+    }
+    if key(ctx, Modifiers::ALT, Key::T)
+        && let Some(id) = add_marker(app, at)
+    {
+        app.dialog = Some(crate::dialogs::Dialog::rename_marker(app, id));
+    }
+    for (k, op) in [(Key::X, ClipOp::Cut), (Key::C, ClipOp::Copy), (Key::V, ClipOp::Paste)] {
+        if key(ctx, Modifiers::COMMAND, k) {
+            clipboard(app, op);
+        }
     }
     if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
         let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();

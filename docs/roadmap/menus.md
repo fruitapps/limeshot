@@ -6,14 +6,14 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 21, DIFFERENT 36, LIMESHOT_ONLY 9, NOT_STARTED 184, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 25, DIFFERENT 35, LIMESHOT_ONLY 9, NOT_STARTED 181, NOT_PLANNED 27
 
 ## Summary
 
 | Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |
 |---|---|---|---|---|---|---|
 | File | 45 | 3 | 8 | 31 | 3 | 0 |
-| Edit | 4 | 0 | 1 | 3 | 0 | 0 |
+| Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 5 | 3 | 35 | 5 | 4 |
@@ -32,7 +32,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
-| PR-019 | P1 | VERIFIED | Copy / cut / paste notes | MENU-047 Edit › Cut<br>MENU-048 Edit › Copy<br>MENU-049 Edit › Paste |
 | REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording |
 | UI-004 | P1 | VERIFIED | Hint bar and tooltips | MENU-117 View › Toolbars › Hint bar |
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
@@ -146,10 +145,10 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| MENU-046 | Undo <last action> |  | action | `Cmd+Z` |  | Edit › Undo | DIFFERENT | APP-005 | One slot that names the last action ('Undo playlist fill paint clip') and turns into 'Redo <action>' (Cmd+Opt+Z) after an undo. LimeShot shows separate Undo and Redo items (Redo is Cmd+Shift+Z). |
-| MENU-047 | Cut |  | action | `Cmd+X` |  | — | NOT_STARTED | PR-019 | Acts on the focused editor (Playlist clips, Piano Roll notes, Channel Rack steps). LimeShot has the keys in each editor but no menu item. |
-| MENU-048 | Copy |  | action | `Cmd+C` |  | — | NOT_STARTED | PR-019 | As Cut. |
-| MENU-049 | Paste |  | action | `Cmd+V` | disabled | — | NOT_STARTED | PR-019 | Disabled while the clipboard is empty. |
+| MENU-046 | Undo <last action> |  | action | `Cmd+Z` |  | Edit › Undo | IMPLEMENTED | APP-026 | Observed again in session 15: FL 2026 steps back through the history with Cmd+Z ('Undo playlist fill paint clip', then 'Undo step seq edit') and shows a separate 'Redo <action>' item (Cmd+Opt+Z) only while there is something to redo (session 13 had read it as one slot). LimeShot does the same, with LimeShot's action names; Cmd+Shift+Z and Cmd+Y also redo. |
+| MENU-047 | Cut |  | action | `Cmd+X` |  | Edit › Cut | IMPLEMENTED | APP-026 | Acts on the focused editor (Playlist clips, Piano Roll notes, Channel Rack steps); disabled when it has nothing selected. |
+| MENU-048 | Copy |  | action | `Cmd+C` |  | Edit › Copy | IMPLEMENTED | APP-026 | As Cut. |
+| MENU-049 | Paste |  | action | `Cmd+V` | disabled | Edit › Paste | IMPLEMENTED | APP-026 | Disabled while the clipboard holds nothing the focused editor can take. |
 
 ## Add
 

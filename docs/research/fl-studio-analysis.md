@@ -259,6 +259,9 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
 - **Edit:** only four items. The first is a single Undo/Redo slot naming the last action: after painting a clip it read
   "Undo playlist fill paint clip" (Cmd+Z); after undoing, "Redo playlist fill paint clip" (Cmd+Opt+Z). Cut/Copy/Paste
   act on the focused editor; Paste is disabled while the clipboard is empty.
+  *Corrected in session 15 (observed again):* Undo and Redo are two items. Cmd+Z steps back through the history
+  (after undoing the clip the item read "Undo step seq edit"), and "Redo <action>" (Cmd+Opt+Z) appears below it only
+  while something can be redone.
 - **Add:** generators grouped by category (Controller, Drum, MIDI, Misc, Patcher, Sampler, Synth classic, Synth special,
   Visual), a Categories/Simple/Tree view switch, and an Other column (Effect › …, Plugin picker F8, plugin database and
   preset browsing, fast rescan, Manage plugins, Automation for last tweaked parameter, Pattern).

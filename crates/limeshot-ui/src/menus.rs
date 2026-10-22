@@ -1,7 +1,7 @@
 //! The application menu bar. Every item runs a command or an app action that also has a
 //! shortcut or toolbar control.
 
-use crate::app::{LimeShotApp, Pending};
+use crate::app::{ClipOp, LimeShotApp, Pending};
 use crate::dialogs::Dialog;
 use crate::shortcuts::label as key;
 use egui::{Button, Ui};
@@ -199,10 +199,12 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
             });
             ui.menu_button("Edit", |ui| {
+                // FL Studio 2026 (observed): "Undo <last action>" (Cmd+Z, steps back), and
+                // "Redo <action>" (Cmd+Opt+Z) only while there is something to redo.
                 let undo = app
                     .doc
                     .undo_label()
-                    .map(|l| format!("Undo {l}"))
+                    .map(|l| format!("Undo {}", l.to_lowercase()))
                     .unwrap_or_else(|| "Undo".into());
                 if ui
                     .add_enabled(
@@ -214,20 +216,26 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     app.doc.undo();
                     ui.close();
                 }
-                let redo = app
-                    .doc
-                    .redo_label()
-                    .map(|l| format!("Redo {l}"))
-                    .unwrap_or_else(|| "Redo".into());
-                if ui
-                    .add_enabled(
-                        app.doc.redo_label().is_some(),
-                        Button::new(redo).shortcut_text(key("Cmd+Shift+Z")),
-                    )
-                    .clicked()
+                if let Some(l) = app.doc.redo_label()
+                    && item(ui, &format!("Redo {}", l.to_lowercase()), &key("Cmd+Alt+Z"))
                 {
                     app.doc.redo();
-                    ui.close();
+                }
+                ui.separator();
+                // Cut, Copy and Paste act on the focused editor (Playlist clips, Piano Roll notes,
+                // Channel Rack steps), as in FL Studio.
+                for (op, label, k) in [
+                    (ClipOp::Cut, "Cut", "Cmd+X"),
+                    (ClipOp::Copy, "Copy", "Cmd+C"),
+                    (ClipOp::Paste, "Paste", "Cmd+V"),
+                ] {
+                    if ui
+                        .add_enabled(app.can_clipboard(op), Button::new(label).shortcut_text(key(k)))
+                        .clicked()
+                    {
+                        app.clipboard_op(op);
+                        ui.close();
+                    }
                 }
                 ui.separator();
                 ui.menu_button("History", |ui| {
@@ -248,7 +256,7 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     add_synth(app);
                 }
                 ui.separator();
-                if item(ui, "Pattern", &key("F4")) {
+                if item(ui, "Pattern", "") {
                     add_pattern(app);
                 }
                 if item(ui, "Playlist track", "") {

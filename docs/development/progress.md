@@ -597,3 +597,11 @@ Transpose…, Insert one, Clone and Delete with FL's keys, Move up/down, Split b
 patterns do. `menus.json` (12 items) and `keybindings.json` (8 bindings) updated. Tests: two core tests and a UI test
 driving the menu and keys; the old F4 test now expects the name prompt.
 
+### Session 15, part 6: Edit menu (APP-026)
+
+FL's Edit menu, observed again: Cmd+Z steps back through the history and Redo is its own item on Cmd+Opt+Z, shown
+only while something can be redone (session 13's "single slot" reading is corrected in `fl-studio-analysis.md` §18).
+LimeShot's Edit menu now matches: "Undo <action>", "Redo <action>" when available (Cmd+Alt+Z added; Cmd+Shift+Z and
+Cmd+Y stay), and Cut / Copy / Paste routed to the focused editor through one `clipboard(app, op)` per editor (the
+editors' Cmd+X/C/V use the same functions), disabled when there is nothing to act on. UI test added.
+

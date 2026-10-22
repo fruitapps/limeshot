@@ -17,6 +17,7 @@
 //! is an overlay right under the selected channel's steps, over the channels below and past the
 //! rack's edge.
 
+use crate::app::ClipOp;
 use crate::app::LimeShotApp;
 use crate::browser::{self, DraggedSample};
 use crate::theme::{Theme, mix, rgb, semibold};
@@ -954,6 +955,60 @@ fn note_preview(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId
     resp.hint("Piano Roll notes — click to edit");
 }
 
+/// Edit › Cut / Copy / Paste (and Cmd+X / C / V) in the Channel Rack: the selected channel's
+/// notes in the current pattern (steps included); pasting replaces the target channel's notes,
+/// as in FL Studio.
+pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
+    let pid = app.current_pattern();
+    let Some(c) = app.selected_channel() else { return };
+    if matches!(op, ClipOp::Cut | ClipOp::Copy) {
+        let notes: Vec<(u8, Tick, Tick, f32)> = app
+            .project()
+            .pattern(pid)
+            .map(|p| p.notes_for(c).map(|n| (n.key, n.start, n.length, n.velocity)).collect())
+            .unwrap_or_default();
+        app.clipboard = Some(crate::app::Clipboard::Notes(notes));
+        if op == ClipOp::Cut {
+            app.exec(Command::ClearChannelNotes {
+                pattern: pid,
+                channel: c,
+            });
+        }
+    }
+    if op == ClipOp::Paste
+        && let Some(crate::app::Clipboard::Notes(notes)) = app.clipboard.clone()
+    {
+        let root = app.project().channel(c).map(|ch| ch.root_key).unwrap_or(60);
+        let src_root = notes.iter().map(|n| n.0).min().unwrap_or(root);
+        // Steps copied from another channel play that channel's root key; re-pitch them so they
+        // remain steps on the target channel.
+        let new = notes
+            .iter()
+            .map(|&(key, start, length, velocity)| NewNote {
+                channel: c,
+                key: if notes.iter().all(|n| n.0 == src_root) {
+                    root
+                } else {
+                    key
+                },
+                start,
+                length,
+                velocity,
+            })
+            .collect();
+        app.exec(Command::Batch(vec![
+            Command::ClearChannelNotes {
+                pattern: pid,
+                channel: c,
+            },
+            Command::AddNotes {
+                pattern: pid,
+                notes: new,
+            },
+        ]));
+    }
+}
+
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
     if key(ctx, Modifiers::ALT, Key::ArrowUp) {
@@ -1007,55 +1062,9 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             rotate_steps(app, &sel, by);
         }
     }
-    // Copy/cut/paste the selected channel's notes in the current pattern (steps included);
-    // pasting replaces the target channel's notes, as in FL Studio.
-    let pid = app.current_pattern();
-    let Some(c) = app.selected_channel() else { return };
-    let cut = key(ctx, Modifiers::COMMAND, Key::X);
-    if cut || key(ctx, Modifiers::COMMAND, Key::C) {
-        let notes: Vec<(u8, Tick, Tick, f32)> = app
-            .project()
-            .pattern(pid)
-            .map(|p| p.notes_for(c).map(|n| (n.key, n.start, n.length, n.velocity)).collect())
-            .unwrap_or_default();
-        app.clipboard = Some(crate::app::Clipboard::Notes(notes));
-        if cut {
-            app.exec(Command::ClearChannelNotes {
-                pattern: pid,
-                channel: c,
-            });
+    for (k, op) in [(Key::X, ClipOp::Cut), (Key::C, ClipOp::Copy), (Key::V, ClipOp::Paste)] {
+        if key(ctx, Modifiers::COMMAND, k) {
+            clipboard(app, op);
         }
-    }
-    if key(ctx, Modifiers::COMMAND, Key::V)
-        && let Some(crate::app::Clipboard::Notes(notes)) = app.clipboard.clone()
-    {
-        let root = app.project().channel(c).map(|ch| ch.root_key).unwrap_or(60);
-        let src_root = notes.iter().map(|n| n.0).min().unwrap_or(root);
-        // Steps copied from another channel play that channel's root key; re-pitch them so they
-        // remain steps on the target channel.
-        let new = notes
-            .iter()
-            .map(|&(key, start, length, velocity)| NewNote {
-                channel: c,
-                key: if notes.iter().all(|n| n.0 == src_root) {
-                    root
-                } else {
-                    key
-                },
-                start,
-                length,
-                velocity,
-            })
-            .collect();
-        app.exec(Command::Batch(vec![
-            Command::ClearChannelNotes {
-                pattern: pid,
-                channel: c,
-            },
-            Command::AddNotes {
-                pattern: pid,
-                notes: new,
-            },
-        ]));
     }
 }

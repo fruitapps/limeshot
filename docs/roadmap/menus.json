@@ -818,9 +818,9 @@
       "fl_state": "",
       "confidence": "OBSERVED",
       "limeshot": "Edit › Undo",
-      "status": "DIFFERENT",
-      "feature": "APP-005",
-      "notes": "One slot that names the last action ('Undo playlist fill paint clip') and turns into 'Redo <action>' (Cmd+Opt+Z) after an undo. LimeShot shows separate Undo and Redo items (Redo is Cmd+Shift+Z)."
+      "status": "IMPLEMENTED",
+      "feature": "APP-026",
+      "notes": "Observed again in session 15: FL 2026 steps back through the history with Cmd+Z ('Undo playlist fill paint clip', then 'Undo step seq edit') and shows a separate 'Redo <action>' item (Cmd+Opt+Z) only while there is something to redo (session 13 had read it as one slot). LimeShot does the same, with LimeShot's action names; Cmd+Shift+Z and Cmd+Y also redo."
     },
     {
       "id": "MENU-047",
@@ -834,10 +834,10 @@
       "fl_keys": "Cmd+X",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "PR-019",
-      "notes": "Acts on the focused editor (Playlist clips, Piano Roll notes, Channel Rack steps). LimeShot has the keys in each editor but no menu item."
+      "limeshot": "Edit › Cut",
+      "status": "IMPLEMENTED",
+      "feature": "APP-026",
+      "notes": "Acts on the focused editor (Playlist clips, Piano Roll notes, Channel Rack steps); disabled when it has nothing selected."
     },
     {
       "id": "MENU-048",
@@ -851,9 +851,9 @@
       "fl_keys": "Cmd+C",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "PR-019",
+      "limeshot": "Edit › Copy",
+      "status": "IMPLEMENTED",
+      "feature": "APP-026",
       "notes": "As Cut."
     },
     {
@@ -868,10 +868,10 @@
       "fl_keys": "Cmd+V",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "PR-019",
-      "notes": "Disabled while the clipboard is empty."
+      "limeshot": "Edit › Paste",
+      "status": "IMPLEMENTED",
+      "feature": "APP-026",
+      "notes": "Disabled while the clipboard holds nothing the focused editor can take."
     },
     {
       "id": "MENU-050",
