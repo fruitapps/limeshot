@@ -78,7 +78,7 @@ features as records.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
   native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
-* The workspace has 111 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* The workspace has 124 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
 * UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
 
 ## Immediate next tasks
