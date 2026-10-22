@@ -3974,7 +3974,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No lookahead, so fast peaks are shaped hard."
+      "notes": "No lookahead, so fast peaks are shaped hard. Standalone VST3 export (PLG-012): shared Limiter now reports gain reduction through Effect::gain_reduction_db; ceiling/reduction/reset/bypass tested in native-plugins/shared/src/processor.rs."
     },
     {
       "id": "FX-006",
@@ -7467,7 +7467,7 @@
       "name": "LimeSynth filter modes and key tracking",
       "description": "More filter options for LimeSynth.",
       "fl_reference": "FL's synths offer low/high/band-pass filters and keyboard tracking.",
-      "limeshot_behavior": "LimeSynth's Filter section has a Type (Low-pass, Band-pass, High-pass: outputs of the same state-variable filter) and Key track (0–100 %: the cutoff moves that many octaves per octave of the played note, around C5). Choosing High-pass with the cutoff fully open starts it at 200 Hz.",
+      "limeshot_behavior": "LimeSynth's Filter section has a Type (Low-pass, Band-pass, High-pass: outputs of the same state-variable filter) and Key track (0–100 %: the cutoff moves that many octaves per octave of the played note, around C5). Choosing High-pass with the cutoff fully open starts it at 200 Hz. The standalone LimeSynth VST3 (PLG-012) exposes the same Filter type and Key track as host-automatable parameters appended after its original ones, saved in host state and .limepreset files.",
       "priority": "P2",
       "status": "VERIFIED",
       "mvp": false,
@@ -7479,7 +7479,8 @@
         "limeshot-dsp",
         "limeshot-sequencer",
         "limeshot-engine",
-        "limeshot-ui"
+        "limeshot-ui",
+        "native-plugins/shared"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
@@ -7487,7 +7488,8 @@
       ],
       "tests": [
         "limeshot-dsp filter::tests::high_and_band_pass_outputs",
-        "limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking"
+        "limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking",
+        "native-plugins/shared/src/processor.rs::tests::synth_filter_type_and_key_tracking_reach_the_voice"
       ],
       "reference": {
         "application": "FL Studio",
@@ -8310,6 +8312,65 @@
         ]
       },
       "notes": ""
+    },
+    {
+      "id": "PLG-012",
+      "category": "Plugins",
+      "name": "Lime Native standalone VST3 suite",
+      "description": "Package LimeShot instruments and built-in effects as independent VST3 plugins usable in any VST3-compatible DAW.",
+      "fl_reference": "Owner request (2026-10-22): native Lime instruments/effects as standalone VST plugins with Lime-themed native editors; independent of FL Studio code and assets.",
+      "limeshot_behavior": "Separate native-plugins/ workspace exports LimeSynth, Lime Sampler, Lime Utility, Lime EQ, Lime Filter, Lime Delay, Lime Room, Lime Comp and Lime Limiter. Self-contained VST3 bundles link the existing DSP, expose host automation/state/bypass and embedded resizable Lime-themed editors. Instruments support 64 voices, timestamped notes, sustain and pitch bend; Sampler embeds WAV audio in state; Comp accepts a stereo external key; Delay follows host tempo. Factory and .limepreset presets reuse the DAW implementation. Build collects bundles in native-plugins/dist/ without installing them. Editors have distinct FL-manual-inspired layouts with modern LimeShot Lime Dark styling. Sampler waveform/keyboard audition and trim handles, draggable three-band EQ response and live limiter level/reduction history use real parameters/audio.",
+      "priority": "P1",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001",
+        "INS-002",
+        "INS-003",
+        "INS-004",
+        "INS-005",
+        "INS-006",
+        "FX-001",
+        "FX-002",
+        "FX-003",
+        "FX-004",
+        "FX-005",
+        "FX-007",
+        "FX-008",
+        "FX-014",
+        "INS-010"
+      ],
+      "modules": [
+        "native-plugins/shared",
+        "native-plugins/lime-*",
+        "native-plugins/xtask",
+        "limeshot-dsp",
+        "limeshot-engine"
+      ],
+      "acceptance_criteria": [
+        "Each plugin is a separately discoverable, self-contained VST3 with no LimeShot installation/runtime requirement.",
+        "Host MIDI, parameter automation and saved state reproduce sound and settings.",
+        "Every visible control reaches DSP or performs its labeled action; sample loading and factory/user presets work.",
+        "Native editors render without clipping and reopen safely; platform and DAW validation are recorded separately."
+      ],
+      "tests": [
+        "native-plugins/shared/src/processor.rs::tests",
+        "native-plugins/shared/src/editor.rs::tests::native_presets_round_trip_through_limeshots_reader",
+        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes",
+        "native-plugins/shared/src/editor.rs::interaction_tests::waveform_and_keyboard_send_audition_and_release_requests",
+        "native-plugins/shared/examples/verify.rs",
+        "native-plugins/shared/examples/ui_shot.rs",
+        "native-plugins/VALIDATION.md"
+      ],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "native-plugins/README.md",
+          "docs/research/lime-native-ui.md"
+        ]
+      },
+      "notes": "macOS Apple Silicon: nine release bundles built, actual VST3 ABI audio/state/automation/editor creation checked at 44.1/48/96 kHz and buffers 1/64/333/1024; independent pluginval 1.0.4 level 5 passes all nine, including Editor and Editor Automation. Debug exported-binary verification also passes with realtime allocation assertions enabled. Offscreen editors rendered and inspected. Final GUI-validator results recorded in native-plugins/VALIDATION.md. Hands-on DAW/editor interaction remains pending (development Mac locked); Windows/Linux/Intel runtime validation pending. Separate CI builds native bundles for macOS/Windows/Linux. Source uses nice-plug 0.4.2 with permissively licensed vst3 0.3 bindings. UI revision: 11 native tests cover default/minimum editor geometry and sampler UI/audio audition at multiple block sizes; all nine modern editors visually inspected. INS-013 integration: LimeSynth gained Filter type and Key track (parameters 16–17, appended so existing IDs and saved states stay valid); Lime Sampler now fills the DAW's sampler envelope fields as a gate, fixing the native build on main. Not re-run through the exported-binary verifier or pluginval since."
     },
     {
       "id": "WF-009",
