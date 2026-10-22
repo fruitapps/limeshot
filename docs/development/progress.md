@@ -967,3 +967,13 @@ Validation: `cargo test --workspace` (including 120 headless UI tests), workspac
 `cargo fmt --all --check`, inventory validation and `git diff --check`. Offscreen UI:
 `cargo run -p limeshot-app --example ui_shot -- /tmp/limeshot-sampler-envelope.png --settings`.
 Delay/hold stages and envelopes for pan, cutoff and pitch remain open; native plugin embedding remains unverified.
+
+
+### 2026-10-22 — Codex continuation: platform CI audit
+
+Read the current runner jobs rather than treating cancelled workflow summaries as failed tests. Windows x86-64,
+Linux x86-64/ARM64, Windows ARM64 cross-build and an earlier Apple Silicon job passed; exact commits and job links
+are in `platform-validation.md`. Updated the stale platform feature records and current next steps. Intel jobs
+had no steps on the retired `macos-13` label, so switched that matrix entry to `macos-15-intel` following GitHub's
+retirement notice. Remote confirmation of the replacement is pending. No native GUI/audio-device claims added.
+Live UI verification was deferred at the owner's request while the Mac was locked.

@@ -6818,7 +6818,10 @@
       "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
@@ -6833,7 +6836,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: the macos-13 CI job never started (retired runner). Changed to macos-15-intel; remote confirmation remains pending. See docs/development/platform-validation.md. Intel GUI/audio remain unverified."
     },
     {
       "id": "PF-003",
@@ -6841,17 +6844,22 @@
       "name": "Windows x86-64",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "`cargo check --target x86_64-pc-windows-msvc` passes locally; CI job defined but not yet run.",
+      "limeshot_behavior": "Windows x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6859,7 +6867,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-004",
@@ -6867,17 +6875,22 @@
       "name": "Linux x86-64",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "CI job defined (ALSA, X11/Wayland, GTK deps); not yet run. Local cross-check stops at alsa-sys (needs target pkg-config).",
+      "limeshot_behavior": "Linux x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": true,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022486"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6885,7 +6898,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-005",
@@ -6893,17 +6906,23 @@
       "name": "Windows ARM64 / Linux ARM64",
       "description": "Secondary architectures.",
       "fl_reference": "—",
-      "limeshot_behavior": "`cargo check --target aarch64-pc-windows-msvc` passes locally; CI jobs defined.",
+      "limeshot_behavior": "Linux ARM64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventories; Windows ARM64 cross-build passes. Windows ARM64 runtime and native GUI/audio-device checks remain open.",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "workspace",
+        ".github/workflows/ci.yml"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022953",
+        "Windows ARM64 cross-build: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022229"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6911,7 +6930,7 @@
           "START.md §14"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-006",

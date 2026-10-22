@@ -5,8 +5,9 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
   headless under Rosetta, but its GUI and audio were not exercised.
-* Windows and Linux: CI jobs exist, but complete CI runtime verification is pending (jobs now run; the owner supplied a macOS test failure on 2026-10-22). Windows type-checks
-  locally. Linux was not built.
+* Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64 passes a cross-build.
+  Native GUI/audio-device checks remain open. Intel CI used a retired runner; its supported replacement needs a run.
+  See [platform-validation.md](../development/platform-validation.md) for commit-specific evidence.
 
 ## Audio
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).

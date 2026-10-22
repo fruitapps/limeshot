@@ -38,7 +38,8 @@ jobs:
           - { name: Linux x86-64, os: ubuntu-latest }
           - { name: Linux ARM64, os: ubuntu-24.04-arm }
           - { name: macOS Apple Silicon, os: macos-latest }
-          - { name: macOS Intel, os: macos-13 }
+          # macos-13 is retired; keep this job on an explicitly Intel runner.
+          - { name: macOS Intel, os: macos-15-intel }
           - { name: Windows x86-64, os: windows-latest }
     steps:
       - uses: actions/checkout@v4

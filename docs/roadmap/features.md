@@ -9,8 +9,8 @@ automated tests or recorded manual verification. Everything else is not done.
 ## Summary
 
 - Features tracked: **272**
-- MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 84, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 146, DEFERRED 4
+- MVP features: **69** — 69 implemented or verified, 66 verified
+- By status: NOT_STARTED 84, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 146, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -29,7 +29,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 8 | 2 | 1 | 7 |
-| Platform | 6 | 1 | 1 | 4 | 0 |
+| Platform | 6 | 1 | 4 | 1 | 0 |
 
 ## Application
 
@@ -377,8 +377,8 @@ automated tests or recorded manual verification. Everything else is not done.
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
 | PF-001 | macOS Apple Silicon | P0 | ✓ | VERIFIED | Built, tested (all tests), GUI launched, realtime audio verified on macOS 26.6.2 arm64. | `cargo test --workspace (local)` |
-| PF-002 | macOS Intel | P0 | ✓ | IMPLEMENTED | x86_64-apple-darwin release build runs under Rosetta; headless render bit-identical to arm64. GUI and audio device not exercised on Intel. | `local: arch -x86_64 limeshot-cli demo … (render compared with cmp)` |
-| PF-003 | Windows x86-64 | P0 | ✓ | IN_PROGRESS | `cargo check --target x86_64-pc-windows-msvc` passes locally; CI job defined but not yet run. | — |
-| PF-004 | Linux x86-64 | P0 | ✓ | IN_PROGRESS | CI job defined (ALSA, X11/Wayland, GTK deps); not yet run. Local cross-check stops at alsa-sys (needs target pkg-config). | — |
-| PF-005 | Windows ARM64 / Linux ARM64 | P2 |  | IN_PROGRESS | `cargo check --target aarch64-pc-windows-msvc` passes locally; CI jobs defined. | — |
+| PF-002 | macOS Intel | P0 | ✓ | IMPLEMENTED | x86_64-apple-darwin release build runs under Rosetta; headless render bit-identical to arm64. GUI and audio device not exercised on Intel.<br>*2026-10-22: the macos-13 CI job never started (retired runner). Changed to macos-15-intel; remote confirmation remains pending. See docs/development/platform-validation.md. Intel GUI/audio remain unverified.* | `local: arch -x86_64 limeshot-cli demo … (render compared with cmp)` |
+| PF-003 | Windows x86-64 | P0 | ✓ | IMPLEMENTED | Windows x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.<br>*2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits.* | `CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648` |
+| PF-004 | Linux x86-64 | P0 | ✓ | IMPLEMENTED | Linux x86-64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventory validation. Native GUI/audio-device checks remain open.<br>*2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits.* | `CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022486` |
+| PF-005 | Windows ARM64 / Linux ARM64 | P2 |  | IMPLEMENTED | Linux ARM64 CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventories; Windows ARM64 cross-build passes. Windows ARM64 runtime and native GUI/audio-device checks remain open.<br>*2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits.* | `CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022953`<br>`Windows ARM64 cross-build: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022229` |
 | PF-006 | Packaging (DMG, MSI, AppImage/deb) | P1 |  | IN_PROGRESS | scripts/package-macos.sh builds dist/LimeShot.app (limeshot and limeshot-cli, the bundled samples in Resources, an icon drawn from the same code as the window icon, Info.plist with the .lime document type, ad-hoc signature) and a DMG with an Applications link. Windows (MSI) and Linux (AppImage/deb) packages wait for CI on those platforms.<br>*Session 16 (next-steps Then 12). Not: Developer ID signing and notarisation (needs the owner's certificate), opening .lime files from Finder (macOS sends them as Apple Events, not arguments), MSI, AppImage/deb.* | `Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.` |
