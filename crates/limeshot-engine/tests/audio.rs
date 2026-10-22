@@ -1637,3 +1637,46 @@ fn audio_clip_fades_ramp_the_gain() {
     let c = doc.project().clip(clip).unwrap();
     assert_eq!((c.fade_in, c.fade_out), (c.length, 0));
 }
+
+/// Every built-in effect runs as an insert; FX-006: a gate whose threshold is above the clip
+/// silences it, one below lets it through.
+#[test]
+fn every_built_in_effect_runs_and_the_gate_gates() {
+    let peak = |doc: &Document| {
+        let (a, _) = render(dc_snapshot(doc), ExportRange::Song, 256, SR);
+        a.iter().fold(0.0f32, |m, v| m.max(v.abs()))
+    };
+    for kind in EffectKind::ALL {
+        let (mut doc, _) = dc_clip_doc();
+        doc.execute(Command::AddEffect { track: 1, kind }).unwrap();
+        let p = peak(&doc);
+        assert!(p.is_finite(), "{kind:?}");
+    }
+    let (mut doc, _) = dc_clip_doc();
+    let open = peak(&doc);
+    let gate = doc
+        .execute(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Gate,
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    // The DC clip is at about −6 dBFS: a −3 dB threshold keeps the gate shut.
+    doc.execute(Command::SetEffectParam {
+        track: 1,
+        effect: gate,
+        index: 0,
+        value: -3.0,
+    })
+    .unwrap();
+    assert!(peak(&doc) < 1e-4, "shut");
+    doc.execute(Command::SetEffectParam {
+        track: 1,
+        effect: gate,
+        index: 0,
+        value: -30.0,
+    })
+    .unwrap();
+    assert!((peak(&doc) - open).abs() < 1e-3, "open");
+}

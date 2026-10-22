@@ -340,6 +340,23 @@ pub fn factory(slot: Slot) -> Vec<Preset> {
                 &[("Mid gain", -6.0), ("Mid freq", 700.0), ("Mid Q", 0.7)],
             ),
         ],
+        Slot::Effect(K::Gate) => vec![
+            effect(
+                "Tight drums",
+                K::Gate,
+                &[("Threshold", -30.0), ("Hold", 20.0), ("Release", 60.0)],
+            ),
+            effect(
+                "Hiss cut",
+                K::Gate,
+                &[
+                    ("Threshold", -55.0),
+                    ("Hold", 80.0),
+                    ("Release", 300.0),
+                    ("Range", -20.0),
+                ],
+            ),
+        ],
         Slot::Effect(K::Utility) => vec![
             effect("Mono", K::Utility, &[("Width", 0.0)]),
             effect("Wide", K::Utility, &[("Width", 1.6)]),

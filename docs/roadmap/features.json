@@ -3958,19 +3958,27 @@
       "name": "Noise gate",
       "description": "Noise gate.",
       "fl_reference": "Fruity Limiter gate mode",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Gate: opens when the level passes the threshold, stays open for the hold time, then releases to the range floor (−80 dB shuts completely); attack and release are time constants. Factory presets Tight drums and Hiss cut.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-engine",
+        "limeshot-project"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::gate_passes_loud_sound_and_closes_after_hold_and_release",
+        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3979,7 +3987,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. Not FL's Fruity Limiter gate section; no sidechain input or lookahead."
     },
     {
       "id": "FX-007",

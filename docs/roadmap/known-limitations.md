@@ -15,7 +15,7 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes only (no audio,
   automation or clips, no count-in or loop takes), and a recorded note appears when it ends.
 * Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only.
-* Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter and utility; VST3 inserts are supported. A route is pre- or
+* Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter, gate and utility; VST3 inserts are supported. A route is pre- or
   post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input
   (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
 * Presets for the built-in effects and instruments are LimeShot's own JSON files (no FL .fst import), and only

@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 92, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 20, VERIFIED 141, DEFERRED 4
+- By status: NOT_STARTED 91, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 20, VERIFIED 142, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -20,7 +20,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Playlist | 29 | 20 | 1 | 3 | 5 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 7 | 1 | 0 | 6 |
-| Effects | 15 | 8 | 1 | 0 | 6 |
+| Effects | 15 | 9 | 1 | 0 | 5 |
 | Automation | 13 | 4 | 1 | 0 | 8 |
 | Recording | 11 | 1 | 0 | 0 | 10 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
@@ -213,7 +213,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | FX-003 | Filters (LP/HP/BP) | P1 |  | VERIFIED | Lime Filter: TPT state-variable filter, low/band/high-pass, resonance, mix. | `limeshot-dsp effects::tests::filter_modes` |
 | FX-004 | Compressor | P1 |  | VERIFIED | Lime Comp: feed-forward, stereo-linked peak detector, hard knee; threshold, ratio, attack, release, makeup.<br>*No sidechain input, no knee or lookahead, no gain-reduction meter in the UI.* | `limeshot-dsp effects::tests::compressor_reduces_loud_signals_by_the_ratio` |
 | FX-005 | Limiter / maximiser | P1 |  | VERIFIED | Lime Limiter: instant-attack peak limiter; ceiling and release. The output never exceeds the ceiling.<br>*No lookahead, so fast peaks are shaped hard.* | `limeshot-dsp effects::tests::limiter_never_exceeds_the_ceiling` |
-| FX-006 | Noise gate | P1 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-006 | Noise gate | P1 |  | VERIFIED | Lime Gate: opens when the level passes the threshold, stays open for the hold time, then releases to the range floor (−80 dB shuts completely); attack and release are time constants. Factory presets Tight drums and Hiss cut.<br>*Session 16. Not FL's Fruity Limiter gate section; no sidechain input or lookahead.* | `limeshot-dsp effects::tests::gate_passes_loud_sound_and_closes_after_hold_and_release`<br>`limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates` |
 | FX-007 | Reverb | P1 |  | VERIFIED | Lime Room: pre-delay, 8 damped combs and 4 allpasses per side; size, damping, pre-delay, width, mix. | `limeshot-dsp effects::tests::reverb_has_a_decaying_tail` |
 | FX-008 | Delay | P1 |  | VERIFIED | Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide. Sync (Off, 1/16, 1/8T, 1/8, 1/8., 1/4, 1/4., 1/2, 1/1) sets the time from the project tempo; Time is then greyed out.<br>*No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s.* | `limeshot-dsp effects::tests::delay_echoes_after_the_delay_time`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-core effects::tests::a_synced_delay_takes_its_time_from_the_tempo`<br>`limeshot-sequencer tests::a_tempo_synced_delay_gets_its_time_from_the_tempo` |
 | FX-009 | Distortion / saturation / waveshaper | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |

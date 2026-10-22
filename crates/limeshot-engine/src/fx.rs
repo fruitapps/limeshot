@@ -7,7 +7,7 @@
 //! control thread to free ([`FxRack::take_retired`]).
 
 use limeshot_core::{EffectKind, MAX_EFFECTS, Mixer};
-use limeshot_dsp::effects::{Compressor, Delay, Effect, Eq3, Filter, Limiter, Reverb, Utility};
+use limeshot_dsp::effects::{Compressor, Delay, Effect, Eq3, Filter, Gate, Limiter, Reverb, Utility};
 use limeshot_sequencer::Snapshot;
 
 /// Create a processor for `kind` at `sample_rate` with `params` applied. Allocates: call it on
@@ -22,6 +22,7 @@ pub fn build(kind: EffectKind, sample_rate: u32, params: &[f32]) -> Box<dyn Effe
         EffectKind::Reverb => Box::new(Reverb::new(sr)),
         EffectKind::Compressor => Box::new(Compressor::new(sr)),
         EffectKind::Limiter => Box::new(Limiter::new(sr)),
+        EffectKind::Gate => Box::new(Gate::new(sr)),
         // The host adopts the real processor; until then the slot passes audio through.
         EffectKind::Plugin => Box::new(Passthrough),
     };

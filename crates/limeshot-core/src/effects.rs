@@ -21,6 +21,8 @@ pub enum EffectKind {
     Compressor,
     /// Brick-wall peak limiter.
     Limiter,
+    /// Noise gate: quiets the signal below a threshold.
+    Gate,
     /// A hosted plugin ([`EffectSlot::plugin`]); its parameters are the plugin's own.
     Plugin,
 }
@@ -137,13 +139,21 @@ const COMPRESSOR: &[ParamSpec] = &[
 
 /// Index of the compressor's sidechain parameter.
 pub const COMPRESSOR_SIDECHAIN: usize = 5;
+const GATE: &[ParamSpec] = &[
+    p("Threshold", -80.0, 0.0, -40.0, "dB", false),
+    p("Attack", 0.1, 50.0, 1.0, "ms", true),
+    p("Hold", 0.0, 500.0, 30.0, "ms", false),
+    p("Release", 5.0, 2000.0, 120.0, "ms", true),
+    // How far the closed gate turns the signal down.
+    p("Range", -80.0, 0.0, -80.0, "dB", false),
+];
 const LIMITER: &[ParamSpec] = &[
     p("Ceiling", -24.0, 0.0, -0.3, "dB", false),
     p("Release", 5.0, 1000.0, 80.0, "ms", true),
 ];
 
 impl EffectKind {
-    pub const ALL: [EffectKind; 7] = [
+    pub const ALL: [EffectKind; 8] = [
         EffectKind::Utility,
         EffectKind::Eq3,
         EffectKind::Filter,
@@ -151,6 +161,7 @@ impl EffectKind {
         EffectKind::Reverb,
         EffectKind::Compressor,
         EffectKind::Limiter,
+        EffectKind::Gate,
     ];
 
     pub fn label(self) -> &'static str {
@@ -162,6 +173,7 @@ impl EffectKind {
             EffectKind::Reverb => "Lime Room",
             EffectKind::Compressor => "Lime Comp",
             EffectKind::Limiter => "Lime Limiter",
+            EffectKind::Gate => "Lime Gate",
             EffectKind::Plugin => "Plugin",
         }
     }
@@ -175,6 +187,7 @@ impl EffectKind {
             EffectKind::Reverb => REVERB,
             EffectKind::Compressor => COMPRESSOR,
             EffectKind::Limiter => LIMITER,
+            EffectKind::Gate => GATE,
             EffectKind::Plugin => &[],
         }
     }

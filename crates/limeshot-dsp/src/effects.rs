@@ -770,6 +770,90 @@ impl Effect for Limiter {
     }
 }
 
+/// Noise gate: opens when the level rises over the threshold, stays open for the hold time
+/// after it falls back, then fades to the range floor. Params: threshold dB, attack ms, hold
+/// ms, release ms, range dB.
+pub struct Gate {
+    sr: f32,
+    threshold: f32,
+    attack: f32,
+    hold: u32,
+    release: f32,
+    floor: f32,
+    /// Peak detector (fast release, so the gate can tell when the sound stops).
+    env: f32,
+    detect_release: f32,
+    held: u32,
+    gain: f32,
+}
+
+impl Gate {
+    pub fn new(sample_rate: f32) -> Self {
+        let sr = sample_rate.max(1.0);
+        let mut g = Self {
+            sr,
+            threshold: 0.0,
+            attack: 0.0,
+            hold: 0,
+            release: 0.0,
+            floor: 0.0,
+            env: 0.0,
+            detect_release: coeff(0.005, sr),
+            held: 0,
+            gain: 0.0,
+        };
+        g.set_params(&[-40.0, 1.0, 30.0, 120.0, -80.0]);
+        g
+    }
+
+    /// The gate's current gain (1 open, the range floor closed).
+    pub fn gain(&self) -> f32 {
+        self.gain
+    }
+}
+
+impl Effect for Gate {
+    fn set_params(&mut self, p: &[f32]) {
+        self.threshold = db_to_gain(get(p, 0, -40.0).clamp(-80.0, 0.0));
+        self.attack = coeff(get(p, 1, 1.0).clamp(0.1, 50.0) / 1000.0, self.sr);
+        self.hold = (get(p, 2, 30.0).clamp(0.0, 500.0) / 1000.0 * self.sr) as u32;
+        self.release = coeff(get(p, 3, 120.0).clamp(5.0, 2000.0) / 1000.0, self.sr);
+        let range = get(p, 4, -80.0).clamp(-80.0, 0.0);
+        // At the bottom of the range the gate shuts completely.
+        self.floor = if range <= -80.0 { 0.0 } else { db_to_gain(range) };
+    }
+
+    fn process(&mut self, buf: &mut [f32]) {
+        for f in buf.as_chunks_mut::<2>().0 {
+            let peak = f[0].abs().max(f[1].abs());
+            self.env = peak.max(self.env * self.detect_release);
+            let open = if self.env >= self.threshold {
+                self.held = self.hold;
+                true
+            } else if self.held > 0 {
+                self.held -= 1;
+                true
+            } else {
+                false
+            };
+            let (target, c) = if open {
+                (1.0, self.attack)
+            } else {
+                (self.floor, self.release)
+            };
+            self.gain = target + (self.gain - target) * c;
+            f[0] *= self.gain;
+            f[1] *= self.gain;
+        }
+    }
+
+    fn reset(&mut self) {
+        self.env = 0.0;
+        self.held = 0;
+        self.gain = 0.0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -916,6 +1000,27 @@ mod tests {
     }
 
     #[test]
+    fn gate_passes_loud_sound_and_closes_after_hold_and_release() {
+        let mut g = Gate::new(SR);
+        // -20 dB threshold, 1 ms attack, 10 ms hold, 20 ms release, closed fully.
+        g.set_params(&[-20.0, 1.0, 10.0, 20.0, -80.0]);
+        let loud = run(&mut g, sine(200.0, 0.5, 9_600));
+        assert!(
+            rms(&loud[2 * 4_800..]) / rms(&sine(200.0, 0.5, 4_800)) > 0.99,
+            "open on loud sound"
+        );
+        let quiet = run(&mut g, sine(200.0, 0.01, 9_600));
+        // Hold (480 frames) then release: shut well before the end.
+        assert!(rms(&quiet[2 * 7_200..]) < 1e-5, "closed on quiet sound");
+        assert!(g.gain() < 1e-3);
+        // A partial range leaves the floor through.
+        g.set_params(&[-20.0, 1.0, 0.0, 5.0, -20.0]);
+        let quiet = run(&mut g, sine(200.0, 0.01, 9_600));
+        let ratio = rms(&quiet[2 * 7_200..]) / rms(&sine(200.0, 0.01, 2_400));
+        assert!((ratio - 0.1).abs() < 0.01, "{ratio}");
+    }
+
+    #[test]
     fn nonsense_params_stay_finite() {
         let effects: Vec<Box<dyn Effect>> = vec![
             Box::new(Utility::new()),
@@ -925,6 +1030,7 @@ mod tests {
             Box::new(Reverb::new(SR)),
             Box::new(Compressor::new(SR)),
             Box::new(Limiter::new(SR)),
+            Box::new(Gate::new(SR)),
         ];
         for mut e in effects {
             e.set_params(&[f32::NAN, f32::INFINITY, -1e9, 1e9, f32::NAN, 0.0, 1e30]);

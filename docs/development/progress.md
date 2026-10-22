@@ -890,3 +890,9 @@ shows a faded clip.
 `AUDIO_EXTENSIONS`; the sample loader, the Browser (`browser::is_sample`) and the file pickers use them. Fixtures: a
 0.1 s stereo sine as AIFF (afconvert) and FLAC (a hand-written verbatim encoder, as afconvert's FLAC output failed),
 both checked sample for sample; truncated and junk files fail cleanly.
+
+### Session 16, part 17: Lime Gate (FX-006)
+
+`EffectKind::Gate` and `limeshot_dsp::effects::Gate` (threshold, attack, hold, release, range; a fast peak detector
+drives a smoothed gain), wired into the engine's effect factory, the Add effect menu and factory presets. An engine
+test now runs every built-in effect as an insert.
