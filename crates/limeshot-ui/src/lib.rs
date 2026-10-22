@@ -33,6 +33,7 @@ pub mod plugin_window;
 pub mod plugins;
 pub mod presets_ui;
 pub mod rack_menu;
+pub mod recording;
 pub mod settings;
 pub mod settings_window;
 pub mod shortcuts;

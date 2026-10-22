@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 /// Which Piano Roll tool an [`crate::Command::EditNotes`] comes from (its undo label).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NoteTool {
+    /// Notes recorded from the MIDI input or the typing keyboard (one undo step per take).
+    Record,
     Quantize,
     Legato,
     DiscardLengths,
@@ -27,6 +29,7 @@ pub enum NoteTool {
 impl NoteTool {
     pub fn label(self) -> &'static str {
         match self {
+            NoteTool::Record => "Record",
             NoteTool::Quantize => "Quantize",
             NoteTool::Legato => "Quick legato",
             NoteTool::DiscardLengths => "Discard lengths",

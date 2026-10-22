@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **142** — IMPLEMENTED 108, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 22, NOT_PLANNED 3
+Tracked: **142** — IMPLEMENTED 108, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 21, NOT_PLANNED 3
 
 ## Global
 
@@ -17,7 +17,7 @@ Tracked: **142** — IMPLEMENTED 108, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-001 | Play / stop | `Space` | VERIFIED | `Space` | IMPLEMENTED | TR-002 |  |
 | KB-002 | Play / pause | `Ctrl+Space` | VERIFIED | `Cmd+Space` | IMPLEMENTED | TR-002 |  |
 | KB-003 | Pattern / Song mode | `L` | VERIFIED | `L` | IMPLEMENTED | TR-003 |  |
-| KB-004 | Record | `R` | VERIFIED | — | NOT_STARTED | REC-001 | The Record button is shown disabled. |
+| KB-004 | Record | `R` | VERIFIED | `R` | DIFFERENT | REC-002 | Session 16: arms note recording (MIDI input and typing keyboard); audio recording is not in. Not while the typing keyboard plays notes. |
 | KB-005 | Metronome | `Ctrl+M` | VERIFIED | `Cmd+M` | IMPLEMENTED | TR-008 |  |
 | KB-006 | Panic (stop all sound) | `Ctrl+H` | VERIFIED | `Cmd+H` | IMPLEMENTED | TR-010 |  |
 | KB-007 | Step edit mode | `Ctrl+E` | OBSERVED | — | NOT_STARTED | REC-009 | Seen in the main menu on macOS (session 13, menus.json). |

@@ -860,3 +860,11 @@ UI repaints at once). Settings › MIDI (enabled; Options › MIDI settings open
 Link note on velocity to, Refresh device list; `settings.midi_input` / `midi_velocity`. `LimeShotApp::midi_event`
 plays the selected channel and remembers each held note's channel. A unit test round-trips a note through a
 virtual CoreMIDI port. Next: MIDI recording into the Piano Roll (PR-021 / REC-002).
+
+### Session 16, part 13: note recording (REC-002, PR-021; next-steps Then 9)
+
+`recording.rs`: the toolbar's Record button (R) arms; while playing, MIDI input and typing-keyboard notes become
+notes of the current pattern (`Command::EditNotes` with `NoteTool::Record`; the take's step is replaced as notes
+arrive, so a take is one undo step unless another edit comes in between). Right-click: FL's record menu with
+Recording starts playback, Disarm on stop and start/end quantize. Song mode records into the current pattern's clip
+under the song position. `ui_shot --record` shows the armed button.

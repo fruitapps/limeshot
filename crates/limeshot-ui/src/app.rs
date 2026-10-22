@@ -69,6 +69,8 @@ pub struct UiState {
     pub settings: Option<crate::settings_window::State>,
     /// Choices from the toolbar's right-click menus, and the tempo tapper.
     pub toolbar: crate::toolbar::State,
+    /// The record button and the take being recorded.
+    pub record: crate::recording::State,
 }
 
 impl UiState {
@@ -76,6 +78,7 @@ impl UiState {
         Self {
             settings: None,
             toolbar: Default::default(),
+            record: Default::default(),
             show_browser: true,
             workspace: Default::default(),
             current_pattern: project.patterns.first().map(|p| p.id).unwrap_or(PatternId(0)),
@@ -236,11 +239,13 @@ impl LimeShotApp {
                 // Held by the key, not the mouse: keep it out of the pointer's auditions.
                 self.auditions.retain(|a| *a != (channel, key));
                 self.midi_notes.push((key, channel));
+                crate::recording::note_on(self, channel, key, velocity);
             }
             MidiEvent::NoteOff { key } => {
                 if let Some(i) = self.midi_notes.iter().position(|n| n.0 == key) {
                     let (_, channel) = self.midi_notes.remove(i);
                     self.preview_off(channel, key);
+                    crate::recording::note_off(self, channel, key);
                 }
             }
             MidiEvent::Control { .. } | MidiEvent::PitchBend(_) => {}
@@ -506,6 +511,7 @@ impl LimeShotApp {
         self.ui.browser.cancel_preview();
         self.sampler_preview = None;
         let stopped = !self.is_playing();
+        crate::recording::stopped(self);
         self.send(Msg::Stop);
         if stopped {
             let start = if self.ui.mode == PlayMode::Song {
@@ -985,6 +991,7 @@ impl LimeShotApp {
                 && ctx.input(|i| i.focused && i.key_down(*key));
             if !keep {
                 self.preview_off(*channel, *note);
+                crate::recording::note_off(self, *channel, *note);
             }
             keep
         });

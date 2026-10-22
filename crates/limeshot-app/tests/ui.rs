@@ -5239,3 +5239,52 @@ fn midi_input_notes_play_the_selected_channel() {
     h.step();
     assert!(h.state().settings.midi_input.is_none());
 }
+
+/// REC-002 / PR-021: R arms recording and starts playback; notes from the MIDI input become
+/// notes of the current pattern (starts on the snap), one undo step per take.
+#[test]
+fn recording_turns_played_notes_into_pattern_notes() {
+    use limeshot_audio::midi::MidiEvent;
+    let (mut h, pat, lead) = empty_piano_roll();
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::None;
+    h.key_press(Key::R);
+    h.step();
+    assert!(h.state().ui.record.armed);
+    wait_for(&mut h, "playback", |a| {
+        a.is_playing() && a.player.status().position() > PPQ / 2
+    });
+    let play = |h: &mut Harness<'static, LimeShotApp>, key: u8| {
+        h.state_mut().midi_event(MidiEvent::NoteOn { key, velocity: 0.5 });
+        // The empty pattern loops every bar: measure the time played across the loop point.
+        let bar = h.state().project().time_signature.ticks_per_bar();
+        let from = h.state().player.status().position();
+        wait_for(h, "the note to last", |a| {
+            (a.player.status().position() + bar - from) % bar >= PPQ / 4
+        });
+        h.state_mut().midi_event(MidiEvent::NoteOff { key });
+    };
+    play(&mut h, 60);
+    play(&mut h, 64);
+    let notes = pattern_notes(&h, pat, lead);
+    assert_eq!(notes.iter().map(|n| n.key).collect::<Vec<_>>().len(), 2, "{notes:?}");
+    assert!(
+        notes
+            .iter()
+            .all(|n| n.start % STEP_TICKS == 0 && n.length >= PPQ / 4 - 60),
+        "{notes:?}"
+    );
+    assert!((notes[0].velocity - 0.5).abs() < 1e-6);
+    assert_eq!(h.state().doc.undo_label(), Some("Record"));
+    h.state_mut().doc.undo();
+    assert!(pattern_notes(&h, pat, lead).is_empty(), "the take is one undo step");
+    // Disarm on stop.
+    h.state_mut().ui.record.disarm_on_stop = true;
+    h.state_mut().stop();
+    assert!(!h.state().ui.record.armed);
+    // Not armed: playing records nothing.
+    h.state_mut().toggle_play();
+    wait_for(&mut h, "playback", |a| a.is_playing());
+    play(&mut h, 67);
+    assert!(pattern_notes(&h, pat, lead).is_empty());
+    h.state_mut().stop();
+}

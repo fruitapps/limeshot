@@ -1950,20 +1950,24 @@
       "name": "MIDI recording into the Piano Roll",
       "description": "Record played notes.",
       "fl_reference": "Record with MIDI input.",
-      "limeshot_behavior": "Record from MIDI devices/typing keyboard.",
+      "limeshot_behavior": "Recorded notes (REC-002) land in the current pattern and show in the Piano Roll as they end.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "WF-003",
         "REC-002"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::recording_turns_played_notes_into_pattern_notes"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1971,7 +1975,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16."
     },
     {
       "id": "PR-022",
@@ -4569,17 +4573,22 @@
       "name": "MIDI recording",
       "description": "MIDI recording.",
       "fl_reference": "Record button (R), recording filter, count-in (Ctrl+P).",
-      "limeshot_behavior": "Planned. The toolbar Record button is shown disabled with a 'not implemented' hint.",
+      "limeshot_behavior": "The toolbar's Record button (R) arms note recording; arming while stopped starts playback (option). While playing, notes from the MIDI input and the typing keyboard become notes of the current pattern on the channel they played, at the pattern position (in Song mode: inside the current pattern's clip under the song position), with their velocity; starts snap to the snap setting (option), lengths optionally too, notes held across the loop point wrap. Each take is one undo step (\"Record\"). Right-click: FL's record menu (recording filter: notes; Recording starts playback, Disarm on stop; Quantize note start / end time).",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::recording_turns_played_notes_into_pattern_notes"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4588,7 +4597,7 @@
           "HelpAliases.scr (recording_*.htm)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. Not: audio, automation and clip recording, loop record / takes, count-in, recording latency compensation."
     },
     {
       "id": "REC-003",

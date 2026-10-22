@@ -6,7 +6,7 @@ use crate::dialogs::Dialog;
 use crate::icons::{self, Icon};
 use crate::theme::{Theme, mix, mono, prop, semibold};
 use crate::widgets::Hint as _;
-use crate::widgets::{icon_button, meter, readout, segmented, transport_button, unavailable_button, vrule};
+use crate::widgets::{icon_button, meter, readout, segmented, transport_button, vrule};
 use crate::workspace::Win;
 use egui::{Align2, ComboBox, CornerRadius, DragValue, Rect, RichText, Sense, Stroke, Ui, vec2};
 use limeshot_core::{BarBeatTick, Command, Snap, Tempo, TimeSignature, Timeline};
@@ -124,7 +124,47 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
     if transport_button(ui, Icon::Stop, false, B, "Stop (Space)").clicked() {
         app.stop();
     }
-    unavailable_button(ui, Icon::Record, B, "Record");
+    let armed = app.ui.record.armed;
+    let r = transport_button(
+        ui,
+        Icon::Record,
+        armed,
+        B,
+        "Record (R): notes from the MIDI input or the typing keyboard go into the current pattern while playing. Right-click: options",
+    );
+    if r.clicked() {
+        crate::recording::toggle(app);
+    }
+    // FL Studio's record menu (only notes are recorded; the other filters are not in yet).
+    r.context_menu(|ui| {
+        let t = Theme::current();
+        ui.label(RichText::new("Recording filter").small().color(t.text_faint));
+        ui.add_enabled(false, egui::Button::selectable(false, "Automation"));
+        let _ = ui.add(egui::Button::selectable(true, "Notes"));
+        ui.add_enabled(false, egui::Button::selectable(false, "Audio"));
+        ui.add_enabled(false, egui::Button::selectable(false, "Clips"));
+        ui.separator();
+        ui.label(RichText::new("Options").small().color(t.text_faint));
+        let st = &mut app.ui.record;
+        for (on, label) in [
+            (&mut st.starts_playback, "Recording starts playback"),
+            (&mut st.disarm_on_stop, "Disarm on stop"),
+        ] {
+            if ui.add(egui::Button::selectable(*on, label)).clicked() {
+                *on = !*on;
+            }
+        }
+        ui.separator();
+        ui.label(RichText::new("Quantize").small().color(t.text_faint));
+        for (on, label) in [
+            (&mut st.quantize_start, "Note start time"),
+            (&mut st.quantize_end, "Note end time"),
+        ] {
+            if ui.add(egui::Button::selectable(*on, label)).clicked() {
+                *on = !*on;
+            }
+        }
+    });
 }
 
 fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {

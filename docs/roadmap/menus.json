@@ -4881,10 +4881,10 @@
       "fl_keys": "R",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button",
+      "status": "DIFFERENT",
       "feature": "REC-002",
-      "notes": "Right-click opens the menu below. LimeShot shows the button disabled."
+      "notes": "Right-click opens the menu below. LimeShot shows the button disabled. Session 16: records notes only (R); right-click opens the menu."
     },
     {
       "id": "MENU-282",
@@ -4919,10 +4919,10 @@
       "fl_keys": "",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button › Notes",
+      "status": "IMPLEMENTED",
       "feature": "REC-002",
-      "notes": ""
+      "notes": "Session 16: always on; the other filters are shown disabled."
     },
     {
       "id": "MENU-284",
@@ -4976,10 +4976,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button › Recording starts playback",
+      "status": "IMPLEMENTED",
       "feature": "REC-002",
-      "notes": ""
+      "notes": "Session 16: on by default."
     },
     {
       "id": "MENU-287",
@@ -4995,8 +4995,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button › Disarm on stop",
+      "status": "IMPLEMENTED",
       "feature": "REC-002",
       "notes": ""
     },
@@ -5033,10 +5033,10 @@
       "fl_keys": "",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button › Note start time",
+      "status": "IMPLEMENTED",
       "feature": "REC-002",
-      "notes": ""
+      "notes": "Session 16: to the snap; on by default."
     },
     {
       "id": "MENU-290",
@@ -5052,10 +5052,10 @@
       "fl_keys": "",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › record button › Note end time",
+      "status": "IMPLEMENTED",
       "feature": "REC-002",
-      "notes": ""
+      "notes": "Session 16: the length to the snap."
     },
     {
       "id": "MENU-291",

@@ -43,10 +43,10 @@
       "action": "Record",
       "fl_keys": "R",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
-      "feature": "REC-001",
-      "notes": "The Record button is shown disabled."
+      "limeshot_keys": "R",
+      "status": "DIFFERENT",
+      "feature": "REC-002",
+      "notes": "Session 16: arms note recording (MIDI input and typing keyboard); audio recording is not in. Not while the typing keyboard plays notes."
     },
     {
       "id": "KB-005",

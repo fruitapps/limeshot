@@ -10,19 +10,19 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 97, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 20, VERIFIED 138, DEFERRED 4
+- By status: NOT_STARTED 95, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 20, VERIFIED 140, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 33 | 16 | 3 | 3 | 11 |
 | Channel Rack | 22 | 18 | 0 | 0 | 4 |
-| Piano Roll | 29 | 18 | 3 | 0 | 8 |
+| Piano Roll | 29 | 19 | 3 | 0 | 7 |
 | Playlist | 29 | 20 | 1 | 2 | 6 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 6 | 1 | 0 | 7 |
 | Effects | 15 | 8 | 1 | 0 | 6 |
 | Automation | 13 | 4 | 1 | 0 | 8 |
-| Recording | 11 | 0 | 0 | 0 | 11 |
+| Recording | 11 | 1 | 0 | 0 | 10 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
 | Export | 18 | 5 | 0 | 0 | 13 |
@@ -120,7 +120,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-018 | Note color groups | P3 |  | NOT_STARTED | Per-note color group. | — |
 | PR-019 | Copy / cut / paste notes | P1 |  | VERIFIED | Cmd+C/X/V copy, cut and paste notes; pasting puts them at the same times into the channel being edited and selects them (FL Studio behaviour).<br>*App-internal clipboard (not the system clipboard).* | `limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
 | PR-020 | MIDI file import / export | P1 |  | VERIFIED | Own Standard MIDI File reader/writer (format 0/1, running status, note-on velocity 0, tempo, time signature, track names; SMPTE and format 2 refused; hostile input bounded). File › Import MIDI file… adds one pattern named after the file with a LimeSynth channel per MIDI track (and per MIDI channel within a track), in one undo step; an empty project also takes the file's tempo. CLI: limeshot-cli import-midi in.mid out.lime.<br>*Exported files were read back by LimeShot's own reader only; not yet checked in another program. Controller events, pitch bend and program changes are ignored on import.* | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-project midi::tests::reads_running_status_other_resolutions_and_note_on_zero`<br>`limeshot-project midi::tests::hostile_input_is_refused_not_panicked_on`<br>`limeshot-project midi::tests::import_command_builds_one_channel_per_track`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
-| PR-021 | MIDI recording into the Piano Roll | P1 |  | NOT_STARTED | Record from MIDI devices/typing keyboard. | — |
+| PR-021 | MIDI recording into the Piano Roll | P1 |  | VERIFIED | Recorded notes (REC-002) land in the current pattern and show in the Piano Roll as they end.<br>*Session 16.* | `crates/limeshot-app/tests/ui.rs::recording_turns_played_notes_into_pattern_notes` |
 | PR-022 | Time signature per pattern / time markers | P3 |  | NOT_STARTED | Project-wide signature only for now. | — |
 | PR-023 | Glue / slice notes | P2 |  | VERIFIED | Glue (Cmd+G) joins selected notes of the same key that touch or overlap; Quick chop (Cmd+U) cuts notes at every snap step; the Slice tool cuts at a point. With nothing selected they apply to all of the channel's notes. Chop… (Alt+U) cuts into pieces of N snap steps with a gate.<br>*Shortcuts from FL 2026.1.1's Piano Roll Tools menu (fl-piano-tools-menu.png). Session 16: a Chop… dialog (FL's chopper not observed: its pattern presets are not in).* | `crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools`<br>`limeshot-core document::tests::slice_glue_and_mute_notes`<br>`limeshot-core note_tools::tests::articulate_chop_and_quantize` |
 | PR-024 | Resize from the left edge | P2 |  | VERIFIED | Draw/Paint tools: dragging a note's left edge (outer 6 px) moves its start and keeps its end (snapped; one undo step). Always on.<br>*The option to turn it off is not implemented.* | `crates/limeshot-app/tests/ui.rs::delete_select_zoom_and_draw_left_edge` |
@@ -247,7 +247,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
 | REC-001 | Audio recording from inputs | P1 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
-| REC-002 | MIDI recording | P1 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
+| REC-002 | MIDI recording | P1 |  | VERIFIED | The toolbar's Record button (R) arms note recording; arming while stopped starts playback (option). While playing, notes from the MIDI input and the typing keyboard become notes of the current pattern on the channel they played, at the pattern position (in Song mode: inside the current pattern's clip under the song position), with their velocity; starts snap to the snap setting (option), lengths optionally too, notes held across the loop point wrap. Each take is one undo step ("Record"). Right-click: FL's record menu (recording filter: notes; Recording starts playback, Disarm on stop; Quantize note start / end time).<br>*Session 16. Not: audio, automation and clip recording, loop record / takes, count-in, recording latency compensation.* | `crates/limeshot-app/tests/ui.rs::recording_turns_played_notes_into_pattern_notes` |
 | REC-003 | Input selection and monitoring | P1 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-004 | Punch in/out | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-005 | Loop recording / takes | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |

@@ -14,6 +14,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
         "Play selected channel when Typing keyboard to piano is enabled",
     ),
     ("Cmd+Space", "Play / pause"),
+    ("R", "Record: arm note recording (MIDI input and the typing keyboard)"),
     ("L", "Switch Pattern / Song mode"),
     ("Cmd+M", "Metronome on/off"),
     ("Cmd+H", "Stop all sound (panic)"),
@@ -271,6 +272,11 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     if typing || app.dialog.is_some() {
         return;
     }
+    // Record (FL Studio: R). Only without modifiers (Shift+R is an editor key) and not while the
+    // typing keyboard plays notes (R is a key there).
+    if !app.keyboard_notes && ctx.input(|i| i.modifiers.is_none()) && pressed(ctx, Modifiers::NONE, Key::R) {
+        crate::recording::toggle(app);
+    }
     if pressed(ctx, cmd, Key::Space) {
         app.toggle_play();
     } else if pressed(ctx, Modifiers::NONE, Key::Space) {
@@ -342,6 +348,7 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
                         app.preview_on(channel, note, 0.78);
                         app.auditions.retain(|n| *n != (channel, note));
                         app.typing_notes.push((key, channel, note));
+                        crate::recording::note_on(app, channel, note, 0.78);
                     }
                 }
             }

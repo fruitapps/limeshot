@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -316,6 +316,11 @@ fn main() {
                 harness.step();
             }
         }
+    }
+    if args.iter().any(|a| a == "--record") {
+        // The record button armed.
+        harness.state_mut().ui.record.armed = true;
+        harness.step();
     }
     if args.iter().any(|a| a == "--scale") {
         // Piano Roll scale highlighting: A minor.
