@@ -851,3 +851,12 @@ when set) and `automation::segment`. A point's right-click in the Playlist opens
 modes) instead of deleting at once. Automation lanes now keep the automation's own points and each clip's
 start/end/offset (`LaneClip`) and evaluate the curve directly, so stepped and periodic segments stay in place when a
 clip starts mid-curve. `ui_shot --automation` shows stairs and a wave.
+
+### Session 16, part 12: MIDI input (WF-003, APP-020; next-steps Then 9)
+
+`limeshot_audio::midi` (midir 0.11, MIT): `parse` (notes, velocity-0 note-offs, controllers, pitch bend, any MIDI
+channel), `input_ports`, and `MidiIn` (messages parsed on midir's thread, sent over a channel, with a waker so the
+UI repaints at once). Settings › MIDI (enabled; Options › MIDI settings opens it): the inputs as radio buttons,
+Link note on velocity to, Refresh device list; `settings.midi_input` / `midi_velocity`. `LimeShotApp::midi_event`
+plays the selected channel and remembers each held note's channel. A unit test round-trips a note through a
+virtual CoreMIDI port. Next: MIDI recording into the Piano Roll (PR-021 / REC-002).

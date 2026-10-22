@@ -83,10 +83,10 @@
       "fl_default": "no device",
       "fl_reference": "Options › MIDI settings (F10) › Input › Input devices and controller type",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
-      "feature": "WF-003",
-      "notes": "Per device: Enable, Controller type (script), Port; a wrench opens the controller script."
+      "limeshot_setting": "settings.midi_input",
+      "status": "IMPLEMENTED",
+      "feature": "APP-020",
+      "notes": "Per device: Enable, Controller type (script), Port; a wrench opens the controller script. Session 16: one input at a time, played on the selected channel; no controller types."
     },
     {
       "id": "SET-010",
@@ -97,10 +97,10 @@
       "fl_default": "Velocity",
       "fl_reference": "Options › MIDI settings (F10) › Input › Link note on velocity to",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
-      "feature": "WF-003",
-      "notes": ""
+      "limeshot_setting": "settings.midi_velocity",
+      "status": "IMPLEMENTED",
+      "feature": "APP-020",
+      "notes": "Session 16: Velocity or Nothing (a fixed 78 %)."
     },
     {
       "id": "SET-033",
@@ -251,10 +251,10 @@
       "fl_default": "",
       "fl_reference": "Options › MIDI settings (F10) › Refresh device list",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
-      "feature": "WF-003",
-      "notes": ""
+      "limeshot_setting": "settings.midi_input",
+      "status": "IMPLEMENTED",
+      "feature": "APP-020",
+      "notes": "Session 16: re-reads the input list."
     },
     {
       "id": "SET-044",

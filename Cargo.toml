@@ -27,6 +27,7 @@ env_logger = { version = "0.11", default-features = false, features = ["auto-col
 hound = "3.5"
 rtrb = "0.3"
 cpal = "0.16"
+midir = "0.11"
 egui = "0.36"
 eframe = { version = "0.36", default-features = false, features = ["default_fonts", "glow", "accesskit", "wayland", "x11"] }
 rfd = "0.17"

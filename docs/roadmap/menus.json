@@ -2658,10 +2658,10 @@
       "fl_keys": "F10",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › MIDI settings",
+      "status": "IMPLEMENTED",
       "feature": "APP-020",
-      "notes": "Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About)."
+      "notes": "Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). Session 16: opens the settings window on its MIDI page."
     },
     {
       "id": "MENU-154",

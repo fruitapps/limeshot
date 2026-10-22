@@ -22,6 +22,11 @@ pub struct Settings {
     pub confirm_channel_delete: bool,
     /// View › Arrange windows › Save custom layout.
     pub custom_layout: Option<crate::workspace::SavedLayout>,
+    /// The MIDI input device whose notes play the selected channel (FL Studio's MIDI settings);
+    /// `None`: no MIDI input.
+    pub midi_input: Option<String>,
+    /// FL Studio's "Link note on velocity to": the key's velocity, or a fixed one ("Nothing").
+    pub midi_velocity: bool,
 }
 
 impl Default for Settings {
@@ -34,6 +39,8 @@ impl Default for Settings {
             autosave_minutes: 5,
             confirm_channel_delete: true,
             custom_layout: None,
+            midi_input: None,
+            midi_velocity: true,
         }
     }
 }

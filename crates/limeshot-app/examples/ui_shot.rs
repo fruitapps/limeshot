@@ -302,6 +302,7 @@ fn main() {
         // The settings window on a page ("Audio", "Info").
         use limeshot_ui::settings_window::Page;
         let pages = [
+            Page::Midi,
             Page::Audio,
             Page::General,
             Page::File,

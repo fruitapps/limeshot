@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **188** — IMPLEMENTED 17, IN_PROGRESS 1, NOT_STARTED 155, NOT_PLANNED 15
+Tracked: **188** — IMPLEMENTED 20, IN_PROGRESS 1, NOT_STARTED 152, NOT_PLANNED 15
 
 ## MIDI
 
@@ -16,8 +16,8 @@ Tracked: **188** — IMPLEMENTED 17, IN_PROGRESS 1, NOT_STARTED 155, NOT_PLANNED
 | SET-030 | Output | Send all notes off | switch | on | Options › MIDI settings (F10) › Output › Send all notes off | OBSERVED | — | NOT_STARTED | WF-005 | Sent to the output when playback stops. |
 | SET-031 | Output | Master sync offset (milliseconds) | field | 0 | Options › MIDI settings (F10) › Output › Master sync offset (milliseconds) | OBSERVED | — | NOT_STARTED | WF-012 |  |
 | SET-032 | Output | Synchronization type | dropdown | MIDI clock | Options › MIDI settings (F10) › Output › Synchronization type | OBSERVED | — | NOT_STARTED | WF-012 |  |
-| SET-008 | Input | Input devices and controller type | list + dropdown | no device | Options › MIDI settings (F10) › Input › Input devices and controller type | OBSERVED | — | NOT_STARTED | WF-003 | Per device: Enable, Controller type (script), Port; a wrench opens the controller script. |
-| SET-010 | Input | Link note on velocity to | dropdown | Velocity | Options › MIDI settings (F10) › Input › Link note on velocity to | OBSERVED | — | NOT_STARTED | WF-003 |  |
+| SET-008 | Input | Input devices and controller type | list + dropdown | no device | Options › MIDI settings (F10) › Input › Input devices and controller type | OBSERVED | `settings.midi_input` | IMPLEMENTED | APP-020 | Per device: Enable, Controller type (script), Port; a wrench opens the controller script. Session 16: one input at a time, played on the selected channel; no controller types. |
+| SET-010 | Input | Link note on velocity to | dropdown | Velocity | Options › MIDI settings (F10) › Input › Link note on velocity to | OBSERVED | `settings.midi_velocity` | IMPLEMENTED | APP-020 | Session 16: Velocity or Nothing (a fixed 78 %). |
 | SET-033 | Input | Link release velocity to | dropdown | Release | Options › MIDI settings (F10) › Input › Link release velocity to | OBSERVED | — | NOT_STARTED | WF-003 |  |
 | SET-034 | Input | Pickup (takeover mode) | switch | off | Options › MIDI settings (F10) › Input › Pickup (takeover mode) | OBSERVED | — | NOT_STARTED | WF-004 |  |
 | SET-035 | Input | Auto accept detected controller | switch | on | Options › MIDI settings (F10) › Input › Auto accept detected controller | OBSERVED | — | NOT_STARTED | WF-003 |  |
@@ -28,7 +28,7 @@ Tracked: **188** — IMPLEMENTED 17, IN_PROGRESS 1, NOT_STARTED 155, NOT_PLANNED
 | SET-040 | Input | Generator muting MIDI channel | field | --- | Options › MIDI settings (F10) › Input › Generator muting MIDI channel | OBSERVED | — | NOT_STARTED | WF-003 | With 'Toggle on release' (off). |
 | SET-041 | External sync | External clock sync | dropdown | Off | Options › MIDI settings (F10) › External sync › External clock sync | OBSERVED | — | NOT_STARTED | WF-012 | Status line below ('Status: off'). |
 | SET-042 | External sync | External sync offset (milliseconds) | field | 0 | Options › MIDI settings (F10) › External sync › External sync offset (milliseconds) | OBSERVED | — | NOT_STARTED | WF-012 |  |
-| SET-043 |  | Refresh device list | button |  | Options › MIDI settings (F10) › Refresh device list | OBSERVED | — | NOT_STARTED | WF-003 |  |
+| SET-043 |  | Refresh device list | button |  | Options › MIDI settings (F10) › Refresh device list | OBSERVED | `settings.midi_input` | IMPLEMENTED | APP-020 | Session 16: re-reads the input list. |
 | SET-044 |  | Update MIDI scripts | button |  | Options › MIDI settings (F10) › Update MIDI scripts | OBSERVED | — | NOT_PLANNED | WF-003 |  |
 | SET-045 |  | Enable FL Studio Remote | switch | off | Options › MIDI settings (F10) › Enable FL Studio Remote | OBSERVED | — | NOT_PLANNED | APP-025 | Image-Line's phone/tablet remote. |
 

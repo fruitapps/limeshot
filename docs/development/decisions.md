@@ -199,3 +199,10 @@ IPlugView size constraints and onSize handle resizable plugins, while fixed-size
 The container keeps the editor's natural dimensions so its subviews cannot extend upward across the tabs. Native views hide while covered by another
 workspace window, a popup or a dialog. Other platforms retain the parameter-list fallback. The old attach API remains
 available for detached host-window clients and its tests.
+
+### D36. MIDI input with midir, through the UI thread
+**Why:** MIDI input uses `midir` (MIT; CoreMIDI, WinMM, ALSA), in `limeshot-audio`. Messages are parsed on midir's thread and
+passed over a channel to the UI thread, which plays them like other auditions; the callback only wakes the UI.
+Sending them straight to the audio thread would save one frame of latency at most, but the engine's message ring
+has a single producer (the UI), and recording needs the notes on the UI side anyway. Revisit if live-play latency
+proves noticeable.

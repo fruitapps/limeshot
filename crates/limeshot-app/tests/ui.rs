@@ -5208,3 +5208,34 @@ fn automated_controls_follow_the_song() {
     wait_for(&mut h, "the stop", |a| !a.is_playing());
     assert_eq!(h.state().automated(AutomationTarget::MixerPan(1)), None);
 }
+
+/// WF-003: notes from the MIDI input play the selected channel and stay held until their
+/// note-off (not ended by the mouse safety net); a note ends on the channel it started on.
+#[test]
+fn midi_input_notes_play_the_selected_channel() {
+    use limeshot_audio::midi::MidiEvent;
+    let mut h = harness(true);
+    let lead = h.state().project().channels[3].id;
+    let bass = h.state().project().channels[4].id;
+    h.state_mut().select_channel(lead);
+    h.state_mut().midi_event(MidiEvent::NoteOn { key: 60, velocity: 0.5 });
+    for _ in 0..3 {
+        h.step();
+    }
+    assert_eq!(h.state().midi_notes, vec![(60, lead)], "held without a mouse button");
+    wait_for(&mut h, "a voice", |a| a.player.status().voices() > 0);
+    // The selection changes while the key is down: the note still ends on the lead.
+    h.state_mut().select_channel(bass);
+    h.state_mut().midi_event(MidiEvent::NoteOn { key: 64, velocity: 1.0 });
+    assert_eq!(h.state().midi_notes, vec![(60, lead), (64, bass)]);
+    h.state_mut().midi_event(MidiEvent::NoteOff { key: 60 });
+    h.state_mut().midi_event(MidiEvent::NoteOff { key: 64 });
+    assert!(h.state().midi_notes.is_empty());
+    // The settings window's MIDI page lists inputs and can refresh them.
+    h.state_mut().open_settings(limeshot_ui::settings_window::Page::Midi);
+    h.step();
+    h.step();
+    h.get_by_label("Refresh device list").click();
+    h.step();
+    assert!(h.state().settings.midi_input.is_none());
+}

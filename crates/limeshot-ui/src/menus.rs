@@ -582,6 +582,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
             ui.menu_button("Options", |ui| {
                 use crate::settings_window::Page;
                 section(ui, "System");
+                if item(ui, "MIDI settings", "") {
+                    app.open_settings(Page::Midi);
+                }
                 if item(ui, "Audio settings", "") {
                     app.open_settings(Page::Audio);
                 }

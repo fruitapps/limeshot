@@ -10,11 +10,11 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 99, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 20, VERIFIED 137, DEFERRED 4
+- By status: NOT_STARTED 97, RESEARCHED 1, IN_PROGRESS 12, IMPLEMENTED 20, VERIFIED 138, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
-| Application | 33 | 16 | 3 | 2 | 12 |
+| Application | 33 | 16 | 3 | 3 | 11 |
 | Channel Rack | 22 | 18 | 0 | 0 | 4 |
 | Piano Roll | 29 | 18 | 3 | 0 | 8 |
 | Playlist | 29 | 20 | 1 | 2 | 6 |
@@ -27,7 +27,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Plugins | 11 | 5 | 3 | 0 | 3 |
 | Export | 18 | 5 | 0 | 0 | 13 |
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
-| Workflow | 13 | 1 | 1 | 2 | 9 |
+| Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 8 | 2 | 1 | 7 |
 | Platform | 6 | 1 | 1 | 3 | 1 |
 
@@ -54,7 +54,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | APP-017 | Project info (title, author, comments) | P2 |  | IMPLEMENTED | Settings › Info (Options › Project info, F11): Title, Author, Genre, Comments and Web link, saved in the .lime (`Project::info`); typing in a field is one undo step (SetProjectInfo). Project statistics below. Not done: Show info on opening, working time (APP-033). | `crates/limeshot-app/tests/ui.rs::the_settings_window_opens_on_its_page_and_edits_project_info_in_one_undo_step` |
 | APP-018 | Save new version | P2 |  | NOT_STARTED | File › Save new version. (LimeShot uses Cmd+N for New.) | — |
 | APP-019 | Project bundle (zip with samples) | P2 |  | NOT_STARTED | Export project + samples as a single archive. | — |
-| APP-020 | MIDI settings | P1 |  | NOT_STARTED | Device list, enable inputs, controller type. | — |
+| APP-020 | MIDI settings | P1 |  | IN_PROGRESS | Options › MIDI settings opens the settings window's MIDI page: the input devices (one active, saved in the settings), Link note on velocity to (Velocity / Nothing) and Refresh device list.<br>*Session 16. Not yet: MIDI output, controller types, master sync, the per-purpose MIDI channels.* | `crates/limeshot-app/tests/ui.rs::midi_input_notes_play_the_selected_channel` |
 | APP-021 | Plugin manager | P2 |  | NOT_STARTED | Scan folders for CLAP/VST3/AU. | — |
 | APP-022 | Import FL Studio projects (.flp) | P3 |  | VERIFIED | File › Open (and `limeshot song.flp`, `limeshot-cli import-flp in.flp [out.lime]`) reads an .flp as a new unsaved project titled after the file; Save asks where to write the .lime. Converted: tempo, time signature, title, channels (samplers with their sample, `%FLStudioFactoryData%` resolved; plugin generators become LimeSynth), volume, pan, mixer insert, patterns with names and notes (key, position, length, velocity; steps), and the first arrangement's pattern and audio clips with track, offset and mute. A toast reports what was left out (plugin channels, automation clips, unknown items). Format notes: docs/research/flp-format.md.<br>*Clean-room: from the bytes of project files (FL's shipped templates/demos read-only and files saved by FL 26.1.1 for the tests); no decompilation. Not converted: plugin states, mixer effects and routing, automation curves, layers, further arrangements. Only FL 26.1.1 was used to make test files; older versions are covered by the shipped demos importing without errors.* | `limeshot-project tests/flp.rs::fl26_saved_steps_project`<br>`limeshot-project tests/flp.rs::fl26_saved_notes_project`<br>`limeshot-project tests/flp.rs::fl26_saved_arrangement_project`<br>`limeshot-project tests/flp.rs::installed_fl_projects_all_import`<br>`limeshot-project tests/flp.rs::fixture_files_match_their_definitions`<br>`limeshot-project src/flp.rs::tests::hostile_bytes_never_panic`<br>`limeshot-app tests/ui.rs::opening_an_flp_imports_it_as_an_unsaved_project` |
 | APP-023 | Welcome window | P3 |  | NOT_STARTED | Planned (offline parts only: templates, recent files, demo song). | — |
@@ -337,7 +337,7 @@ automated tests or recorded manual verification. Everything else is not done.
 |---|---|---|---|---|---|---|
 | WF-001 | Headless command scripting (CLI) | P1 |  | IMPLEMENTED | `limeshot-cli run commands.json` applies typed commands, `render`, `info`, `demo`, `play`; no network service. | `CI: headless demo render + reload compare` |
 | WF-002 | Typing keyboard to piano | P2 |  | VERIFIED | Toolbar piano button and Options > Typing keyboard to piano toggle note input to the selected Channel Rack instrument (including plugins); Z–M / Q–U map two chromatic octaves starting at MIDI 48. Key-up releases the original channel even after selection changes; text fields, dialogs and loss of focus release notes. Cmd+T toggles outside Playlist, where it adds a marker.<br>*Session 17: Toolbar piano button and Options > Typing keyboard to piano toggle note input to the selected Channel Rack instrument (including plugins); Z–M / Q–U map two chromatic octaves starting at MIDI 48. Key-up releases the original channel even after selection changes; text fields, dialogs and loss of focus release notes. Cmd+T toggles outside Playlist, where it adds a marker.* | `crates/limeshot-app/tests/ui.rs::typing_keyboard_targets_selected_channel_and_releases_the_original` |
-| WF-003 | MIDI controller input | P1 |  | NOT_STARTED | midir-based input routed to the selected channel. | — |
+| WF-003 | MIDI controller input | P1 |  | VERIFIED | The MIDI input chosen in Settings › MIDI (midir) plays the selected channel: note-ons start a held note (velocity, or a fixed one), note-offs end it on the channel it started on; the input wakes the UI so notes play at once. Controllers and pitch bend are parsed but not used yet.<br>*Session 16 (next-steps Then 9). Checked end to end with a virtual CoreMIDI port; not yet with a hardware keyboard. The notes go through the UI thread (one message hop) to the engine.* | `limeshot-audio midi::tests::parses_notes_controllers_and_bends_on_any_channel`<br>`limeshot-audio midi::tests::a_virtual_port_delivers_notes`<br>`crates/limeshot-app/tests/ui.rs::midi_input_notes_play_the_selected_channel` |
 | WF-004 | Controller mapping (link to controller) | P2 |  | NOT_STARTED | — | — |
 | WF-005 | External MIDI devices / MIDI out | P2 |  | NOT_STARTED | — | — |
 | WF-006 | Multichannel / surround output | P3 |  | NOT_STARTED | Stereo only; extra device channels receive silence. | — |

@@ -13,6 +13,7 @@ limeshot-sequencer.workspace = true
 limeshot-engine.workspace = true
 limeshot-project.workspace = true
 cpal.workspace = true
+midir.workspace = true
 rtrb.workspace = true
 log.workspace = true
 serde.workspace = true

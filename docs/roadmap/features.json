@@ -605,19 +605,24 @@
       "name": "MIDI settings",
       "description": "Configure MIDI input/output devices.",
       "fl_reference": "Options › MIDI settings.",
-      "limeshot_behavior": "Device list, enable inputs, controller type.",
+      "limeshot_behavior": "Options › MIDI settings opens the settings window's MIDI page: the input devices (one active, saved in the settings), Link note on velocity to (Velocity / Nothing) and Refresh device list.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "WF-003"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::midi_input_notes_play_the_selected_channel"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -626,7 +631,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. Not yet: MIDI output, controller types, master sync, the per-purpose MIDI channels."
     },
     {
       "id": "APP-021",
@@ -6288,17 +6293,24 @@
       "name": "MIDI controller input",
       "description": "Play with hardware.",
       "fl_reference": "MIDI settings, controller scripts.",
-      "limeshot_behavior": "midir-based input routed to the selected channel.",
+      "limeshot_behavior": "The MIDI input chosen in Settings › MIDI (midir) plays the selected channel: note-ons start a held note (velocity, or a fixed one), note-offs end it on the channel it started on; the input wakes the UI so notes play at once. Controllers and pitch bend are parsed but not used yet.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-audio midi::tests::parses_notes_controllers_and_bends_on_any_channel",
+        "limeshot-audio midi::tests::a_virtual_port_delivers_notes",
+        "crates/limeshot-app/tests/ui.rs::midi_input_notes_play_the_selected_channel"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -6306,7 +6318,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 9). Checked end to end with a virtual CoreMIDI port; not yet with a hardware keyboard. The notes go through the UI thread (one message hop) to the engine."
     },
     {
       "id": "WF-004",

@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 183, DIFFERENT 95, LIMESHOT_ONLY 13, NOT_STARTED 393, NOT_PLANNED 41
+Tracked: **725** — IMPLEMENTED 184, DIFFERENT 95, LIMESHOT_ONLY 13, NOT_STARTED 392, NOT_PLANNED 41
 
 ## Summary
 
@@ -17,7 +17,7 @@ Tracked: **725** — IMPLEMENTED 183, DIFFERENT 95, LIMESHOT_ONLY 13, NOT_STARTE
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 16 | 1 | 26 | 5 | 4 |
-| Options | 24 | 7 | 0 | 15 | 2 | 2 |
+| Options | 24 | 8 | 0 | 14 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 | Toolbar | 52 | 17 | 7 | 25 | 3 | 2 |
@@ -35,7 +35,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | EXP-001 | P0 | VERIFIED | WAV export (offline bounce) | MENU-580 Playlist › Options › Tools › Export all playlist tracks |
 | MIX-001 | P0 | VERIFIED | Master and insert tracks | MENU-708 Mixer › Options › Alt solo selected track(s) |
 | SEQ-002 | P0 | VERIFIED | Add sampler / synth channels | MENU-383 Channel Rack › Channel menu › Insert<br>MENU-384 Channel Rack › Channel menu › Replace |
-| APP-020 | P1 | NOT_STARTED | MIDI settings | MENU-153 Options › MIDI settings |
 | AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip...<br>MENU-536 Piano Roll › Options › Target control › Channel panning<br>MENU-537 Piano Roll › Options › Target control › Channel volume<br>MENU-538 Piano Roll › Options › Target control › Channel pitch |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
@@ -50,7 +49,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | TR-008 | P1 | VERIFIED | Metronome | MENU-299 Toolbar › Song position › Middle unit |
 | UI-004 | P1 | VERIFIED | Hint bar and tooltips | MENU-117 View › Toolbars › Hint bar |
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
-| WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control<br>MENU-399 Channel Rack › Channel menu › MIDI channel through<br>MENU-400 Channel Rack › Channel menu › Receive notes from |
+| WF-003 | P1 | VERIFIED | MIDI controller input | MENU-163 Options › Enable MIDI remote control<br>MENU-399 Channel Rack › Channel menu › MIDI channel through<br>MENU-400 Channel Rack › Channel menu › Receive notes from |
 | APP-015 | P2 | NOT_STARTED | Project templates | MENU-002 File › New from template<br>MENU-003 File › New from template › Advanced<br>MENU-004 File › New from template › Minimal<br>MENU-005 File › New from template › Other<br>MENU-006 File › New from template › Performance<br>MENU-007 File › New from template › Power User<br>MENU-008 File › New from template › Utility<br>MENU-009 File › New from template › Empty<br>MENU-010 File › New from template › Change default template...<br>MENU-017 File › Save as template... |
 | APP-018 | P2 | NOT_STARTED | Save new version | MENU-014 File › Save new version |
 | APP-019 | P2 | NOT_STARTED | Project bundle (zip with samples) | MENU-040 File › Export › Zipped loop package... |
@@ -291,7 +290,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| MENU-153 | MIDI settings | System | dialog | `F10` |  | — | NOT_STARTED | APP-020 | Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). |
+| MENU-153 | MIDI settings | System | dialog | `F10` |  | Options › MIDI settings | IMPLEMENTED | APP-020 | Opens: settings.json page 'MIDI' (one window with tabs MIDI, Audio, General, File, Theme, Project, Info, Debug, Account, About). Session 16: opens the settings window on its MIDI page. |
 | MENU-154 | Audio settings | System | dialog |  |  | Options › Audio settings | IMPLEMENTED | APP-025 | Opens the settings window on the Audio tab. |
 | MENU-155 | General settings | System | dialog |  |  | Options › General settings | IMPLEMENTED | APP-025 | Settings window, General tab. |
 | MENU-156 | File settings | System | dialog |  |  | Options › File settings | IMPLEMENTED | APP-025 | Settings window, File tab. |

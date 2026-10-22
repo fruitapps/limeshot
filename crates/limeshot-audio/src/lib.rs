@@ -22,6 +22,7 @@
 
 pub mod assets;
 pub mod devices;
+pub mod midi;
 
 pub use devices::{AudioConfig, DeviceInfo, list_output_devices};
 

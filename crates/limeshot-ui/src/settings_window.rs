@@ -4,8 +4,8 @@
 //! there is no OK or Cancel. Options › Audio / General / File settings, Project general settings
 //! and Project info open it on their page.
 //!
-//! LimeShot's pages hold the settings it has; MIDI and Theme are shown disabled until LimeShot
-//! has settings for them.
+//! LimeShot's pages hold the settings it has; Theme is shown disabled until LimeShot has settings
+//! for it.
 
 use egui::{Align2, ComboBox, Context, RichText, Ui, vec2};
 use limeshot_core::{Command, TimeSignature};
@@ -58,7 +58,7 @@ impl Page {
 
     /// Whether LimeShot has settings on this page yet.
     fn available(self) -> bool {
-        !matches!(self, Page::Midi | Page::Theme)
+        !matches!(self, Page::Theme)
     }
 }
 
@@ -74,6 +74,8 @@ pub struct State {
     pub page: Page,
     /// Output devices, read when the Audio page was opened.
     devices: Option<Vec<limeshot_audio::DeviceInfo>>,
+    /// MIDI input ports, read when the MIDI page was opened (and on Refresh device list).
+    midi_ports: Option<Vec<String>>,
 }
 
 impl LimeShotApp {
@@ -82,7 +84,11 @@ impl LimeShotApp {
         match &mut self.ui.settings {
             Some(s) => s.page = page,
             None => {
-                self.ui.settings = Some(State { page, devices: None });
+                self.ui.settings = Some(State {
+                    page,
+                    devices: None,
+                    midi_ports: None,
+                });
             }
         }
     }
@@ -109,13 +115,14 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| match page {
+                    Page::Midi => midi(app, ui),
                     Page::Audio => audio(app, ui),
                     Page::General => general(app, ui),
                     Page::File => file(app, ui),
                     Page::Project => project(app, ui),
                     Page::Info => info(app, ui),
                     Page::About => about(ui),
-                    Page::Midi | Page::Theme => {
+                    Page::Theme => {
                         ui.label(RichText::new("Not implemented yet").color(Theme::current().text_faint));
                     }
                 });
@@ -171,6 +178,81 @@ fn section(ui: &mut Ui, title: &str, add: impl FnOnce(&mut Ui)) {
 }
 
 // ----- Audio -----
+
+/// FL Studio's MIDI page: the input devices (LimeShot plays one at a time; its notes play the
+/// selected channel), how note-on velocity is used, and Refresh device list.
+fn midi(app: &mut LimeShotApp, ui: &mut Ui) {
+    let ports = match app.ui.settings.as_mut() {
+        Some(s) => s
+            .midi_ports
+            .get_or_insert_with(limeshot_audio::midi::input_ports)
+            .clone(),
+        None => return,
+    };
+    let t = Theme::current();
+    let mut changed_input = false;
+    section(ui, "Input", |ui| {
+        let current = app.settings.midi_input.clone();
+        if ui.radio(current.is_none(), "(none)").clicked() && current.is_some() {
+            app.settings.midi_input = None;
+            changed_input = true;
+        }
+        for name in &ports {
+            let on = current.as_deref() == Some(name.as_str());
+            if ui
+                .radio(on, name.as_str())
+                .hint("Notes from this device play the selected channel")
+                .clicked()
+                && !on
+            {
+                app.settings.midi_input = Some(name.clone());
+                changed_input = true;
+            }
+        }
+        // A saved device that is not connected now.
+        if let Some(name) = current.as_deref()
+            && !ports.iter().any(|p| p == name)
+        {
+            ui.label(RichText::new(format!("{name} (not connected)")).color(t.text_faint));
+        }
+        if ports.is_empty() {
+            ui.label(RichText::new("No MIDI inputs found").color(t.text_faint));
+        }
+        ui.add_space(4.0);
+        let active = app.midi.as_ref().map(|m| m.name().to_string());
+        ui.label(
+            RichText::new(match active {
+                Some(n) => format!("Playing the selected channel from {n}"),
+                None => "No MIDI input is open".into(),
+            })
+            .small()
+            .color(t.text_dim),
+        );
+        ui.horizontal(|ui| {
+            ui.label("Link note on velocity to");
+            ComboBox::from_id_salt("settings-midi-velocity")
+                .selected_text(if app.settings.midi_velocity {
+                    "Velocity"
+                } else {
+                    "Nothing"
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut app.settings.midi_velocity, true, "Velocity");
+                    ui.selectable_value(&mut app.settings.midi_velocity, false, "Nothing");
+                });
+        });
+    });
+    if ui.button("Refresh device list").clicked()
+        && let Some(s) = app.ui.settings.as_mut()
+    {
+        s.midi_ports = None;
+    }
+    if changed_input {
+        let ctx = ui.ctx().clone();
+        app.open_midi_input(&ctx);
+        app.save_settings();
+    }
+}
 
 fn audio(app: &mut LimeShotApp, ui: &mut Ui) {
     let devices = match app.ui.settings.as_mut() {

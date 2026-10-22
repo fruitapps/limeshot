@@ -183,6 +183,11 @@ pub struct LimeShotApp {
     pub auditions: Vec<(ChannelId, u8)>,
     pub typing_notes: Vec<(egui::Key, ChannelId, u8)>,
     pub keyboard_notes: bool,
+    /// The open MIDI input (settings' `midi_input`) and the notes it holds, with the channel each
+    /// started on (so a note ends where it began when the selection changes meanwhile).
+    pub midi: Option<limeshot_audio::midi::MidiIn>,
+    pub midi_notes: Vec<(u8, ChannelId)>,
+    midi_opened: bool,
     pub sampler_preview: Option<(ChannelId, std::time::Instant, f64)>,
 }
 
@@ -196,6 +201,57 @@ impl LimeShotApp {
         app.persist_settings = true;
         app.presets_dir = crate::settings::config_dir().map(|d| d.join("presets"));
         app
+    }
+
+    /// Open the MIDI input named in the settings (none: close it). `ctx` is woken by each
+    /// message so notes play without waiting for the next frame.
+    pub fn open_midi_input(&mut self, ctx: &Context) {
+        self.midi_all_off();
+        self.midi = None;
+        let Some(name) = self.settings.midi_input.clone() else {
+            return;
+        };
+        let ctx = ctx.clone();
+        match limeshot_audio::midi::MidiIn::open(&name, move || ctx.request_repaint()) {
+            Ok(m) => {
+                self.hint(format!("MIDI input: {name}"));
+                self.midi = Some(m);
+            }
+            Err(e) => self.toast_error(e),
+        }
+    }
+
+    /// A MIDI message from the input device (or a test): notes play the selected channel.
+    pub fn midi_event(&mut self, e: limeshot_audio::midi::MidiEvent) {
+        use limeshot_audio::midi::MidiEvent;
+        match e {
+            MidiEvent::NoteOn { key, velocity } => {
+                let Some(channel) = self.selected_channel() else { return };
+                let velocity = if self.settings.midi_velocity { velocity } else { 0.78 };
+                if let Some(i) = self.midi_notes.iter().position(|n| n.0 == key) {
+                    let (_, old) = self.midi_notes.remove(i);
+                    self.preview_off(old, key);
+                }
+                self.preview_on(channel, key, velocity);
+                // Held by the key, not the mouse: keep it out of the pointer's auditions.
+                self.auditions.retain(|a| *a != (channel, key));
+                self.midi_notes.push((key, channel));
+            }
+            MidiEvent::NoteOff { key } => {
+                if let Some(i) = self.midi_notes.iter().position(|n| n.0 == key) {
+                    let (_, channel) = self.midi_notes.remove(i);
+                    self.preview_off(channel, key);
+                }
+            }
+            MidiEvent::Control { .. } | MidiEvent::PitchBend(_) => {}
+        }
+    }
+
+    /// Release every note the MIDI input holds.
+    pub fn midi_all_off(&mut self) {
+        for (key, channel) in std::mem::take(&mut self.midi_notes) {
+            self.preview_off(channel, key);
+        }
     }
 
     /// For tests and the headless path: an app with no audio device.
@@ -250,6 +306,9 @@ impl LimeShotApp {
             sampler_preview: None,
             keyboard_notes: false,
             typing_notes: Vec::new(),
+            midi: None,
+            midi_notes: Vec::new(),
+            midi_opened: false,
         }
     }
 
@@ -930,6 +989,16 @@ impl LimeShotApp {
             keep
         });
         self.typing_notes = held;
+        if !self.midi_opened {
+            self.midi_opened = true;
+            if self.persist_settings {
+                self.open_midi_input(ctx);
+            }
+        }
+        let events = self.midi.as_ref().map(|m| m.drain()).unwrap_or_default();
+        for e in events {
+            self.midi_event(e);
+        }
         self.sync_engine();
         if self.plugins.poll() {
             self.doc.mark_unsaved();
