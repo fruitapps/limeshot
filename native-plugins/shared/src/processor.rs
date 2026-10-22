@@ -249,7 +249,10 @@ impl<const ID: u8> LimePlugin<ID> {
                 release: p[4] / 1000.0,
                 reverse: p[5] >= 0.5,
                 one_shot: p[6] >= 0.5,
-                looping: None,
+                looping: (p[13] >= 0.5).then(|| {
+                    let (a, b) = (p[14].clamp(0.0, 1.0), p[15].clamp(0.0, 1.0));
+                    (a.min(b), a.max(b))
+                }),
                 // As LimeShot compiles its sampler: no filter while it is fully open.
                 filter: (p[11] < 19_999.0 || p[12] > 0.0)
                     .then(|| (p[11].clamp(20.0, 20_000.0), p[12].clamp(0.0, 0.95))),
@@ -384,7 +387,8 @@ impl<const ID: u8> LimePlugin<ID> {
         if let Some(i) = index {
             let s = &mut self.voices[i];
             s.held = false;
-            if ID == 1 && p[6] >= 0.5 {
+            // One-shot notes ignore their note-off, unless they loop (as in LimeShot's renderer).
+            if ID == 1 && p[6] >= 0.5 && p[13] < 0.5 {
                 return;
             }
             s.sustained = self.pedal.get(s.channel as usize).copied().unwrap_or(false);

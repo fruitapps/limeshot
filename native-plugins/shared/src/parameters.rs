@@ -98,6 +98,10 @@ pub const SAMPLER: &[ParamSpec] = &[
     // Appended (PLG-016): the low-pass filter, open by default.
     spec("Cutoff", 20.0, 20000.0, 20000.0, "Hz", true),
     spec("Resonance", 0.0, 0.95, 0.0, "", false),
+    // Appended (PLG-015): loop the region while the note is held, as fractions of the sample.
+    choice("Loop", &["Off", "On"], 0.0),
+    spec("Loop start", 0.0, 1.0, 0.0, "", false),
+    spec("Loop end", 0.0, 1.0, 1.0, "", false),
 ];
 
 /// Return controls in the stable native plugin order (IDs 0–8), or an empty slice for other IDs.

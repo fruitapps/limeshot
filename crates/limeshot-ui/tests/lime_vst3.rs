@@ -44,6 +44,9 @@ fn project(wav: &str) -> (Project, PatternId) {
                 sustain: 0.4,
                 cutoff_hz: 1500.0,
                 resonance: 0.5,
+                looping: true,
+                loop_start: 0.1,
+                loop_end: 0.3,
                 ..Default::default()
             }),
         })

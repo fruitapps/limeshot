@@ -367,11 +367,14 @@ fn values(content: &Content) -> Vec<f32> {
             s.sustain,
             s.cutoff_hz,
             s.resonance,
+            f32::from(s.looping),
+            s.loop_start,
+            s.loop_end,
         ],
     }
 }
 /// Convert plain native controls to preset content, omitting bypass and external-key toggles.
-/// Sampler content omits embedded audio and root key and defaults DAW-only settings.
+/// Sampler content omits embedded audio and root key.
 fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
     match id {
         0 => Content::Synth(limeshot_core::SynthParams {
@@ -416,7 +419,9 @@ fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
             sustain: p[10],
             cutoff_hz: p[11],
             resonance: p[12],
-            ..Default::default()
+            looping: p[13] >= 0.5,
+            loop_start: p[14],
+            loop_end: p[15],
         }),
         _ => Content::Effect {
             kind: parameters::KINDS[(id - 2) as usize],

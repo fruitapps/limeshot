@@ -8797,7 +8797,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-015, PLG-017…PLG-023."
+      "notes": "Conversion and hosting done: a project with LimeSynth, Sampler (embedded WAV, pitch, trim) and EQ renders bit-identically through the VST3 bundles (difference 0). Remaining: delete built-ins, ship bundles in the app package and CI, the P0 gaps PLG-017…PLG-023."
     },
     {
       "id": "PLG-014",
@@ -8840,9 +8840,9 @@
       "name": "Lime Sampler loop points",
       "description": "Sample looping with loop start and end in Lime Sampler (INS-007).",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Not implemented in Lime Sampler; converted looping samplers play once with a warning.",
+      "limeshot_behavior": "Lime Sampler has Loop (off/on), Loop start and Loop end (fractions of the sample), appended as parameters 14–16 and shown under the waveform. A looping note plays the loop while held and releases on note-off even in one-shot mode, as in LimeShot's renderer. They round-trip through .limepreset and the converter carries the built-in sampler's loop over.",
       "priority": "P0",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PLG-013",
@@ -8854,7 +8854,11 @@
       "acceptance_criteria": [
         "Loop on/off, start and end controls; the converter carries them over."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
+        "limeshot-core lime::tests::converts_built_in_instruments_and_effects",
+        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes"
+      ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
@@ -8862,7 +8866,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": ""
+      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform."
     },
     {
       "id": "PLG-016",

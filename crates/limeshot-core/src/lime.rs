@@ -198,17 +198,16 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
         p.sustain,
         p.cutoff_hz,
         p.resonance,
+        f32::from(u8::from(p.looping)),
+        p.loop_start,
+        p.loop_end,
     ]
 }
 
 /// Settings of a former built-in sampler that Lime Sampler cannot reproduce yet (the P0 features
-/// listed in decision D39), as user-facing phrases.
-pub fn sampler_losses(p: &SamplerParams) -> Vec<&'static str> {
-    let mut lost = Vec::new();
-    if p.looping {
-        lost.push("its loop");
-    }
-    lost
+/// listed in decision D39), as user-facing phrases. Lime Sampler now has every sampler setting.
+pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
+    Vec::new()
 }
 
 /// Replace the former built-in instruments and exported effects of `project` with Lime plugins,
@@ -355,7 +354,7 @@ mod tests {
                 stereo: vec![0.0; 4],
             })
         });
-        assert_eq!(warnings, ["Kick: Lime Sampler does not have its loop yet"]);
+        assert!(warnings.is_empty(), "{warnings:?}");
         let Instrument::Plugin(p) = &project.channels[0].instrument else {
             panic!("not converted")
         };
@@ -368,6 +367,7 @@ mod tests {
         let v: Value = serde_json::from_slice(component_state(&p.state).unwrap()).unwrap();
         assert_eq!(v["params"]["value_8"]["f32"], 60.0);
         assert_eq!(v["params"]["value_9"]["f32"], 12.0);
+        assert_eq!(v["params"]["value_14"]["f32"], 1.0);
         assert!(v["fields"]["sample-v1"].is_string());
         let fx = &project.mixer.tracks[0].effects;
         assert_eq!(fx[0].kind, EffectKind::Plugin);
