@@ -135,13 +135,35 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
     if r.clicked() {
         crate::recording::toggle(app);
     }
+    // While recording audio: the input's level under the button.
+    if let Some(level) = crate::recording::input_level(app) {
+        let t = Theme::current();
+        let bar = egui::Rect::from_min_size(
+            r.rect.left_bottom() + egui::vec2(2.0, -3.0),
+            egui::vec2(r.rect.width() - 4.0, 2.0),
+        );
+        ui.painter().rect_filled(bar, 0.0, t.sunken);
+        let w = bar.width() * level.clamp(0.0, 1.0);
+        ui.painter().rect_filled(
+            egui::Rect::from_min_size(bar.min, egui::vec2(w, bar.height())),
+            0.0,
+            if level >= 1.0 { t.danger } else { t.accent },
+        );
+        ui.ctx().request_repaint();
+    }
     // FL Studio's record menu (only notes are recorded; the other filters are not in yet).
     r.context_menu(|ui| {
         let t = Theme::current();
         ui.label(RichText::new("Recording filter").small().color(t.text_faint));
         ui.add_enabled(false, egui::Button::selectable(false, "Automation"));
         let _ = ui.add(egui::Button::selectable(true, "Notes"));
-        ui.add_enabled(false, egui::Button::selectable(false, "Audio"));
+        if ui
+            .add(egui::Button::selectable(app.ui.record.audio, "Audio"))
+            .hint("Also record the audio input (Settings › Audio) into an audio clip while playing")
+            .clicked()
+        {
+            app.ui.record.audio = !app.ui.record.audio;
+        }
         ui.add_enabled(false, egui::Button::selectable(false, "Clips"));
         ui.separator();
         ui.label(RichText::new("Options").small().color(t.text_faint));

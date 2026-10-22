@@ -27,6 +27,8 @@ pub struct Settings {
     pub midi_input: Option<String>,
     /// FL Studio's "Link note on velocity to": the key's velocity, or a fixed one ("Nothing").
     pub midi_velocity: bool,
+    /// The audio input recorded from (`None`: the system default input).
+    pub audio_input: Option<String>,
 }
 
 impl Default for Settings {
@@ -41,6 +43,7 @@ impl Default for Settings {
             custom_layout: None,
             midi_input: None,
             midi_velocity: true,
+            audio_input: None,
         }
     }
 }

@@ -5370,3 +5370,44 @@ fn compressed_samples_list_load_and_play() {
         )
     });
 }
+
+/// REC-001: a finished audio take lands on the Playlist as an audio clip at the song position
+/// where recording started, on a free track, as long as the recording.
+#[test]
+fn an_audio_take_becomes_an_audio_clip() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("Untitled take 1.wav");
+    let data: Vec<f32> = (0..48_000).flat_map(|i| [(i as f32 * 0.05).sin() * 0.3; 2]).collect();
+    limeshot_dsp::write_wav(&path, 48_000, &data, limeshot_dsp::BitDepth::Float32).expect("wav");
+    let mut h = harness(true);
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let clips = h.state().project().playlist.clips.len();
+    let take = limeshot_audio::record::Take {
+        path: path.clone(),
+        frames: 48_000,
+        sample_rate: 48_000,
+        dropped: 0,
+    };
+    // The demo's first tracks are busy at bar 2: the take goes below them.
+    limeshot_ui::recording::place_take(h.state_mut(), &take, 2 * bar);
+    let p = h.state().project();
+    assert_eq!(p.playlist.clips.len(), clips + 1);
+    let c = p
+        .playlist
+        .clips
+        .iter()
+        .find(|c| c.audio_channel().is_some())
+        .expect("audio clip");
+    assert_eq!(c.start, 2 * bar);
+    let want = p.tempo.bpm() / 60.0 * PPQ as f64; // one second
+    assert!((c.length as f64 - want).abs() <= 1.0, "{} vs {want}", c.length);
+    assert!(
+        !p.playlist
+            .clips
+            .iter()
+            .any(|o| o.id != c.id && o.track == c.track && o.start < c.end() && c.start < o.end()),
+        "on a free track"
+    );
+    // Audio recording is off until the Audio filter is chosen.
+    assert!(!h.state().ui.record.audio);
+}

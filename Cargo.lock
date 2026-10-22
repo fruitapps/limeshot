@@ -2064,6 +2064,7 @@ name = "limeshot-audio"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "hound",
  "limeshot-core",
  "limeshot-dsp",
  "limeshot-engine",

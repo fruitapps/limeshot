@@ -10,7 +10,6 @@ use limeshot_core::*;
 use limeshot_engine::PlayMode;
 
 /// The record button's state and options.
-#[derive(Debug, Clone)]
 pub struct State {
     pub armed: bool,
     /// Arming while stopped starts playback (FL Studio: Recording starts playback).
@@ -20,6 +19,12 @@ pub struct State {
     /// Snap recorded note starts / ends to the snap setting (FL Studio's Quantize submenu).
     pub quantize_start: bool,
     pub quantize_end: bool,
+    /// Record audio from the input too (the Recording filter's Audio).
+    pub audio: bool,
+    /// The running audio recording and the song tick it started at.
+    recorder: Option<(limeshot_audio::record::InputRecorder, Tick)>,
+    /// Whether the transport was playing in the last frame (audio recording follows it).
+    was_playing: bool,
     /// Notes being held: channel, key, start (pattern ticks), velocity.
     held: Vec<(ChannelId, u8, Tick, f32)>,
     /// The current take: its pattern, notes, and the revision after its last step.
@@ -36,6 +41,9 @@ impl Default for State {
             disarm_on_stop: false,
             quantize_start: true,
             quantize_end: false,
+            audio: false,
+            recorder: None,
+            was_playing: false,
             held: Vec::new(),
             take: Vec::new(),
             take_pattern: None,
@@ -184,4 +192,99 @@ fn add(app: &mut LimeShotApp, channel: ChannelId, key: u8, start: Tick, end: Tic
         notes,
     });
     app.ui.record.applied = (app.doc.revision() != before).then(|| app.doc.revision());
+}
+
+/// Where the next audio take goes: the project's "Recorded" folder, or the settings folder's
+/// "Recordings" for an unsaved project; numbered so takes never overwrite each other.
+fn take_path(app: &LimeShotApp) -> Option<std::path::PathBuf> {
+    let dir = match app.path.as_ref().and_then(|p| p.parent()) {
+        Some(d) => d.join("Recorded"),
+        None => crate::settings::config_dir()?.join("Recordings"),
+    };
+    let stem = app
+        .path
+        .as_ref()
+        .and_then(|p| p.file_stem())
+        .map_or_else(|| "Untitled".to_string(), |s| s.to_string_lossy().into_owned());
+    (1..10_000)
+        .map(|n| dir.join(format!("{stem} take {n}.wav")))
+        .find(|p| !p.exists())
+}
+
+/// Called every frame: audio recording starts and stops with the transport while armed with the
+/// Audio filter on.
+pub fn tick(app: &mut LimeShotApp) {
+    let playing = app.is_playing();
+    let was = std::mem::replace(&mut app.ui.record.was_playing, playing);
+    if playing && !was && app.ui.record.armed && app.ui.record.audio && app.ui.record.recorder.is_none() {
+        start_audio(app);
+    }
+    if !playing && was {
+        stop_audio(app);
+    }
+}
+
+fn start_audio(app: &mut LimeShotApp) {
+    if !app.persist_settings {
+        // Headless apps (tests) never open a real input.
+        return;
+    }
+    let Some(path) = take_path(app) else {
+        app.toast_error("No folder to record into".to_string());
+        return;
+    };
+    let start = if app.ui.mode == PlayMode::Song {
+        app.player.status().position()
+    } else {
+        0
+    };
+    match limeshot_audio::record::InputRecorder::start(app.settings.audio_input.as_deref(), path) {
+        Ok(r) => {
+            app.hint(format!("Recording audio from {}", r.device));
+            app.ui.record.recorder = Some((r, start));
+        }
+        Err(e) => app.toast_error(format!("Audio recording: {e}")),
+    }
+}
+
+fn stop_audio(app: &mut LimeShotApp) {
+    let Some((r, start)) = app.ui.record.recorder.take() else {
+        return;
+    };
+    match r.stop() {
+        Ok(take) => place_take(app, &take, start),
+        Err(e) => app.toast_error(format!("Audio recording: {e}")),
+    }
+}
+
+/// The input level of the running audio recording (for the toolbar's meter).
+pub fn input_level(app: &LimeShotApp) -> Option<f32> {
+    app.ui.record.recorder.as_ref().map(|(r, _)| r.level())
+}
+
+/// Put a finished take on the Playlist at `start`, on the first track free for its length.
+pub fn place_take(app: &mut LimeShotApp, take: &limeshot_audio::record::Take, start: Tick) {
+    if take.frames == 0 {
+        let _ = std::fs::remove_file(&take.path);
+        return;
+    }
+    let secs = take.frames as f64 / f64::from(take.sample_rate.max(1));
+    let len = (secs * app.project().tempo.bpm() / 60.0 * PPQ as f64).round() as Tick;
+    let clips = &app.project().playlist.clips;
+    let tracks = app.project().playlist.tracks.len() as u32;
+    let track = (0..tracks)
+        .find(|t| {
+            !clips
+                .iter()
+                .any(|c| c.track == *t && c.start < start + len && start < c.end())
+        })
+        .unwrap_or(tracks.saturating_sub(1));
+    if crate::playlist::add_audio_clip(app, &take.path, track, start).is_some() {
+        let dropped = if take.dropped > 0 {
+            format!(" ({} frames lost: the disk could not keep up)", take.dropped)
+        } else {
+            String::new()
+        };
+        app.hint(format!("Recorded {secs:.1} s to {}{dropped}", take.path.display()));
+    }
 }

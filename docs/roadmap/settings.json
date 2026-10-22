@@ -307,10 +307,10 @@
       "fl_default": "Default input device",
       "fl_reference": "Options › Audio settings › Input / output › Input device / ASIO inputs",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "settings.audio_input",
+      "status": "IMPLEMENTED",
       "feature": "REC-003",
-      "notes": ""
+      "notes": "Session 16: the input recorded from (default or a named device); no ASIO channel pairs."
     },
     {
       "id": "SET-002",

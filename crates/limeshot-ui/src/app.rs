@@ -1002,6 +1002,7 @@ impl LimeShotApp {
                 self.open_midi_input(ctx);
             }
         }
+        crate::recording::tick(self);
         let events = self.midi.as_ref().map(|m| m.drain()).unwrap_or_default();
         for e in events {
             self.midi_event(e);

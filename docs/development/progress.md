@@ -903,3 +903,13 @@ test now runs every built-in effect as an insert.
 unchanged). The voice wraps round the loop (forwards or reversed) and runs a stereo state-variable low-pass when the
 filter is not open; a looping one-shot follows the note length. Channel Settings has Loop and Filter sections and
 shades the loop on the waveform.
+
+### Session 16, part 19: audio recording (REC-001, REC-003)
+
+`limeshot_audio::record`: `InputRecorder` (cpal input stream → rtrb ring → writer thread → 32-bit float WAV;
+dropped frames counted, never blocking the callback), `list_input_devices`, `Take`. The record menu's Audio filter
+turns it on; `recording::tick` starts it when playback starts while armed and stops it with the transport;
+`place_take` puts the take on the first free Playlist track at its start. Settings › Audio has an Input choice
+(`settings.audio_input`); a level bar shows under the record button while recording; the macOS package declares
+microphone use. Not tried with a real input (it needs the owner's microphone permission): next session, record a few
+seconds from the built-in microphone and check the clip lines up.

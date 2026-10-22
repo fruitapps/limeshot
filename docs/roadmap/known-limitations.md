@@ -12,8 +12,9 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
 * Switching output devices was tested only with the default device.
 * MIDI input plays the selected channel from one device; it was checked with a virtual port, not a hardware
-  keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes only (no audio,
-  automation or clips, no count-in or loop takes), and a recorded note appears when it ends.
+  keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes and (with the Audio filter) the audio input;
+  audio recording was not tried with a real input yet, has no latency compensation or input monitoring, and there is
+  no automation or clip recording, count-in or loop takes. A recorded note appears when it ends.
 * Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only.
 * Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter, gate and utility; VST3 inserts are supported. A route is pre- or
   post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input

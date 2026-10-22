@@ -4938,10 +4938,10 @@
       "fl_keys": "",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "REC-002",
-      "notes": ""
+      "limeshot": "Toolbar › record button › Audio",
+      "status": "IMPLEMENTED",
+      "feature": "REC-001",
+      "notes": "Session 16: records the audio input into an audio clip while playing; off by default."
     },
     {
       "id": "MENU-285",

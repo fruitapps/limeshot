@@ -76,6 +76,8 @@ pub struct State {
     devices: Option<Vec<limeshot_audio::DeviceInfo>>,
     /// MIDI input ports, read when the MIDI page was opened (and on Refresh device list).
     midi_ports: Option<Vec<String>>,
+    /// Audio inputs, read when the Audio page was opened.
+    inputs: Option<Vec<String>>,
 }
 
 impl LimeShotApp {
@@ -88,6 +90,7 @@ impl LimeShotApp {
                     page,
                     devices: None,
                     midi_ports: None,
+                    inputs: None,
                 });
             }
         }
@@ -284,6 +287,37 @@ fn audio(app: &mut LimeShotApp, ui: &mut Ui) {
                             ui.selectable_value(&mut cfg.device, Some(d.name.clone()), label);
                         }
                     });
+                ui.end_row();
+                ui.label("Input (recording)");
+                let inputs = app
+                    .ui
+                    .settings
+                    .as_mut()
+                    .map(|s| {
+                        s.inputs
+                            .get_or_insert_with(limeshot_audio::record::list_input_devices)
+                            .clone()
+                    })
+                    .unwrap_or_default();
+                let current = app
+                    .settings
+                    .audio_input
+                    .clone()
+                    .unwrap_or_else(|| "System default".into());
+                let mut choice = app.settings.audio_input.clone();
+                ComboBox::from_id_salt("settings-audio-input")
+                    .width(260.0)
+                    .selected_text(current)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut choice, None, "System default");
+                        for name in &inputs {
+                            ui.selectable_value(&mut choice, Some(name.clone()), name.as_str());
+                        }
+                    });
+                if choice != app.settings.audio_input {
+                    app.settings.audio_input = choice;
+                    app.save_settings();
+                }
                 ui.end_row();
                 let dev = devices
                     .iter()

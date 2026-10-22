@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 189, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 386, NOT_PLANNED 41
+Tracked: **725** — IMPLEMENTED 190, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 385, NOT_PLANNED 41
 
 ## Summary
 
@@ -20,7 +20,7 @@ Tracked: **725** — IMPLEMENTED 189, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTE
 | Options | 24 | 8 | 0 | 14 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
-| Toolbar | 52 | 22 | 8 | 19 | 3 | 2 |
+| Toolbar | 52 | 23 | 8 | 18 | 3 | 2 |
 | Channel Rack | 72 | 25 | 12 | 31 | 4 | 2 |
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
@@ -42,8 +42,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PL-014 | P1 | VERIFIED | Audio clips | MENU-572 Playlist › Options › Edit › Reverse selected audio clips |
 | PL-015 | P1 | VERIFIED | Automation clips | MENU-568 Playlist › Options › Edit › Merge automation clips |
 | PL-016 | P1 | VERIFIED | Markers and loop region / time selection | MENU-635 Playlist › Options › Time markers › Add two...<br>MENU-636 Playlist › Options › Time markers › Add one every<br>MENU-637 Playlist › Options › Time markers › Add jump to next bar<br>MENU-639 Playlist › Options › Time markers › Add key marker<br>MENU-640 Playlist › Options › Time markers › Place loop<br>MENU-642 Playlist › Options › Time markers › Change to marker loop |
-| REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording<br>MENU-319 Toolbar › One-click audio recording<br>MENU-683 Mixer › Options › Disk recording<br>MENU-709 Mixer › Options › Arm selected track(s)<br>MENU-710 Mixer › Options › Disarm selected track(s) |
-| REC-002 | P1 | VERIFIED | MIDI recording | MENU-282 Toolbar › Record (automation, score, audio, clips) › Recording filter › Automation<br>MENU-284 Toolbar › Record (automation, score, audio, clips) › Recording filter › Audio<br>MENU-285 Toolbar › Record (automation, score, audio, clips) › Recording filter › Clips<br>MENU-288 Toolbar › Record (automation, score, audio, clips) › Options › Enable recording markers<br>MENU-291 Toolbar › Record (automation, score, audio, clips) › Quantize › Leave note duration<br>MENU-292 Toolbar › Record (automation, score, audio, clips) › Quantize › Record to step sequencer<br>MENU-293 Toolbar › Record (automation, score, audio, clips) › Quantize › Automations |
+| REC-001 | P1 | IMPLEMENTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording<br>MENU-319 Toolbar › One-click audio recording<br>MENU-683 Mixer › Options › Disk recording<br>MENU-709 Mixer › Options › Arm selected track(s)<br>MENU-710 Mixer › Options › Disarm selected track(s) |
+| REC-002 | P1 | VERIFIED | MIDI recording | MENU-282 Toolbar › Record (automation, score, audio, clips) › Recording filter › Automation<br>MENU-285 Toolbar › Record (automation, score, audio, clips) › Recording filter › Clips<br>MENU-288 Toolbar › Record (automation, score, audio, clips) › Options › Enable recording markers<br>MENU-291 Toolbar › Record (automation, score, audio, clips) › Quantize › Leave note duration<br>MENU-292 Toolbar › Record (automation, score, audio, clips) › Quantize › Record to step sequencer<br>MENU-293 Toolbar › Record (automation, score, audio, clips) › Quantize › Automations |
 | SEQ-008 | P1 | VERIFIED | Piano-roll preview in rack | MENU-367 Channel Rack › Options › Show a mute button on the piano roll preview |
 | SEQ-010 | P1 | VERIFIED | Swing (global and per channel) | MENU-348 Channel Rack › Options › Set swing mix for selected<br>MENU-349 Channel Rack › Options › Set truncate swing notes for selected |
 | TR-008 | P1 | VERIFIED | Metronome | MENU-299 Toolbar › Song position › Middle unit |
@@ -436,7 +436,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-281 | Record (automation, score, audio, clips) | Transport | control | `R` |  | Toolbar › record button | DIFFERENT | REC-002 | Right-click opens the menu below. LimeShot shows the button disabled. Session 16: records notes only (R); right-click opens the menu. |
 | MENU-282 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Automation | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
 | MENU-283 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Notes | Record menu › Recording filter | toggle |  | checked | Toolbar › record button › Notes | IMPLEMENTED | REC-002 | Session 16: always on; the other filters are shown disabled. |
-| MENU-284 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Audio | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-284 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Audio | Record menu › Recording filter | toggle |  | checked | Toolbar › record button › Audio | IMPLEMENTED | REC-001 | Session 16: records the audio input into an audio clip while playing; off by default. |
 | MENU-285 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Clips | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
 | MENU-286 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Recording starts playback | Record menu › Options | toggle |  |  | Toolbar › record button › Recording starts playback | IMPLEMENTED | REC-002 | Session 16: on by default. |
 | MENU-287 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Disarm on stop | Record menu › Options | toggle |  |  | Toolbar › record button › Disarm on stop | IMPLEMENTED | REC-002 |  |

@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **188** — IMPLEMENTED 20, IN_PROGRESS 1, NOT_STARTED 152, NOT_PLANNED 15
+Tracked: **188** — IMPLEMENTED 21, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED 15
 
 ## MIDI
 
@@ -37,7 +37,7 @@ Tracked: **188** — IMPLEMENTED 20, IN_PROGRESS 1, NOT_STARTED 152, NOT_PLANNED
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | SET-001 | Input / output | Output device | dropdown | Default audio device | Options › Audio settings › Input / output › Output device | OBSERVED | `settings.audio.device` | IMPLEMENTED | APP-012 |  |
-| SET-004 | Input / output | Input device / ASIO inputs | dropdown | Default input device | Options › Audio settings › Input / output › Input device / ASIO inputs | OBSERVED | — | NOT_STARTED | REC-003 |  |
+| SET-004 | Input / output | Input device / ASIO inputs | dropdown | Default input device | Options › Audio settings › Input / output › Input device / ASIO inputs | OBSERVED | `settings.audio_input` | IMPLEMENTED | REC-003 | Session 16: the input recorded from (default or a named device); no ASIO channel pairs. |
 | SET-002 | Input / output | Sample rate | dropdown | 48000 (device) | Options › Audio settings › Input / output › Sample rate | OBSERVED | `settings.audio.sample_rate` | IMPLEMENTED | APP-012 |  |
 | SET-007 | Input / output | Release the device when inactive | switch | off | Options › Audio settings › Input / output › Release the device when inactive | OBSERVED | — | NOT_STARTED | APP-012 | FL: 'Auto close'. |
 | SET-046 | Input / output | Device status and latency | info |  | Options › Audio settings › Input / output › Device status and latency | OBSERVED | `settings.audio.device` | IMPLEMENTED | APP-012 | FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Settings › Audio status shows the open device, rate, buffer and plugin delay compensation. |

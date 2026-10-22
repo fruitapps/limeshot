@@ -46,6 +46,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   </array>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSMicrophoneUsageDescription</key><string>LimeShot records audio from your input when you arm Record with the Audio filter.</string>
 </dict>
 </plist>
 PLIST

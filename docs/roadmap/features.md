@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 90, RESEARCHED 1, IN_PROGRESS 15, IMPLEMENTED 20, VERIFIED 142, DEFERRED 4
+- By status: NOT_STARTED 88, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 142, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -22,7 +22,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Instruments | 14 | 7 | 1 | 1 | 5 |
 | Effects | 15 | 9 | 1 | 0 | 5 |
 | Automation | 13 | 4 | 1 | 0 | 8 |
-| Recording | 11 | 1 | 0 | 0 | 10 |
+| Recording | 11 | 1 | 1 | 1 | 8 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
 | Export | 18 | 5 | 0 | 0 | 13 |
@@ -246,9 +246,9 @@ automated tests or recorded manual verification. Everything else is not done.
 
 | ID | Feature | Pri | MVP | Status | LimeShot behaviour | Tests |
 |---|---|---|---|---|---|---|
-| REC-001 | Audio recording from inputs | P1 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
+| REC-001 | Audio recording from inputs | P1 |  | IMPLEMENTED | Record armed with the Audio filter (record button's right-click) records the audio input (Settings › Audio › Input) while the transport plays: the input callback fills a lock-free ring, a writer thread writes a 32-bit float WAV into the project's Recorded folder (or Recordings in the settings folder when unsaved; numbered takes). On stop the take becomes an audio clip at the song position where it started (bar 1 in Pattern mode), on the first free Playlist track.<br>*Session 16. Not checked with a real input yet (that asks macOS for microphone access, which is the owner's to grant). No latency compensation (REC-006), count-in, punch or loop takes; the packaged app carries NSMicrophoneUsageDescription.* | `limeshot-audio record::tests::the_writer_drains_the_ring_into_a_wav`<br>`crates/limeshot-app/tests/ui.rs::an_audio_take_becomes_an_audio_clip` |
 | REC-002 | MIDI recording | P1 |  | VERIFIED | The toolbar's Record button (R) arms note recording; arming while stopped starts playback (option). While playing, notes from the MIDI input and the typing keyboard become notes of the current pattern on the channel they played, at the pattern position (in Song mode: inside the current pattern's clip under the song position), with their velocity; starts snap to the snap setting (option), lengths optionally too, notes held across the loop point wrap. Each take is one undo step ("Record"). Right-click: FL's record menu (recording filter: notes; Recording starts playback, Disarm on stop; Quantize note start / end time).<br>*Session 16. Not: audio, automation and clip recording, loop record / takes, count-in, recording latency compensation.* | `crates/limeshot-app/tests/ui.rs::recording_turns_played_notes_into_pattern_notes` |
-| REC-003 | Input selection and monitoring | P1 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
+| REC-003 | Input selection and monitoring | P1 |  | IN_PROGRESS | Settings › Audio › Input chooses the recording input; while recording, a level bar under the record button shows its peak (red at 0 dBFS). No input monitoring through the mixer yet.<br>*Session 16.* | `crates/limeshot-app/tests/ui.rs::an_audio_take_becomes_an_audio_clip` |
 | REC-004 | Punch in/out | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-005 | Loop recording / takes | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
 | REC-006 | Recording latency compensation | P2 |  | NOT_STARTED | Planned. The toolbar Record button is shown disabled with a 'not implemented' hint. | — |
