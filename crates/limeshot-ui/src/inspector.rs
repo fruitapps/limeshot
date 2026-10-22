@@ -291,7 +291,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
     row(ui, "Attack", |ui| {
         let r = reset(
             ui.add(
-                egui::Slider::new(&mut q.attack_ms, 0.0..=2000.0)
+                egui::Slider::new(&mut q.attack_ms, 0.0..=10_000.0)
                     .logarithmic(true)
                     .max_decimals(1)
                     .suffix(" ms"),
@@ -305,7 +305,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
     row(ui, "Decay", |ui| {
         let r = reset(
             ui.add(
-                egui::Slider::new(&mut q.decay_ms, 0.0..=4000.0)
+                egui::Slider::new(&mut q.decay_ms, 0.0..=10_000.0)
                     .logarithmic(true)
                     .max_decimals(1)
                     .suffix(" ms"),
@@ -464,7 +464,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     row(ui, "Attack", |ui| {
         track(reset(
             ui.add(
-                egui::Slider::new(&mut q.attack_ms, 0.0..=2000.0)
+                egui::Slider::new(&mut q.attack_ms, 0.0..=10_000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),
@@ -475,7 +475,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     row(ui, "Decay", |ui| {
         track(reset(
             ui.add(
-                egui::Slider::new(&mut q.decay_ms, 0.0..=4000.0)
+                egui::Slider::new(&mut q.decay_ms, 0.0..=10_000.0)
                     .logarithmic(true)
                     .suffix(" ms"),
             ),

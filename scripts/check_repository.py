@@ -13,6 +13,46 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def link_targets(text):
+    """Extract inline Markdown destinations (without titles) and HTML attributes."""
+    for match in re.finditer(r'\]\(\s*|(?:src|href)="([^"]+)"', text):
+        if match[1] is not None:
+            yield match[1].strip()
+            continue
+        start = end = match.end()
+        if text[start:start + 1] == "<":
+            end = text.find(">", start + 1)
+            if end < 0:
+                continue
+            target = text[start + 1:end]
+            end += 1
+        else:
+            depth = 0
+            while end < len(text):
+                char = text[end]
+                if char == "\\" and end + 1 < len(text):
+                    end += 2
+                    continue
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    if depth == 0:
+                        break
+                    depth -= 1
+                elif char.isspace():
+                    break
+                end += 1
+            if depth:
+                continue
+            target = text[start:end]
+        # A title must be separated from the destination by whitespace.
+        tail = text[end:]
+        if re.match(r"\s*\)", tail) or re.match(
+            r'''\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^()\\])*\))\s*\)''', tail
+        ):
+            yield re.sub(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])", r"\1", target)
+
+
 def check():
     files = subprocess.check_output(
         ["git", "ls-files", "-z"], cwd=ROOT
@@ -25,8 +65,7 @@ def check():
             # The repository uses inline Markdown and HTML links. Exclude code fences, whose
             # examples can contain placeholder paths or HTML that is not a document link.
             text = re.sub(r"^```.*?^```[^\n]*", "", path.read_text(encoding="utf-8"), flags=re.M | re.S)
-            for md, html in re.findall(r'\]\(([^)]+)\)|(?:src|href)="([^"]+)"', text):
-                target = (md or html).strip().removeprefix("<").removesuffix(">")
+            for target in link_targets(text):
                 url = urlsplit(target)
                 if url.scheme or url.netloc or not url.path:
                     continue

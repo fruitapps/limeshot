@@ -342,8 +342,11 @@ impl Voice {
     }
 
     /// Start `secs` (of output time) into the source: audio clips trimmed at the start, or
-    /// playback starting inside a clip. Only samplers move; a voice skipped past its end stops.
+    /// playback starting inside a clip. Advance its envelope by the elapsed output samples;
+    /// only samplers move, and a voice skipped past its end stops.
     pub fn skip(&mut self, secs: f64, sample_rate: f32) {
+        let output_samples = secs.max(0.0) * f64::from(sample_rate);
+        self.env.advance(output_samples as u64);
         if let Source::Sampler {
             pos,
             step,
@@ -353,7 +356,7 @@ impl Voice {
             ..
         } = &mut self.source
         {
-            let frames = secs.max(0.0) * f64::from(sample_rate) * *step;
+            let frames = output_samples * *step;
             if *reverse {
                 *pos -= frames;
             } else {
@@ -362,6 +365,9 @@ impl Voice {
             if *pos < *lo || *pos >= *hi {
                 self.source = Source::Off;
             }
+        }
+        if self.env.is_done() {
+            self.source = Source::Off;
         }
     }
 

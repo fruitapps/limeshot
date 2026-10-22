@@ -200,6 +200,12 @@ pub fn save_new_version(project: &Project, current: &Path) -> Result<PathBuf, Pr
         path: current.to_path_buf(),
         message: e.to_string(),
     })?;
+    #[cfg(unix)]
+    let mut temporary = tempfile::Builder::new()
+        .permissions(std::os::unix::fs::PermissionsExt::from_mode(0o666))
+        .tempfile_in(dir)
+        .map_err(io(dir))?;
+    #[cfg(not(unix))]
     let mut temporary = tempfile::NamedTempFile::new_in(dir).map_err(io(dir))?;
     temporary.write_all(text.as_bytes()).map_err(io(current))?;
     temporary.as_file().sync_all().map_err(io(current))?;

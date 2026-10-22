@@ -102,6 +102,37 @@ impl Envelope {
         self.level
     }
 
+    /// Advance by output samples without rendering them. Work is bounded by the ADSR stages.
+    pub fn advance(&mut self, mut samples: u64) {
+        while samples > 0 {
+            let (target, step, next) = match self.stage {
+                Stage::Attack => (1.0, self.attack_step, Stage::Decay),
+                Stage::Decay => (self.sustain, -self.decay_step, Stage::Sustain),
+                Stage::Release => (0.0, -self.release_step, Stage::Done),
+                Stage::Sustain => {
+                    if self.sustain <= 0.0 {
+                        self.stage = Stage::Done;
+                    }
+                    return;
+                }
+                Stage::Done => return,
+            };
+            let remaining = if step == 0.0 {
+                1
+            } else {
+                ((f64::from(target) - f64::from(self.level)) / f64::from(step)).ceil() as u64
+            }
+            .max(1);
+            if samples < remaining {
+                self.level = (f64::from(self.level) + f64::from(step) * samples as f64) as f32;
+                return;
+            }
+            self.level = target;
+            self.stage = next;
+            samples -= remaining;
+        }
+    }
+
     /// The level for this sample, then advance.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> f32 {
@@ -142,6 +173,50 @@ impl Envelope {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn advance_crosses_stages_and_handles_large_offsets() {
+        let adsr = Adsr {
+            attack: 0.125,
+            decay: 0.125,
+            sustain: 0.5,
+            release: 0.125,
+        };
+        for samples in [0, 1, 4, 8, 12, 16, 32] {
+            let mut expected = Envelope::start(adsr, 64.0);
+            let mut skipped = expected;
+            for _ in 0..samples {
+                expected.next();
+            }
+            skipped.advance(samples);
+            assert_eq!(skipped.stage, expected.stage, "offset {samples}");
+            assert_eq!(skipped.level(), expected.level());
+            skipped.release();
+            expected.release();
+            skipped.advance(4);
+            for _ in 0..4 {
+                expected.next();
+            }
+            assert_eq!(skipped.stage, expected.stage);
+            assert_eq!(skipped.next(), expected.next());
+            skipped.advance(u64::MAX);
+            assert!(skipped.is_done());
+        }
+        for sustain in [0.0, 1.0] {
+            let mut e = Envelope::start(
+                Adsr {
+                    attack: 0.0,
+                    decay: 0.0,
+                    sustain,
+                    ..adsr
+                },
+                64.0,
+            );
+            e.advance(u64::MAX);
+            assert_eq!(e.level(), sustain);
+            assert_eq!(e.is_done(), sustain == 0.0);
+        }
+    }
 
     #[test]
     fn stages_follow_the_settings() {

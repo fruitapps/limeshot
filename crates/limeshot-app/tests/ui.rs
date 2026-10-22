@@ -5978,6 +5978,58 @@ fn auto_scrolling_follows_playback_and_loop_returns_only_when_enabled() {
 }
 
 #[test]
+fn playlist_auto_scroll_pauses_during_ruler_gestures() {
+    for marker in [false, true] {
+        let mut h = playlist_harness();
+        let bar = h.state().project().time_signature.ticks_per_bar();
+        if marker {
+            h.state_mut().exec(Command::AddMarker {
+                tick: 0,
+                name: "Intro".into(),
+            });
+        }
+        h.state_mut().set_mode(limeshot_engine::PlayMode::Song);
+        h.state_mut().set_auto_scroll(true);
+        h.state_mut().locate(0);
+        wait_for(&mut h, "locate", |a| a.player.status().position() == 0);
+        h.state_mut().toggle_play();
+        wait_for(&mut h, "playback", |a| a.is_playing());
+        h.step();
+        let g = h.state().ui.playlist.geometry.unwrap();
+        let from = if marker {
+            h.state().ui.playlist.marker_rects[0].1.center()
+        } else {
+            egui::pos2(g.pos(bar, 0).x, g.grid.top() - 24.0)
+        };
+        let mods = if marker { Modifiers::NONE } else { Modifiers::COMMAND };
+        h.event(Event::ModifiersChanged(mods));
+        h.event(Event::PointerMoved(from));
+        h.event(Event::PointerButton {
+            pos: from,
+            button: PointerButton::Primary,
+            pressed: true,
+            modifiers: mods,
+        });
+        h.step();
+        // Move the view away from the playing position while the ruler gesture is held.
+        h.state_mut().ui.playlist.scroll.x = 1000.0;
+        h.event(Event::PointerMoved(from + vec2(20.0, 0.0)));
+        h.step();
+        h.step();
+        assert_eq!(h.state().ui.playlist.scroll.x, 1000.0, "marker drag: {marker}");
+        h.event(Event::PointerButton {
+            pos: from + vec2(20.0, 0.0),
+            button: PointerButton::Primary,
+            pressed: false,
+            modifiers: mods,
+        });
+        h.event(Event::ModifiersChanged(Modifiers::NONE));
+        h.step();
+        h.state_mut().stop();
+    }
+}
+
+#[test]
 fn save_new_version_from_file_menu_keeps_previous_project_and_undo_history() {
     let dir = tempfile::tempdir().expect("dir");
     let original = dir.path().join("beat.lime");

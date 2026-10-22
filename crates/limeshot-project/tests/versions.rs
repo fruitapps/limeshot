@@ -2,6 +2,19 @@
 use limeshot_core::*;
 use limeshot_project::{load, save, save_new_version};
 
+#[cfg(unix)]
+#[test]
+fn numbered_saves_use_the_same_umask_permissions_as_ordinary_saves() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let original = dir.path().join("song.lime");
+    let project = Project::new();
+    save(&project, &original).unwrap();
+    let next = save_new_version(&project, &original).unwrap();
+    let mode = |path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode(&next), mode(&original));
+}
+
 #[test]
 fn numbered_saves_skip_files_and_directories_and_keep_sample_paths() {
     let dir = tempfile::tempdir().unwrap();

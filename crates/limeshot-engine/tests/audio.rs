@@ -1795,3 +1795,36 @@ fn sampler_volume_envelope() {
         );
     }
 }
+
+#[test]
+fn skipped_sampler_advances_envelope_in_output_time() {
+    use limeshot_engine::voice::{Source, Voice};
+    for reverse in [false, true] {
+        let snap = ramp_snapshot(SamplerParams {
+            attack_ms: 4.0,
+            decay_ms: 4.0,
+            sustain: 0.5,
+            pitch: 12.0,
+            reverse,
+            ..Default::default()
+        });
+        let instrument = &snap.channels[0].instrument;
+        // The sample moves two source frames per output frame at this pitch.
+        for offset in [0, 96, 192, 288, 384, 480] {
+            let mut skipped = Voice::for_instrument(instrument, 60, 60, 1.0, SR as f32).unwrap();
+            let mut rendered = skipped.clone();
+            for _ in 0..offset {
+                rendered.next_frame();
+            }
+            skipped.skip(f64::from(offset) / f64::from(SR), SR as f32);
+            assert!((skipped.env.level() - rendered.env.level()).abs() < 1e-5);
+            for _ in 0..8 {
+                let (actual, _) = skipped.next_frame();
+                let (expected, _) = rendered.next_frame();
+                assert!((actual - expected).abs() < 1e-5, "offset {offset}, reverse {reverse}");
+            }
+            skipped.skip(1.0, SR as f32);
+            assert!(matches!(skipped.source, Source::Off));
+        }
+    }
+}

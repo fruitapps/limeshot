@@ -142,10 +142,8 @@ pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &st
     }
     let value = match target {
         ChannelVolume(_) | ChannelPan(_) | MixerPan(_) => typed / 100.0,
-        MixerVolume(_) if (-60.0..=limeshot_dsp::gain_to_db(2.0)).contains(&typed) => {
-            limeshot_dsp::db_to_gain(typed).min(2.0)
-        }
-        MixerVolume(_) | PluginParam { .. } => return None,
+        MixerVolume(_) => 10f32.powf(typed / 20.0),
+        PluginParam { .. } => return None,
         EffectParam { .. } => typed,
     };
     (value.is_finite() && (mapping.to_value(0.0)..=mapping.to_value(1.0)).contains(&value)).then_some(value)
@@ -227,6 +225,9 @@ mod tests {
             (AutomationTarget::MixerPan(1), "100", 1.0),
             (AutomationTarget::MixerVolume(1), "0", 1.0),
             (AutomationTarget::MixerVolume(1), "-inf", 0.0),
+            (AutomationTarget::MixerVolume(1), "-80", 0.0001),
+            (AutomationTarget::MixerVolume(1), "-140", 0.0000001),
+            (AutomationTarget::MixerVolume(1), "6.0206", 2.0),
             (
                 AutomationTarget::EffectParam {
                     track: 1,
@@ -238,11 +239,12 @@ mod tests {
             ),
         ] {
             let v = parse_value(&app, target, text).expect("valid value");
-            assert!((v - expected).abs() < 1e-5);
+            let tolerance = 1e-5_f32.min(f32::abs(expected) * 1e-5);
+            assert!((v - expected).abs() <= tolerance);
             set_value(&mut app, target, v);
             assert!((target.current_value(app.project()).unwrap() - expected).abs() < 1e-5);
             let (text, _) = input_value(&app, target).unwrap();
-            assert!((parse_value(&app, target, &text).unwrap() - expected).abs() < 1e-5);
+            assert!((parse_value(&app, target, &text).unwrap() - expected).abs() <= tolerance);
         }
         for text in ["NaN", "inf", "-inf", "", "abc", "101", "-101"] {
             assert_eq!(parse_value(&app, AutomationTarget::MixerPan(1), text), None);
