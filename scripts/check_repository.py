@@ -13,6 +13,30 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def without_code_blocks(text):
+    """Exclude fenced and indented Markdown examples from reference checks."""
+    lines = []
+    fence = None
+    paragraph = False
+    for line in text.splitlines(keepends=True):
+        lines.append("\n")
+        if fence is not None:
+            if re.fullmatch(rf" {{0,3}}{fence[0]}{{{len(fence)},}}[ \t]*", line.rstrip("\r\n")):
+                fence = None
+            continue
+        match = re.match(r" {0,3}(`{3,}|~{3,})(.*)", line)
+        if match and (match[1][0] == "~" or "`" not in match[2]):
+            fence = match[1]
+            paragraph = False
+        elif not paragraph and line.expandtabs(4).startswith("    "):
+            continue
+        else:
+            lines[-1] = line
+            # Indented code cannot interrupt a paragraph.
+            paragraph = bool(line.strip())
+    return "".join(lines)
+
+
 def link_targets(text):
     """Extract inline Markdown destinations (without titles) and HTML attributes."""
     for match in re.finditer(r'\]\(\s*|(?:src|href)="([^"]+)"', text):
@@ -56,7 +80,7 @@ def link_targets(text):
 def check():
     """Print missing local links, embedded assets, and feature evidence in tracked files.
 
-    Return True if any reference is missing, otherwise False. Markdown code fences,
+    Return True if any reference is missing, otherwise False. Markdown code blocks,
     anchors, and external URLs are excluded. Git, file access, JSON parsing, and URL
     parsing errors propagate to the caller.
     """
@@ -68,9 +92,9 @@ def check():
     for name in files:
         path = ROOT / name
         if name.endswith(".md"):
-            # The repository uses inline Markdown and HTML links. Exclude code fences, whose
+            # The repository uses inline Markdown and HTML links. Exclude code blocks, whose
             # examples can contain placeholder paths or HTML that is not a document link.
-            text = re.sub(r"^```.*?^```[^\n]*", "", path.read_text(encoding="utf-8"), flags=re.M | re.S)
+            text = without_code_blocks(path.read_text(encoding="utf-8"))
             for target in link_targets(text):
                 url = urlsplit(target)
                 if url.scheme or url.netloc or not url.path:
