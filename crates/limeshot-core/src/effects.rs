@@ -23,6 +23,8 @@ pub enum EffectKind {
     Limiter,
     /// Noise gate: quiets the signal below a threshold.
     Gate,
+    /// Saturation and distortion (soft clip, hard clip, wave folding).
+    Drive,
     /// A hosted plugin ([`EffectSlot::plugin`]); its parameters are the plugin's own.
     Plugin,
 }
@@ -147,13 +149,28 @@ const GATE: &[ParamSpec] = &[
     // How far the closed gate turns the signal down.
     p("Range", -80.0, 0.0, -80.0, "dB", false),
 ];
+const DRIVE: &[ParamSpec] = &[
+    p("Drive", 0.0, 36.0, 12.0, "dB", false),
+    ParamSpec {
+        name: "Shape",
+        min: 0.0,
+        max: 2.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &["Soft", "Hard", "Fold"],
+    },
+    p("Tone", 500.0, 20000.0, 8000.0, "Hz", true),
+    p("Mix", 0.0, 1.0, 1.0, "", false),
+    p("Output", -24.0, 6.0, -6.0, "dB", false),
+];
 const LIMITER: &[ParamSpec] = &[
     p("Ceiling", -24.0, 0.0, -0.3, "dB", false),
     p("Release", 5.0, 1000.0, 80.0, "ms", true),
 ];
 
 impl EffectKind {
-    pub const ALL: [EffectKind; 8] = [
+    pub const ALL: [EffectKind; 9] = [
         EffectKind::Utility,
         EffectKind::Eq3,
         EffectKind::Filter,
@@ -162,6 +179,7 @@ impl EffectKind {
         EffectKind::Compressor,
         EffectKind::Limiter,
         EffectKind::Gate,
+        EffectKind::Drive,
     ];
 
     pub fn label(self) -> &'static str {
@@ -174,6 +192,7 @@ impl EffectKind {
             EffectKind::Compressor => "Lime Comp",
             EffectKind::Limiter => "Lime Limiter",
             EffectKind::Gate => "Lime Gate",
+            EffectKind::Drive => "Lime Drive",
             EffectKind::Plugin => "Plugin",
         }
     }
@@ -188,6 +207,7 @@ impl EffectKind {
             EffectKind::Compressor => COMPRESSOR,
             EffectKind::Limiter => LIMITER,
             EffectKind::Gate => GATE,
+            EffectKind::Drive => DRIVE,
             EffectKind::Plugin => &[],
         }
     }

@@ -4074,19 +4074,27 @@
       "name": "Distortion / saturation / waveshaper",
       "description": "Distortion / saturation / waveshaper.",
       "fl_reference": "Fruity Blood Overdrive, Fast Dist, WaveShaper",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Drive: drive (0–36 dB) into a soft clip (tanh), hard clip or wave folder, a tone low-pass, dry/wet mix and output level. Factory presets Warm tape, Fuzz, Folder.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-engine",
+        "limeshot-project"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::drive_saturates_hard_clips_and_folds",
+        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4095,7 +4103,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. No oversampling, so high drive aliases; no bit crushing."
     },
     {
       "id": "FX-010",

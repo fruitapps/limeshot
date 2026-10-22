@@ -854,6 +854,75 @@ impl Effect for Gate {
     }
 }
 
+/// Saturation: the input is driven into a shaper (soft clip `tanh`, hard clip, or wave
+/// folding), then a one-pole low-pass tames the new harmonics. Params: drive dB, shape, tone Hz,
+/// mix, output dB.
+pub struct Drive {
+    sr: f32,
+    drive: f32,
+    shape: u8,
+    tone: f32,
+    mix: f32,
+    out: f32,
+    lp: [f32; 2],
+}
+
+impl Drive {
+    pub fn new(sample_rate: f32) -> Self {
+        let mut d = Self {
+            sr: sample_rate.max(1.0),
+            drive: 1.0,
+            shape: 0,
+            tone: 1.0,
+            mix: 1.0,
+            out: 1.0,
+            lp: [0.0; 2],
+        };
+        d.set_params(&[12.0, 0.0, 8000.0, 1.0, -6.0]);
+        d
+    }
+
+    fn shape(&self, x: f32) -> f32 {
+        match self.shape {
+            1 => x.clamp(-1.0, 1.0),
+            // Folding back from ±1 (a triangle-shaped transfer curve, period 4).
+            2 => {
+                let t = (x + 1.0).rem_euclid(4.0);
+                if t < 2.0 { t - 1.0 } else { 3.0 - t }
+            }
+            _ => x.tanh(),
+        }
+    }
+}
+
+impl Effect for Drive {
+    fn set_params(&mut self, p: &[f32]) {
+        self.drive = db_to_gain(get(p, 0, 12.0).clamp(0.0, 36.0));
+        self.shape = get(p, 1, 0.0).round().clamp(0.0, 2.0) as u8;
+        let hz = get(p, 2, 8000.0).clamp(500.0, 20_000.0).min(self.sr * 0.45);
+        self.tone = 1.0 - (-2.0 * PI * hz / self.sr).exp();
+        self.mix = get(p, 3, 1.0).clamp(0.0, 1.0);
+        self.out = db_to_gain(get(p, 4, -6.0).clamp(-24.0, 6.0));
+    }
+
+    fn process(&mut self, buf: &mut [f32]) {
+        for f in buf.as_chunks_mut::<2>().0 {
+            for (c, x) in f.iter_mut().enumerate() {
+                let wet = self.shape(*x * self.drive);
+                self.lp[c] += (wet - self.lp[c]) * self.tone;
+                if !self.lp[c].is_finite() {
+                    self.lp[c] = 0.0;
+                }
+                *x = (*x * (1.0 - self.mix) + self.lp[c] * self.mix) * self.out;
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        self.lp = [0.0; 2];
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1021,6 +1090,32 @@ mod tests {
     }
 
     #[test]
+    fn drive_saturates_hard_clips_and_folds() {
+        let mut d = Drive::new(SR);
+        // 24 dB of drive into a hard clip with the tone open, no output change: the output is
+        // a square-ish wave at ±1.
+        d.set_params(&[24.0, 1.0, 20_000.0, 1.0, 0.0]);
+        let out = run(&mut d, sine(100.0, 0.5, 9_600));
+        let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(peak <= 1.0 + 1e-3 && peak > 0.95, "{peak}");
+        assert!(rms(&out[2 * 4_800..]) > 0.85, "mostly at the rails");
+        // Soft clip never passes ±1 either, and is smoother (lower RMS than the hard clip).
+        d.set_params(&[24.0, 0.0, 20_000.0, 1.0, 0.0]);
+        d.reset();
+        let soft = run(&mut d, sine(100.0, 0.5, 9_600));
+        assert!(soft.iter().all(|v| v.abs() <= 1.0 + 1e-3));
+        // Folding keeps the level bounded too.
+        d.set_params(&[36.0, 2.0, 20_000.0, 1.0, 0.0]);
+        let fold = run(&mut d, sine(100.0, 0.5, 9_600));
+        assert!(fold.iter().all(|v| v.abs() <= 1.0 + 1e-3));
+        // Mix 0 is the dry signal times the output gain.
+        d.set_params(&[36.0, 0.0, 8000.0, 0.0, -6.0206]);
+        let dry = run(&mut d, sine(100.0, 0.5, 480));
+        let src = sine(100.0, 0.5, 480);
+        assert!(dry.iter().zip(&src).all(|(a, b)| (a - b * 0.5).abs() < 1e-4));
+    }
+
+    #[test]
     fn nonsense_params_stay_finite() {
         let effects: Vec<Box<dyn Effect>> = vec![
             Box::new(Utility::new()),
@@ -1031,6 +1126,7 @@ mod tests {
             Box::new(Compressor::new(SR)),
             Box::new(Limiter::new(SR)),
             Box::new(Gate::new(SR)),
+            Box::new(Drive::new(SR)),
         ];
         for mut e in effects {
             e.set_params(&[f32::NAN, f32::INFINITY, -1e9, 1e9, f32::NAN, 0.0, 1e30]);

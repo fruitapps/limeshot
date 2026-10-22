@@ -357,6 +357,23 @@ pub fn factory(slot: Slot) -> Vec<Preset> {
                 ],
             ),
         ],
+        Slot::Effect(K::Drive) => vec![
+            effect(
+                "Warm tape",
+                K::Drive,
+                &[("Drive", 6.0), ("Shape", 0.0), ("Tone", 6000.0), ("Output", -3.0)],
+            ),
+            effect(
+                "Fuzz",
+                K::Drive,
+                &[("Drive", 30.0), ("Shape", 1.0), ("Tone", 4000.0), ("Output", -12.0)],
+            ),
+            effect(
+                "Folder",
+                K::Drive,
+                &[("Drive", 24.0), ("Shape", 2.0), ("Mix", 0.6), ("Output", -6.0)],
+            ),
+        ],
         Slot::Effect(K::Utility) => vec![
             effect("Mono", K::Utility, &[("Width", 0.0)]),
             effect("Wide", K::Utility, &[("Width", 1.6)]),

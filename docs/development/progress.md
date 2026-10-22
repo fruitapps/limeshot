@@ -938,3 +938,8 @@ Next, in order:
 `ExportRange::Selection { from, to }`: the offline render plays Song mode from `from` for exactly the selection's
 frames (clips already under way are chased), no loop. The export dialog offers Time selection when the Playlist
 has one and starts on it, as FL Studio does.
+
+### Session 16, part 21: Lime Drive (FX-009)
+
+`EffectKind::Drive` / `effects::Drive`: soft clip, hard clip or wave folding after up to 36 dB of drive, a one-pole
+tone low-pass, mix and output; factory presets. No oversampling yet (noted in the limitations).
