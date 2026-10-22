@@ -32,8 +32,8 @@ def without_code_blocks(text):
             continue
         else:
             lines[-1] = line
-            # Indented code cannot interrupt a paragraph.
-            paragraph = bool(line.strip())
+            # Indented code cannot interrupt a paragraph, but headings end one.
+            paragraph = bool(line.strip()) and not re.match(r" {0,3}#{1,6}(?:\s|$)", line)
     return "".join(lines)
 
 

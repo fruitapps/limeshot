@@ -70,6 +70,8 @@ class LinkTests(unittest.TestCase):
             "tildes": "~~~markdown\n" + examples + "~~~\n",
             "spaces": "".join("    " + line for line in examples.splitlines(keepends=True)),
             "tabs": "".join("\t" + line for line in examples.splitlines(keepends=True)),
+            "heading before indented code": '## Example\n    [example](missing-code.md)\n',
+            "indented heading before tabbed code": '   ###### Example\n\t[example](missing-code.md)\n',
             "indented blank line": '    [example](missing-code.md)\n\n    <img src="missing-code.png">\n',
             "indented fence": "   ~~~markdown\n" + examples + "   ~~~\n",
             "long fence": "````markdown\n```\n" + examples + "`````\n",
