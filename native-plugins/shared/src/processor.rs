@@ -243,10 +243,9 @@ impl<const ID: u8> LimePlugin<ID> {
                 pitch: p[1],
                 start: p[2],
                 end: p[3],
-                // The native Sampler is a gate: instant attack, full sustain, timed release.
-                attack: 0.0,
-                decay: 0.0,
-                sustain: 1.0,
+                attack: p[8] / 1000.0,
+                decay: p[9] / 1000.0,
+                sustain: p[10],
                 release: p[4] / 1000.0,
                 reverse: p[5] >= 0.5,
                 one_shot: p[6] >= 0.5,

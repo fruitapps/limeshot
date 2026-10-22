@@ -262,7 +262,9 @@ impl NativeEditor {
         let values = values(&preset.content);
         let setter = context.param_setter();
         for (p, value) in self.params.controls.iter().zip(values) {
-            set(&setter, &p.value, value);
+            if value.is_finite() {
+                set(&setter, &p.value, value);
+            }
         }
         self.preset_name = preset.name;
         self.status.clear();
@@ -317,7 +319,8 @@ fn set<P: Param>(setter: &ParamSetter<'_>, p: &P, value: P::Plain) {
 }
 
 /// Convert preset content to plain native controls in specification order.
-/// Sampler content excludes audio and root key so applying it preserves both.
+/// Sampler content excludes audio and root key (NaN, skipped when applied) so applying it
+/// preserves both.
 fn values(content: &Content) -> Vec<f32> {
     match content {
         Content::Effect { params, .. } => params.clone(),
@@ -357,6 +360,11 @@ fn values(content: &Content) -> Vec<f32> {
             s.release_ms,
             f32::from(s.reverse),
             f32::from(s.one_shot),
+            // The root key is the channel's, not the preset's: kept as it is.
+            f32::NAN,
+            s.attack_ms,
+            s.decay_ms,
+            s.sustain,
         ],
     }
 }
@@ -401,6 +409,9 @@ fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
             release_ms: p[4],
             reverse: p[5] >= 0.5,
             one_shot: p[6] >= 0.5,
+            attack_ms: p[8],
+            decay_ms: p[9],
+            sustain: p[10],
             ..Default::default()
         }),
         _ => Content::Effect {
@@ -437,7 +448,9 @@ mod tests {
             save_preset_file(&path, &original).unwrap();
             let loaded = preset::load(&path, NativeEditor::preview(id).slot()).unwrap();
             let got = values(&loaded.content);
-            assert_eq!(&params.values()[..got.len()], got.as_slice());
+            for (want, got) in params.values().iter().zip(&got) {
+                assert!(got.is_nan() || want == got, "{want} vs {got}");
+            }
         }
     }
 }

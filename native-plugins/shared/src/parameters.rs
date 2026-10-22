@@ -91,6 +91,10 @@ pub const SAMPLER: &[ParamSpec] = &[
     choice("Reverse", &["Forward", "Reverse"], 0.0),
     choice("Playback", &["Gated", "One-shot"], 1.0),
     spec("Root key", 0.0, 127.0, 60.0, "MIDI", false),
+    // Appended (PLG-014) so earlier parameter IDs and saved states stay valid; the defaults are a gate.
+    spec("Attack", 0.0, 10000.0, 0.0, "ms", false),
+    spec("Decay", 0.0, 10000.0, 0.0, "ms", false),
+    spec("Sustain", 0.0, 1.0, 1.0, "", false),
 ];
 
 /// Return controls in the stable native plugin order (IDs 0–8), or an empty slice for other IDs.

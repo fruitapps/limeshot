@@ -193,6 +193,9 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
         f32::from(u8::from(p.reverse)),
         f32::from(u8::from(p.one_shot)),
         f32::from(root_key),
+        p.attack_ms,
+        p.decay_ms,
+        p.sustain,
     ]
 }
 
@@ -201,9 +204,6 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
 pub fn sampler_losses(p: &SamplerParams) -> Vec<&'static str> {
     let d = SamplerParams::default();
     let mut lost = Vec::new();
-    if p.attack_ms != d.attack_ms || p.decay_ms != d.decay_ms || p.sustain != d.sustain {
-        lost.push("its attack/decay/sustain envelope");
-    }
     if p.looping {
         lost.push("its loop");
     }
@@ -341,6 +341,7 @@ mod tests {
                 path: "kick.wav".into(),
             }),
             looping: true,
+            attack_ms: 12.0,
             ..SamplerParams::default()
         });
         project.channels = vec![c, s];
@@ -368,6 +369,7 @@ mod tests {
         };
         let v: Value = serde_json::from_slice(component_state(&p.state).unwrap()).unwrap();
         assert_eq!(v["params"]["value_8"]["f32"], 60.0);
+        assert_eq!(v["params"]["value_9"]["f32"], 12.0);
         assert!(v["fields"]["sample-v1"].is_string());
         let fx = &project.mixer.tracks[0].effects;
         assert_eq!(fx[0].kind, EffectKind::Plugin);

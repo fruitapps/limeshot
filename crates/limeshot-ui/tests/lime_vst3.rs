@@ -39,6 +39,9 @@ fn project(wav: &str) -> (Project, PatternId) {
                 sample: Some(SampleRef { path: wav.into() }),
                 pitch: 3.0,
                 end: 0.8,
+                attack_ms: 5.0,
+                decay_ms: 80.0,
+                sustain: 0.4,
                 ..Default::default()
             }),
         })
