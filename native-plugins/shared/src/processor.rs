@@ -1,0 +1,808 @@
+use limeshot_dsp::{Adsr, SampleData, db_to_gain, effects::Effect, osc::Shape};
+use limeshot_engine::voice::Voice;
+use limeshot_sequencer::{InstrumentState, SynthMods};
+use nice_plug::editor::dpi::LogicalSize;
+use nice_plug::midi::{Channel, Key, VoiceID};
+use nice_plug::prelude::*;
+use nice_plug_egui::{EguiEditor, EguiEditorState, EguiNiceSettings, RepaintNotifier, create_egui_editor};
+use std::sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+};
+
+use crate::{
+    editor::NativeEditor,
+    parameters::{self, NativeParams},
+};
+
+pub struct Meters {
+    pub input: AtomicU32,
+    pub output: AtomicU32,
+    pub reduction: AtomicU32,
+    pub scope: [AtomicU32; 128],
+    pub preview_note: AtomicU32,
+    pub sample_rate: AtomicU32,
+}
+impl Default for Meters {
+    fn default() -> Self {
+        Self {
+            input: AtomicU32::new(0),
+            output: AtomicU32::new(0),
+            reduction: AtomicU32::new(0),
+            scope: std::array::from_fn(|_| AtomicU32::new(0)),
+            preview_note: AtomicU32::new(0),
+            sample_rate: AtomicU32::new(48000.0_f32.to_bits()),
+        }
+    }
+}
+impl Meters {
+    pub fn read(value: &AtomicU32) -> f32 {
+        f32::from_bits(value.load(Ordering::Relaxed))
+    }
+    fn store(value: &AtomicU32, v: f32) {
+        value.store(v.to_bits(), Ordering::Relaxed);
+    }
+}
+
+#[derive(Default)]
+struct Slot {
+    voice: Voice,
+    id: Option<i32>,
+    channel: u8,
+    velocity: f32,
+    held: bool,
+    sustained: bool,
+    serial: u64,
+}
+
+pub struct LimePlugin<const ID: u8> {
+    pub(crate) params: Arc<NativeParams>,
+    pub(crate) meters: Arc<Meters>,
+    editor_state: Arc<EguiEditorState>,
+    notifier: RepaintNotifier,
+    effect: Option<Box<dyn Effect>>,
+    sample: Option<Arc<SampleData>>,
+    voices: [Slot; 64],
+    bend: [f32; 16],
+    pedal: [bool; 16],
+    serial: u64,
+    sample_rate: f32,
+    last_values: [f32; 16],
+    scope_offset: usize,
+    preview_note: u32,
+    meter_decay: f32,
+}
+
+impl<const ID: u8> Default for LimePlugin<ID> {
+    fn default() -> Self {
+        Self {
+            params: Arc::new(NativeParams::new(ID)),
+            meters: Arc::new(Meters::default()),
+            editor_state: {
+                let (w, h) = crate::editor::editor_size(ID);
+                EguiEditorState::from_size(LogicalSize::new(w, h), 1.0)
+            },
+            notifier: RepaintNotifier::new(),
+            effect: None,
+            sample: None,
+            voices: std::array::from_fn(|_| Slot::default()),
+            bend: [0.0; 16],
+            pedal: [false; 16],
+            serial: 0,
+            sample_rate: 48000.0,
+            last_values: [f32::NAN; 16],
+            scope_offset: 0,
+            preview_note: 0,
+            meter_decay: 0.999,
+        }
+    }
+}
+
+impl<const ID: u8> LimePlugin<ID> {
+    pub(crate) fn prepare(&mut self, rate: f32) {
+        self.sample_rate = rate;
+        Meters::store(&self.meters.sample_rate, rate);
+        self.meter_decay = (-1.0 / (rate * 0.18)).exp();
+        self.sample = self.params.sample.audio();
+        self.effect = if ID >= 2 {
+            Some(limeshot_engine::fx::build(
+                parameters::KINDS[(ID - 2) as usize],
+                rate as u32,
+                &self.params.values()[..parameters::specs(ID).len()],
+            ))
+        } else {
+            None
+        };
+        self.clear();
+    }
+    fn sync_preview(&mut self, values: &[f32; 16]) {
+        let requested = self.meters.preview_note.load(Ordering::Relaxed).min(128);
+        if ID >= 2 || requested == self.preview_note {
+            return;
+        }
+        if self.preview_note > 0 {
+            self.event(
+                NoteEvent::NoteOff {
+                    timing: 0,
+                    voice_id: VoiceID::ID(i32::MIN),
+                    channel: Channel::Number(0),
+                    key: Key::Number((self.preview_note - 1) as u8),
+                    velocity: 0.0,
+                },
+                values,
+            );
+        }
+        if requested > 0 {
+            self.event(
+                NoteEvent::NoteOn {
+                    timing: 0,
+                    voice_id: VoiceID::ID(i32::MIN),
+                    channel: Channel::Number(0),
+                    key: Key::Number((requested - 1) as u8),
+                    velocity: 0.8,
+                },
+                values,
+            );
+        }
+        self.preview_note = requested;
+    }
+
+    fn clear(&mut self) {
+        self.preview_note = 0;
+        self.meters.preview_note.store(0, Ordering::Relaxed);
+        for v in &mut self.voices {
+            v.voice.source = limeshot_engine::voice::Source::Off;
+            v.held = false;
+            v.sustained = false;
+        }
+        self.bend.fill(0.0);
+        self.pedal.fill(false);
+        self.last_values.fill(f32::NAN);
+        if let Some(e) = &mut self.effect {
+            e.reset();
+        }
+        Meters::store(&self.meters.input, 0.0);
+        Meters::store(&self.meters.output, 0.0);
+        Meters::store(&self.meters.reduction, 0.0);
+        for point in &self.meters.scope {
+            Meters::store(point, 0.0);
+        }
+    }
+
+    fn instrument(&self, p: &[f32; 16]) -> InstrumentState {
+        if ID == 0 {
+            InstrumentState::Synth {
+                shape: match p[0].round() as u8 {
+                    0 => Shape::Sine,
+                    1 => Shape::Square,
+                    3 => Shape::Triangle,
+                    _ => Shape::Saw,
+                },
+                octave: p[1].round() as i8,
+                detune_cents: p[2],
+                gain: db_to_gain(p[3]),
+                adsr: Adsr {
+                    attack: p[4] / 1000.0,
+                    decay: p[5] / 1000.0,
+                    sustain: p[6],
+                    release: p[7] / 1000.0,
+                },
+                mods: SynthMods {
+                    cutoff: p[8],
+                    resonance: p[9],
+                    env_octaves: p[10],
+                    env_decay: p[11] / 1000.0,
+                    lfo_rate: p[12],
+                    vibrato_cents: p[13],
+                    lfo_cutoff: p[14],
+                },
+            }
+        } else {
+            InstrumentState::Sampler {
+                sample: self.sample.clone(),
+                gain: db_to_gain(p[0]),
+                pitch: p[1],
+                start: p[2],
+                end: p[3],
+                release: p[4] / 1000.0,
+                reverse: p[5] >= 0.5,
+                one_shot: p[6] >= 0.5,
+                looping: None,
+                filter: None,
+            }
+        }
+    }
+
+    fn update_voices(&mut self, p: &[f32; 16]) {
+        let state = self.instrument(p);
+        let root = if ID == 1 { p[7].round() as u8 } else { 60 };
+        for v in &mut self.voices {
+            if v.voice.is_active() {
+                v.voice.update_instrument(
+                    &state,
+                    root,
+                    v.velocity,
+                    self.bend[v.channel as usize],
+                    self.sample_rate,
+                );
+            }
+        }
+    }
+
+    pub(crate) fn event(&mut self, e: NoteEvent<()>, p: &[f32; 16]) {
+        match e {
+            NoteEvent::NoteOn {
+                voice_id,
+                channel: Channel::Number(channel),
+                key: Key::Number(note),
+                velocity,
+                ..
+            } if channel < 16 && note < 128 => {
+                if velocity <= 0.0 {
+                    self.release_note(voice_id, Channel::Number(channel), Key::Number(note), p);
+                    return;
+                }
+                let state = self.instrument(p);
+                let root = if ID == 1 { p[7].round() as u8 } else { 60 };
+                let Some(mut voice) = Voice::for_instrument(&state, root, note, velocity, self.sample_rate) else {
+                    return;
+                };
+                voice.update_instrument(&state, root, velocity, self.bend[channel as usize], self.sample_rate);
+                let index = self
+                    .voices
+                    .iter()
+                    .position(|s| !s.voice.is_active())
+                    .unwrap_or_else(|| {
+                        self.voices
+                            .iter()
+                            .enumerate()
+                            .min_by_key(|(_, s)| (s.held, s.serial))
+                            .map_or(0, |(i, _)| i)
+                    });
+                self.serial = self.serial.wrapping_add(1);
+                self.voices[index] = Slot {
+                    voice,
+                    id: voice_id.id(),
+                    channel,
+                    velocity,
+                    held: true,
+                    sustained: false,
+                    serial: self.serial,
+                };
+            }
+            NoteEvent::NoteOff {
+                voice_id, channel, key, ..
+            } => self.release_note(voice_id, channel, key, p),
+            NoteEvent::Choke {
+                voice_id, channel, key, ..
+            } => {
+                for s in &mut self.voices {
+                    if matches_note(s, voice_id, channel, key) {
+                        s.voice.source = limeshot_engine::voice::Source::Off;
+                        s.held = false;
+                    }
+                }
+            }
+            NoteEvent::MidiPitchBend { channel, value, .. } if channel < 16 => {
+                self.bend[channel as usize] = (value.clamp(0.0, 1.0) - 0.5) * 4.0;
+                self.update_voices(p);
+            }
+            NoteEvent::MidiCC { channel, cc, value, .. } if channel < 16 => match cc {
+                64 => {
+                    let down = value >= 0.5;
+                    self.pedal[channel as usize] = down;
+                    if !down {
+                        for s in &mut self.voices {
+                            if s.channel == channel && s.sustained {
+                                s.voice.release();
+                                s.sustained = false;
+                            }
+                        }
+                    }
+                }
+                120 | 123 => {
+                    for s in &mut self.voices {
+                        if s.channel == channel {
+                            if cc == 120 {
+                                s.voice.source = limeshot_engine::voice::Source::Off;
+                            } else {
+                                s.voice.release();
+                            }
+                            s.held = false;
+                            s.sustained = false;
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    fn release_note(&mut self, id: VoiceID, channel: Channel, key: Key, p: &[f32; 16]) {
+        // Hosts without note IDs pair repeated keys in start order.
+        let index = self
+            .voices
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.held && matches_note(s, id, channel, key))
+            .min_by_key(|(_, s)| s.serial)
+            .map(|(i, _)| i);
+        if let Some(i) = index {
+            let s = &mut self.voices[i];
+            s.held = false;
+            if ID == 1 && p[6] >= 0.5 {
+                return;
+            }
+            s.sustained = self.pedal.get(s.channel as usize).copied().unwrap_or(false);
+            if !s.sustained {
+                s.voice.release();
+            }
+        }
+    }
+
+    pub(crate) fn frame(&mut self, input: [f32; 2], key: Option<[f32; 2]>, p: &[f32; 16], tempo: f64) -> [f32; 2] {
+        let mut out = if ID < 2 {
+            if *p != self.last_values {
+                self.update_voices(p);
+                self.last_values = *p;
+            }
+            let mut sum = [0.0; 2];
+            for s in &mut self.voices {
+                if s.voice.is_active() {
+                    let (l, r) = s.voice.next_frame();
+                    sum[0] += l;
+                    sum[1] += r;
+                }
+            }
+            sum
+        } else {
+            input
+        };
+        if let Some(effect) = &mut self.effect {
+            let mut resolved = *p;
+            if ID == 5 {
+                const BEATS: [f64; 9] = [0.0, 0.25, 1.0 / 3.0, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
+                let choice = p[5].round() as usize;
+                if let Some(beats) = BEATS.get(choice)
+                    && choice > 0
+                    && tempo.is_finite()
+                    && tempo > 0.0
+                {
+                    resolved[0] = (beats * 60000.0 / tempo).clamp(10.0, 2000.0) as f32;
+                }
+            }
+            if resolved != self.last_values {
+                effect.set_params(&resolved[..parameters::specs(ID).len()]);
+                self.last_values = resolved;
+            }
+            if self.params.external_key.value()
+                && let Some(key) = key
+            {
+                effect.process_sidechain(&mut out, &key);
+            } else {
+                effect.process(&mut out);
+            }
+            Meters::store(&self.meters.reduction, effect.gain_reduction_db());
+        }
+        if self.params.bypass.value() {
+            out = if ID < 2 { [0.0; 2] } else { input };
+        }
+        let in_peak = input[0].abs().max(input[1].abs());
+        let out_peak = out[0].abs().max(out[1].abs());
+        Meters::store(
+            &self.meters.input,
+            in_peak.max(Meters::read(&self.meters.input) * self.meter_decay),
+        );
+        Meters::store(
+            &self.meters.output,
+            out_peak.max(Meters::read(&self.meters.output) * self.meter_decay),
+        );
+        if self.scope_offset.is_multiple_of(16) {
+            Meters::store(
+                &self.meters.scope[(self.scope_offset / 16) % 128],
+                (out[0] + out[1]) * 0.5,
+            );
+        }
+        self.scope_offset = self.scope_offset.wrapping_add(1);
+        out
+    }
+}
+
+fn matches_note(s: &Slot, id: VoiceID, channel: Channel, key: Key) -> bool {
+    channel.number().is_none_or(|c| s.channel == c)
+        && key.number().is_none_or(|k| s.voice.key == k)
+        && id.id().is_none_or(|id| s.id == Some(id))
+}
+
+impl<const ID: u8> Plugin for LimePlugin<ID> {
+    const NAME: &'static str = parameters::NAMES[ID as usize];
+    const VENDOR: &'static str = "LimeShot";
+    const URL: &'static str = "https://github.com/fruitapps/limeshot";
+    const EMAIL: &'static str = "";
+    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = if ID < 2 {
+        &[AudioIOLayout {
+            main_output_channels: NonZeroU32::new(2),
+            ..AudioIOLayout::const_default()
+        }]
+    } else if ID == 7 {
+        &[
+            AudioIOLayout {
+                main_input_channels: NonZeroU32::new(2),
+                main_output_channels: NonZeroU32::new(2),
+                aux_input_ports: &[new_nonzero_u32(2)],
+                ..AudioIOLayout::const_default()
+            },
+            AudioIOLayout {
+                main_input_channels: NonZeroU32::new(2),
+                main_output_channels: NonZeroU32::new(2),
+                ..AudioIOLayout::const_default()
+            },
+        ]
+    } else {
+        &[AudioIOLayout {
+            main_input_channels: NonZeroU32::new(2),
+            main_output_channels: NonZeroU32::new(2),
+            ..AudioIOLayout::const_default()
+        }]
+    };
+    const MIDI_INPUT: MidiConfig = if ID < 2 { MidiConfig::MidiCCs } else { MidiConfig::None };
+    const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+    type Editor = EguiEditor<NativeEditor>;
+    type SysExMessage = ();
+    type BackgroundTask = ();
+
+    fn params(&self) -> Arc<dyn Params> {
+        self.params.clone()
+    }
+    fn editor(&mut self, _executor: AsyncExecutor<Self>) -> Option<Self::Editor> {
+        create_egui_editor(
+            self.editor_state.clone(),
+            self.notifier.clone(),
+            EguiNiceSettings::new().with_resize_hint({
+                let (w, h) = crate::editor::minimum_size(ID);
+                ResizeHint::resizable().with_min_logical_size(LogicalSize::new(w, h))
+            }),
+            NativeEditor::new(ID, self.params.clone(), self.meters.clone()),
+        )
+    }
+    fn activate(
+        &mut self,
+        _layout: &AudioIOLayout,
+        config: &BufferConfig,
+        _context: &mut impl ActivateContext<Self>,
+    ) -> bool {
+        if !config.sample_rate.is_finite() || config.sample_rate < 8000.0 || config.sample_rate > 384000.0 {
+            return false;
+        }
+        self.prepare(config.sample_rate);
+        true
+    }
+    fn reset(&mut self) {
+        self.clear();
+    }
+    fn process(
+        &mut self,
+        buffer: &mut Buffer,
+        aux: &mut AuxiliaryBuffers,
+        context: &mut impl ProcessContext<Self>,
+    ) -> ProcessStatus {
+        let tempo = context.transport().tempo.unwrap_or(120.0);
+        self.sync_preview(&self.params.values());
+        let mut event = context.next_event();
+        for (i, mut frame) in buffer.iter_samples().enumerate() {
+            let p = self.params.next_values();
+            while let Some(e) = event {
+                if e.timing() > i as u32 {
+                    break;
+                }
+                if ID < 2 {
+                    self.event(e, &p);
+                }
+                event = context.next_event();
+            }
+            let key = aux.inputs.first_mut().and_then(|b| {
+                let channels = b.as_slice();
+                Some([*channels.first()?.get(i)?, *channels.get(1)?.get(i)?])
+            });
+            let input = [
+                frame.get_mut(0).map_or(0.0, |v| *v),
+                frame.get_mut(1).map_or(0.0, |v| *v),
+            ];
+            let out = self.frame(input, key, &p, tempo);
+            for (v, value) in frame.iter_mut().zip(out) {
+                *v = value;
+            }
+        }
+        self.notifier.request_repaint();
+        // Reverb/delay and releasing voices must continue to receive silent blocks.
+        ProcessStatus::KeepAlive
+    }
+}
+
+impl<const ID: u8> Vst3Plugin for LimePlugin<ID> {
+    const VST3_CLASS_ID: [u8; 16] = [
+        b'L', b'I', b'M', b'E', b'N', b'A', b'T', b'I', b'V', b'E', 0, 0, 0, 0, 1, ID,
+    ];
+    const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = match ID {
+        0 => &[Vst3SubCategory::Instrument, Vst3SubCategory::Synth],
+        1 => &[Vst3SubCategory::Instrument, Vst3SubCategory::Sampler],
+        3 => &[Vst3SubCategory::Fx, Vst3SubCategory::Eq],
+        4 => &[Vst3SubCategory::Fx, Vst3SubCategory::Filter],
+        5 => &[Vst3SubCategory::Fx, Vst3SubCategory::Delay],
+        6 => &[Vst3SubCategory::Fx, Vst3SubCategory::Reverb],
+        7 | 8 => &[Vst3SubCategory::Fx, Vst3SubCategory::Dynamics],
+        _ => &[Vst3SubCategory::Fx, Vst3SubCategory::Tools],
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sample::EmbeddedSample;
+    use nice_plug::params::persist::PersistentField;
+
+    fn on(id: i32, key: u8) -> NoteEvent<()> {
+        NoteEvent::NoteOn {
+            timing: 0,
+            voice_id: VoiceID::ID(id),
+            channel: Channel::Number(0),
+            key: Key::Number(key),
+            velocity: 0.8,
+        }
+    }
+    fn off(id: i32, key: u8) -> NoteEvent<()> {
+        NoteEvent::NoteOff {
+            timing: 0,
+            voice_id: VoiceID::ID(id),
+            channel: Channel::Number(0),
+            key: Key::Number(key),
+            velocity: 0.0,
+        }
+    }
+    fn cc(cc: u8, value: f32) -> NoteEvent<()> {
+        NoteEvent::MidiCC {
+            timing: 0,
+            channel: 0,
+            cc,
+            value,
+        }
+    }
+
+    fn parity<const ID: u8>() {
+        for sr in [44100, 48000, 96000] {
+            for block in [1, 64, 333, 1024] {
+                let mut plugin = LimePlugin::<ID>::default();
+                plugin.prepare(sr as f32);
+                let p = plugin.params.values();
+                let mut reference = limeshot_engine::fx::build(
+                    parameters::KINDS[(ID - 2) as usize],
+                    sr,
+                    &p[..parameters::specs(ID).len()],
+                );
+                let input: Vec<f32> = (0..4096)
+                    .map(|i| if i < 2 { 0.9 } else { (i as f32 * 0.07).sin() * 0.2 })
+                    .collect();
+                let mut expected = input.clone();
+                for chunk in expected.chunks_mut(block * 2) {
+                    reference.process(chunk);
+                }
+                let actual: Vec<f32> = input
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .flat_map(|f| plugin.frame([f[0], f[1]], None, &p, 120.0))
+                    .collect();
+                assert!(
+                    actual.iter().zip(&expected).all(|(a, b)| (a - b).abs() < 0.00001),
+                    "ID {ID}, {sr}Hz, block {block}"
+                );
+            }
+        }
+    }
+    #[test]
+    fn exported_effects_share_the_daw_dsp_at_variable_block_sizes() {
+        parity::<2>();
+        parity::<3>();
+        parity::<4>();
+        parity::<5>();
+        parity::<6>();
+        parity::<7>();
+        parity::<8>();
+    }
+
+    #[test]
+    fn limiter_holds_its_ceiling_and_reset_clears_meters() {
+        let mut p = LimePlugin::<8>::default();
+        p.prepare(48000.0);
+        let values = p.params.values();
+        let ceiling = db_to_gain(values[0]);
+        for i in 0..48000 {
+            let out = p.frame([if i % 2 == 0 { 10.0 } else { -10.0 }, 2.0], None, &values, 120.0);
+            assert!(out.iter().all(|v| v.abs() <= ceiling + 0.00001));
+        }
+        assert!(Meters::read(&p.meters.reduction) > 10.0);
+        p.clear();
+        assert_eq!(Meters::read(&p.meters.output), 0.0);
+    }
+    #[test]
+    fn synth_release_sustain_repeated_keys_and_wildcard_choke() {
+        let mut p = LimePlugin::<0>::default();
+        p.prepare(48000.0);
+        let values = p.params.values();
+        p.event(on(1, 60), &values);
+        p.event(on(2, 60), &values);
+        p.event(cc(64, 1.0), &values);
+        p.event(off(1, 60), &values);
+        assert!(p.voices[0].sustained);
+        assert!(!p.voices[1].sustained);
+        for _ in 0..12000 {
+            p.frame([0.0; 2], None, &values, 120.0);
+        }
+        assert!(p.voices[0].voice.is_active());
+        p.event(cc(64, 0.0), &values);
+        p.event(off(2, 60), &values);
+        for _ in 0..12000 {
+            p.frame([0.0; 2], None, &values, 120.0);
+        }
+        assert!(!p.voices.iter().any(|v| v.voice.is_active()));
+        for i in 0..100 {
+            p.event(on(i, 40 + (i % 40) as u8), &values);
+        }
+        assert_eq!(p.voices.iter().filter(|v| v.voice.is_active()).count(), 64);
+        p.event(
+            NoteEvent::Choke {
+                timing: 0,
+                voice_id: VoiceID::Wildcard,
+                channel: Channel::Wildcard,
+                key: Key::Wildcard,
+            },
+            &values,
+        );
+        assert!(!p.voices.iter().any(|v| v.voice.is_active()));
+    }
+    #[test]
+    fn sampler_embeds_audio_and_recalls_without_the_original_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("source.wav");
+        let data =
+            limeshot_dsp::SampleData::from_stereo(48000, (0..1000).flat_map(|i| [i as f32 / 1000.0; 2]).collect());
+        limeshot_dsp::write_wav(&path, 48000, &data.data, limeshot_dsp::BitDepth::Float32).unwrap();
+        let params = NativeParams::new(1);
+        params.sample.set(EmbeddedSample::load(&path).unwrap());
+        let saved = params.serialize_fields();
+        std::fs::remove_file(path).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.params.deserialize_fields(&saved);
+        plugin.prepare(48000.0);
+        let mut values = plugin.params.values();
+        values[5] = 1.0;
+        values[2] = 0.25;
+        values[3] = 0.75;
+        plugin.event(on(1, 60), &values);
+        plugin.event(off(1, 60), &values);
+        let first = plugin.frame([0.0; 2], None, &values, 120.0)[0];
+        assert!((first - 0.749 * 0.8).abs() < 0.0001, "{first}");
+        for _ in 0..1000 {
+            plugin.frame([0.0; 2], None, &values, 120.0);
+        }
+        assert!(!plugin.voices.iter().any(|v| v.voice.is_active()));
+        // Gated playback releases before the end of the sample.
+        values[5] = 0.0;
+        values[6] = 0.0;
+        values[4] = 0.0;
+        plugin.event(on(2, 60), &values);
+        plugin.event(off(2, 60), &values);
+        assert_eq!(plugin.frame([0.0; 2], None, &values, 120.0), [0.0; 2]);
+    }
+    #[test]
+    fn external_sidechain_ducks_quiet_audio() {
+        let mut plugin = LimePlugin::<7>::default();
+        let mut params = NativeParams::new(7);
+        params.external_key = BoolParam::new("External sidechain", true);
+        plugin.params = Arc::new(params);
+        plugin.prepare(48000.0);
+        let values = plugin.params.values();
+        let mut last = [0.0; 2];
+        for _ in 0..24000 {
+            last = plugin.frame([0.05; 2], Some([1.0; 2]), &values, 120.0);
+        }
+        assert!(last[0] < 0.02, "{last:?}");
+        assert!(Meters::read(&plugin.meters.reduction) > 10.0);
+    }
+    #[test]
+    fn tempo_sync_moves_delay_echo_and_bypass_passes_exact_audio() {
+        let mut slow = LimePlugin::<5>::default();
+        slow.prepare(48000.0);
+        let mut fast = LimePlugin::<5>::default();
+        fast.prepare(48000.0);
+        let mut values = slow.params.values();
+        values[1] = 0.0;
+        values[2] = 0.0;
+        values[4] = 1.0;
+        values[5] = 5.0;
+        let mut slow_on = None;
+        let mut fast_on = None;
+        for i in 0..50000 {
+            let input = if i == 0 { [1.0; 2] } else { [0.0; 2] };
+            let a = slow.frame(input, None, &values, 60.0);
+            let b = fast.frame(input, None, &values, 120.0);
+            if a[0].abs() > 0.001 && slow_on.is_none() {
+                slow_on = Some(i);
+            }
+            if b[0].abs() > 0.001 && fast_on.is_none() {
+                fast_on = Some(i);
+            }
+        }
+        assert!(slow_on.is_some_and(|n: i32| (n - 48000).abs() <= 4));
+        assert!(fast_on.is_some_and(|n: i32| (n - 24000).abs() <= 4));
+        let mut plugin = LimePlugin::<8>::default();
+        let mut params = NativeParams::new(8);
+        params.bypass = BoolParam::new("Bypass", true).make_bypass();
+        plugin.params = Arc::new(params);
+        plugin.prepare(48000.0);
+        let values = plugin.params.values();
+        assert_eq!(plugin.frame([2.0, -3.0], None, &values, 120.0), [2.0, -3.0]);
+    }
+    #[test]
+    fn held_synth_notes_follow_filter_and_pitch_automation() {
+        let mut p = LimePlugin::<0>::default();
+        p.prepare(48000.0);
+        let mut values = p.params.values();
+        p.event(on(1, 69), &values);
+        for _ in 0..12000 {
+            p.frame([0.0; 2], None, &values, 120.0);
+        }
+        values[8] = 50.0;
+        values[9] = 0.3;
+        values[3] = -12.0;
+        values[1] = 1.0;
+        p.frame([0.0; 2], None, &values, 120.0);
+        assert!(p.voices[0].voice.is_active());
+        let peak = (0..12000)
+            .map(|_| p.frame([0.0; 2], None, &values, 120.0)[0].abs())
+            .fold(0.0_f32, f32::max);
+        assert!(peak < 0.15, "{peak}");
+        p.event(
+            NoteEvent::MidiPitchBend {
+                timing: 0,
+                channel: 0,
+                value: 1.0,
+            },
+            &values,
+        );
+        assert_eq!(p.bend[0], 2.0);
+    }
+    #[test]
+    fn editor_audition_starts_and_releases_at_block_boundaries() {
+        for block in [1, 64, 333, 1024] {
+            let mut plugin = LimePlugin::<1>::default();
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/samples/Lime Snare.wav");
+            plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+            plugin.prepare(48000.0);
+            let values = plugin.params.values();
+            assert_eq!(plugin.frame([0.0; 2], None, &values, 120.0), [0.0; 2]);
+            plugin.meters.preview_note.store(61, Ordering::Relaxed);
+            plugin.sync_preview(&values);
+            assert_eq!(plugin.voices.iter().filter(|s| s.voice.is_active()).count(), 1);
+            let mut peak = 0.0_f32;
+            for _ in 0..block * 64 {
+                peak = peak.max(plugin.frame([0.0; 2], None, &values, 120.0)[0].abs());
+            }
+            assert!(peak > 0.00001, "block {block}");
+            plugin.meters.preview_note.store(0, Ordering::Relaxed);
+            plugin.sync_preview(&values);
+            // A one-shot preview finishes the WAV after mouse-up, matching the sampler setting.
+            for _ in 0..48000 {
+                plugin.frame([0.0; 2], None, &values, 120.0);
+            }
+            assert!(!plugin.voices.iter().any(|s| s.voice.is_active()));
+            plugin.meters.preview_note.store(128, Ordering::Relaxed);
+            plugin.sync_preview(&values);
+            assert!(plugin.voices.iter().any(|s| s.voice.key == 127 && s.voice.is_active()));
+            plugin.clear();
+            assert_eq!(plugin.meters.preview_note.load(Ordering::Relaxed), 0);
+        }
+    }
+}

@@ -116,3 +116,17 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The macOS package (`scripts/package-macos.sh`) is signed ad hoc: other Macs need a Developer ID signature and
   notarisation. Double-clicking a .lime file in Finder starts LimeShot without opening the file. No Windows or Linux
   packages yet.
+
+
+
+## Lime Native standalone plugins (PLG-012)
+
+* `native-plugins/` exports independent VST3 instruments/effects for other DAWs; it does not require LimeShot.
+  The supplied development builds are macOS Apple Silicon, ad-hoc signed, not notarized. Windows/Linux/Intel
+  runtime and hands-on FL Studio/other-DAW editor checks remain pending; the development Mac was locked.
+  Validator and actual VST3 ABI tests are recorded in `native-plugins/VALIDATION.md`.
+* Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV and embeds at most
+  4 million stereo frames in host state. Loading a sample resets sounding notes. Sampler .limepreset files
+  preserve the sample/root key; host state saves both. No sample loops/time stretching/multisampling.
+* Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
+  response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.

@@ -732,6 +732,7 @@ pub struct Limiter {
     ceiling: f32,
     release: f32,
     env: f32,
+    reduction_db: f32,
 }
 
 impl Limiter {
@@ -741,6 +742,7 @@ impl Limiter {
             ceiling: 1.0,
             release: 0.0,
             env: 0.0,
+            reduction_db: 0.0,
         };
         l.set_params(&[-0.3, 80.0]);
         l
@@ -754,19 +756,26 @@ impl Effect for Limiter {
     }
 
     fn process(&mut self, buf: &mut [f32]) {
+        self.reduction_db = 0.0;
         for f in buf.as_chunks_mut::<2>().0 {
             let peak = f[0].abs().max(f[1].abs());
             self.env = peak.max(self.env * self.release);
             if self.env > self.ceiling {
                 let g = self.ceiling / self.env;
+                self.reduction_db = self.reduction_db.max(-crate::gain_to_db(g));
                 f[0] *= g;
                 f[1] *= g;
             }
         }
     }
 
+    fn gain_reduction_db(&self) -> f32 {
+        self.reduction_db
+    }
+
     fn reset(&mut self) {
         self.env = 0.0;
+        self.reduction_db = 0.0;
     }
 }
 

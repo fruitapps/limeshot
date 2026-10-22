@@ -1,0 +1,33 @@
+[package]
+name = "lime-native"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+egui = { version = "0.37", default-features = false, features = ["default_fonts"] }
+nice-plug.workspace = true
+nice-plug-egui.workspace = true
+limeshot-core = { path = "../../crates/limeshot-core" }
+limeshot-dsp = { path = "../../crates/limeshot-dsp" }
+limeshot-sequencer = { path = "../../crates/limeshot-sequencer" }
+limeshot-engine = { path = "../../crates/limeshot-engine" }
+limeshot-project = { path = "../../crates/limeshot-project" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+parking_lot = "0.12"
+base64 = "0.22"
+hound = "3.5"
+rfd = "0.17"
+thiserror = "2"
+
+[dev-dependencies]
+egui_kittest = { version = "0.37", features = ["wgpu", "snapshot"] }
+eframe = { version = "0.37", default-features = false, features = ["glow", "x11", "wayland"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+tempfile = "3"
+limeshot-plugins = { path = "../../crates/limeshot-plugins" }
+
+[lints]
+workspace = true

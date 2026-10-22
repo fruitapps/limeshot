@@ -1,0 +1,26 @@
+[lime-synth]
+name = "LimeSynth"
+
+[lime-sampler]
+name = "Lime Sampler"
+
+[lime-utility]
+name = "Lime Utility"
+
+[lime-eq]
+name = "Lime EQ"
+
+[lime-filter]
+name = "Lime Filter"
+
+[lime-delay]
+name = "Lime Delay"
+
+[lime-room]
+name = "Lime Room"
+
+[lime-comp]
+name = "Lime Comp"
+
+[lime-limiter]
+name = "Lime Limiter"
