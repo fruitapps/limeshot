@@ -923,6 +923,102 @@ impl Effect for Drive {
     }
 }
 
+/// Modulation: chorus and flanger read a delay line at an LFO-swept time (chorus around 15 ms,
+/// flanger around 2 ms, with feedback); the phaser sweeps six first-order all-passes between
+/// 200 Hz and 4 kHz. The right side's LFO runs `spread` of a cycle ahead.
+/// Params: mode, rate Hz, depth, feedback, spread, mix.
+pub struct Chorus {
+    sr: f32,
+    mode: u8,
+    rate: f32,
+    depth: f32,
+    feedback: f32,
+    spread: f32,
+    mix: f32,
+    phase: f32,
+    lines: [Line; 2],
+    fb: [f32; 2],
+    /// Phaser all-pass states, per side.
+    ap: [[f32; 6]; 2],
+}
+
+impl Chorus {
+    pub fn new(sample_rate: f32) -> Self {
+        let sr = sample_rate.max(1.0);
+        let len = (0.04 * sr) as usize + 4;
+        let mut c = Self {
+            sr,
+            mode: 0,
+            rate: 0.8,
+            depth: 0.5,
+            feedback: 0.0,
+            spread: 0.5,
+            mix: 0.5,
+            phase: 0.0,
+            lines: [Line::new(len), Line::new(len)],
+            fb: [0.0; 2],
+            ap: [[0.0; 6]; 2],
+        };
+        c.set_params(&[0.0, 0.8, 0.5, 0.0, 0.5, 0.5]);
+        c
+    }
+}
+
+impl Effect for Chorus {
+    fn set_params(&mut self, p: &[f32]) {
+        self.mode = get(p, 0, 0.0).round().clamp(0.0, 2.0) as u8;
+        self.rate = get(p, 1, 0.8).clamp(0.05, 10.0);
+        self.depth = get(p, 2, 0.5).clamp(0.0, 1.0);
+        self.feedback = get(p, 3, 0.0).clamp(-0.95, 0.95);
+        self.spread = get(p, 4, 0.5).clamp(0.0, 1.0);
+        self.mix = get(p, 5, 0.5).clamp(0.0, 1.0);
+    }
+
+    fn process(&mut self, buf: &mut [f32]) {
+        let inc = self.rate / self.sr;
+        for f in buf.as_chunks_mut::<2>().0 {
+            for (c, sample) in f.iter_mut().enumerate() {
+                let lfo = 0.5 + 0.5 * (2.0 * PI * (self.phase + self.spread * 0.5 * c as f32)).sin();
+                let x = *sample;
+                let wet = match self.mode {
+                    2 => {
+                        // All-pass coefficient for a corner sweeping 200 Hz … 4 kHz.
+                        let hz = 200.0 * 20f32.powf(lfo * self.depth);
+                        let t = (PI * hz / self.sr).tan();
+                        let a = (t - 1.0) / (t + 1.0);
+                        let mut y = x + self.fb[c] * self.feedback;
+                        for s in &mut self.ap[c] {
+                            let out = a * y + *s;
+                            *s = y - a * out;
+                            y = out;
+                        }
+                        self.fb[c] = y;
+                        y
+                    }
+                    m => {
+                        let (base, sweep) = if m == 1 { (2.0, 1.8) } else { (15.0, 7.0) };
+                        let delay = (base + sweep * self.depth * (2.0 * lfo - 1.0)) * 0.001 * self.sr;
+                        let y = self.lines[c].read(delay);
+                        self.lines[c].write(x + y * self.feedback);
+                        y
+                    }
+                };
+                let wet = if wet.is_finite() { wet } else { 0.0 };
+                *sample = x * (1.0 - self.mix) + wet * self.mix;
+            }
+            self.phase = (self.phase + inc).fract();
+        }
+    }
+
+    fn reset(&mut self) {
+        for l in &mut self.lines {
+            l.clear();
+        }
+        self.fb = [0.0; 2];
+        self.ap = [[0.0; 6]; 2];
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1116,6 +1212,32 @@ mod tests {
     }
 
     #[test]
+    fn chorus_flanger_and_phaser_modulate_and_stay_bounded() {
+        let dry = sine(1000.0, 0.5, 24_000);
+        for mode in [0.0, 1.0, 2.0] {
+            let mut c = Chorus::new(SR);
+            c.set_params(&[mode, 2.0, 1.0, 0.5, 0.5, 0.5]);
+            let out = run(&mut c, dry.clone());
+            assert!(out.iter().all(|v| v.is_finite() && v.abs() < 2.0), "mode {mode}");
+            // The wet signal differs from the dry one (it is modulated) …
+            let diff = out.iter().zip(&dry).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(diff > 0.05, "mode {mode}: {diff}");
+            // … and the two sides differ with spread.
+            let lr = out
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|f| (f[0] - f[1]).abs())
+                .fold(0.0f32, f32::max);
+            assert!(lr > 0.01, "mode {mode}: sides {lr}");
+        }
+        // Mix 0 passes the dry signal untouched.
+        let mut c = Chorus::new(SR);
+        c.set_params(&[0.0, 1.0, 1.0, 0.0, 0.5, 0.0]);
+        assert_eq!(run(&mut c, dry.clone()), dry);
+    }
+
+    #[test]
     fn nonsense_params_stay_finite() {
         let effects: Vec<Box<dyn Effect>> = vec![
             Box::new(Utility::new()),
@@ -1127,6 +1249,7 @@ mod tests {
             Box::new(Limiter::new(SR)),
             Box::new(Gate::new(SR)),
             Box::new(Drive::new(SR)),
+            Box::new(Chorus::new(SR)),
         ];
         for mut e in effects {
             e.set_params(&[f32::NAN, f32::INFINITY, -1e9, 1e9, f32::NAN, 0.0, 1e30]);

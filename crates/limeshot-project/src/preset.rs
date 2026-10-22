@@ -374,6 +374,41 @@ pub fn factory(slot: Slot) -> Vec<Preset> {
                 &[("Drive", 24.0), ("Shape", 2.0), ("Mix", 0.6), ("Output", -6.0)],
             ),
         ],
+        Slot::Effect(K::Chorus) => vec![
+            effect(
+                "Wide chorus",
+                K::Chorus,
+                &[
+                    ("Mode", 0.0),
+                    ("Rate", 0.6),
+                    ("Depth", 0.6),
+                    ("Spread", 1.0),
+                    ("Mix", 0.5),
+                ],
+            ),
+            effect(
+                "Jet flanger",
+                K::Chorus,
+                &[
+                    ("Mode", 1.0),
+                    ("Rate", 0.2),
+                    ("Depth", 0.9),
+                    ("Feedback", 0.7),
+                    ("Mix", 0.5),
+                ],
+            ),
+            effect(
+                "Slow phaser",
+                K::Chorus,
+                &[
+                    ("Mode", 2.0),
+                    ("Rate", 0.3),
+                    ("Depth", 1.0),
+                    ("Feedback", 0.5),
+                    ("Mix", 0.5),
+                ],
+            ),
+        ],
         Slot::Effect(K::Utility) => vec![
             effect("Mono", K::Utility, &[("Width", 0.0)]),
             effect("Wide", K::Utility, &[("Width", 1.6)]),

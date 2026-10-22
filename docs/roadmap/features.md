@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 86, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 144, DEFERRED 4
+- By status: NOT_STARTED 85, RESEARCHED 1, IN_PROGRESS 16, IMPLEMENTED 21, VERIFIED 145, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -20,7 +20,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Playlist | 29 | 20 | 1 | 3 | 5 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 7 | 1 | 1 | 5 |
-| Effects | 15 | 10 | 1 | 0 | 4 |
+| Effects | 15 | 11 | 1 | 0 | 3 |
 | Automation | 13 | 4 | 1 | 0 | 8 |
 | Recording | 11 | 1 | 1 | 1 | 8 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
@@ -217,7 +217,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | FX-007 | Reverb | P1 |  | VERIFIED | Lime Room: pre-delay, 8 damped combs and 4 allpasses per side; size, damping, pre-delay, width, mix. | `limeshot-dsp effects::tests::reverb_has_a_decaying_tail` |
 | FX-008 | Delay | P1 |  | VERIFIED | Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide. Sync (Off, 1/16, 1/8T, 1/8, 1/8., 1/4, 1/4., 1/2, 1/1) sets the time from the project tempo; Time is then greyed out.<br>*No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s.* | `limeshot-dsp effects::tests::delay_echoes_after_the_delay_time`<br>`limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail`<br>`limeshot-core effects::tests::a_synced_delay_takes_its_time_from_the_tempo`<br>`limeshot-sequencer tests::a_tempo_synced_delay_gets_its_time_from_the_tempo` |
 | FX-009 | Distortion / saturation / waveshaper | P2 |  | VERIFIED | Lime Drive: drive (0–36 dB) into a soft clip (tanh), hard clip or wave folder, a tone low-pass, dry/wet mix and output level. Factory presets Warm tape, Fuzz, Folder.<br>*Session 16. No oversampling, so high drive aliases; no bit crushing.* | `limeshot-dsp effects::tests::drive_saturates_hard_clips_and_folds`<br>`limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates` |
-| FX-010 | Chorus / flanger / phaser | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
+| FX-010 | Chorus / flanger / phaser | P2 |  | VERIFIED | Lime Chorus with three modes: Chorus (a delay swept around 15 ms), Flanger (around 2 ms, with feedback) and Phaser (six all-passes swept 200 Hz–4 kHz, with feedback); rate, depth, feedback, stereo spread (the right side's LFO offset) and mix. Factory presets Wide chorus, Jet flanger, Slow phaser.<br>*Session 16. One voice per side (FL's Fruity Chorus has several); no tempo-synced rate.* | `limeshot-dsp effects::tests::chorus_flanger_and_phaser_modulate_and_stay_bounded`<br>`limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates` |
 | FX-011 | Pitch shifting | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-012 | Stereo processing | P2 |  | NOT_STARTED | Original implementation from documented DSP algorithms. | — |
 | FX-013 | Utility (gain, phase, balance, mono) | P2 |  | VERIFIED | Utility: gain, stereo width (M/S), polarity. | `limeshot-dsp effects::tests::utility_gain_width_polarity` |

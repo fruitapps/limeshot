@@ -25,6 +25,8 @@ pub enum EffectKind {
     Gate,
     /// Saturation and distortion (soft clip, hard clip, wave folding).
     Drive,
+    /// Modulation: chorus, flanger or phaser.
+    Chorus,
     /// A hosted plugin ([`EffectSlot::plugin`]); its parameters are the plugin's own.
     Plugin,
 }
@@ -164,13 +166,30 @@ const DRIVE: &[ParamSpec] = &[
     p("Mix", 0.0, 1.0, 1.0, "", false),
     p("Output", -24.0, 6.0, -6.0, "dB", false),
 ];
+const CHORUS: &[ParamSpec] = &[
+    ParamSpec {
+        name: "Mode",
+        min: 0.0,
+        max: 2.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &["Chorus", "Flanger", "Phaser"],
+    },
+    p("Rate", 0.05, 10.0, 0.8, "Hz", true),
+    p("Depth", 0.0, 1.0, 0.5, "", false),
+    p("Feedback", -0.95, 0.95, 0.0, "", false),
+    // The right side's LFO phase offset (0: in phase, 1: opposite).
+    p("Spread", 0.0, 1.0, 0.5, "", false),
+    p("Mix", 0.0, 1.0, 0.5, "", false),
+];
 const LIMITER: &[ParamSpec] = &[
     p("Ceiling", -24.0, 0.0, -0.3, "dB", false),
     p("Release", 5.0, 1000.0, 80.0, "ms", true),
 ];
 
 impl EffectKind {
-    pub const ALL: [EffectKind; 9] = [
+    pub const ALL: [EffectKind; 10] = [
         EffectKind::Utility,
         EffectKind::Eq3,
         EffectKind::Filter,
@@ -180,6 +199,7 @@ impl EffectKind {
         EffectKind::Limiter,
         EffectKind::Gate,
         EffectKind::Drive,
+        EffectKind::Chorus,
     ];
 
     pub fn label(self) -> &'static str {
@@ -193,6 +213,7 @@ impl EffectKind {
             EffectKind::Limiter => "Lime Limiter",
             EffectKind::Gate => "Lime Gate",
             EffectKind::Drive => "Lime Drive",
+            EffectKind::Chorus => "Lime Chorus",
             EffectKind::Plugin => "Plugin",
         }
     }
@@ -208,6 +229,7 @@ impl EffectKind {
             EffectKind::Limiter => LIMITER,
             EffectKind::Gate => GATE,
             EffectKind::Drive => DRIVE,
+            EffectKind::Chorus => CHORUS,
             EffectKind::Plugin => &[],
         }
     }

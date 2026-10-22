@@ -943,3 +943,8 @@ has one and starts on it, as FL Studio does.
 
 `EffectKind::Drive` / `effects::Drive`: soft clip, hard clip or wave folding after up to 36 dB of drive, a one-pole
 tone low-pass, mix and output; factory presets. No oversampling yet (noted in the limitations).
+
+### Session 16, part 22: Lime Chorus — chorus, flanger, phaser (FX-010)
+
+`EffectKind::Chorus` / `effects::Chorus` with a Mode choice: modulated delay (chorus, flanger with feedback) or a
+six-stage swept all-pass phaser; rate, depth, feedback, spread and mix; factory presets.

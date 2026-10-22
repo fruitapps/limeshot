@@ -4111,19 +4111,27 @@
       "name": "Chorus / flanger / phaser",
       "description": "Chorus / flanger / phaser.",
       "fl_reference": "Fruity Chorus, Flanger, Phaser, Vintage Chorus",
-      "limeshot_behavior": "Original implementation from documented DSP algorithms.",
+      "limeshot_behavior": "Lime Chorus with three modes: Chorus (a delay swept around 15 ms), Flanger (around 2 ms, with feedback) and Phaser (six all-passes swept 200 Hz–4 kHz, with feedback); rate, depth, feedback, stereo spread (the right side's LFO offset) and mix. Factory presets Wide chorus, Jet flanger, Slow phaser.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "FX-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-engine",
+        "limeshot-project"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp effects::tests::chorus_flanger_and_phaser_modulate_and_stay_bounded",
+        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -4132,7 +4140,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. One voice per side (FL's Fruity Chorus has several); no tempo-synced rate."
     },
     {
       "id": "FX-011",
