@@ -1097,20 +1097,52 @@ fn rack_auto_zip_finishes_a_held_stroke_in_the_old_pattern() {
     let cid = h.state().project().channels[3].id;
     let old = h.state().current_pattern();
     let next = PatternId(h.state_mut().exec(Command::AddPattern { name: "Next".into() }).unwrap());
+    // Keep the destination rows expanded so the held strip keeps receiving pointer input.
+    let channels: Vec<_> = h.state().project().channels.iter().map(|c| c.id).collect();
+    for channel in channels {
+        h.state_mut().exec(Command::SetStep {
+            pattern: next,
+            channel,
+            step: 8,
+            on: true,
+        });
+    }
+    let next_before = h.state().project().pattern(next).unwrap().clone();
     h.state_mut().settings.auto_zip_empty_channels = true;
     let p = h.state().ui.rack.step_pos(cid, 0).unwrap();
     h.event(Event::PointerMoved(p));
     h.step();
     press(&mut h, p, PointerButton::Primary, true);
+    press(&mut h, p, PointerButton::Secondary, true);
+    let history = h.state().doc.history().len();
     h.state_mut().set_current_pattern(next);
     h.step();
-    press(&mut h, p, PointerButton::Primary, false);
-    assert!(h.state().project().pattern(next).unwrap().notes.is_empty());
-    h.state_mut().set_current_pattern(old);
-    h.step();
     let p = h.state().ui.rack.step_pos(cid, 1).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
+    press(&mut h, p, PointerButton::Primary, false);
+    h.step();
+    assert_eq!(
+        h.state().project().pattern(next).unwrap(),
+        &next_before,
+        "releasing one button must not unblock a stroke while another is held"
+    );
+    press(&mut h, p, PointerButton::Secondary, false);
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
+    assert_eq!(h.state().doc.history().len(), history);
     click(&mut h, p, PointerButton::Primary);
+    assert!(
+        h.state()
+            .project()
+            .pattern(next)
+            .unwrap()
+            .step_note(cid, 60, 1)
+            .is_some()
+    );
+    assert_eq!(h.state().doc.history().len(), history + 1);
     h.state_mut().doc.undo();
+    assert_eq!(h.state().project().pattern(next).unwrap(), &next_before);
     let pattern = h.state().project().pattern(old).unwrap();
     assert!(
         pattern.step_note(cid, 60, 0).is_some(),

@@ -72,6 +72,8 @@ pub struct State {
     pub filter: RackFilter,
     /// (channel, painting on/off) while a step drag is in progress.
     paint: Option<(ChannelId, bool)>,
+    /// An interrupted stroke must not restart while any pointer button is held.
+    paint_wait_for_release: bool,
     /// Steps already painted in the current drag.
     painted: Vec<u32>,
     /// Screen rectangles of each channel's step strip (or note preview) in the last frame (for
@@ -118,6 +120,7 @@ fn finish_hidden_edits(app: &mut LimeShotApp, hidden: &[ChannelId]) {
         && hidden.contains(&channel)
     {
         app.ui.rack.paint = None;
+        app.ui.rack.paint_wait_for_release = true;
         app.doc.end_gesture();
         if let Some(key) = app.project().channel(channel).map(|c| c.root_key) {
             app.preview_off(channel, key);
@@ -156,6 +159,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         auto_zip(app, pattern);
     }
     app.ui.rack.viewed_pattern = Some(pattern);
+    if !ui.input(|i| i.pointer.any_down()) {
+        app.ui.rack.paint_wait_for_release = false;
+    }
     app.ui.rack.step_strips.clear();
     app.ui.rack.leds.clear();
     app.ui.rack.zipped_buttons.clear();
@@ -1050,7 +1056,9 @@ fn step_strip(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, pid: PatternId, 
     let pointer = resp.interact_pointer_pos();
     // A stroke starts once, on press; `drag_started` arrives a frame later and must not restart it
     // (it would see the step just painted on and switch to erasing).
-    let started = app.ui.rack.paint.is_none() && (resp.drag_started() || resp.is_pointer_button_down_on());
+    let started = app.ui.rack.paint.is_none()
+        && !app.ui.rack.paint_wait_for_release
+        && (resp.drag_started() || resp.is_pointer_button_down_on());
     if started && let Some(pos) = pointer {
         let s = step_at(pos.x);
         let currently_on = pattern.and_then(|p| p.step_note(ch.id, ch.root_key, s)).is_some();
