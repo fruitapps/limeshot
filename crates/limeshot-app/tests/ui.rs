@@ -5455,3 +5455,91 @@ fn sampler_envelope_controls_reset_and_undo() {
         );
     }
 }
+
+fn mixer_control_menu(h: &mut Harness<'static, LimeShotApp>, label: &str) {
+    let r = h
+        .get_all_by_label(label)
+        .map(|n| n.rect())
+        .max_by(|a, b| a.width().total_cmp(&b.width()))
+        .expect("mixer control");
+    click(h, r.left_center() + vec2(20.0, 0.0), PointerButton::Secondary);
+    h.step();
+}
+
+#[test]
+fn control_menus_copy_paste_reset_and_undo() {
+    let mut h = mixer_harness(1);
+    let original_volume = h.state().project().mixer.tracks[1].volume;
+    h.state_mut().exec(Command::SetMixerPan { track: 1, pan: -0.5 });
+    h.step();
+    let history = h.state().doc.history().len();
+    mixer_control_menu(&mut h, "Pan");
+    h.get_by_label("Copy value").click();
+    h.step();
+    assert_eq!(h.state().control_clipboard, Some(0.25));
+    assert_eq!(h.state().doc.history().len(), history, "copy does not edit the project");
+    // Paste transfers the normalised control position onto the fader's cubic scale.
+    mixer_control_menu(&mut h, "Volume");
+    h.get_by_label("Paste value").click();
+    h.step();
+    assert!((h.state().project().mixer.tracks[1].volume - 0.03125).abs() < 1e-6);
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].volume, original_volume);
+    mixer_control_menu(&mut h, "Pan");
+    {
+        use egui_kittest::kittest::NodeT;
+        h.get_all_by_label("Reset")
+            .find(|n| !n.accesskit_node().is_disabled())
+            .expect("control menu Reset")
+            .click();
+    }
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].pan, 0.0);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().mixer.tracks[1].pan, -0.5);
+}
+
+#[test]
+fn control_value_dialog_validates_commits_once_and_cancels() {
+    let mut h = mixer_harness(1);
+    let original_volume = h.state().project().mixer.tracks[1].volume;
+    let history = h.state().doc.history().len();
+    mixer_control_menu(&mut h, "Volume");
+    h.get_by_label("Type in value…").click();
+    h.step();
+    assert!(matches!(
+        h.state().dialog,
+        Some(limeshot_ui::dialogs::Dialog::ControlValue { .. })
+    ));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("NaN".into()));
+    h.step();
+    h.key_press(Key::Enter);
+    h.step();
+    assert!(h.state().dialog.is_some(), "invalid input keeps the dialog open");
+    assert_eq!(h.state().doc.history().len(), history);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("-12".into()));
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert!((h.state().project().mixer.tracks[1].volume - limeshot_dsp::db_to_gain(-12.0)).abs() < 1e-5);
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    assert_eq!(h.state().project().mixer.tracks[1].volume, original_volume);
+    mixer_control_menu(&mut h, "Pan");
+    h.get_by_label("Type in value…").click();
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("50".into()));
+    h.step();
+    h.get_by_label("Cancel").click();
+    h.step();
+    assert!(h.state().dialog.is_none());
+    assert_eq!(h.state().project().mixer.tracks[1].pan, 0.0);
+    assert_eq!(h.state().doc.history().len(), history);
+}

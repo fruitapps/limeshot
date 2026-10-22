@@ -7063,7 +7063,7 @@
       "name": "Control context menu",
       "description": "Right-click menu on knobs, faders and sliders.",
       "fl_reference": "Observed: right-click a knob › Reset, Edit events, Init song with this position, Create automation clip, Link to controller, Copy value, Paste value, Type in value…, Set….",
-      "limeshot_behavior": "Right-click › Create automation clip on channel volume/pan, mixer volume/pan and effect parameters. Reset is double-click. Copy/paste value and type-in are planned.",
+      "limeshot_behavior": "Right-click channel/mixer volume and pan or built-in effect parameters for Reset, Copy value, Paste value, Type in value… and Create automation clip. Copy/paste transfers normalised control position using the automation mapping; the value clipboard is separate from notes/clips. Type in uses percentages for channel volume/pan and mixer pan, dB for mixer gain (-inf for silence), and effect units. Edits commit through Commands and undo once; cancel and invalid input leave the project unchanged.",
       "priority": "P1",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -7075,7 +7075,11 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::control_menus_copy_paste_reset_and_undo",
+        "limeshot-app tests/ui.rs::control_value_dialog_validates_commits_once_and_cancels",
+        "limeshot-ui automation_ui::tests::typed_values_use_control_units_and_reject_invalid_or_deleted_targets"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7083,7 +7087,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob."
+      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob. Codex continuation 2026-10-22: basic value actions implemented; cross-control paste follows LimeShot automation mappings, not a measured FL conversion. Event editing, Init song, Link to controller, and host value menus for instrument/plugin parameters remain open."
     },
     {
       "id": "AUT-010",

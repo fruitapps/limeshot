@@ -39,7 +39,9 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
 ## Editing
-* Clipboard is app-internal (not the system clipboard). Quantize… has start and duration strength only (no swing templates). Swing is
+* Clipboard is app-internal (not the system clipboard). The separate value clipboard supports channel/mixer volume/pan
+  and built-in effect parameters; instrument and hosted-plugin host value menus, Edit events, Init song and controller
+  linking remain unavailable. Cross-control paste uses LimeShot's automation mappings. Quantize… has start and duration strength only (no swing templates). Swing is
   global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
   menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.

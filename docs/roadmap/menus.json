@@ -13084,6 +13084,91 @@
       "status": "NOT_STARTED",
       "feature": "APP-021",
       "notes": ""
+    },
+    {
+      "id": "MENU-726",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Reset"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Reset",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-727",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Copy value"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Copy value",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-728",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Paste value"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Paste value",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-729",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Type in value…"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Type in value…",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-730",
+      "menu": "Control",
+      "path": [
+        "Control",
+        "Create automation clip"
+      ],
+      "section": "Value and automation",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Control context menu › Create automation clip",
+      "status": "IMPLEMENTED",
+      "feature": "UI-010",
+      "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
     }
   ],
   "lists": {

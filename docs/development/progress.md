@@ -977,3 +977,21 @@ are in `platform-validation.md`. Updated the stale platform feature records and 
 had no steps on the retired `macos-13` label, so switched that matrix entry to `macos-15-intel` following GitHub's
 retirement notice. Remote confirmation of the replacement is pending. No native GUI/audio-device claims added.
 Live UI verification was deferred at the owner's request while the Mac was locked.
+
+
+### 2026-10-22 — Codex continuation: control value context menus (UI-010)
+
+Channel/mixer volume and pan and built-in effect parameters now offer Reset, Copy value, Paste value and
+Type in value… alongside Create automation clip. The independent value clipboard stores normalised control
+position using the existing automation mappings. Typed values use percentages, mixer dB (-inf for silence) or
+the effect's units. Invalid/non-finite/out-of-range input and Cancel do not edit; applying, resetting and pasting
+use existing Commands and one undo step each. Controller linking, event editing, Init song and host value menus
+for instrument/plugin parameters remain open; UI-010 remains IN_PROGRESS.
+
+The context-menu tests exposed that an egui slider's display rounding could edit the project on mere hover.
+`user_changed` now requires input as well as a changed/interactive response. Tests cover copy without edits,
+normalised paste across pan/fader scales, undo, reset, typing validation, cancellation and deleted targets.
+
+Validation: `cargo test --workspace` (329 tests, including 122 headless UI tests), workspace Clippy with warnings
+denied, workspace build, rustfmt, inventory check (730 menus) and `git diff --check`. Rendered and inspected the
+new dialog with `ui_shot --mixer --dialog=control` (`/tmp/limeshot-control-value.png`). No live UI checks performed.

@@ -73,6 +73,10 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
+Right-click channel/mixer volume or pan and built-in effect parameters for Reset, Copy/Paste value,
+Type in value… and Create automation clip. The value clipboard holds normalised control position independently
+of notes/clips. Type-in uses the control's units and commits once on OK; invalid input and Cancel do not edit.
+
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
 
 ## Keyboard

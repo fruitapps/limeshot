@@ -232,6 +232,10 @@ fn main() {
     if let Some(dialog) = args.iter().find_map(|a| a.strip_prefix("--dialog=")) {
         use limeshot_ui::dialogs::Dialog;
         app.dialog = match dialog {
+            "control" => Some(Dialog::ControlValue {
+                target: limeshot_core::AutomationTarget::MixerVolume(1),
+                text: "-12".into(),
+            }),
             "export" => Some(Dialog::export(&app)),
             "quit" => Some(Dialog::ConfirmDiscard(limeshot_ui::app::Pending::Quit)),
             "marker" => limeshot_ui::playlist::add_marker(&mut app, 0).map(|id| Dialog::rename_marker(&app, id)),

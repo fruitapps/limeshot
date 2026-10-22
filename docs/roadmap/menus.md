@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 190, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 385, NOT_PLANNED 41
+Tracked: **730** — IMPLEMENTED 195, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 385, NOT_PLANNED 41
 
 ## Summary
 
@@ -25,6 +25,7 @@ Tracked: **725** — IMPLEMENTED 190, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTE
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
 | Mixer | 44 | 9 | 9 | 22 | 4 | 0 |
+| Control | 5 | 5 | 0 | 0 | 0 | 0 |
 
 ## Open work by feature
 
@@ -898,6 +899,16 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-723 | Effect slot menu |  | submenu |  |  | Mixer › + Add effect | DIFFERENT | FX-001 | The ▸ of an empty insert slot: More plugins…, Plugin database (Shift+F8), FL's effects by category (Controller, Delay reverb, Distortion, Dynamics, Filter, Flanger, Gain, Misc, Patcher, Visual) and Categories / Simple / Tree. LimeShot's + Add effect lists its built-in effects and plugins. |
 | MENU-724 | &nbsp;&nbsp;&nbsp;&nbsp;↳ <FL effects by category> |  | list |  |  | — | NOT_PLANNED |  | FL's own plugins. |
 | MENU-725 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Plugin database |  | action | `Shift+F8` |  | — | NOT_STARTED | APP-021 |  |
+
+## Control
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| MENU-726 | Reset | Value and automation | action |  |  | Control context menu › Reset | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-727 | Copy value | Value and automation | action |  |  | Control context menu › Copy value | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-728 | Paste value | Value and automation | action |  |  | Control context menu › Paste value | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-729 | Type in value… | Value and automation | action |  |  | Control context menu › Type in value… | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
+| MENU-730 | Create automation clip | Value and automation | action |  |  | Control context menu › Create automation clip | IMPLEMENTED | UI-010 | Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units. |
 
 ## Lists
 

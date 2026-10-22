@@ -628,7 +628,21 @@ pub fn user_changed(r: &Response) -> bool {
         i.pointer.button_down(egui::PointerButton::Secondary)
             || i.pointer.button_released(egui::PointerButton::Secondary)
     });
-    r.changed() && !secondary && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
+    let input = r.ctx.input(|i| {
+        i.pointer.primary_down()
+            || i.pointer.button_released(egui::PointerButton::Primary)
+            || i.smooth_scroll_delta != egui::Vec2::ZERO
+            || i.events.iter().any(|e| {
+                matches!(
+                    e,
+                    egui::Event::Key { .. } | egui::Event::Text(_) | egui::Event::Paste(_)
+                )
+            })
+    });
+    r.changed()
+        && !secondary
+        && input
+        && (r.hovered() || r.has_focus() || r.lost_focus() || r.dragged() || r.drag_stopped())
 }
 
 /// A control's response that also senses clicks, so a right-click can open its context menu

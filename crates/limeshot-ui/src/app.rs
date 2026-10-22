@@ -157,6 +157,8 @@ pub struct LimeShotApp {
     pub dialog: Option<dialogs::Dialog>,
     pub toasts: Vec<Toast>,
     pub clipboard: Option<Clipboard>,
+    /// A copied control position (0–1), independent of the notes/clips clipboard.
+    pub control_clipboard: Option<f32>,
     /// Folder of bundled samples, shown first in the Browser.
     pub bundled_samples: Option<PathBuf>,
     pub export_job: Option<dialogs::ExportJob>,
@@ -291,6 +293,7 @@ impl LimeShotApp {
             dialog: None,
             toasts: Vec::new(),
             clipboard: None,
+            control_clipboard: None,
             bundled_samples,
             export_job: None,
             compiled: None,
