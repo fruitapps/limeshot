@@ -5,6 +5,7 @@
 
 use crate::automation::*;
 use crate::model::*;
+use crate::note_tools::NoteTool;
 use crate::time::{STEP_TICKS, Tempo, Tick, TimeSignature};
 use serde::{Deserialize, Serialize};
 
@@ -207,6 +208,15 @@ pub enum Command {
         pattern: PatternId,
         notes: Vec<NoteId>,
         by: i64,
+    },
+    /// Replace the notes `remove` with `notes` in one step (FL Studio's Piano Roll tools,
+    /// [`crate::note_tools`]). A replacement whose id is in `remove` keeps it; any other gets a
+    /// new id. Inside a gesture, edits by the same tool merge (a tool dialog's live preview).
+    EditNotes {
+        pattern: PatternId,
+        tool: NoteTool,
+        remove: Vec<NoteId>,
+        notes: Vec<Note>,
     },
     /// Move note starts towards the nearest multiple of `grid` ticks by `strength` (0–1); with
     /// `lengths`, also round note lengths to the grid (minimum one grid unit).
@@ -543,6 +553,7 @@ impl Command {
                 NoteProp::Pan => "Note pan",
             },
             RotateNotes { .. } => "Rotate",
+            EditNotes { tool, .. } => tool.label(),
             Quantize { .. } => "Quantize",
             AddPattern { .. } => "Add pattern",
             ImportPattern { .. } => "Import MIDI",
@@ -626,6 +637,7 @@ impl Command {
             SetNotesMuted { pattern, muted, .. } => format!("mute{}:{muted}", pattern.0),
             SetNoteVelocity { pattern, notes, .. } => format!("vel{}:{notes:?}", pattern.0),
             SetNoteValues { pattern, prop, .. } => format!("graph{}:{prop:?}", pattern.0),
+            EditNotes { pattern, tool, .. } => format!("tool{}:{tool:?}", pattern.0),
             // A Playlist paint stroke or mute drag is one undo step too.
             AddClip { track, .. } | PlaceClip { track, .. } => format!("addc{track}"),
             SetClipMuted { muted, .. } => format!("cmute{muted}"),
@@ -976,6 +988,38 @@ impl Command {
                 for n in pat.notes.iter_mut().filter(|n| notes.contains(&n.id)) {
                     n.start = (n.start as i64 + by).rem_euclid(len.max(1)) as Tick;
                 }
+                sort_notes(pat);
+            }
+            EditNotes {
+                pattern: pid,
+                remove,
+                notes,
+                ..
+            } => {
+                let mut kept: Vec<NoteId> = Vec::new();
+                let mut new = Vec::with_capacity(notes.len());
+                for n in notes {
+                    if p.channel(n.channel).is_none() {
+                        return Err(CommandError::NoChannel(n.channel));
+                    }
+                    let id = if remove.contains(&n.id) && !kept.contains(&n.id) {
+                        kept.push(n.id);
+                        n.id
+                    } else {
+                        NoteId(p.alloc_id())
+                    };
+                    new.push(Note {
+                        id,
+                        key: n.key.min(127),
+                        length: n.length.max(1),
+                        velocity: finite(n.velocity)?.clamp(0.0, 1.0),
+                        pan: finite(n.pan)?.clamp(-1.0, 1.0),
+                        ..n
+                    });
+                }
+                let pat = pattern(p, pid)?;
+                pat.notes.retain(|n| !remove.contains(&n.id));
+                pat.notes.extend(new);
                 sort_notes(pat);
             }
             Quantize {

@@ -16,6 +16,7 @@ pub mod command;
 pub mod document;
 pub mod effects;
 pub mod model;
+pub mod note_tools;
 pub mod plugin;
 pub mod time;
 
@@ -24,5 +25,6 @@ pub use command::{Command, CommandError, Created, ImportedChannel, NewNote, Note
 pub use document::{Document, PluginTarget};
 pub use effects::{COMPRESSOR_SIDECHAIN, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;
+pub use note_tools::NoteTool;
 pub use plugin::{PluginRef, PluginState, PluginWindow};
 pub use time::{BarBeatTick, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};

@@ -230,6 +230,7 @@ mod tests {
     use crate::command::NewNote;
     use crate::effects::EffectKind;
     use crate::model::*;
+    use crate::note_tools::NoteTool;
     use crate::time::{STEP_TICKS, Tempo, Tick};
 
     fn doc_with_channel() -> (Document, ChannelId, PatternId) {
@@ -391,6 +392,54 @@ mod tests {
         d.execute(Command::RemoveMarker(b)).unwrap();
         assert!(d.execute(Command::RemoveMarker(b)).is_err());
         assert_eq!(names(&d), ["Intro"]);
+    }
+
+    #[test]
+    fn edit_notes_keeps_ids_and_merges_a_tool_gesture() {
+        let (mut d, ch, pat) = doc_with_channel();
+        d.execute(Command::AddNotes {
+            pattern: pat,
+            notes: (0..2)
+                .map(|k| NewNote {
+                    channel: ch,
+                    key: 60 + k,
+                    start: Tick::from(k) * 480,
+                    length: 100,
+                    velocity: 0.5,
+                })
+                .collect(),
+        })
+        .unwrap();
+        let before = d.project().patterns[0].notes.clone();
+        let ids: Vec<NoteId> = before.iter().map(|n| n.id).collect();
+        let legato = crate::note_tools::legato(&before);
+        d.begin_gesture();
+        for _ in 0..3 {
+            // A dialog's live preview: each update replaces what the last one produced.
+            let cur: Vec<NoteId> = d.project().patterns[0].notes.iter().map(|n| n.id).collect();
+            let mut notes = legato.clone();
+            notes.push(Note { key: 200, ..legato[0] });
+            d.execute(Command::EditNotes {
+                pattern: pat,
+                tool: NoteTool::Legato,
+                remove: cur,
+                notes,
+            })
+            .unwrap();
+        }
+        d.end_gesture();
+        let after = &d.project().patterns[0].notes;
+        assert_eq!(after.len(), 3);
+        assert_eq!(after[0].id, ids[0]);
+        assert_eq!(after[0].length, 480);
+        assert_eq!(
+            after.iter().filter(|n| n.key == 127).count(),
+            1,
+            "keys are clamped, copies get new ids"
+        );
+        assert_eq!(d.undo_label(), Some("Quick legato"));
+        d.undo();
+        assert_eq!(d.project().patterns[0].notes, before, "the gesture is one undo step");
     }
 
     #[test]

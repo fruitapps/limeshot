@@ -4280,3 +4280,152 @@ fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
     h.step();
     assert!(!h.state().plugins.is_window_open(target));
 }
+
+/// Open the Piano Roll's ⏵ menu, then `submenu` (hovered, as a person would), then click `item`.
+fn piano_menu(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
+    h.get_by_label("⏵").click();
+    h.step();
+    h.get_by_label(&format!("{submenu} ⏵")).hover();
+    for _ in 0..3 {
+        h.step();
+    }
+    // Menu items carry their shortcut in the label ("Quick legato ⌘L").
+    let with_key = format!("{item} ");
+    h.get_by(|n| n.label().is_some_and(|l| l == item || l.starts_with(&with_key)))
+        .click();
+    h.step();
+    h.step();
+}
+
+fn shift_digit(h: &mut Harness<'static, LimeShotApp>, digit: Key, typed: Key) {
+    // QWERTZ: Shift+1 types "!", so the logical key differs from the physical one.
+    for pressed in [true, false] {
+        h.event(Event::Key {
+            key: typed,
+            physical_key: Some(digit),
+            pressed,
+            repeat: false,
+            modifiers: Modifiers::SHIFT,
+        });
+    }
+    h.step();
+}
+
+#[test]
+fn piano_roll_menu_tools_select_and_zoom() {
+    let (mut h, pat, lead) = empty_piano_roll();
+    let add = |key: u8, start: Tick, length: Tick| NewNote {
+        channel: lead,
+        key,
+        start,
+        length,
+        velocity: 0.8,
+    };
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: vec![add(60, 0, 100), add(64, 0, 100), add(67, 960, 100), add(72, 1920, 100)],
+    });
+    h.step();
+    // Tools › Quick legato from the ⏵ menu: every note reaches the next start.
+    piano_menu(&mut h, "Tools", "Quick legato");
+    assert_eq!(
+        notes_by_start(&h, pat, lead),
+        vec![
+            (60, 0, 960, false),
+            (64, 0, 960, false),
+            (67, 960, 960, false),
+            (72, 1920, 100, false)
+        ]
+    );
+    assert_eq!(h.state().doc.undo_label(), Some("Quick legato"));
+    // Select › Select stacked notes: the chord.
+    piano_menu(&mut h, "Select", "Select stacked notes");
+    let ids = |h: &Harness<'static, LimeShotApp>, keys: &[u8]| -> Vec<NoteId> {
+        let mut v: Vec<NoteId> = pattern_notes(h, pat, lead)
+            .iter()
+            .filter(|n| keys.contains(&n.key))
+            .map(|n| n.id)
+            .collect();
+        v.sort();
+        v
+    };
+    let mut sel = h.state().ui.piano.selection.clone();
+    sel.sort();
+    assert_eq!(sel, ids(&h, &[60, 64]));
+    // Shift+D discards the selection's lengths (one step).
+    h.key_press_modifiers(Modifiers::SHIFT, Key::D);
+    h.step();
+    assert_eq!(
+        h.state().ui.piano.tool,
+        limeshot_ui::piano_roll::Tool::Draw,
+        "Shift+D is not the Delete tool"
+    );
+    assert!(
+        pattern_notes(&h, pat, lead)
+            .iter()
+            .all(|n| (n.length == STEP_TICKS) == [60, 64].contains(&n.key))
+    );
+    // Shift+O: every other note of the channel (none selected after Cmd+D).
+    h.key_press_modifiers(Modifiers::COMMAND, Key::D);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::O);
+    h.step();
+    let mut sel = h.state().ui.piano.selection.clone();
+    sel.sort();
+    assert_eq!(sel, ids(&h, &[60, 67]));
+    // Shift+R picks one, Shift+M adds another.
+    h.key_press_modifiers(Modifiers::SHIFT, Key::R);
+    h.step();
+    assert_eq!(h.state().ui.piano.selection.len(), 1);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::M);
+    h.step();
+    assert_eq!(h.state().ui.piano.selection.len(), 2);
+    // Shift+Q quantizes starts only; Cmd+L is quick legato.
+    let top = ids(&h, &[72]);
+    h.state_mut().exec(Command::MoveNotes {
+        pattern: pat,
+        notes: top,
+        dt: 50,
+        dkey: 0,
+    });
+    h.key_press_modifiers(Modifiers::COMMAND, Key::D);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::Q);
+    h.step();
+    assert!(
+        pattern_notes(&h, pat, lead)
+            .iter()
+            .any(|n| n.key == 72 && n.start == 1920 && n.length == 100)
+    );
+    // Zoom: PgUp zooms in, Shift+4 fits the pattern, Shift+1 (typed "!") one bar.
+    let z = h.state().ui.piano.zoom_x;
+    h.key_press(Key::PageUp);
+    h.step();
+    assert!(h.state().ui.piano.zoom_x > z);
+    shift_digit(&mut h, Key::Num4, Key::Num4);
+    let g = piano_geometry(&h);
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let len = h
+        .state()
+        .project()
+        .pattern(pat)
+        .map(|p| p.length(h.state().project().time_signature))
+        .unwrap_or(bar);
+    assert!(
+        (g.ppt * len as f32 - g.grid.width()).abs() < 2.0,
+        "the pattern fills the grid"
+    );
+    shift_digit(&mut h, Key::Num1, Key::Exclamationmark);
+    let g = piano_geometry(&h);
+    assert!(
+        (g.ppt * bar as f32 - g.grid.width()).abs() < 2.0,
+        "one bar fills the grid"
+    );
+    // Zoom › Zoom on selection from the menu.
+    let mid = ids(&h, &[60, 67]);
+    h.state_mut().ui.piano.selection = mid;
+    piano_menu(&mut h, "Zoom", "Zoom on selection");
+    let g = piano_geometry(&h);
+    assert!(
+        (g.ppt * 1920.0 - g.grid.width()).abs() < 2.0,
+        "the selected notes fill the grid"
+    );
+}

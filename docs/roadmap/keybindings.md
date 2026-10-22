@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 79, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 31, NOT_PLANNED 2
+Tracked: **124** — IMPLEMENTED 85, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 29, NOT_PLANNED 2
 
 ## Global
 
@@ -116,16 +116,22 @@ Tracked: **118** — IMPLEMENTED 79, DIFFERENT 4, LIMESHOT_ONLY 2, NOT_STARTED 3
 | KB-058 | Nudge the selection | `Shift+Left / Shift+Right` | OBSERVED | `Shift+← / Shift+→` | IMPLEMENTED | PR-009 | FL calls it Shift left/right (moves by the snap). |
 | KB-059 | Quick quantize | `Cmd+Q (macOS menu)` | OBSERVED | `Alt+Q` | DIFFERENT | PR-014 | FL 2026.1.1's macOS Tools menu: Quick quantize Cmd+Q, Quick quantize start times Shift+Q, Quantize… Opt+Q. LimeShot keeps Cmd+Q for Quit and uses Alt+Q for quick quantize. |
 | KB-060 | Quantize dialog | `Opt+Q (macOS menu)` | OBSERVED | — | NOT_STARTED | PR-014 | FL 2026.1.1 Tools menu. |
-| KB-061 | Legato | `Cmd+L (macOS menu)` | OBSERVED | — | NOT_STARTED | PR-015 | Quick legato in FL 2026.1.1's Tools menu. |
+| KB-061 | Legato | `Cmd+L (macOS menu)` | OBSERVED | `Cmd+L` | IMPLEMENTED | PR-015 | Quick legato in FL 2026.1.1's Tools menu. Session 16: in the Piano Roll (the Channel Rack keeps Cmd+L for routing). |
 | KB-062 | Arpeggiate / strum / randomize | `Alt+A / Alt+S / Alt+R` | INFERRED | — | NOT_STARTED | PR-015 |  |
 | KB-063 | Edit without snapping | `Alt+drag` | VERIFIED | `Alt+click` | IMPLEMENTED | PR-003 | A mouse modifier. |
 | KB-079 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PR-002 | From FL 2026.1.1's Select menu. |
 | KB-080 | Scroll the view | `Up / Down / Left / Right` | OBSERVED | `↑ / ↓ / ← / →` | IMPLEMENTED | PR-005 | Up/Down move about three rows per press in FL 2026.1.1. |
 | KB-081 | Rotate selection left / right | `Shift+Cmd+Left / Shift+Cmd+Right` | OBSERVED | `Shift+Cmd+← / Shift+Cmd+→` | IMPLEMENTED | PR-009 | FL 2026.1.1 Edit menu (macOS labels). LimeShot rotates by the snap; all of the channel's notes when none is selected. |
-| KB-082 | Discard lengths | `Shift+D` | OBSERVED | — | NOT_STARTED | PR-015 | FL 2026.1.1 Edit menu. |
+| KB-082 | Discard lengths | `Shift+D` | OBSERVED | `Shift+D` | IMPLEMENTED | PR-015 | FL 2026.1.1 Edit menu. Session 16: one step long. |
 | KB-083 | Mute / unmute selected notes | `Opt+M / Shift+Opt+M` | OBSERVED | `Alt+M / Shift+Alt+M` | IMPLEMENTED | PR-012 | Selection, or all of the channel's notes when none is selected. |
 | KB-088 | Glue notes | `Cmd+G` | OBSERVED | `Cmd+G` | IMPLEMENTED | PR-023 | FL 2026.1.1 Tools menu. |
 | KB-089 | Quick chop | `Cmd+U` | OBSERVED | `Cmd+U` | IMPLEMENTED | PR-023 | Cuts at every snap step. FL's Chop… dialog (Opt+U) is not implemented. |
+| KB-119 | Quick quantize start times | `Shift+Q` | OBSERVED | `Shift+Q` | IMPLEMENTED | PR-014 | FL 2026.1.1 Piano Roll menu (menus.json). |
+| KB-120 | Select one at random / more at random | `Shift+R / Shift+M` | OBSERVED | `Shift+R / Shift+M` | IMPLEMENTED | PR-002 | FL 2026.1.1 Piano Roll menu (menus.json). |
+| KB-121 | Select odd | `Shift+O` | OBSERVED | `Shift+O` | IMPLEMENTED | PR-002 | FL 2026.1.1 Piano Roll menu (menus.json). |
+| KB-122 | Zoom in / out | `PgUp / PgDn` | OBSERVED | `PgUp / PgDn` | IMPLEMENTED | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). |
+| KB-123 | Quick zoom 1–3, zoom out far, zoom on selection, step sequencer mode zoom | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6` | OBSERVED | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6` | DIFFERENT | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's zoom levels; matched by key position, so they work on QWERTZ. |
+| KB-124 | Center | `Shift+0` | OBSERVED | `Shift+0` | DIFFERENT | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's centring (playback position and notes). |
 
 ## Playlist
 

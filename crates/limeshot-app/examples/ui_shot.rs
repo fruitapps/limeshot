@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -296,11 +296,21 @@ fn main() {
         }
     }
     if let Some(menu) = args.iter().find_map(|a| a.strip_prefix("--menu=")) {
-        // Open a main menu, to look at its items.
+        // Open a menu, to look at its items; "⏵/Tools" (with --piano) opens the Piano Roll's
+        // menu and hovers its Tools submenu.
         use egui_kittest::kittest::Queryable;
-        harness.get_by_label(menu).click();
+        let mut path = menu.split('/');
+        if let Some(first) = path.next() {
+            harness.get_by_label(first).click();
+        }
         for _ in 0..3 {
             harness.step();
+        }
+        for sub in path {
+            harness.get_by_label(&format!("{sub} ⏵")).hover();
+            for _ in 0..3 {
+                harness.step();
+            }
         }
     }
     match harness.render() {

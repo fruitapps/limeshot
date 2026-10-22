@@ -670,10 +670,10 @@
       "action": "Legato",
       "fl_keys": "Cmd+L (macOS menu)",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+L",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": "Quick legato in FL 2026.1.1's Tools menu."
+      "notes": "Quick legato in FL 2026.1.1's Tools menu. Session 16: in the Piano Roll (the Channel Rack keeps Cmd+L for routing)."
     },
     {
       "id": "KB-062",
@@ -901,10 +901,10 @@
       "action": "Discard lengths",
       "fl_keys": "Shift+D",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Shift+D",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": "FL 2026.1.1 Edit menu."
+      "notes": "FL 2026.1.1 Edit menu. Session 16: one step long."
     },
     {
       "id": "KB-083",
@@ -1301,6 +1301,72 @@
       "status": "NOT_PLANNED",
       "feature": "",
       "notes": "Help › Gopher (chat assistant) (MENU-262)."
+    },
+    {
+      "id": "KB-119",
+      "context": "Piano Roll",
+      "action": "Quick quantize start times",
+      "fl_keys": "Shift+Q",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+Q",
+      "status": "IMPLEMENTED",
+      "feature": "PR-014",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json)."
+    },
+    {
+      "id": "KB-120",
+      "context": "Piano Roll",
+      "action": "Select one at random / more at random",
+      "fl_keys": "Shift+R / Shift+M",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+R / Shift+M",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json)."
+    },
+    {
+      "id": "KB-121",
+      "context": "Piano Roll",
+      "action": "Select odd",
+      "fl_keys": "Shift+O",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+O",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json)."
+    },
+    {
+      "id": "KB-122",
+      "context": "Piano Roll",
+      "action": "Zoom in / out",
+      "fl_keys": "PgUp / PgDn",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "PgUp / PgDn",
+      "status": "IMPLEMENTED",
+      "feature": "PR-005",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json)."
+    },
+    {
+      "id": "KB-123",
+      "context": "Piano Roll",
+      "action": "Quick zoom 1–3, zoom out far, zoom on selection, step sequencer mode zoom",
+      "fl_keys": "Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's zoom levels; matched by key position, so they work on QWERTZ."
+    },
+    {
+      "id": "KB-124",
+      "context": "Piano Roll",
+      "action": "Center",
+      "fl_keys": "Shift+0",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+0",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's centring (playback position and notes)."
     }
   ]
 }

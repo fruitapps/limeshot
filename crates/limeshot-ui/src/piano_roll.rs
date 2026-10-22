@@ -310,6 +310,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
+                ui.menu_button("⏵", |ui| crate::piano_menu::menu(app, ui))
+                    .response
+                    .hint("Piano Roll options: Edit, Tools, Select, Zoom");
                 for tool in Tool::ALL {
                     if icon_button(ui, tool.icon(), app.ui.piano.tool == tool, 22.0, tool.tip()).clicked() {
                         app.ui.piano.tool = tool;
@@ -354,11 +357,11 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                     quantize(app, pid, cid);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
-                        app.ui.piano.zoom_x = (app.ui.piano.zoom_x * 1.25).min(800.0);
+                    if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (PgUp, Cmd+wheel)").clicked() {
+                        crate::piano_menu::run(app, crate::piano_menu::Act::ZoomIn);
                     }
-                    if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
-                        app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(12.0);
+                    if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out (PgDn)").clicked() {
+                        crate::piano_menu::run(app, crate::piano_menu::Act::ZoomOut);
                     }
                     if ui.small_button("↕").hint("Taller keys").clicked() {
                         app.ui.piano.key_h = if app.ui.piano.key_h >= 22.0 {
@@ -1581,139 +1584,61 @@ pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
 }
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
+    use crate::piano_menu::{Act, run};
     use crate::shortcuts::key;
-    let pid = app.current_pattern();
-    let Some(cid) = app.selected_channel() else { return };
-    let sel = app.ui.piano.selection.clone();
-    if (key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace)) && !sel.is_empty() {
-        app.exec(Command::RemoveNotes {
-            pattern: pid,
-            notes: sel.clone(),
-        });
-        app.ui.piano.selection.clear();
+    if app.selected_channel().is_none() {
+        return;
     }
-    if key(ctx, Modifiers::COMMAND, Key::A) {
-        app.ui.piano.selection = app
-            .project()
-            .pattern(pid)
-            .map(|p| p.notes_for(cid).map(|n| n.id).collect())
-            .unwrap_or_default();
-    }
-    if key(ctx, Modifiers::COMMAND, Key::D) {
-        app.ui.piano.selection.clear();
-    }
-    for (k, op) in [(Key::X, ClipOp::Cut), (Key::C, ClipOp::Copy), (Key::V, ClipOp::Paste)] {
-        if key(ctx, Modifiers::COMMAND, k) {
-            clipboard(app, op);
+    // egui matches a shortcut even with extra Shift or Alt held, so the more specific
+    // combinations come first (Shift+Alt+M before Alt+M and Shift+M, Shift+D before the D tool).
+    let shift = Modifiers::SHIFT;
+    let cmd = Modifiers::COMMAND;
+    for (mods, k, act) in [
+        (Modifiers::ALT | shift, Key::M, Act::Unmute),
+        (Modifiers::ALT, Key::M, Act::Mute),
+        (cmd | shift, Key::ArrowLeft, Act::RotateLeft),
+        (cmd | shift, Key::ArrowRight, Act::RotateRight),
+        (Modifiers::NONE, Key::Delete, Act::Delete),
+        (Modifiers::NONE, Key::Backspace, Act::Delete),
+        (cmd, Key::A, Act::SelectAll),
+        (cmd, Key::D, Act::Deselect),
+        (cmd, Key::X, Act::Cut),
+        (cmd, Key::C, Act::Copy),
+        (cmd, Key::V, Act::Paste),
+        (cmd, Key::B, Act::Duplicate),
+        (cmd, Key::G, Act::Glue),
+        (cmd, Key::U, Act::QuickChop),
+        (shift, Key::I, Act::InvertSelection),
+    ] {
+        if key(ctx, mods, k) {
+            run(app, act);
         }
     }
     if key(ctx, Modifiers::ALT, Key::Q) {
-        quantize(app, pid, cid);
+        let pid = app.current_pattern();
+        if let Some(cid) = app.selected_channel() {
+            quantize(app, pid, cid);
+        }
     }
-    if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
-        let before: Vec<NoteId> = app
-            .project()
-            .pattern(pid)
-            .map(|p| p.notes.iter().map(|n| n.id).collect())
-            .unwrap_or_default();
-        app.exec(Command::DuplicateNotes {
-            pattern: pid,
-            notes: sel.clone(),
-        });
-        // Select the copies.
-        app.ui.piano.selection = app
-            .project()
-            .pattern(pid)
-            .map(|p| p.notes.iter().map(|n| n.id).filter(|id| !before.contains(id)).collect())
-            .unwrap_or_default();
-    }
+    crate::piano_menu::keys(app, ctx);
     for tool in Tool::ALL {
         if key(ctx, Modifiers::NONE, tool.key()) {
             app.ui.piano.tool = tool;
         }
     }
-    let sig = app.project().time_signature;
-    // Glue (Cmd+G), quick chop (Cmd+U) and mute (Opt+M / Shift+Opt+M) act on the selection, or on
-    // every note of the channel when none is selected (FL Studio's Tools and Edit menus).
-    let all_or_sel = |app: &LimeShotApp| -> Vec<NoteId> {
-        if sel.is_empty() {
-            app.project()
-                .pattern(pid)
-                .map(|p| p.notes_for(cid).map(|n| n.id).collect())
-                .unwrap_or_default()
-        } else {
-            sel.clone()
-        }
-    };
-    if key(ctx, Modifiers::COMMAND, Key::G) {
-        let notes = all_or_sel(app);
-        app.exec(Command::GlueNotes { pattern: pid, notes });
-        app.ui.piano.selection.retain(|id| {
-            app.doc
-                .project()
-                .pattern(pid)
-                .is_some_and(|p| p.notes.iter().any(|n| n.id == *id))
-        });
-    }
-    if key(ctx, Modifiers::COMMAND, Key::U) {
-        let notes = all_or_sel(app);
-        chop(app, pid, &notes, app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS));
-    }
-    for (mods, muted) in [(Modifiers::ALT | Modifiers::SHIFT, false), (Modifiers::ALT, true)] {
-        if key(ctx, mods, Key::M) {
-            let notes = all_or_sel(app);
-            app.exec(Command::SetNotesMuted {
-                pattern: pid,
-                notes,
-                muted,
-            });
-        }
-    }
-    if key(ctx, Modifiers::SHIFT, Key::I) {
-        // Invert selection (FL Studio: Select › Invert selection, Shift+I).
-        app.ui.piano.selection = app
-            .project()
-            .pattern(pid)
-            .map(|p| p.notes_for(cid).map(|n| n.id).filter(|id| !sel.contains(id)).collect())
-            .unwrap_or_default();
-    }
     // Plain arrows scroll the view; Shift+arrows transpose / nudge and Cmd+Up/Down transpose an
     // octave. As in FL Studio, these edits apply to every note of the channel when none is
     // selected (observed in FL Studio 2026.1.1).
-    let targets = if sel.is_empty() {
-        app.project()
-            .pattern(pid)
-            .map(|p| p.notes_for(cid).map(|n| n.id).collect())
-            .unwrap_or_default()
-    } else {
-        sel
-    };
-    let grid = app.ui.snap.ticks(sig).unwrap_or(STEP_TICKS) as i64;
-    // Rotate by the snap, wrapping round the pattern (FL Studio's Edit menu: Shift+Cmd+Left/Right).
-    for (k, by) in [(Key::ArrowLeft, -grid), (Key::ArrowRight, grid)] {
-        if key(ctx, Modifiers::COMMAND | Modifiers::SHIFT, k) && !targets.is_empty() {
-            app.exec(Command::RotateNotes {
-                pattern: pid,
-                notes: targets.clone(),
-                by,
-            });
-        }
-    }
-    for (mods, k, dt, dk) in [
-        (Modifiers::SHIFT, Key::ArrowUp, 0, 1),
-        (Modifiers::SHIFT, Key::ArrowDown, 0, -1),
-        (Modifiers::COMMAND, Key::ArrowUp, 0, 12),
-        (Modifiers::COMMAND, Key::ArrowDown, 0, -12),
-        (Modifiers::SHIFT, Key::ArrowLeft, -grid, 0),
-        (Modifiers::SHIFT, Key::ArrowRight, grid, 0),
+    for (mods, k, act) in [
+        (shift, Key::ArrowUp, Act::TransposeUp),
+        (shift, Key::ArrowDown, Act::TransposeDown),
+        (cmd, Key::ArrowUp, Act::OctaveUp),
+        (cmd, Key::ArrowDown, Act::OctaveDown),
+        (shift, Key::ArrowLeft, Act::ShiftLeft),
+        (shift, Key::ArrowRight, Act::ShiftRight),
     ] {
-        if key(ctx, mods, k) && !targets.is_empty() {
-            app.exec(Command::MoveNotes {
-                pattern: pid,
-                notes: targets.clone(),
-                dt,
-                dkey: dk,
-            });
+        if key(ctx, mods, k) {
+            run(app, act);
         }
     }
     // Checked after the Shift/Cmd variants: a shortcut without modifiers also matches Shift.

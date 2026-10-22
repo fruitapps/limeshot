@@ -102,6 +102,19 @@ pub const EDITING: &[(&str, &str)] = &[
     ("Cmd+G", "Piano Roll: glue touching notes"),
     ("Cmd+U", "Piano Roll: chop notes at the snap"),
     ("Alt+M / Shift+Alt+M", "Piano Roll: mute / unmute notes"),
+    ("Cmd+L", "Piano Roll: quick legato (notes reach the next note)"),
+    ("Shift+D", "Piano Roll: discard lengths (one step)"),
+    ("Shift+Q", "Piano Roll: quick quantize start times"),
+    (
+        "Shift+R / Shift+M / Shift+O",
+        "Piano Roll: select one at random / more at random / odd notes",
+    ),
+    ("PgUp / PgDn", "Piano Roll: zoom in / out"),
+    (
+        "Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6",
+        "Piano Roll: quick zoom 1 bar / 4 / 16 / whole pattern / selection / step size",
+    ),
+    ("Shift+0", "Piano Roll: center on the playback position and the notes"),
     ("Home", "Playlist: song position to the start"),
     (
         "Cmd+L",

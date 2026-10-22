@@ -1321,7 +1321,7 @@
       "name": "Note selection (click, rectangle, select all)",
       "description": "Select notes.",
       "fl_reference": "Ctrl+click/drag, Ctrl+A, Shift+I invert.",
-      "limeshot_behavior": "Click selects; Cmd+click toggles; Cmd+drag rectangle; Cmd+A all, Cmd+D none, Shift+I invert; double-click a note selects its pitch row.",
+      "limeshot_behavior": "Click selects; Cmd+click toggles; Cmd+drag rectangle; Cmd+A all, Cmd+D none, Shift+I invert; double-click a note selects its pitch row. ⏵ menu › Select: select one / more at random (Shift+R / Shift+M), odd (Shift+O), muted, overlapping and stacked notes.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -1334,7 +1334,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::piano_roll_selection_gestures"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_selection_gestures",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1344,7 +1345,7 @@
           "docs/research/evidence/screenshots/fl-piano-select-menu.png"
         ]
       },
-      "notes": "Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Not implemented: select by colour/odd/random/muted/overlapping, select time around selection, magic lasso."
+      "notes": "Observed in FL 2026.1.1's Select menu (fl-piano-select-menu.png): Cmd+A, Cmd+D, Shift+I invert. Session 16: random, odd, muted, overlapping and stacked from the ⏵ menu. Not implemented: select by colour (no note colours yet), select time around selection / previous / next time, magic lasso."
     },
     {
       "id": "PR-003",
@@ -1417,7 +1418,7 @@
       "name": "Zoom and scroll",
       "description": "Navigate the grid.",
       "fl_reference": "Zoom handles, Page Up/Down, middle-drag.",
-      "limeshot_behavior": "Wheel scrolls, Shift+wheel horizontal, Cmd+wheel or pinch zooms (anchored at the pointer), arrow keys scroll, +/− buttons, taller keys.",
+      "limeshot_behavior": "Wheel scrolls, Shift+wheel horizontal, Cmd+wheel or pinch zooms (anchored at the pointer), arrow keys scroll, +/− buttons, taller keys. ⏵ menu › Zoom: PgUp / PgDn, quick zooms Shift+1–3 (1, 4, 16 bars), Shift+4 the whole pattern, Shift+5 the selection, Shift+6 step size; Center (Shift+0).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -1431,7 +1432,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll",
-        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically"
+        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1440,7 +1442,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1. Session 9: Opt+wheel / Opt+pinch zooms the key height around the pointer."
+      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1. Session 9: Opt+wheel / Opt+pinch zooms the key height around the pointer. Session 16: FL's Zoom submenu; the quick-zoom levels are LimeShot's (not observed in FL)."
     },
     {
       "id": "PR-006",
@@ -1703,7 +1705,7 @@
       "name": "Quantize",
       "description": "Quantise note starts/lengths.",
       "fl_reference": "Alt+Q quantize, Ctrl+Q quick quantize.",
-      "limeshot_behavior": "Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only.",
+      "limeshot_behavior": "Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only. ⏵ menu › Tools: Quick quantize (starts and lengths) and Quick quantize start times (Shift+Q).",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -1718,7 +1720,8 @@
       ],
       "tests": [
         "limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths",
-        "limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll"
+        "limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1735,17 +1738,24 @@
       "name": "Chords, arpeggiator, strum, humanize, legato",
       "description": "Generative note tools.",
       "fl_reference": "Chord progression, Riff machine, strum, arp, randomize, legato (Ctrl+L).",
-      "limeshot_behavior": "Tools menu with these transforms as commands.",
+      "limeshot_behavior": "The Piano Roll's ⏵ menu › Tools: Quick legato (Cmd+L: every note ends where the next later note starts, chords together) and Edit › Discard lengths (Shift+D, one step), on the selection or the channel; one undo step each (Command::EditNotes, core note_tools). The tool dialogs (Arpeggiate, Strum, Flam, Limit, Flip, Randomize, Scale levels, LFO, Articulate, Chop…) come next.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core note_tools::tests::legato_reaches_the_next_start_and_keeps_chords_together",
+        "limeshot-core document::tests::edit_notes_keeps_ids_and_merges_a_tool_gesture",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -1753,7 +1763,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16: menu and quick tools from FL 2026.1.1's Piano Roll menu (menus.json, pseudo-menu Piano Roll). Not yet: the dialog tools, Riff machine, chord progressions."
     },
     {
       "id": "PR-016",

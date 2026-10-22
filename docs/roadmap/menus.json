@@ -7108,10 +7108,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵",
+      "status": "IMPLEMENTED",
       "feature": "",
-      "notes": "The ▸ at the Piano Roll's top left. LimeShot has no Piano Roll menu; its commands are keys (shortcuts help) and the tool buttons."
+      "notes": "The ▸ at the Piano Roll's top left. LimeShot has no Piano Roll menu; its commands are keys (shortcuts help) and the tool buttons. Session 16: LimeShot's ⏵ button at the left of the Piano Roll header opens Edit, Tools, Select, Zoom and Center."
     },
     {
       "id": "MENU-407",
@@ -7296,8 +7296,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Edit",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -7315,8 +7315,8 @@
       "fl_keys": "Cmd+X",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Cut",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Cut",
+      "status": "IMPLEMENTED",
       "feature": "PR-019",
       "notes": "Main Edit menu and Cmd+X with the Piano Roll focused."
     },
@@ -7334,8 +7334,8 @@
       "fl_keys": "Cmd+C",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Copy",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Copy",
+      "status": "IMPLEMENTED",
       "feature": "PR-019",
       "notes": ""
     },
@@ -7353,8 +7353,8 @@
       "fl_keys": "Cmd+V",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Paste",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Paste",
+      "status": "IMPLEMENTED",
       "feature": "PR-019",
       "notes": ""
     },
@@ -7372,8 +7372,8 @@
       "fl_keys": "Cmd+B",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+B",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Duplicate",
+      "status": "IMPLEMENTED",
       "feature": "PR-008",
       "notes": ""
     },
@@ -7391,8 +7391,8 @@
       "fl_keys": "Del",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Delete",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Delete",
+      "status": "IMPLEMENTED",
       "feature": "PR-001",
       "notes": ""
     },
@@ -7410,8 +7410,8 @@
       "fl_keys": "Shift+Left",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Left",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Shift left",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": "By the snap."
     },
@@ -7429,8 +7429,8 @@
       "fl_keys": "Shift+Right",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Right",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Shift right",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7448,8 +7448,8 @@
       "fl_keys": "Shift+Cmd+Left",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Cmd+Left",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Rotate left",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7467,8 +7467,8 @@
       "fl_keys": "Shift+Cmd+Right",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Cmd+Right",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Rotate right",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7486,8 +7486,8 @@
       "fl_keys": "Shift+Up",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Up",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Transpose up",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7505,8 +7505,8 @@
       "fl_keys": "Shift+Down",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Down",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Transpose down",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7524,8 +7524,8 @@
       "fl_keys": "Cmd+Up",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+Up",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Transpose one octave up",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7543,8 +7543,8 @@
       "fl_keys": "Cmd+Down",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+Down",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Transpose one octave down",
+      "status": "IMPLEMENTED",
       "feature": "PR-009",
       "notes": ""
     },
@@ -7562,10 +7562,10 @@
       "fl_keys": "Shift+D",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Edit › Discard lengths",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "Session 16: sets the notes (selection, or the channel) to one step; the exact length FL uses was not observed."
     },
     {
       "id": "MENU-431",
@@ -7638,8 +7638,8 @@
       "fl_keys": "Opt+M",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Alt+M",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Mute",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -7657,8 +7657,8 @@
       "fl_keys": "Shift+Opt+M",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+Alt+M",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Edit › Unmute",
+      "status": "IMPLEMENTED",
       "feature": "PR-012",
       "notes": ""
     },
@@ -7827,8 +7827,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": "Built-in tools on the left, scripts on the right."
     },
@@ -7884,10 +7884,10 @@
       "fl_keys": "Cmd+L",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Quick legato",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: each note ends where the next later note starts; chords stay together, the last notes keep their lengths."
     },
     {
       "id": "MENU-448",
@@ -7922,10 +7922,10 @@
       "fl_keys": "Cmd+Q",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Alt+Q",
+      "limeshot": "Piano Roll › ⏵ › Tools › Quick quantize",
       "status": "DIFFERENT",
       "feature": "PR-014",
-      "notes": "LimeShot's Alt+Q quantizes to the snap (Cmd+Q quits on macOS)."
+      "notes": "LimeShot's Alt+Q quantizes to the snap (Cmd+Q quits on macOS). Session 16: starts and lengths to the snap. No key: Cmd+Q quits LimeShot."
     },
     {
       "id": "MENU-450",
@@ -7941,10 +7941,10 @@
       "fl_keys": "Shift+Q",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Quick quantize start times",
+      "status": "IMPLEMENTED",
       "feature": "PR-014",
-      "notes": ""
+      "notes": "Session 16: Shift+Q."
     },
     {
       "id": "MENU-451",
@@ -7979,8 +7979,8 @@
       "fl_keys": "Cmd+U",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+U",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Tools › Quick chop",
+      "status": "IMPLEMENTED",
       "feature": "PR-023",
       "notes": ""
     },
@@ -8017,8 +8017,8 @@
       "fl_keys": "Cmd+G",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+G",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Tools › Glue",
+      "status": "IMPLEMENTED",
       "feature": "PR-023",
       "notes": ""
     },
@@ -8735,8 +8735,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Select",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -8754,8 +8754,8 @@
       "fl_keys": "Cmd+D",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+D",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Select › Deselect",
+      "status": "IMPLEMENTED",
       "feature": "PR-002",
       "notes": ""
     },
@@ -8773,8 +8773,8 @@
       "fl_keys": "Cmd+A",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+A",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Select › Select all",
+      "status": "IMPLEMENTED",
       "feature": "PR-002",
       "notes": ""
     },
@@ -8792,9 +8792,9 @@
       "fl_keys": "Shift+R",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Select › Select one at random",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
       "notes": ""
     },
     {
@@ -8811,9 +8811,9 @@
       "fl_keys": "Shift+M",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Select › Select more at random",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
       "notes": ""
     },
     {
@@ -8849,10 +8849,10 @@
       "fl_keys": "Shift+O",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Select › Select odd",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
+      "notes": "Session 16: the 1st, 3rd, 5th … note in time order (of the selection, or the channel)."
     },
     {
       "id": "MENU-499",
@@ -8868,9 +8868,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Select › Select muted",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
       "notes": ""
     },
     {
@@ -8887,9 +8887,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Select › Select overlapping notes",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
       "notes": ""
     },
     {
@@ -8906,9 +8906,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Select › Select stacked notes",
+      "status": "IMPLEMENTED",
+      "feature": "PR-002",
       "notes": ""
     },
     {
@@ -8925,8 +8925,8 @@
       "fl_keys": "Shift+I",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Shift+I",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Select › Invert selection",
+      "status": "IMPLEMENTED",
       "feature": "PR-002",
       "notes": ""
     },
@@ -9075,9 +9075,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Zoom",
+      "status": "IMPLEMENTED",
+      "feature": "PR-005",
       "notes": ""
     },
     {
@@ -9094,8 +9094,8 @@
       "fl_keys": "PgUp",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+wheel",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Zoom › Zoom in",
+      "status": "IMPLEMENTED",
       "feature": "PR-005",
       "notes": "LimeShot zooms with Cmd+wheel and pinch."
     },
@@ -9113,8 +9113,8 @@
       "fl_keys": "PgDn",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › key Cmd+wheel",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Zoom › Zoom out",
+      "status": "IMPLEMENTED",
       "feature": "PR-005",
       "notes": ""
     },
@@ -9132,10 +9132,10 @@
       "fl_keys": "Shift+1",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Zoom › Quick zoom 1",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "Session 16: LimeShot's levels (1, 4, 16 bars; the whole pattern; a Channel Rack step per step), not observed in FL."
     },
     {
       "id": "MENU-514",
@@ -9151,10 +9151,10 @@
       "fl_keys": "Shift+2",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Zoom › Quick zoom 2",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "Session 16: LimeShot's levels (1, 4, 16 bars; the whole pattern; a Channel Rack step per step), not observed in FL."
     },
     {
       "id": "MENU-515",
@@ -9170,10 +9170,10 @@
       "fl_keys": "Shift+3",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Zoom › Quick zoom 3",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "Session 16: LimeShot's levels (1, 4, 16 bars; the whole pattern; a Channel Rack step per step), not observed in FL."
     },
     {
       "id": "MENU-516",
@@ -9189,10 +9189,10 @@
       "fl_keys": "Shift+4",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Zoom › Zoom out far",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "Session 16: LimeShot's levels (1, 4, 16 bars; the whole pattern; a Channel Rack step per step), not observed in FL."
     },
     {
       "id": "MENU-517",
@@ -9208,9 +9208,9 @@
       "fl_keys": "Shift+5",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Piano Roll › ⏵ › Zoom › Zoom on selection",
+      "status": "IMPLEMENTED",
+      "feature": "PR-005",
       "notes": ""
     },
     {
@@ -9227,10 +9227,10 @@
       "fl_keys": "Shift+6",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › Zoom › Step sequencer mode zoom",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "Session 16: LimeShot's levels (1, 4, 16 bars; the whole pattern; a Channel Rack step per step), not observed in FL."
     },
     {
       "id": "MENU-519",
@@ -9658,10 +9658,10 @@
       "fl_keys": "Shift+0",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Center",
+      "status": "DIFFERENT",
       "feature": "PR-005",
-      "notes": ""
+      "notes": "Session 16: scrolls to the playback position (or the start) and the channel's notes; FL's exact behaviour not observed."
     },
     {
       "id": "MENU-542",

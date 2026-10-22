@@ -667,3 +667,16 @@ remaining "Then" items in `next-steps.md` (live FL observation list, keybindings
 pre-fader sends, effects polish, MIDI input). Open checks: a live pass with real plugins over presets, automation,
 delay compensation and the plugin bridge (sessions 12–15), and SMPTE / FL's Line and Cell snap modes.
 
+
+## 2026-10-22 — Session 16: implementing the editor menus
+
+### Session 16, part 1: the Piano Roll's ⏵ menu (PR-015, PR-002, PR-005, PR-014)
+
+FL's Piano Roll menu from the session 15 inventory: a ⏵ button at the left of the Piano Roll header opens Edit (the
+existing editing keys as items, plus Discard lengths, Shift+D), Tools (Quick legato Cmd+L, Quick quantize, Quick
+quantize start times Shift+Q, Quick chop, Glue), Select (one / more at random Shift+R / Shift+M, odd Shift+O, muted,
+overlapping, stacked, invert), Zoom (PgUp / PgDn, Shift+1 … 6) and Center (Shift+0). Menu items and keys run the same
+`piano_menu::Act`s; the Piano Roll's key handling is one ordered list (egui matches shortcuts with extra Shift/Alt,
+so Shift+D must win over the D tool). Shift+digits match the key's position, so they work on QWERTZ. New core
+`note_tools` (pure tools, a seeded RNG) and `Command::EditNotes` (replace notes keeping ids; merges inside a gesture,
+for the coming dialogs' live preview). `ui_shot --menu=⏵/Tools` shows a submenu. egui's font has no "▸", hence ⏵.
