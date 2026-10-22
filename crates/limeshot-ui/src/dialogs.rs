@@ -49,6 +49,11 @@ pub enum Dialog {
     },
     /// A previous session left unsaved work behind.
     Recover(crate::autosave::SessionInfo),
+    /// FL Studio's Patterns › Transpose…: move every note of a pattern by semitones.
+    Transpose {
+        pattern: PatternId,
+        semitones: i32,
+    },
     About,
     Shortcuts,
 }
@@ -525,6 +530,38 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 RenameTarget::Marker(marker) => Command::RenameMarker { marker, name },
                                 RenameTarget::Project => Command::SetTitle(name),
                                 RenameTarget::ChannelGroup(_) => return,
+                            });
+                        }
+                        keep = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        keep = false;
+                    }
+                });
+            });
+        }
+        Dialog::Transpose { pattern, semitones } => {
+            let pattern = *pattern;
+            modal(ctx, "Transpose", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Semitones");
+                    let r = ui.add(egui::DragValue::new(semitones).range(-127..=127).speed(0.2));
+                    r.request_focus();
+                });
+                let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
+                ui.horizontal(|ui| {
+                    if ui.button("OK").clicked() || enter {
+                        let notes: Vec<_> = app
+                            .project()
+                            .pattern(pattern)
+                            .map(|p| p.notes.iter().map(|n| n.id).collect())
+                            .unwrap_or_default();
+                        if *semitones != 0 && !notes.is_empty() {
+                            app.exec(Command::MoveNotes {
+                                pattern,
+                                notes,
+                                dt: 0,
+                                dkey: *semitones,
                             });
                         }
                         keep = false;

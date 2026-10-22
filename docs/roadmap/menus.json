@@ -1381,10 +1381,10 @@
       "fl_keys": "Shift+F4",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Find first empty…",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": "Selects the first empty pattern and asks for a name."
+      "notes": "Selects the first empty pattern (a new one at the end when none is empty) and asks for a name."
     },
     {
       "id": "MENU-080",
@@ -1398,10 +1398,10 @@
       "fl_keys": "F4",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Patterns › New pattern",
-      "status": "DIFFERENT",
+      "limeshot": "Patterns › Find next empty…",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": "FL asks for a name; LimeShot's F4 adds a pattern without asking."
+      "notes": "The first empty pattern after the current one, else a new one; asks for a name."
     },
     {
       "id": "MENU-081",
@@ -1415,8 +1415,8 @@
       "fl_keys": "Cmd+F4",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Find next empty (no naming)",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
       "notes": ""
     },
@@ -1432,10 +1432,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Select in playlist",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Selects the current pattern's clips and shows the Playlist."
     },
     {
       "id": "MENU-083",
@@ -1452,7 +1452,7 @@
       "limeshot": "Patterns › Rename pattern…",
       "status": "DIFFERENT",
       "feature": "SEQ-018",
-      "notes": "LimeShot has rename and Color as separate items."
+      "notes": "LimeShot has rename (F2) and Color as separate items."
     },
     {
       "id": "MENU-084",
@@ -1483,10 +1483,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Random color",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Another palette colour, at random."
     },
     {
       "id": "MENU-086",
@@ -1585,10 +1585,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Transpose…",
+      "status": "DIFFERENT",
       "feature": "SEQ-021",
-      "notes": "Opens: settings.json page 'Patterns dialogs'."
+      "notes": "FL: a small inline field at the pointer; LimeShot: a small dialog with Semitones, OK and Cancel. Moves every note of the pattern (one undo step)."
     },
     {
       "id": "MENU-092",
@@ -1602,10 +1602,10 @@
       "fl_keys": "Shift+Cmd+Ins",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Insert one",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "An empty pattern before the current one, made current; default names renumber by position; asks for a name. FL: not an undo step (observed session 15); LimeShot: one."
     },
     {
       "id": "MENU-093",
@@ -1622,7 +1622,7 @@
       "limeshot": "Patterns › Clone pattern",
       "status": "DIFFERENT",
       "feature": "SEQ-018",
-      "notes": "LimeShot has no key."
+      "notes": "Same action and key; LimeShot's label adds 'pattern'."
     },
     {
       "id": "MENU-094",
@@ -1639,7 +1639,7 @@
       "limeshot": "Patterns › Delete pattern",
       "status": "DIFFERENT",
       "feature": "SEQ-018",
-      "notes": "LimeShot has no key."
+      "notes": "Same action and key; LimeShot's label adds 'pattern'."
     },
     {
       "id": "MENU-095",
@@ -1653,10 +1653,10 @@
       "fl_keys": "Shift+Cmd+Up",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Move up",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Default names renumber by position."
     },
     {
       "id": "MENU-096",
@@ -1670,10 +1670,10 @@
       "fl_keys": "Shift+Cmd+Down",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Move down",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Default names renumber by position."
     },
     {
       "id": "MENU-097",
@@ -1687,10 +1687,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Patterns › Split by channel",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": ""
+      "notes": "Observed session 15: the pattern keeps its first channel's notes and that channel's name; each other channel with notes gets a new pattern named after it at the end of the list; Playlist clips keep the original. One undo step ('Undo split by channel')."
     },
     {
       "id": "MENU-098",

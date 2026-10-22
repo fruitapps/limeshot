@@ -471,6 +471,106 @@ mod tests {
     }
 
     #[test]
+    fn patterns_insert_move_and_renumber_default_names_as_fl_does() {
+        let (mut d, _, p1) = doc_with_channel();
+        let p2 = PatternId(
+            d.execute(Command::AddPattern {
+                name: "Pattern 2".into(),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let named = PatternId(
+            d.execute(Command::AddPattern { name: "Verse".into() })
+                .unwrap()
+                .0
+                .unwrap(),
+        );
+        let names = |d: &Document| d.project().patterns.iter().map(|p| p.name.clone()).collect::<Vec<_>>();
+        // Insert one before Pattern 1: the new one is "Pattern 1", the others move down a number.
+        let new = PatternId(d.execute(Command::InsertPattern { before: p1 }).unwrap().0.unwrap());
+        assert_eq!(names(&d), ["Pattern 1", "Pattern 2", "Pattern 3", "Verse"]);
+        assert_eq!(d.project().patterns[0].id, new);
+        assert_eq!(d.project().patterns[1].id, p1);
+        // Move down / up keep the given name and renumber default ones.
+        d.execute(Command::MovePattern {
+            pattern: named,
+            delta: -1,
+        })
+        .unwrap();
+        assert_eq!(names(&d), ["Pattern 1", "Pattern 2", "Verse", "Pattern 4"]);
+        assert_eq!(d.project().patterns[3].id, p2);
+        assert!(
+            d.execute(Command::MovePattern {
+                pattern: new,
+                delta: -1
+            })
+            .is_err(),
+            "already first"
+        );
+        // Deleting renumbers too.
+        d.execute(Command::RemovePattern(new)).unwrap();
+        assert_eq!(names(&d), ["Pattern 1", "Verse", "Pattern 3"]);
+        assert!(d.undo());
+        assert_eq!(names(&d), ["Pattern 1", "Pattern 2", "Verse", "Pattern 4"]);
+    }
+
+    #[test]
+    fn split_by_channel_keeps_the_first_channel_and_adds_one_pattern_per_other_channel() {
+        let (mut d, kick, pat) = doc_with_channel();
+        let snare = ChannelId(
+            d.execute(Command::AddChannel {
+                name: "Snare".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let _empty = d.execute(Command::AddChannel {
+            name: "Hat".into(),
+            instrument: Instrument::Sampler(SamplerParams::default()),
+        });
+        for (channel, step) in [(snare, 4), (kick, 0), (kick, 8)] {
+            d.execute(Command::SetStep {
+                pattern: pat,
+                channel,
+                step,
+                on: true,
+            })
+            .unwrap();
+        }
+        let clip = d
+            .execute(Command::AddClip {
+                pattern: pat,
+                track: 0,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        let new = PatternId(d.execute(Command::SplitPatternByChannel(pat)).unwrap().0.unwrap());
+        let p = d.project();
+        assert_eq!(p.patterns.len(), 2, "no pattern for a channel without notes");
+        assert_eq!(p.pattern(pat).unwrap().name, "Kick");
+        assert!(p.pattern(pat).unwrap().notes.iter().all(|n| n.channel == kick));
+        assert_eq!(p.pattern(pat).unwrap().notes.len(), 2);
+        assert_eq!(p.pattern(new).unwrap().name, "Snare");
+        assert_eq!(p.pattern(new).unwrap().notes.len(), 1);
+        assert_eq!(
+            p.clip(ClipId(clip)).unwrap().pattern(),
+            Some(pat),
+            "clips keep the original"
+        );
+        assert!(d.undo());
+        assert_eq!(d.project().patterns.len(), 1);
+        assert_eq!(d.project().patterns[0].notes.len(), 3);
+        assert!(d.execute(Command::SplitPatternByChannel(new)).is_err());
+    }
+
+    #[test]
     fn notes_move_resize_and_duplicate() {
         let (mut d, ch, pat) = doc_with_channel();
         let id = d

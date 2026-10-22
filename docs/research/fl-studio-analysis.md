@@ -269,6 +269,12 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
 - **Confidence:** OBSERVED. **LimeShot equivalent:** `crates/limeshot-ui/src/menus.rs`; the per-item comparison is
   `menus.md` (APP-026 tracks the menu bar as a whole).
 
+- **Patterns commands (observed live, session 15).** Split by channel on "Pattern 1" with an 808 Kick and an
+  808 Snare step: the pattern became "808 Kick" (kick steps only) in the same slot, "808 Snare" was added after it,
+  and a Playlist clip of the pattern stayed (now playing only the kick); one undo step ("Undo split by channel").
+  Insert one: an empty pattern appeared before the current one and became current, unnamed patterns renumbered by
+  position (the old "Pattern 1" showed as "Pattern 2"), and a name field opened; it was not an undo step.
+
 ## 19. Dialogs opened from the main menus (session 14)
 - **OBSERVED live (2026-10-22, `fl-dlg-*.png`):** every control is recorded in `docs/roadmap/settings.json` (page =
   tab or dialog, section, control type, default value; generated view `settings.md`). Nothing was changed or saved:

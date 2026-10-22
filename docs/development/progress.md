@@ -588,3 +588,12 @@ a UI test (checkbox, kill, toast, notice, Reload, undo), and `examples/bridge_pr
 Elephant (sound, latency, state; about 0.1 ms per 512-frame block). The full suite, Clippy (also for Windows, where
 the bridge is left out) and fmt pass.
 
+### Session 15, part 5: Patterns menu commands (SEQ-021, APP-026)
+
+FL's Patterns menu, observed live where unclear (Split by channel, Insert one; `fl-studio-analysis.md` §18):
+Find first/next empty with FL's name prompt (Shift+F4, F4; Cmd+F4 without naming), Select in playlist, Random color,
+Transpose…, Insert one, Clone and Delete with FL's keys, Move up/down, Split by channel. New commands
+`InsertPattern`, `MovePattern`, `SplitPatternByChannel`; default pattern names follow their position as FL's unnamed
+patterns do. `menus.json` (12 items) and `keybindings.json` (8 bindings) updated. Tests: two core tests and a UI test
+driving the menu and keys; the old F4 test now expects the name prompt.
+

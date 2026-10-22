@@ -223,6 +223,23 @@ pub enum Command {
         channels: Vec<ImportedChannel>,
     },
     ClonePattern(PatternId),
+    /// Insert an empty pattern before `before` (FL Studio's Patterns › Insert one). Patterns
+    /// with default names ("Pattern 3") are renumbered by position, as FL numbers its unnamed
+    /// patterns. Returns the new pattern's id.
+    InsertPattern {
+        before: PatternId,
+    },
+    /// Move a pattern up (−1) or down (+1) the list (Patterns › Move up / Move down); default
+    /// names are renumbered.
+    MovePattern {
+        pattern: PatternId,
+        delta: i32,
+    },
+    /// FL Studio's Patterns › Split by channel: the pattern keeps the notes of its first channel
+    /// (in Channel Rack order) and takes that channel's name; every other channel's notes move
+    /// to a new pattern named after the channel, added at the end of the list. Playlist clips
+    /// keep pointing at the original pattern (observed in FL). Returns the first new pattern.
+    SplitPatternByChannel(PatternId),
     RemovePattern(PatternId),
     RenamePattern {
         pattern: PatternId,
@@ -523,6 +540,9 @@ impl Command {
             AddPattern { .. } => "Add pattern",
             ImportPattern { .. } => "Import MIDI",
             ClonePattern(_) => "Clone pattern",
+            InsertPattern { .. } => "Insert pattern",
+            MovePattern { .. } => "Move pattern",
+            SplitPatternByChannel(_) => "Split by channel",
             RemovePattern(_) => "Delete pattern",
             RenamePattern { .. } => "Rename pattern",
             SetPatternColor { .. } => "Recolor pattern",
@@ -1020,17 +1040,76 @@ impl Command {
                 let new = clone_pattern(p, i);
                 return Ok(Created(Some(new.0)));
             }
+            InsertPattern { before } => {
+                let i = pattern_index(p, before)?;
+                let id = PatternId(p.alloc_id());
+                let color = PALETTE[p.patterns.len() % PALETTE.len()];
+                p.patterns.insert(
+                    i,
+                    Pattern {
+                        id,
+                        name: format!("Pattern {}", i + 1),
+                        color,
+                        length_steps: None,
+                        notes: Vec::new(),
+                        extra: Extra::new(),
+                    },
+                );
+                renumber_default_names(p);
+                return Ok(Created(Some(id.0)));
+            }
+            MovePattern { pattern: id, delta } => {
+                let i = pattern_index(p, id)?;
+                let j = (i as i64 + i64::from(delta)).clamp(0, p.patterns.len() as i64 - 1) as usize;
+                if i == j {
+                    return Err(CommandError::Invalid("the pattern cannot move further".into()));
+                }
+                let pat = p.patterns.remove(i);
+                p.patterns.insert(j, pat);
+                renumber_default_names(p);
+            }
+            SplitPatternByChannel(id) => {
+                let i = pattern_index(p, id)?;
+                let order: Vec<ChannelId> = p
+                    .channels
+                    .iter()
+                    .map(|c| c.id)
+                    .filter(|c| p.patterns[i].notes.iter().any(|n| n.channel == *c))
+                    .collect();
+                let Some((&first, rest)) = order.split_first() else {
+                    return Err(CommandError::Invalid("the pattern has no notes to split".into()));
+                };
+                let name_of = |p: &Project, c: ChannelId| p.channel(c).map(|c| c.name.clone()).unwrap_or_default();
+                let mut first_new = None;
+                for &c in rest {
+                    let id = PatternId(p.alloc_id());
+                    first_new.get_or_insert(id.0);
+                    let src = &mut p.patterns[i];
+                    let (moved, kept): (Vec<_>, Vec<_>) =
+                        std::mem::take(&mut src.notes).into_iter().partition(|n| n.channel == c);
+                    src.notes = kept;
+                    let (color, length_steps) = (src.color, src.length_steps);
+                    let name = name_of(p, c);
+                    p.patterns.push(Pattern {
+                        id,
+                        name,
+                        color,
+                        length_steps,
+                        notes: moved,
+                        extra: Extra::new(),
+                    });
+                }
+                p.patterns[i].name = name_of(p, first);
+                return Ok(Created(first_new));
+            }
             RemovePattern(id) => {
                 if p.patterns.len() <= 1 {
                     return Err(CommandError::Invalid("a project keeps at least one pattern".into()));
                 }
-                let i = p
-                    .patterns
-                    .iter()
-                    .position(|x| x.id == id)
-                    .ok_or(CommandError::NoPattern(id))?;
+                let i = pattern_index(p, id)?;
                 p.patterns.remove(i);
                 p.playlist.clips.retain(|c| c.pattern() != Some(id));
+                renumber_default_names(p);
             }
             RenamePattern { pattern: id, name } => pattern(p, id)?.name = name,
             SetPatternColor { pattern: id, color } => pattern(p, id)?.color = color,
@@ -1498,6 +1577,27 @@ fn add_notes(p: &mut Project, pid: PatternId, notes: Vec<NewNote>) -> R {
     pat.notes.extend(new);
     sort_notes(pat);
     Ok(Created(last))
+}
+
+fn pattern_index(p: &Project, id: PatternId) -> Result<usize, CommandError> {
+    p.patterns
+        .iter()
+        .position(|x| x.id == id)
+        .ok_or(CommandError::NoPattern(id))
+}
+
+/// FL Studio numbers unnamed patterns by position; LimeShot's default names ("Pattern 3")
+/// follow the same rule when patterns are inserted, moved or deleted.
+fn renumber_default_names(p: &mut Project) {
+    for (i, pat) in p.patterns.iter_mut().enumerate() {
+        let default = pat
+            .name
+            .strip_prefix("Pattern ")
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
+        if default {
+            pat.name = format!("Pattern {}", i + 1);
+        }
+    }
 }
 
 fn clone_pattern(p: &mut Project, i: usize) -> PatternId {

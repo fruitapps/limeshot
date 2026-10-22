@@ -52,6 +52,101 @@ pub fn add_pattern(app: &mut LimeShotApp) {
     }
 }
 
+// ----- FL Studio's Patterns menu (SEQ-021) -----
+
+/// FL Studio's Find first empty (Shift+F4) / Find next empty (F4, Cmd+F4 without naming): make
+/// the first pattern without notes current, from the start or after the current pattern, or add
+/// one at the end when there is none; `name` then asks for its name.
+pub fn find_empty_pattern(app: &mut LimeShotApp, from_start: bool, name: bool) {
+    let cur = app.current_pattern();
+    let pats = &app.project().patterns;
+    let after = if from_start {
+        0
+    } else {
+        pats.iter().position(|p| p.id == cur).map_or(0, |i| i + 1)
+    };
+    let found = pats.iter().skip(after).find(|p| p.notes.is_empty()).map(|p| p.id);
+    let id = match found {
+        Some(id) => Some(id),
+        None => {
+            add_pattern(app);
+            Some(app.current_pattern()).filter(|&p| p != cur)
+        }
+    };
+    if let Some(id) = id {
+        app.set_current_pattern(id);
+        if name {
+            app.dialog = Some(Dialog::rename_pattern(app, id));
+        }
+    }
+}
+
+/// Select the current pattern's clips in the Playlist and show it.
+pub fn select_pattern_in_playlist(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    app.ui.playlist.selection = app
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| c.pattern() == Some(cur))
+        .map(|c| c.id)
+        .collect();
+    app.show_window(crate::workspace::Win::Playlist);
+}
+
+/// Give the current pattern another colour from the palette, picked at random.
+pub fn random_pattern_color(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    let Some(old) = app.project().pattern(cur).map(|p| p.color) else {
+        return;
+    };
+    let others: Vec<_> = limeshot_core::PALETTE.iter().copied().filter(|c| *c != old).collect();
+    let seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos() as usize);
+    if let Some(&color) = others.get(seed % others.len().max(1)) {
+        app.exec(Command::SetPatternColor { pattern: cur, color });
+    }
+}
+
+/// FL Studio's Insert one: an empty pattern before the current one, made current and named.
+pub fn insert_pattern(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    if let Some(id) = app.exec(Command::InsertPattern { before: cur }) {
+        app.set_current_pattern(PatternId(id));
+        app.dialog = Some(Dialog::rename_pattern(app, PatternId(id)));
+    }
+}
+
+pub fn clone_pattern(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    if let Some(id) = app.exec(Command::ClonePattern(cur)) {
+        app.set_current_pattern(PatternId(id));
+    }
+}
+
+/// Delete the current pattern; the one before it (or the new first) becomes current.
+pub fn delete_pattern(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    let i = app.project().patterns.iter().position(|p| p.id == cur).unwrap_or(0);
+    if app.exec(Command::RemovePattern(cur)).is_some()
+        && let Some(p) = app.project().patterns.get(i.saturating_sub(1)).map(|p| p.id)
+    {
+        app.set_current_pattern(p);
+    }
+}
+
+pub fn move_pattern(app: &mut LimeShotApp, delta: i32) {
+    let cur = app.current_pattern();
+    app.exec(Command::MovePattern { pattern: cur, delta });
+}
+
+pub fn split_pattern(app: &mut LimeShotApp) {
+    let cur = app.current_pattern();
+    app.exec(Command::SplitPatternByChannel(cur));
+}
+
 /// The menu bar; returns the right edge of its last menu.
 pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
     egui::MenuBar::new()
@@ -185,21 +280,82 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
             });
             ui.menu_button("Patterns", |ui| {
                 let cur = app.current_pattern();
-                if item(ui, "New pattern", &key("F4")) {
-                    add_pattern(app);
+                if item(ui, "Find first empty…", &key("Shift+F4")) {
+                    find_empty_pattern(app, true, true);
                 }
-                if item(ui, "Clone pattern", "")
-                    && let Some(id) = app.exec(Command::ClonePattern(cur))
-                {
-                    app.set_current_pattern(PatternId(id));
+                if item(ui, "Find next empty…", &key("F4")) {
+                    find_empty_pattern(app, false, true);
                 }
-                if item(ui, "Rename pattern…", "") {
+                if item(ui, "Find next empty (no naming)", &key("Cmd+F4")) {
+                    find_empty_pattern(app, false, false);
+                }
+                ui.separator();
+                if item(ui, "Select in playlist", "") {
+                    select_pattern_in_playlist(app);
+                }
+                if item(ui, "Rename pattern…", &key("F2")) {
                     app.dialog = Some(Dialog::rename_pattern(app, cur));
                 }
                 crate::playlist::pattern_color_menu(app, ui, cur);
+                if item(ui, "Random color", "") {
+                    random_pattern_color(app);
+                }
+                let has_notes = app.project().pattern(cur).is_some_and(|p| !p.notes.is_empty());
+                if ui.add_enabled(has_notes, Button::new("Transpose…")).clicked() {
+                    app.dialog = Some(Dialog::Transpose {
+                        pattern: cur,
+                        semitones: 0,
+                    });
+                    ui.close();
+                }
+                ui.separator();
+                if item(ui, "Insert one", &key("Cmd+Shift+Insert")) {
+                    insert_pattern(app);
+                }
+                if item(ui, "Clone pattern", &key("Cmd+Shift+C")) {
+                    clone_pattern(app);
+                }
                 let can_delete = app.project().patterns.len() > 1;
-                if ui.add_enabled(can_delete, Button::new("Delete pattern")).clicked() {
-                    app.exec(Command::RemovePattern(cur));
+                if ui
+                    .add_enabled(
+                        can_delete,
+                        Button::new("Delete pattern").shortcut_text(key("Cmd+Shift+Delete")),
+                    )
+                    .clicked()
+                {
+                    delete_pattern(app);
+                    ui.close();
+                }
+                ui.separator();
+                let i = app.project().patterns.iter().position(|p| p.id == cur).unwrap_or(0);
+                let n = app.project().patterns.len();
+                if ui
+                    .add_enabled(i > 0, Button::new("Move up").shortcut_text(key("Cmd+Shift+↑")))
+                    .clicked()
+                {
+                    move_pattern(app, -1);
+                    ui.close();
+                }
+                if ui
+                    .add_enabled(i + 1 < n, Button::new("Move down").shortcut_text(key("Cmd+Shift+↓")))
+                    .clicked()
+                {
+                    move_pattern(app, 1);
+                    ui.close();
+                }
+                ui.separator();
+                let channels = app
+                    .project()
+                    .pattern(cur)
+                    .map(|p| {
+                        let mut c: Vec<_> = p.notes.iter().map(|n| n.channel).collect();
+                        c.sort_unstable();
+                        c.dedup();
+                        c.len()
+                    })
+                    .unwrap_or(0);
+                if ui.add_enabled(channels > 1, Button::new("Split by channel")).clicked() {
+                    split_pattern(app);
                     ui.close();
                 }
                 ui.separator();

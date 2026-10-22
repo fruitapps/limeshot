@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
 
-Tracked: **277** — IMPLEMENTED 12, DIFFERENT 36, LIMESHOT_ONLY 9, NOT_STARTED 193, NOT_PLANNED 27
+Tracked: **277** — IMPLEMENTED 21, DIFFERENT 36, LIMESHOT_ONLY 9, NOT_STARTED 184, NOT_PLANNED 27
 
 ## Summary
 
@@ -15,7 +15,7 @@ Tracked: **277** — IMPLEMENTED 12, DIFFERENT 36, LIMESHOT_ONLY 9, NOT_STARTED 
 | File | 45 | 3 | 8 | 31 | 3 | 0 |
 | Edit | 4 | 0 | 1 | 3 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
-| Patterns | 23 | 1 | 5 | 17 | 0 | 0 |
+| Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 5 | 3 | 35 | 5 | 4 |
 | Options | 24 | 2 | 0 | 20 | 2 | 2 |
 | Tools | 82 | 0 | 4 | 71 | 7 | 0 |
@@ -34,7 +34,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
 | PR-019 | P1 | VERIFIED | Copy / cut / paste notes | MENU-047 Edit › Cut<br>MENU-048 Edit › Copy<br>MENU-049 Edit › Paste |
 | REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording |
-| SEQ-021 | P1 | NOT_STARTED | Pattern menu commands | MENU-079 Patterns › Find first empty...<br>MENU-081 Patterns › Find next empty (no naming)<br>MENU-082 Patterns › Select in playlist<br>MENU-085 Patterns › Random color<br>MENU-091 Patterns › Transpose...<br>MENU-092 Patterns › Insert one<br>MENU-095 Patterns › Move up<br>MENU-096 Patterns › Move down<br>MENU-097 Patterns › Split by channel |
 | UI-004 | P1 | VERIFIED | Hint bar and tooltips | MENU-117 View › Toolbars › Hint bar |
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
 | WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control |
@@ -190,25 +189,25 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | MENU-078 | <pattern list> |  | list |  |  | Patterns › pattern list | IMPLEMENTED | SEQ-018 | FL shows the patterns in a column left of the commands; clicking one makes it current. |
-| MENU-079 | Find first empty... |  | dialog | `Shift+F4` |  | — | NOT_STARTED | SEQ-021 | Selects the first empty pattern and asks for a name. |
-| MENU-080 | Find next empty... |  | dialog | `F4` |  | Patterns › New pattern | DIFFERENT | SEQ-021 | FL asks for a name; LimeShot's F4 adds a pattern without asking. |
-| MENU-081 | Find next empty (no naming) |  | action | `Cmd+F4` |  | — | NOT_STARTED | SEQ-021 |  |
-| MENU-082 | Select in playlist |  | action |  |  | — | NOT_STARTED | SEQ-021 |  |
-| MENU-083 | Rename and color... |  | dialog | `F2` |  | Patterns › Rename pattern… | DIFFERENT | SEQ-018 | LimeShot has rename and Color as separate items. |
+| MENU-079 | Find first empty... |  | dialog | `Shift+F4` |  | Patterns › Find first empty… | IMPLEMENTED | SEQ-021 | Selects the first empty pattern (a new one at the end when none is empty) and asks for a name. |
+| MENU-080 | Find next empty... |  | dialog | `F4` |  | Patterns › Find next empty… | IMPLEMENTED | SEQ-021 | The first empty pattern after the current one, else a new one; asks for a name. |
+| MENU-081 | Find next empty (no naming) |  | action | `Cmd+F4` |  | Patterns › Find next empty (no naming) | IMPLEMENTED | SEQ-021 |  |
+| MENU-082 | Select in playlist |  | action |  |  | Patterns › Select in playlist | IMPLEMENTED | SEQ-021 | Selects the current pattern's clips and shows the Playlist. |
+| MENU-083 | Rename and color... |  | dialog | `F2` |  | Patterns › Rename pattern… | DIFFERENT | SEQ-018 | LimeShot has rename (F2) and Color as separate items. |
 | MENU-084 | Change color... |  | dialog |  |  | Patterns › Color | DIFFERENT | SEQ-018 |  |
-| MENU-085 | Random color |  | action |  |  | — | NOT_STARTED | SEQ-021 |  |
+| MENU-085 | Random color |  | action |  |  | Patterns › Random color | IMPLEMENTED | SEQ-021 | Another palette colour, at random. |
 | MENU-086 | Open in project browser |  | action | `Shift+Cmd+P` |  | — | NOT_STARTED | BR-005 |  |
 | MENU-087 | Group selected... |  | dialog |  |  | — | NOT_STARTED | SEQ-022 | In the native macOS menu mirror; hidden in-window with one pattern. |
 | MENU-088 | Rename group... |  | dialog |  |  | — | NOT_STARTED | SEQ-022 | As Group selected. |
 | MENU-089 | Ungroup selected... |  | action |  |  | — | NOT_STARTED | SEQ-022 | As Group selected. |
 | MENU-090 | Set time signature... |  | dialog |  |  | — | NOT_STARTED | PR-022 | Opens: settings.json page 'Patterns dialogs'. |
-| MENU-091 | Transpose... |  | dialog |  |  | — | NOT_STARTED | SEQ-021 | Opens: settings.json page 'Patterns dialogs'. |
-| MENU-092 | Insert one |  | action | `Shift+Cmd+Ins` |  | — | NOT_STARTED | SEQ-021 |  |
-| MENU-093 | Clone |  | action | `Shift+Cmd+C` |  | Patterns › Clone pattern | DIFFERENT | SEQ-018 | LimeShot has no key. |
-| MENU-094 | Delete |  | action | `Shift+Cmd+Del` |  | Patterns › Delete pattern | DIFFERENT | SEQ-018 | LimeShot has no key. |
-| MENU-095 | Move up |  | action | `Shift+Cmd+Up` |  | — | NOT_STARTED | SEQ-021 |  |
-| MENU-096 | Move down |  | action | `Shift+Cmd+Down` |  | — | NOT_STARTED | SEQ-021 |  |
-| MENU-097 | Split by channel |  | action |  |  | — | NOT_STARTED | SEQ-021 |  |
+| MENU-091 | Transpose... |  | dialog |  |  | Patterns › Transpose… | DIFFERENT | SEQ-021 | FL: a small inline field at the pointer; LimeShot: a small dialog with Semitones, OK and Cancel. Moves every note of the pattern (one undo step). |
+| MENU-092 | Insert one |  | action | `Shift+Cmd+Ins` |  | Patterns › Insert one | IMPLEMENTED | SEQ-021 | An empty pattern before the current one, made current; default names renumber by position; asks for a name. FL: not an undo step (observed session 15); LimeShot: one. |
+| MENU-093 | Clone |  | action | `Shift+Cmd+C` |  | Patterns › Clone pattern | DIFFERENT | SEQ-018 | Same action and key; LimeShot's label adds 'pattern'. |
+| MENU-094 | Delete |  | action | `Shift+Cmd+Del` |  | Patterns › Delete pattern | DIFFERENT | SEQ-018 | Same action and key; LimeShot's label adds 'pattern'. |
+| MENU-095 | Move up |  | action | `Shift+Cmd+Up` |  | Patterns › Move up | IMPLEMENTED | SEQ-021 | Default names renumber by position. |
+| MENU-096 | Move down |  | action | `Shift+Cmd+Down` |  | Patterns › Move down | IMPLEMENTED | SEQ-021 | Default names renumber by position. |
+| MENU-097 | Split by channel |  | action |  |  | Patterns › Split by channel | IMPLEMENTED | SEQ-021 | Observed session 15: the pattern keeps its first channel's notes and that channel's name; each other channel with notes gets a new pattern named after it at the end of the list; Playlist clips keep the original. One undo step ('Undo split by channel'). |
 | MENU-098 | Quick render as audio clip |  | action |  |  | — | NOT_STARTED | PL-022 |  |
 | MENU-099 | Render as audio clip... |  | dialog |  |  | — | NOT_STARTED | PL-022 |  |
 | MENU-100 | Render and replace... |  | dialog |  |  | — | NOT_STARTED | PL-022 |  |

@@ -249,13 +249,13 @@
     {
       "id": "KB-023",
       "context": "Global",
-      "action": "Next empty pattern",
+      "action": "Find next empty pattern (asks for a name)",
       "fl_keys": "F4",
       "confidence": "OBSERVED",
       "limeshot_keys": "F4",
       "status": "IMPLEMENTED",
-      "feature": "SEQ-018",
-      "notes": "LimeShot adds a new pattern. Seen in the main menu on macOS (session 13, menus.json)."
+      "feature": "SEQ-021",
+      "notes": "Patterns › Find next empty… (MENU-080). LimeShot: the first pattern without notes after the current one, else a new one at the end; then the rename dialog. Session 15 (until then F4 added a pattern without asking)."
     },
     {
       "id": "KB-024",
@@ -1077,8 +1077,8 @@
       "action": "Find first empty pattern (asks for a name)",
       "fl_keys": "Shift+F4",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Shift+F4",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
       "notes": "Patterns › Find first empty... (MENU-079)."
     },
@@ -1088,8 +1088,8 @@
       "action": "Find next empty pattern without naming",
       "fl_keys": "Ctrl+F4",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+F4",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
       "notes": "Patterns › Find next empty (no naming) (MENU-081)."
     },
@@ -1110,10 +1110,10 @@
       "action": "Insert a pattern",
       "fl_keys": "Ctrl+Shift+Ins",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+Shift+Insert",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
-      "notes": "Patterns › Insert one (MENU-092)."
+      "notes": "Patterns › Insert one (MENU-092). Mac keyboards have no Insert key; the menu item works everywhere."
     },
     {
       "id": "KB-102",
@@ -1121,9 +1121,9 @@
       "action": "Clone pattern",
       "fl_keys": "Ctrl+Shift+C",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
-      "feature": "SEQ-018",
+      "limeshot_keys": "Cmd+Shift+C",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-021",
       "notes": "Patterns › Clone (MENU-093)."
     },
     {
@@ -1132,10 +1132,10 @@
       "action": "Delete pattern",
       "fl_keys": "Ctrl+Shift+Del",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
-      "feature": "SEQ-018",
-      "notes": "Patterns › Delete (MENU-094)."
+      "limeshot_keys": "Cmd+Shift+Delete",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-021",
+      "notes": "Patterns › Delete (MENU-094). LimeShot also takes Cmd+Shift+Backspace (the Mac's Delete key)."
     },
     {
       "id": "KB-104",
@@ -1143,8 +1143,8 @@
       "action": "Move pattern up",
       "fl_keys": "Ctrl+Shift+Up",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+Shift+↑",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
       "notes": "Patterns › Move up (MENU-095)."
     },
@@ -1154,8 +1154,8 @@
       "action": "Move pattern down",
       "fl_keys": "Ctrl+Shift+Down",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+Shift+↓",
+      "status": "IMPLEMENTED",
       "feature": "SEQ-021",
       "notes": "Patterns › Move down (MENU-096)."
     },

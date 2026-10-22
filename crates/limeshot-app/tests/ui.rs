@@ -183,6 +183,10 @@ fn pattern_and_mode_shortcuts_with_undo() {
     assert_eq!(h.state().project().patterns.len(), 2);
     let new = h.state().project().patterns[1].id;
     assert_eq!(h.state().current_pattern(), new, "a new pattern becomes current");
+    // FL Studio asks for its name (Find next empty…).
+    h.get_by_label("Cancel").click();
+    h.step();
+    assert!(h.state().dialog.is_none());
     h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
     h.step();
     assert_eq!(h.state().project().patterns.len(), 1, "Cmd+Z undoes it");
@@ -2746,6 +2750,125 @@ fn editor_tools_show_their_cursor() {
         h.step();
         assert_eq!(h.state().ui.playlist.cursor, Some(tool));
     }
+}
+
+/// SEQ-021: FL Studio's Patterns menu commands and keys (observed live in session 15).
+#[test]
+fn the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns() {
+    use limeshot_ui::dialogs::Dialog;
+    let mut h = harness(true);
+    let names = |h: &Harness<'static, LimeShotApp>| {
+        h.state()
+            .project()
+            .patterns
+            .iter()
+            .map(|p| p.name.clone())
+            .collect::<Vec<_>>()
+    };
+    let beat = h.state().project().patterns[0].id;
+    h.state_mut().set_current_pattern(beat);
+    h.step();
+    let before = names(&h);
+
+    // F4: find next empty — none is empty, so a new pattern, then FL's name prompt.
+    h.key_press(Key::F4);
+    h.step();
+    assert_eq!(h.state().project().patterns.len(), before.len() + 1);
+    let new = h.state().current_pattern();
+    assert!(matches!(h.state().dialog, Some(Dialog::Rename { .. })));
+    h.state_mut().dialog = None;
+    // Shift+F4 from a pattern with notes finds that empty one (the first empty from the start).
+    h.state_mut().set_current_pattern(beat);
+    h.key_press_modifiers(Modifiers::SHIFT, Key::F4);
+    h.step();
+    assert_eq!(h.state().current_pattern(), new);
+    h.state_mut().dialog = None;
+
+    // Insert one (menu): before the current pattern, made current, default names renumbered.
+    h.state_mut().set_current_pattern(beat);
+    h.get_by_label("Patterns").click();
+    h.step();
+    h.get_by_label_contains("Insert one").click();
+    h.step();
+    let inserted = h.state().current_pattern();
+    assert_eq!(h.state().project().patterns[0].id, inserted);
+    assert_eq!(h.state().project().patterns[1].id, beat);
+    h.state_mut().dialog = None;
+    // Cmd+Shift+↓ moves it down one.
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::ArrowDown);
+    h.step();
+    assert_eq!(h.state().project().patterns[1].id, inserted);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().patterns[0].id, inserted);
+
+    // Split by channel: the demo's Beat has kick, clap and hat steps.
+    h.state_mut().set_current_pattern(beat);
+    let channels = {
+        let p = h.state().project().pattern(beat).expect("beat");
+        let mut c: Vec<_> = p.notes.iter().map(|n| n.channel).collect();
+        c.sort_unstable();
+        c.dedup();
+        c.len()
+    };
+    assert!(channels > 1);
+    let count = h.state().project().patterns.len();
+    h.get_by_label("Patterns").click();
+    h.step();
+    h.get_by_label("Split by channel").click();
+    h.step();
+    assert_eq!(h.state().project().patterns.len(), count + channels - 1);
+    let first = h.state().project().channels.iter().find(|c| {
+        h.state()
+            .project()
+            .pattern(beat)
+            .is_some_and(|p| p.notes.iter().any(|n| n.channel == c.id))
+    });
+    assert_eq!(
+        h.state().project().pattern(beat).map(|p| p.name.clone()),
+        first.map(|c| c.name.clone())
+    );
+    assert!(h.state_mut().doc.undo());
+
+    // Transpose… moves every note of the pattern.
+    let keys = |h: &Harness<'static, LimeShotApp>| {
+        h.state()
+            .project()
+            .pattern(beat)
+            .map(|p| p.notes.iter().map(|n| n.key).collect::<Vec<_>>())
+    };
+    let was = keys(&h).expect("keys");
+    h.get_by_label("Patterns").click();
+    h.step();
+    h.get_by_label("Transpose…").click();
+    h.step();
+    if let Some(Dialog::Transpose { semitones, .. }) = &mut h.state_mut().dialog {
+        *semitones = 3;
+    } else {
+        panic!("the Transpose dialog");
+    }
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    assert_eq!(keys(&h).expect("keys"), was.iter().map(|k| k + 3).collect::<Vec<_>>());
+
+    // Select in playlist selects the pattern's clips.
+    let clips = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| c.pattern() == Some(beat))
+        .count();
+    assert!(clips > 0);
+    assert!(h.state().dialog.is_none());
+    h.step();
+    h.get_by_label("Patterns").click();
+    h.step();
+    h.step();
+    h.get_by_label_contains("Select in playlist").click();
+    h.step();
+    assert_eq!(h.state().ui.playlist.selection.len(), clips);
 }
 
 /// Owner's hands-on test: pattern colours could not be changed. The Patterns menu (and the

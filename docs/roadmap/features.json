@@ -7755,9 +7755,9 @@
       "name": "Pattern menu commands",
       "description": "FL's Patterns menu: find first/next empty pattern, select in playlist, random color, transpose, insert one, move up/down, split by channel.",
       "fl_reference": "Patterns menu (F4, Shift+F4, Cmd+F4, Shift+Cmd+Ins, Shift+Cmd+Up/Down).",
-      "limeshot_behavior": "Not implemented.",
+      "limeshot_behavior": "Patterns menu as in FL Studio 2026 (observed live, session 15): Find first empty… (Shift+F4) and Find next empty… (F4) make the first pattern without notes current (from the start / after the current pattern; a new pattern at the end when there is none) and ask for its name; Find next empty (no naming) (Cmd+F4); Select in playlist (selects the pattern's clips and shows the Playlist); Rename pattern… (F2), Color, Random color; Transpose… (a Semitones dialog; moves every note of the pattern); Insert one (Cmd+Shift+Insert: an empty pattern before the current one, made current and named); Clone pattern (Cmd+Shift+C); Delete pattern (Cmd+Shift+Delete or Backspace); Move up / Move down (Cmd+Shift+↑/↓); Split by channel (the pattern keeps its first channel's notes and takes that channel's name; every other channel with notes gets a new pattern named after it at the end of the list; Playlist clips keep the original). As FL numbers unnamed patterns by position, default names ('Pattern 3') are renumbered when patterns are inserted, moved or deleted. Each command is one undo step (FL's Insert one is none). Not done: Open in project browser, Set time signature…, group commands, render-to-audio items.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "SEQ-018"
@@ -7771,16 +7771,22 @@
         "Keys as in FL.",
         "Split by channel makes one pattern per channel that has notes or steps."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-core/src/document.rs::tests::patterns_insert_move_and_renumber_default_names_as_fl_does",
+        "crates/limeshot-core/src/document.rs::tests::split_by_channel_keeps_the_first_channel_and_adds_one_pattern_per_other_channel",
+        "crates/limeshot-app/tests/ui.rs::the_patterns_menu_finds_inserts_moves_splits_and_transposes_patterns",
+        "crates/limeshot-app/tests/ui.rs::pattern_and_mode_shortcuts_with_undo"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "docs/roadmap/menus.json",
-          "docs/research/evidence/screenshots/fl-menu-patterns.png"
+          "docs/research/evidence/screenshots/fl-menu-patterns.png",
+          "docs/research/fl-studio-analysis.md#18-main-menu-bar-session-13-outside-in-pass"
         ]
       },
-      "notes": ""
+      "notes": "Session 15. FL observed with synthetic input on a scratch project (not saved): Split by channel and Insert one as described; Edit › Undo then read 'Undo split by channel'."
     },
     {
       "id": "SEQ-022",

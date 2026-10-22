@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **118** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 44, NOT_PLANNED 2
+Tracked: **118** — IMPLEMENTED 72, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 37, NOT_PLANNED 2
 
 ## Global
 
@@ -36,19 +36,19 @@ Tracked: **118** — IMPLEMENTED 65, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 4
 | KB-020 | Arrange windows | `Ctrl+Shift+H` | OBSERVED | `Cmd+Shift+H` | IMPLEMENTED | UI-002 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-021 | Help | `F1` | INFERRED | `F1` | DIFFERENT | UI-004 | LimeShot's F1 lists the keyboard shortcuts (no manual). |
 | KB-022 | Next / previous pattern | `Numpad + / −` | INFERRED | `+ / −` | IMPLEMENTED | SEQ-018 |  |
-| KB-023 | Next empty pattern | `F4` | OBSERVED | `F4` | IMPLEMENTED | SEQ-018 | LimeShot adds a new pattern. Seen in the main menu on macOS (session 13, menus.json). |
+| KB-023 | Find next empty pattern (asks for a name) | `F4` | OBSERVED | `F4` | IMPLEMENTED | SEQ-021 | Patterns › Find next empty… (MENU-080). LimeShot: the first pattern without notes after the current one, else a new one at the end; then the rename dialog. Session 15 (until then F4 added a pattern without asking). |
 | KB-024 | Undo | `Ctrl+Z` | VERIFIED | `Cmd+Z` | DIFFERENT | APP-005 | FL's Ctrl+Z toggles the last undo/redo and Ctrl+Alt+Z steps back; LimeShot's Cmd+Z steps back through the history. |
 | KB-025 | Redo | `Ctrl+Shift+Z` | INFERRED | `Cmd+Shift+Z` | IMPLEMENTED | APP-005 | Cmd+Y also redoes. |
 | KB-026 | UI zoom | `—` | VERIFIED | `Cmd+= / Cmd+- / Cmd+0` | LIMESHOT_ONLY | UI-005 | FL scales through Options. |
 | KB-097 | Plugin database in the Browser | `Shift+F8` | OBSERVED | — | NOT_STARTED | BR-008 | View › Plugin database (MENU-145); also Add › Effect › Plugin database. |
-| KB-098 | Find first empty pattern (asks for a name) | `Shift+F4` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Find first empty... (MENU-079). |
-| KB-099 | Find next empty pattern without naming | `Ctrl+F4` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Find next empty (no naming) (MENU-081). |
+| KB-098 | Find first empty pattern (asks for a name) | `Shift+F4` | OBSERVED | `Shift+F4` | IMPLEMENTED | SEQ-021 | Patterns › Find first empty... (MENU-079). |
+| KB-099 | Find next empty pattern without naming | `Ctrl+F4` | OBSERVED | `Cmd+F4` | IMPLEMENTED | SEQ-021 | Patterns › Find next empty (no naming) (MENU-081). |
 | KB-100 | Open the current pattern in the project browser | `Ctrl+Shift+P` | OBSERVED | — | NOT_STARTED | BR-005 | Patterns › Open in project browser (MENU-086). |
-| KB-101 | Insert a pattern | `Ctrl+Shift+Ins` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Insert one (MENU-092). |
-| KB-102 | Clone pattern | `Ctrl+Shift+C` | OBSERVED | — | NOT_STARTED | SEQ-018 | Patterns › Clone (MENU-093). |
-| KB-103 | Delete pattern | `Ctrl+Shift+Del` | OBSERVED | — | NOT_STARTED | SEQ-018 | Patterns › Delete (MENU-094). |
-| KB-104 | Move pattern up | `Ctrl+Shift+Up` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Move up (MENU-095). |
-| KB-105 | Move pattern down | `Ctrl+Shift+Down` | OBSERVED | — | NOT_STARTED | SEQ-021 | Patterns › Move down (MENU-096). |
+| KB-101 | Insert a pattern | `Ctrl+Shift+Ins` | OBSERVED | `Cmd+Shift+Insert` | IMPLEMENTED | SEQ-021 | Patterns › Insert one (MENU-092). Mac keyboards have no Insert key; the menu item works everywhere. |
+| KB-102 | Clone pattern | `Ctrl+Shift+C` | OBSERVED | `Cmd+Shift+C` | IMPLEMENTED | SEQ-021 | Patterns › Clone (MENU-093). |
+| KB-103 | Delete pattern | `Ctrl+Shift+Del` | OBSERVED | `Cmd+Shift+Delete` | IMPLEMENTED | SEQ-021 | Patterns › Delete (MENU-094). LimeShot also takes Cmd+Shift+Backspace (the Mac's Delete key). |
+| KB-104 | Move pattern up | `Ctrl+Shift+Up` | OBSERVED | `Cmd+Shift+↑` | IMPLEMENTED | SEQ-021 | Patterns › Move up (MENU-095). |
+| KB-105 | Move pattern down | `Ctrl+Shift+Down` | OBSERVED | `Cmd+Shift+↓` | IMPLEMENTED | SEQ-021 | Patterns › Move down (MENU-096). |
 | KB-106 | Project picker | `Ctrl+F8` | OBSERVED | — | NOT_STARTED | BR-005 | View › Project picker (MENU-106). |
 | KB-107 | Tempo tapper | `Ctrl+F5` | OBSERVED | — | NOT_STARTED | TR-012 | View › Tempo tapper (MENU-108). |
 | KB-108 | Touch controller | `Alt+F7` | OBSERVED | — | NOT_STARTED | WF-011 | View › Touch controller (MENU-109). |

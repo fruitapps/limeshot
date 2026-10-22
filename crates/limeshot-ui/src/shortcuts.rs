@@ -12,7 +12,15 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("L", "Switch Pattern / Song mode"),
     ("Cmd+M", "Metronome on/off"),
     ("Cmd+H", "Stop all sound (panic)"),
-    ("F4", "New pattern"),
+    ("F4 / Cmd+F4", "Find next empty pattern (and name it / without naming)"),
+    ("Shift+F4", "Find first empty pattern and name it"),
+    ("Cmd+Shift+Insert", "Insert an empty pattern before the current one"),
+    ("Cmd+Shift+C", "Clone the current pattern"),
+    ("Cmd+Shift+Delete", "Delete the current pattern"),
+    (
+        "Cmd+Shift+↑ / Cmd+Shift+↓",
+        "Move the current pattern up / down the list",
+    ),
     ("F5", "Playlist"),
     ("F6", "Channel Rack"),
     ("F7", "Piano Roll"),
@@ -165,8 +173,13 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     if pressed(ctx, Modifiers::NONE, Key::F1) {
         app.dialog = Some(Dialog::Shortcuts);
     }
-    if pressed(ctx, Modifiers::NONE, Key::F4) {
-        crate::menus::add_pattern(app);
+    // FL Studio's Patterns menu keys.
+    if pressed(ctx, Modifiers::SHIFT, Key::F4) {
+        crate::menus::find_empty_pattern(app, true, true);
+    } else if pressed(ctx, cmd, Key::F4) {
+        crate::menus::find_empty_pattern(app, false, false);
+    } else if pressed(ctx, Modifiers::NONE, Key::F4) {
+        crate::menus::find_empty_pattern(app, false, true);
     }
     use crate::workspace::Win;
     for (k, w) in [
@@ -196,6 +209,23 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, Modifiers::NONE, Key::L) {
         app.toggle_mode();
+    }
+    if pressed(ctx, cmd_shift, Key::Insert) {
+        crate::menus::insert_pattern(app);
+    }
+    if pressed(ctx, cmd_shift, Key::C) {
+        crate::menus::clone_pattern(app);
+    }
+    if (pressed(ctx, cmd_shift, Key::Delete) || pressed(ctx, cmd_shift, Key::Backspace))
+        && app.project().patterns.len() > 1
+    {
+        crate::menus::delete_pattern(app);
+    }
+    if pressed(ctx, cmd_shift, Key::ArrowUp) {
+        crate::menus::move_pattern(app, -1);
+    }
+    if pressed(ctx, cmd_shift, Key::ArrowDown) {
+        crate::menus::move_pattern(app, 1);
     }
     if pressed(ctx, Modifiers::NONE, Key::Plus) || pressed(ctx, Modifiers::NONE, Key::Equals) {
         step_pattern(app, 1);
