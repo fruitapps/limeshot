@@ -329,3 +329,28 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
 - A macOS permission prompt for this session's screen capture appeared during the capture and was left for the owner;
   it hides part of the tempo preset list and the SMPTE entries' right halves.
 
+## 21. Editor menus (session 15, outside-in pass)
+- **OBSERVED live (2026-10-22, synthetic input; nothing saved):** each editor's own menu, recorded item by item in
+  `docs/roadmap/menus.json` under the pseudo-menus "Channel Rack", "Piano Roll", "Playlist" and "Mixer".
+- **Channel Rack** (`fl-rack-options-*.png`, `fl-rack-channel-menu.png`): the ▸ at the top left opens Add one ▸, Loop
+  starter, Purge unused audio clips; *Channels*: Select unused channels, Clone selected (Opt+C), Delete selected…
+  (Opt+Del), Create layer with selected channels, Move selected up/down (Opt+Up/Down), Sort by ▸, Group selected…
+  (Opt+G), Color selected ▸, Mute/Unmute selected, Transpose selected…, Set swing mix / truncate swing notes for
+  selected ▸, Burn selected loops to pattern, Assign selected to free mixer track(s) (Cmd+L), Select mixer tracks for
+  the selected channels, Change declicking ▸, Zip selected (Opt+Z), Unzip all (Opt+U), Restretch all (Cmd+Opt+R);
+  *Options* (display toggles such as Show mixer track selectors Opt+M, piano roll preview, Detached); *Switch* (smart
+  disable, audio clip channels, plugin editors). The channel button's right-click menu has two columns: the channel
+  (Piano roll F7, Graph editor, Rename/color/icon, Load sample…, Cut itself, Insert ▸, Replace ▸, Clone, Delete…,
+  Assign to new instrument track) and steps/MIDI (Cut, Copy, Paste, Fill each 2/4/8 steps, Advanced fill…, Auto fill,
+  Rotate left/right Shift+Cmd+Left/Right, MIDI channel through, Receive notes from ▸, Create DirectWave instrument…,
+  Burn MIDI to ▸). The display filter lists All and Unsorted.
+- **Piano Roll** (`fl-pianoroll-*.png`): the ▸ menu has File, Edit, Tools, Stamp, View, Snap, Select, Group, Zoom,
+  Time markers, Target channel, Target control, then Auto smoothing, Preview notes during playback, Center, Detached.
+  Edit carries the editing keys (Cmd+X/C/V/B, Del, Shift+Left/Right, Shift+Cmd+Left/Right, Shift+Up/Down,
+  Cmd+Up/Down, Shift+D, Opt+C, Opt+M, Shift+Opt+M, Cmd/Cmd+Opt Ins, Cmd+Del, Cmd+I); Tools has Riff machine (Opt+E),
+  Generate chord progression (Opt+P), Quick legato (Cmd+L), Articulate (Opt+L), Quick quantize (Cmd+Q), Quantize…
+  (Opt+Q), Quick chop (Cmd+U), Chop… (Opt+U), Glue (Cmd+G), Arpeggiate (Opt+A), Strum (Opt+S), Flam (Opt+F), Claw
+  machine (Opt+W), Limit (Opt+K), Flip (Opt+Y), Randomize (Opt+R), Scale levels (Opt+X), LFO (Opt+O) and Python
+  scripts; Select (Cmd+D, Cmd+A, Shift+R/M/C/O/I, Cmd+Enter, Magic lasso); Zoom (PgUp/PgDn, Shift+1…6); its own Snap
+  (Main, Line, Cell, (none) … Bar, Events, Markers).
+

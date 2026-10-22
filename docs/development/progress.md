@@ -647,3 +647,10 @@ presets; the song position's menu picks which format is large; the CPU panel's m
 the voice count; the snap list has FL's values in FL's order (1/6 step, 1/4, 1/3, 1/6 beat added; "(none)").
 UI test plus the tapper's arithmetic.
 
+### Session 15, part 12: editor menus documented (Channel Rack, Piano Roll)
+
+Fourth outside-in layer, first half: the Channel Rack's options and channel menus and the Piano Roll's ▸ menu with
+all its submenus, recorded in `menus.json` under the pseudo-menus "Channel Rack" (74) and "Piano Roll" (137), with
+LimeShot's equivalent per item (often a key where LimeShot has no menu). `fl-studio-analysis.md` §21. Playlist and
+Mixer follow.
+

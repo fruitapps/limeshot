@@ -40,7 +40,7 @@ ST_STATUS = ["IMPLEMENTED", "IN_PROGRESS", "NOT_STARTED", "NOT_PLANNED"]
 HAS_KEYS = ("IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY")
 MN_STATUS = ["IMPLEMENTED", "DIFFERENT", "LIMESHOT_ONLY", "NOT_STARTED", "NOT_PLANNED"]
 MN_KINDS = ["action", "dialog", "submenu", "toggle", "radio", "list", "link", "control", "display"]
-FL_MENUS = ["File", "Edit", "Add", "Patterns", "View", "Options", "Tools", "Help", "Toolbar"]
+FL_MENUS = ["File", "Edit", "Add", "Patterns", "View", "Options", "Tools", "Help", "Toolbar", "Channel Rack", "Piano Roll", "Playlist", "Mixer"]
 
 
 def combos(s):
@@ -210,7 +210,7 @@ def generate_mn(mn, features):
     fl = [i for i in items if i["status"] != "LIMESHOT_ONLY"]
     total = Counter(i["status"] for i in items)
     lines = [
-        "# Main menu bar and toolbar: FL Studio and LimeShot",
+        "# Main menu bar, toolbar and editor menus: FL Studio and LimeShot",
         "",
         "> Generated from [`menus.json`](menus.json) by `python3 scripts/inventories.py generate`. Do not edit by hand.",
         f"> Reference: {mn['reference']}.",

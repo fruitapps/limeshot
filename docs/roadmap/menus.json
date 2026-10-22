@@ -2,7 +2,7 @@
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313), macOS",
   "source": "Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png. Toolbar (menu 'Toolbar') observed live on 2026-10-22 (session 15): each control's name and keys from FL's hint panel while hovering it (fl-toolbar-hints-*.png), and its right-click menus (fl-toolbar-*-menu.png, fl-toolbar-snap.png).",
-  "notes": "One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths.",
+  "notes": "One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case (\"channel menu\") are descriptions, not checked labels.",
   "menus": [
     {
       "id": "MENU-001",
@@ -5766,6 +5766,3920 @@
       "status": "LIMESHOT_ONLY",
       "feature": "",
       "notes": "LimeShot's own buttons on the right of the toolbar."
+    },
+    {
+      "id": "MENU-332",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "The ▸ at the rack's top left. LimeShot has no rack-wide menu; per-channel commands are on the channel button's right-click and in Tools."
+    },
+    {
+      "id": "MENU-333",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Add one"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › + Add channel",
+      "status": "DIFFERENT",
+      "feature": "SEQ-002",
+      "notes": "FL lists its generators; LimeShot's + Add channel offers Sampler, LimeSynth and plugins."
+    },
+    {
+      "id": "MENU-334",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Loop starter"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "SEQ-017",
+      "notes": "FL Cloud loops."
+    },
+    {
+      "id": "MENU-335",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Purge unused audio clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Tools › Purge unused audio clips",
+      "status": "DIFFERENT",
+      "feature": "WF-009",
+      "notes": "Same macro, in the Tools menu."
+    },
+    {
+      "id": "MENU-336",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Select unused channels"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Tools › Select unused channels",
+      "status": "DIFFERENT",
+      "feature": "WF-009",
+      "notes": "Same macro, in the Tools menu."
+    },
+    {
+      "id": "MENU-337",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Clone selected"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Opt+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Clone",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "LimeShot clones one channel from its menu; no key."
+    },
+    {
+      "id": "MENU-338",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Delete selected..."
+      ],
+      "section": "Channels",
+      "kind": "dialog",
+      "fl_keys": "Opt+Del",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Delete…",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "Alt+Delete deletes the selected channels (asks first, as FL)."
+    },
+    {
+      "id": "MENU-339",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Create layer with selected channels"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-340",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Move selected up"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Opt+Up",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Move up",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "Alt+↑ moves the selected channels."
+    },
+    {
+      "id": "MENU-341",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Move selected down"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Opt+Down",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Move down",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "Alt+↓."
+    },
+    {
+      "id": "MENU-342",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Sort by"
+      ],
+      "section": "Channels",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-343",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Group selected..."
+      ],
+      "section": "Channels",
+      "kind": "dialog",
+      "fl_keys": "Opt+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Group selected…",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-012",
+      "notes": "Also Alt+G."
+    },
+    {
+      "id": "MENU-344",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Color selected"
+      ],
+      "section": "Channels",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Color",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "LimeShot colours one channel at a time."
+    },
+    {
+      "id": "MENU-345",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Mute selected"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-346",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Unmute selected"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-347",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Transpose selected..."
+      ],
+      "section": "Channels",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-348",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Set swing mix for selected"
+      ],
+      "section": "Channels",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-349",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Set truncate swing notes for selected"
+      ],
+      "section": "Channels",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-010",
+      "notes": ""
+    },
+    {
+      "id": "MENU-350",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Burn selected loops to pattern"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-351",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Assign selected to free mixer track(s)"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Cmd+L",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Route to free mixer track",
+      "status": "DIFFERENT",
+      "feature": "SEQ-005",
+      "notes": "Cmd+L routes the selected channels, as in FL."
+    },
+    {
+      "id": "MENU-352",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Select mixer tracks for the selected channels"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-353",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Change declicking for selected channels to"
+      ],
+      "section": "Channels",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-354",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Zip selected"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Opt+Z",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-355",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Unzip all"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Opt+U",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-356",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Restretch all"
+      ],
+      "section": "Channels",
+      "kind": "action",
+      "fl_keys": "Cmd+Opt+R",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-357",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Group playlist tracks created by Loop starter"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "SEQ-017",
+      "notes": ""
+    },
+    {
+      "id": "MENU-358",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Auto resize"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-359",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Auto switch display filter"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-360",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Channel button width"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-361",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Channel name alignment"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-362",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Colorful channel controls"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-363",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Focus selected channel on playback"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-364",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Mute removed steps"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-365",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Show mixer track selectors"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "Opt+M",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › mixer track numbers",
+      "status": "DIFFERENT",
+      "feature": "SEQ-005",
+      "notes": "LimeShot always shows them."
+    },
+    {
+      "id": "MENU-366",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Show complete piano roll preview"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › piano roll preview",
+      "status": "DIFFERENT",
+      "feature": "SEQ-008",
+      "notes": "Always on in LimeShot."
+    },
+    {
+      "id": "MENU-367",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Show a mute button on the piano roll preview"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-368",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Detached"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › detach button",
+      "status": "DIFFERENT",
+      "feature": "UI-007",
+      "notes": "The title bar's detach button."
+    },
+    {
+      "id": "MENU-369",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Switch smart disable for all plugins"
+      ],
+      "section": "Switch",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-370",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Switch all audio clip channels to"
+      ],
+      "section": "Switch",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-371",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Switch selected audio clip channels to"
+      ],
+      "section": "Switch",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-372",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Options",
+        "Switch all plugin editors to"
+      ],
+      "section": "Switch",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-373",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": "Right-click on a channel button: two columns in FL (channel; steps and MIDI)."
+    },
+    {
+      "id": "MENU-374",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Piano roll"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "F7",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Piano Roll",
+      "status": "IMPLEMENTED",
+      "feature": "PR-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-375",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Graph editor"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Graph editor",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-376",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Rename, color and icon..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Rename… / Color",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "Separate items; no icons."
+    },
+    {
+      "id": "MENU-377",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Change color..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Color",
+      "status": "DIFFERENT",
+      "feature": "SEQ-007",
+      "notes": "A swatch submenu."
+    },
+    {
+      "id": "MENU-378",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Random color"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-379",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Change icon..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-380",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Load sample..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Load sample…",
+      "status": "IMPLEMENTED",
+      "feature": "INS-001",
+      "notes": "Sampler channels."
+    },
+    {
+      "id": "MENU-381",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Cut itself"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "A new note cuts the channel's sounding note."
+    },
+    {
+      "id": "MENU-382",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Show waveform preview"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-383",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Insert"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-002",
+      "notes": "Inserts a generator below this channel."
+    },
+    {
+      "id": "MENU-384",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Replace"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-385",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Patcherize"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's Patcher."
+    },
+    {
+      "id": "MENU-386",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Clone"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Clone",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-387",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Delete..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Delete…",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-388",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Assign to new instrument track"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-389",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Cut"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Cut",
+      "status": "DIFFERENT",
+      "feature": "SEQ-015",
+      "notes": "LimeShot: Edit menu and Cmd+X with the Channel Rack focused."
+    },
+    {
+      "id": "MENU-390",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Copy"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Copy",
+      "status": "DIFFERENT",
+      "feature": "SEQ-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-391",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Paste"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Paste",
+      "status": "DIFFERENT",
+      "feature": "SEQ-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-392",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Fill each 2 steps"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu fill items",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-393",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Fill each 4 steps"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu fill items",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-394",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Fill each 8 steps"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu fill items",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-395",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Advanced fill..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-396",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Auto fill"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-397",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Rotate left"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Left",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Rotate left",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-398",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Rotate right"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Right",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Rotate right",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-399",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "MIDI channel through"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-400",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Receive notes from"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-401",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Create DirectWave instrument..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's DirectWave."
+    },
+    {
+      "id": "MENU-402",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Burn MIDI to"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-403",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Channel Settings"
+      ],
+      "section": "LimeShot",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Channel Settings",
+      "status": "LIMESHOT_ONLY",
+      "feature": "SEQ-007",
+      "notes": "Opens the channel's settings window."
+    },
+    {
+      "id": "MENU-404",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Channel menu",
+        "Clear notes in this pattern"
+      ],
+      "section": "LimeShot",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › channel menu › Clear notes in this pattern",
+      "status": "LIMESHOT_ONLY",
+      "feature": "SEQ-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-405",
+      "menu": "Channel Rack",
+      "path": [
+        "Channel Rack",
+        "Display filter"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › filter",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-012",
+      "notes": "All, Unsorted and the filter groups (Audio for audio clip channels)."
+    },
+    {
+      "id": "MENU-406",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "The ▸ at the Piano Roll's top left. LimeShot has no Piano Roll menu; its commands are keys (shortcuts help) and the tool buttons."
+    },
+    {
+      "id": "MENU-407",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-408",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Open score..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-409",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Browse scores"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-410",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Save score as..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-411",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Import MIDI file..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Import MIDI file…",
+      "status": "DIFFERENT",
+      "feature": "PR-020",
+      "notes": "LimeShot imports into new channels from the main File menu."
+    },
+    {
+      "id": "MENU-412",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Export as MIDI file..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "File › Export MIDI file (pattern)…",
+      "status": "DIFFERENT",
+      "feature": "PR-020",
+      "notes": ""
+    },
+    {
+      "id": "MENU-413",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Paste from MIDI clipboard..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+Cmd+V",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-414",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Copy to MIDI clipboard..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-415",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "File",
+        "Export as score sheet..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-416",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-417",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Cut"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+X",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Cut",
+      "status": "DIFFERENT",
+      "feature": "PR-019",
+      "notes": "Main Edit menu and Cmd+X with the Piano Roll focused."
+    },
+    {
+      "id": "MENU-418",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Copy"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Copy",
+      "status": "DIFFERENT",
+      "feature": "PR-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-419",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Paste"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+V",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Paste",
+      "status": "DIFFERENT",
+      "feature": "PR-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-420",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Duplicate"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+B",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+B",
+      "status": "DIFFERENT",
+      "feature": "PR-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-421",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Delete"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Del",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Delete",
+      "status": "DIFFERENT",
+      "feature": "PR-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-422",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Shift left"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Left",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Left",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": "By the snap."
+    },
+    {
+      "id": "MENU-423",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Shift right"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Right",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Right",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-424",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Rotate left"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Left",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Cmd+Left",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-425",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Rotate right"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+Right",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Cmd+Right",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-426",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Transpose up"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Up",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Up",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-427",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Transpose down"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Down",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Down",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-428",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Transpose one octave up"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Up",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+Up",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-429",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Transpose one octave down"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Down",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+Down",
+      "status": "DIFFERENT",
+      "feature": "PR-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-430",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Discard lengths"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+D",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-431",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Allow resizing from left"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Cmd+Opt+Home",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › left note edge",
+      "status": "DIFFERENT",
+      "feature": "PR-024",
+      "notes": "Always on in LimeShot."
+    },
+    {
+      "id": "MENU-432",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Nudge notes with mouse wheel"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-433",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Change color"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Opt+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-434",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Mute"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Opt+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Alt+M",
+      "status": "DIFFERENT",
+      "feature": "PR-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-435",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Unmute"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Opt+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+Alt+M",
+      "status": "DIFFERENT",
+      "feature": "PR-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-436",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Insert space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Ins",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-437",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Slice & insert space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Opt+Ins",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-438",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Delete space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Del",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-439",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Trim selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-440",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Insert current controller value"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+I",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-441",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Turn into automation clip..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-442",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Purge unused audio clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Tools › Purge unused audio clips",
+      "status": "DIFFERENT",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-443",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Edit",
+        "Select tracks when samples are dropped"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-444",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "Built-in tools on the left, scripts on the right."
+    },
+    {
+      "id": "MENU-445",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Riff machine..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+E",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-029",
+      "notes": ""
+    },
+    {
+      "id": "MENU-446",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Generate chord progression..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+P",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-028",
+      "notes": ""
+    },
+    {
+      "id": "MENU-447",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Quick legato"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+L",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-448",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Articulate..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+L",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-449",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Quick quantize"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Q",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Alt+Q",
+      "status": "DIFFERENT",
+      "feature": "PR-014",
+      "notes": "LimeShot's Alt+Q quantizes to the snap (Cmd+Q quits on macOS)."
+    },
+    {
+      "id": "MENU-450",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Quick quantize start times"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Q",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-451",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Quantize..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+Q",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › Quantize",
+      "status": "DIFFERENT",
+      "feature": "PR-014",
+      "notes": "LimeShot's Quantize button quantizes at once; no dialog."
+    },
+    {
+      "id": "MENU-452",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Quick chop"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+U",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+U",
+      "status": "DIFFERENT",
+      "feature": "PR-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-453",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Chop..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+U",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-454",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Glue"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+G",
+      "status": "DIFFERENT",
+      "feature": "PR-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-455",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Arpeggiate..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+A",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-456",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Strum..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+S",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-457",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Flam..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+F",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-458",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Claw machine..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+W",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-459",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Limit..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+K",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-460",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Flip..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+Y",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-461",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Randomize..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+R",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-462",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Scale levels..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+X",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-463",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "LFO..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+O",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-464",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Run last script again"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's Python scripts."
+    },
+    {
+      "id": "MENU-465",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "Open script folder..."
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-466",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Tools",
+        "<scripts>"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Arpeggiator, Euclidean, Humanize, Note repeater sprinkler, Select by velocity and more."
+    },
+    {
+      "id": "MENU-467",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Stamp"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-027",
+      "notes": "Chords and scales to stamp."
+    },
+    {
+      "id": "MENU-468",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-469",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Grid color..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-470",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Grid contrast"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-471",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Invert grid"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-472",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Time segments"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-473",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keep labels on screen"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-474",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Shadow"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-475",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Rounded"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-476",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Note colors"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-477",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Incremental scrolling"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-478",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Precise time indicator"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-479",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Mini piano roll preview"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-480",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Note grid highlights"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Opt+B",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-481",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Scale highlighting"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-482",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Show chord name for selection"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-483",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Note length in note properties"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-484",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Ghost channels"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Opt+V",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ghost notes",
+      "status": "DIFFERENT",
+      "feature": "PR-010",
+      "notes": "Always on in LimeShot."
+    },
+    {
+      "id": "MENU-485",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Editable ghosts"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Cmd+Opt+V",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-486",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Background waveform"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Opt+N",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-025",
+      "notes": ""
+    },
+    {
+      "id": "MENU-487",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard options"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-488",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Swap panels"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-489",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Flip separator"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Enter",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-490",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Remove background picture"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-491",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Snap"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › snap selector",
+      "status": "DIFFERENT",
+      "feature": "PR-003",
+      "notes": "FL's Piano Roll has its own snap: Main (the toolbar's), Line, Cell, (none) … Bar, Events, Markers. LimeShot's editors follow the toolbar snap."
+    },
+    {
+      "id": "MENU-492",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-493",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Deselect"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+D",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+D",
+      "status": "DIFFERENT",
+      "feature": "PR-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-494",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select all"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+A",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+A",
+      "status": "DIFFERENT",
+      "feature": "PR-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-495",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select one at random"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+R",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-496",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select more at random"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-497",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select by color"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-498",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select odd"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+O",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-499",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select muted"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-500",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select overlapping notes"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-501",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select stacked notes"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-502",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Invert selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+I",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Shift+I",
+      "status": "DIFFERENT",
+      "feature": "PR-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-503",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select time around selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Enter",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-504",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select previous time"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Left",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-505",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Select next time"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Right",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-506",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Select",
+        "Magic lasso"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-507",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Group"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-508",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Group",
+        "Group"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-509",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Group",
+        "Ungroup"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Opt+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-510",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-511",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Zoom in"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "PgUp",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+wheel",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "LimeShot zooms with Cmd+wheel and pinch."
+    },
+    {
+      "id": "MENU-512",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Zoom out"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "PgDn",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › key Cmd+wheel",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-513",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Quick zoom 1"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+1",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-514",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Quick zoom 2"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+2",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-515",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Quick zoom 3"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+3",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-516",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Zoom out far"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+4",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-517",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Zoom on selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+5",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-518",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Zoom",
+        "Step sequencer mode zoom"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+6",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-519",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": "The Playlist has time markers (PL); the Piano Roll's are separate in FL."
+    },
+    {
+      "id": "MENU-520",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add one..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-521",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add auto"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-522",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add two..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-523",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add one every"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-524",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add time signature change..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+Opt+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-525",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Add key marker"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-526",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Time markers",
+        "Delete"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-527",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target channel"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › channel selector",
+      "status": "DIFFERENT",
+      "feature": "PR-011",
+      "notes": "FL lists the channels; LimeShot's Piano Roll header has a channel selector."
+    },
+    {
+      "id": "MENU-528",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": "Which note property the lower panel edits."
+    },
+    {
+      "id": "MENU-529",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note pan"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-530",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note velocity"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › velocity lane",
+      "status": "DIFFERENT",
+      "feature": "PR-004",
+      "notes": "LimeShot's lower panel edits velocity only."
+    },
+    {
+      "id": "MENU-531",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note release"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-532",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note filter cutoff frequency"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-533",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note filter resonance (Q)"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-534",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note fine pitch"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-535",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Note repeat"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-536",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Channel panning"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-537",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Channel volume"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-538",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Target control",
+        "Channel pitch"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "AUT-003",
+      "notes": ""
+    },
+    {
+      "id": "MENU-539",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Auto smoothing"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-540",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Preview notes during playback"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-541",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Center"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+0",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-542",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "Detached"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › detach button",
+      "status": "DIFFERENT",
+      "feature": "UI-007",
+      "notes": "The title bar's detach button."
     }
   ],
   "lists": {

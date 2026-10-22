@@ -1,12 +1,12 @@
-# Main menu bar and toolbar: FL Studio and LimeShot
+# Main menu bar, toolbar and editor menus: FL Studio and LimeShot
 
 > Generated from [`menus.json`](menus.json) by `python3 scripts/inventories.py generate`. Do not edit by hand.
 > Reference: FL Studio 2026 (26.1.1.5313), macOS.
 > Source: Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png. Toolbar (menu 'Toolbar') observed live on 2026-10-22 (session 15): each control's name and keys from FL's hint panel while hovering it (fl-toolbar-hints-*.png), and its right-click menus (fl-toolbar-*-menu.png, fl-toolbar-snap.png).
 
-One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths.
+One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **331** — IMPLEMENTED 65, DIFFERENT 38, LIMESHOT_ONLY 11, NOT_STARTED 187, NOT_PLANNED 30
+Tracked: **542** — IMPLEMENTED 78, DIFFERENT 89, LIMESHOT_ONLY 13, NOT_STARTED 325, NOT_PLANNED 37
 
 ## Summary
 
@@ -21,6 +21,10 @@ Tracked: **331** — IMPLEMENTED 65, DIFFERENT 38, LIMESHOT_ONLY 11, NOT_STARTED
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 | Toolbar | 52 | 16 | 7 | 26 | 3 | 2 |
+| Channel Rack | 72 | 13 | 18 | 37 | 4 | 2 |
+| Piano Roll | 137 | 0 | 33 | 101 | 3 | 0 |
+| Playlist | 0 | 0 | 0 | 0 | 0 | 0 |
+| Mixer | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ## Open work by feature
 
@@ -28,17 +32,25 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | Feature | Pri | Status | Name | Menu items |
 |---|---|---|---|---|
+| PR-005 | P0 | VERIFIED | Zoom and scroll | MENU-541 Piano Roll › Options › Center |
+| SEQ-002 | P0 | VERIFIED | Add sampler / synth channels | MENU-383 Channel Rack › Channel menu › Insert<br>MENU-384 Channel Rack › Channel menu › Replace |
+| SEQ-003 | P0 | VERIFIED | Channel mute and solo | MENU-345 Channel Rack › Options › Mute selected<br>MENU-346 Channel Rack › Options › Unmute selected |
+| SEQ-005 | P0 | VERIFIED | Channel → mixer track routing | MENU-352 Channel Rack › Options › Select mixer tracks for the selected channels |
 | APP-020 | P1 | NOT_STARTED | MIDI settings | MENU-153 Options › MIDI settings |
-| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
+| AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip...<br>MENU-536 Piano Roll › Options › Target control › Channel panning<br>MENU-537 Piano Roll › Options › Target control › Channel volume<br>MENU-538 Piano Roll › Options › Target control › Channel pitch |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
+| PR-014 | P1 | VERIFIED | Quantize | MENU-450 Piano Roll › Options › Tools › Quick quantize start times |
 | REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording<br>MENU-319 Toolbar › One-click audio recording |
 | REC-002 | P1 | NOT_STARTED | MIDI recording | MENU-281 Toolbar › Record (automation, score, audio, clips)<br>MENU-282 Toolbar › Record (automation, score, audio, clips) › Recording filter › Automation<br>MENU-283 Toolbar › Record (automation, score, audio, clips) › Recording filter › Notes<br>MENU-284 Toolbar › Record (automation, score, audio, clips) › Recording filter › Audio<br>MENU-285 Toolbar › Record (automation, score, audio, clips) › Recording filter › Clips<br>MENU-286 Toolbar › Record (automation, score, audio, clips) › Options › Recording starts playback<br>MENU-287 Toolbar › Record (automation, score, audio, clips) › Options › Disarm on stop<br>MENU-288 Toolbar › Record (automation, score, audio, clips) › Options › Enable recording markers<br>MENU-289 Toolbar › Record (automation, score, audio, clips) › Quantize › Note start time<br>MENU-290 Toolbar › Record (automation, score, audio, clips) › Quantize › Note end time<br>MENU-291 Toolbar › Record (automation, score, audio, clips) › Quantize › Leave note duration<br>MENU-292 Toolbar › Record (automation, score, audio, clips) › Quantize › Record to step sequencer<br>MENU-293 Toolbar › Record (automation, score, audio, clips) › Quantize › Automations |
+| SEQ-007 | P1 | VERIFIED | Rename, recolor, clone, delete, reorder channels | MENU-342 Channel Rack › Options › Sort by<br>MENU-378 Channel Rack › Channel menu › Random color |
+| SEQ-008 | P1 | VERIFIED | Piano-roll preview in rack | MENU-367 Channel Rack › Options › Show a mute button on the piano roll preview |
+| SEQ-010 | P1 | VERIFIED | Swing (global and per channel) | MENU-348 Channel Rack › Options › Set swing mix for selected<br>MENU-349 Channel Rack › Options › Set truncate swing notes for selected |
 | TR-008 | P1 | VERIFIED | Metronome | MENU-299 Toolbar › Song position › Middle unit |
 | UI-004 | P1 | VERIFIED | Hint bar and tooltips | MENU-117 View › Toolbars › Hint bar |
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
-| WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control |
+| WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control<br>MENU-399 Channel Rack › Channel menu › MIDI channel through<br>MENU-400 Channel Rack › Channel menu › Receive notes from |
 | APP-015 | P2 | NOT_STARTED | Project templates | MENU-002 File › New from template<br>MENU-003 File › New from template › Advanced<br>MENU-004 File › New from template › Minimal<br>MENU-005 File › New from template › Other<br>MENU-006 File › New from template › Performance<br>MENU-007 File › New from template › Power User<br>MENU-008 File › New from template › Utility<br>MENU-009 File › New from template › Empty<br>MENU-010 File › New from template › Change default template...<br>MENU-017 File › Save as template... |
 | APP-018 | P2 | NOT_STARTED | Save new version | MENU-014 File › Save new version |
 | APP-019 | P2 | NOT_STARTED | Project bundle (zip with samples) | MENU-040 File › Export › Zipped loop package... |
@@ -53,9 +65,16 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PL-022 | P2 | NOT_STARTED | Consolidate / render to audio clip | MENU-098 Patterns › Quick render as audio clip<br>MENU-099 Patterns › Render as audio clip...<br>MENU-100 Patterns › Render and replace... |
 | PL-023 | P2 | NOT_STARTED | Crossfades and time stretching | MENU-250 Tools › Switch all audio clip channels to<br>MENU-251 Tools › Switch selected audio clip channels to |
 | PLG-008 | P2 | IMPLEMENTED | Plugin preset management | MENU-070 Add › Browse presets |
+| PR-013 | P2 | NOT_STARTED | Scale highlighting / snap to scale | MENU-481 Piano Roll › Options › View › Scale highlighting |
+| PR-015 | P2 | NOT_STARTED | Chords, arpeggiator, strum, humanize, legato | MENU-447 Piano Roll › Options › Tools › Quick legato<br>MENU-448 Piano Roll › Options › Tools › Articulate...<br>MENU-455 Piano Roll › Options › Tools › Arpeggiate...<br>MENU-456 Piano Roll › Options › Tools › Strum...<br>MENU-457 Piano Roll › Options › Tools › Flam...<br>MENU-458 Piano Roll › Options › Tools › Claw machine...<br>MENU-459 Piano Roll › Options › Tools › Limit...<br>MENU-460 Piano Roll › Options › Tools › Flip...<br>MENU-461 Piano Roll › Options › Tools › Randomize...<br>MENU-462 Piano Roll › Options › Tools › Scale levels...<br>MENU-463 Piano Roll › Options › Tools › LFO... |
+| PR-016 | P2 | NOT_STARTED | Note properties: pan, release, mod X/Y, fine pitch | MENU-528 Piano Roll › Options › Target control<br>MENU-529 Piano Roll › Options › Target control › Note pan<br>MENU-531 Piano Roll › Options › Target control › Note release<br>MENU-532 Piano Roll › Options › Target control › Note filter cutoff frequency<br>MENU-533 Piano Roll › Options › Target control › Note filter resonance (Q)<br>MENU-534 Piano Roll › Options › Target control › Note fine pitch<br>MENU-535 Piano Roll › Options › Target control › Note repeat |
+| PR-023 | P2 | VERIFIED | Glue / slice notes | MENU-453 Piano Roll › Options › Tools › Chop... |
+| PR-027 | P2 | NOT_STARTED | Stamp tool (chords and scales) | MENU-467 Piano Roll › Options › Stamp |
 | REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record<br>MENU-302 Toolbar › Loop record |
 | REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount<br>MENU-301 Toolbar › Recording precount |
 | REC-010 | P2 | NOT_STARTED | Start on input and blend recorded notes | MENU-169 Options › Start on input<br>MENU-170 Options › Blend recorded notes |
+| SEQ-012 | P2 | VERIFIED | Channel filter groups | MENU-359 Channel Rack › Options › Auto switch display filter |
+| SEQ-014 | P2 | VERIFIED | Fill / rotate / advanced fill | MENU-395 Channel Rack › Channel menu › Advanced fill...<br>MENU-396 Channel Rack › Channel menu › Auto fill |
 | UI-013 | P2 | IMPLEMENTED | Window layout commands | MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate) |
 | UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling<br>MENU-318 Toolbar › Auto scrolling |
 | WF-002 | P2 | NOT_STARTED | Typing keyboard to piano | MENU-166 Options › Typing keyboard to piano<br>MENU-300 Toolbar › Typing keyboard to piano |
@@ -73,11 +92,14 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PL-019 | P3 | NOT_STARTED | Performance mode | MENU-242 Tools › Prepare for performance mode |
 | PL-030 | P3 | DEFERRED | Stem separation (Remix a song) | MENU-183 Tools › Remix a song... |
 | PLG-011 | P3 | NOT_STARTED | Plugin performance monitor | MENU-121 View › Plugin performance monitor |
-| PR-022 | P3 | NOT_STARTED | Time signature per pattern / time markers | MENU-090 Patterns › Set time signature... |
-| PR-028 | P3 | NOT_STARTED | Chord progression tool | MENU-185 Tools › Chord progression tool... |
-| PR-029 | P3 | NOT_STARTED | Riff machine | MENU-184 Tools › Riff machine... |
+| PR-018 | P3 | NOT_STARTED | Note color groups | MENU-433 Piano Roll › Options › Edit › Change color<br>MENU-476 Piano Roll › Options › View › Note colors<br>MENU-497 Piano Roll › Options › Select › Select by color |
+| PR-022 | P3 | NOT_STARTED | Time signature per pattern / time markers | MENU-090 Patterns › Set time signature...<br>MENU-519 Piano Roll › Options › Time markers<br>MENU-520 Piano Roll › Options › Time markers › Add one...<br>MENU-521 Piano Roll › Options › Time markers › Add auto<br>MENU-522 Piano Roll › Options › Time markers › Add two...<br>MENU-523 Piano Roll › Options › Time markers › Add one every<br>MENU-524 Piano Roll › Options › Time markers › Add time signature change...<br>MENU-525 Piano Roll › Options › Time markers › Add key marker<br>MENU-526 Piano Roll › Options › Time markers › Delete |
+| PR-025 | P3 | NOT_STARTED | Waveform helper background | MENU-486 Piano Roll › Options › View › Background waveform |
+| PR-028 | P3 | NOT_STARTED | Chord progression tool | MENU-185 Tools › Chord progression tool...<br>MENU-446 Piano Roll › Options › Tools › Generate chord progression... |
+| PR-029 | P3 | NOT_STARTED | Riff machine | MENU-184 Tools › Riff machine...<br>MENU-445 Piano Roll › Options › Tools › Riff machine... |
 | REC-009 | P3 | NOT_STARTED | Step edit mode | MENU-171 Options › Step edit |
 | REC-011 | P3 | NOT_STARTED | Audio logger | MENU-201 Tools › Enabled<br>MENU-202 Tools › Settings<br>MENU-203 Tools › Settings › 1 minute<br>MENU-204 Tools › Settings › 2 minutes<br>MENU-205 Tools › Settings › 5 minutes<br>MENU-206 Tools › Settings › 10 minutes<br>MENU-207 Tools › Settings › Pre effects<br>MENU-208 Tools › Settings › Post effects, pre fader<br>MENU-209 Tools › Dump to audio editor |
+| SEQ-013 | P3 | NOT_STARTED | Zip / unzip channels | MENU-354 Channel Rack › Options › Zip selected<br>MENU-355 Channel Rack › Options › Unzip all |
 | SEQ-022 | P3 | NOT_STARTED | Pattern groups | MENU-087 Patterns › Group selected...<br>MENU-088 Patterns › Rename group...<br>MENU-089 Patterns › Ungroup selected... |
 | UI-006 | P3 | NOT_STARTED | Additional themes (light, high contrast) | MENU-157 Options › Theme settings |
 | UI-014 | P3 | NOT_STARTED | Toolbar customisation and presets | MENU-111 View › Toolbars<br>MENU-112 View › Toolbars › Edit<br>MENU-113 View › Toolbars › Separators<br>MENU-114 View › Toolbars › Flat buttons<br>MENU-116 View › Toolbars › Show detected MIDI chords near the hint bar<br>MENU-118 View › Toolbars › Hide<br>MENU-119 View › Toolbars › <factory presets> |
@@ -85,11 +107,11 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | UI-017 | P3 | DEFERRED | Control creator | MENU-186 Tools › Control creator |
 | UI-018 | P3 | NOT_STARTED | Plugin picker | MENU-067 Add › Plugin picker<br>MENU-107 View › Plugin picker |
 | WF-008 | P3 | NOT_STARTED | Python-style scripting API | MENU-110 View › Script output |
-| WF-009 | P3 | IN_PROGRESS | Project macros | MENU-246 Tools › Switch smart disable for all plugins<br>MENU-247 Tools › Lock all playlist tracks to content<br>MENU-248 Tools › Unlock all playlist tracks from content<br>MENU-254 Tools › Switch all plugin editors to<br>MENU-255 Tools › Switch all plugin editors to › Attached<br>MENU-256 Tools › Switch all plugin editors to › Detached<br>MENU-260 Tools › Change declicking for selected channels to |
+| WF-009 | P3 | IN_PROGRESS | Project macros | MENU-246 Tools › Switch smart disable for all plugins<br>MENU-247 Tools › Lock all playlist tracks to content<br>MENU-248 Tools › Unlock all playlist tracks from content<br>MENU-254 Tools › Switch all plugin editors to<br>MENU-255 Tools › Switch all plugin editors to › Attached<br>MENU-256 Tools › Switch all plugin editors to › Detached<br>MENU-260 Tools › Change declicking for selected channels to<br>MENU-353 Channel Rack › Options › Change declicking for selected channels to<br>MENU-369 Channel Rack › Options › Switch smart disable for all plugins<br>MENU-370 Channel Rack › Options › Switch all audio clip channels to<br>MENU-371 Channel Rack › Options › Switch selected audio clip channels to<br>MENU-372 Channel Rack › Options › Switch all plugin editors to |
 | WF-011 | P3 | NOT_STARTED | Touch controller | MENU-109 View › Touch controller |
 | WF-012 | P3 | NOT_STARTED | MIDI clock sync | MENU-165 Options › Enable MIDI master sync |
 | WF-013 | P3 | NOT_STARTED | Item groups | MENU-174 Options › Enable groups |
-| — |  |  |  | MENU-304 Toolbar › Detected chord<br>MENU-305 Toolbar › Monitor (master)<br>MENU-310 Toolbar › CPU load › View FPS<br>MENU-311 Toolbar › CPU load history<br>MENU-324 Toolbar › Shift key modifier<br>MENU-325 Toolbar › Command key modifier<br>MENU-326 Toolbar › Option key modifier |
+| — |  |  |  | MENU-304 Toolbar › Detected chord<br>MENU-305 Toolbar › Monitor (master)<br>MENU-310 Toolbar › CPU load › View FPS<br>MENU-311 Toolbar › CPU load history<br>MENU-324 Toolbar › Shift key modifier<br>MENU-325 Toolbar › Command key modifier<br>MENU-326 Toolbar › Option key modifier<br>MENU-339 Channel Rack › Options › Create layer with selected channels<br>MENU-347 Channel Rack › Options › Transpose selected...<br>MENU-350 Channel Rack › Options › Burn selected loops to pattern<br>MENU-356 Channel Rack › Options › Restretch all<br>MENU-358 Channel Rack › Options › Auto resize<br>MENU-360 Channel Rack › Options › Channel button width<br>MENU-361 Channel Rack › Options › Channel name alignment<br>MENU-362 Channel Rack › Options › Colorful channel controls<br>MENU-363 Channel Rack › Options › Focus selected channel on playback<br>MENU-364 Channel Rack › Options › Mute removed steps<br>MENU-379 Channel Rack › Channel menu › Change icon...<br>MENU-381 Channel Rack › Channel menu › Cut itself<br>MENU-382 Channel Rack › Channel menu › Show waveform preview<br>MENU-388 Channel Rack › Channel menu › Assign to new instrument track<br>MENU-402 Channel Rack › Channel menu › Burn MIDI to<br>MENU-406 Piano Roll › Options<br>MENU-407 Piano Roll › Options › File<br>MENU-408 Piano Roll › Options › File › Open score...<br>MENU-409 Piano Roll › Options › File › Browse scores<br>MENU-410 Piano Roll › Options › File › Save score as...<br>MENU-413 Piano Roll › Options › File › Paste from MIDI clipboard...<br>MENU-414 Piano Roll › Options › File › Copy to MIDI clipboard...<br>MENU-415 Piano Roll › Options › File › Export as score sheet...<br>MENU-416 Piano Roll › Options › Edit<br>MENU-430 Piano Roll › Options › Edit › Discard lengths<br>MENU-432 Piano Roll › Options › Edit › Nudge notes with mouse wheel<br>MENU-436 Piano Roll › Options › Edit › Insert space<br>MENU-437 Piano Roll › Options › Edit › Slice & insert space<br>MENU-438 Piano Roll › Options › Edit › Delete space<br>MENU-439 Piano Roll › Options › Edit › Trim selection<br>MENU-440 Piano Roll › Options › Edit › Insert current controller value<br>MENU-441 Piano Roll › Options › Edit › Turn into automation clip...<br>MENU-443 Piano Roll › Options › Edit › Select tracks when samples are dropped<br>MENU-444 Piano Roll › Options › Tools<br>MENU-468 Piano Roll › Options › View<br>MENU-469 Piano Roll › Options › View › Grid color...<br>MENU-470 Piano Roll › Options › View › Grid contrast<br>MENU-471 Piano Roll › Options › View › Invert grid<br>MENU-472 Piano Roll › Options › View › Time segments<br>MENU-473 Piano Roll › Options › View › Keep labels on screen<br>MENU-474 Piano Roll › Options › View › Shadow<br>MENU-475 Piano Roll › Options › View › Rounded<br>MENU-477 Piano Roll › Options › View › Incremental scrolling<br>MENU-478 Piano Roll › Options › View › Precise time indicator<br>MENU-479 Piano Roll › Options › View › Mini piano roll preview<br>MENU-480 Piano Roll › Options › View › Note grid highlights<br>MENU-482 Piano Roll › Options › View › Show chord name for selection<br>MENU-483 Piano Roll › Options › View › Note length in note properties<br>MENU-485 Piano Roll › Options › View › Editable ghosts<br>MENU-487 Piano Roll › Options › View › Keyboard options<br>MENU-488 Piano Roll › Options › View › Swap panels<br>MENU-489 Piano Roll › Options › View › Flip separator<br>MENU-490 Piano Roll › Options › View › Remove background picture<br>MENU-492 Piano Roll › Options › Select<br>MENU-495 Piano Roll › Options › Select › Select one at random<br>MENU-496 Piano Roll › Options › Select › Select more at random<br>MENU-498 Piano Roll › Options › Select › Select odd<br>MENU-499 Piano Roll › Options › Select › Select muted<br>MENU-500 Piano Roll › Options › Select › Select overlapping notes<br>MENU-501 Piano Roll › Options › Select › Select stacked notes<br>MENU-503 Piano Roll › Options › Select › Select time around selection<br>MENU-504 Piano Roll › Options › Select › Select previous time<br>MENU-505 Piano Roll › Options › Select › Select next time<br>MENU-506 Piano Roll › Options › Select › Magic lasso<br>MENU-507 Piano Roll › Options › Group<br>MENU-508 Piano Roll › Options › Group › Group<br>MENU-509 Piano Roll › Options › Group › Ungroup<br>MENU-510 Piano Roll › Options › Zoom<br>MENU-513 Piano Roll › Options › Zoom › Quick zoom 1<br>MENU-514 Piano Roll › Options › Zoom › Quick zoom 2<br>MENU-515 Piano Roll › Options › Zoom › Quick zoom 3<br>MENU-516 Piano Roll › Options › Zoom › Zoom out far<br>MENU-517 Piano Roll › Options › Zoom › Zoom on selection<br>MENU-518 Piano Roll › Options › Zoom › Step sequencer mode zoom<br>MENU-539 Piano Roll › Options › Auto smoothing<br>MENU-540 Piano Roll › Options › Preview notes during playback |
 
 ## File
 
@@ -466,6 +488,237 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-329 | Online content & events | Online | display |  |  | — | NOT_PLANNED |  | Image-Line news panel. |
 | MENU-330 | Time signature | LimeShot | control |  |  | Toolbar › Beats per bar / Beat unit (power of two) | LIMESHOT_ONLY |  | LimeShot shows the project's time signature next to the tempo; FL keeps it in Project settings. |
 | MENU-331 | Undo, redo, save and export | LimeShot | control |  |  | Toolbar › undo, redo, save and export buttons | LIMESHOT_ONLY |  | LimeShot's own buttons on the right of the toolbar. |
+
+## Channel Rack
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| MENU-332 | Options |  | submenu |  |  | Channel Rack › channel menu | DIFFERENT | SEQ-007 | The ▸ at the rack's top left. LimeShot has no rack-wide menu; per-channel commands are on the channel button's right-click and in Tools. |
+| MENU-333 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Add one |  | submenu |  |  | Channel Rack › + Add channel | DIFFERENT | SEQ-002 | FL lists its generators; LimeShot's + Add channel offers Sampler, LimeSynth and plugins. |
+| MENU-334 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Loop starter |  | toggle |  |  | — | NOT_PLANNED | SEQ-017 | FL Cloud loops. |
+| MENU-335 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Purge unused audio clips |  | action |  |  | Tools › Purge unused audio clips | DIFFERENT | WF-009 | Same macro, in the Tools menu. |
+| MENU-336 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select unused channels | Channels | action |  |  | Tools › Select unused channels | DIFFERENT | WF-009 | Same macro, in the Tools menu. |
+| MENU-337 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Clone selected | Channels | action | `Opt+C` |  | Channel Rack › channel menu › Clone | DIFFERENT | SEQ-007 | LimeShot clones one channel from its menu; no key. |
+| MENU-338 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Delete selected... | Channels | dialog | `Opt+Del` |  | Channel Rack › channel menu › Delete… | DIFFERENT | SEQ-007 | Alt+Delete deletes the selected channels (asks first, as FL). |
+| MENU-339 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create layer with selected channels | Channels | action |  |  | — | NOT_STARTED |  |  |
+| MENU-340 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move selected up | Channels | action | `Opt+Up` |  | Channel Rack › channel menu › Move up | DIFFERENT | SEQ-007 | Alt+↑ moves the selected channels. |
+| MENU-341 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Move selected down | Channels | action | `Opt+Down` |  | Channel Rack › channel menu › Move down | DIFFERENT | SEQ-007 | Alt+↓. |
+| MENU-342 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Sort by | Channels | submenu |  |  | — | NOT_STARTED | SEQ-007 |  |
+| MENU-343 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group selected... | Channels | dialog | `Opt+G` |  | Channel Rack › channel menu › Group selected… | IMPLEMENTED | SEQ-012 | Also Alt+G. |
+| MENU-344 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Color selected | Channels | submenu |  |  | Channel Rack › channel menu › Color | DIFFERENT | SEQ-007 | LimeShot colours one channel at a time. |
+| MENU-345 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Mute selected | Channels | action |  |  | — | NOT_STARTED | SEQ-003 |  |
+| MENU-346 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unmute selected | Channels | action |  |  | — | NOT_STARTED | SEQ-003 |  |
+| MENU-347 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Transpose selected... | Channels | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-348 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set swing mix for selected | Channels | submenu |  |  | — | NOT_STARTED | SEQ-010 |  |
+| MENU-349 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set truncate swing notes for selected | Channels | submenu |  |  | — | NOT_STARTED | SEQ-010 |  |
+| MENU-350 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Burn selected loops to pattern | Channels | action |  | disabled | — | NOT_STARTED |  |  |
+| MENU-351 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Assign selected to free mixer track(s) | Channels | action | `Cmd+L` |  | Channel Rack › channel menu › Route to free mixer track | DIFFERENT | SEQ-005 | Cmd+L routes the selected channels, as in FL. |
+| MENU-352 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select mixer tracks for the selected channels | Channels | action |  |  | — | NOT_STARTED | SEQ-005 |  |
+| MENU-353 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change declicking for selected channels to | Channels | submenu |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-354 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zip selected | Channels | action | `Opt+Z` |  | — | NOT_STARTED | SEQ-013 |  |
+| MENU-355 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unzip all | Channels | action | `Opt+U` |  | — | NOT_STARTED | SEQ-013 |  |
+| MENU-356 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Restretch all | Channels | action | `Cmd+Opt+R` | disabled | — | NOT_STARTED |  |  |
+| MENU-357 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group playlist tracks created by Loop starter | Options | submenu |  |  | — | NOT_PLANNED | SEQ-017 |  |
+| MENU-358 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto resize | Options | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-359 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto switch display filter | Options | toggle |  | checked | — | NOT_STARTED | SEQ-012 |  |
+| MENU-360 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Channel button width | Options | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-361 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Channel name alignment | Options | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-362 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Colorful channel controls | Options | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-363 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Focus selected channel on playback | Options | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-364 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Mute removed steps | Options | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-365 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Show mixer track selectors | Options | toggle | `Opt+M` | checked | Channel Rack › mixer track numbers | DIFFERENT | SEQ-005 | LimeShot always shows them. |
+| MENU-366 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Show complete piano roll preview | Options | toggle |  | checked | Channel Rack › piano roll preview | DIFFERENT | SEQ-008 | Always on in LimeShot. |
+| MENU-367 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Show a mute button on the piano roll preview | Options | toggle |  | checked | — | NOT_STARTED | SEQ-008 |  |
+| MENU-368 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Detached | Options | toggle |  |  | Channel Rack › detach button | DIFFERENT | UI-007 | The title bar's detach button. |
+| MENU-369 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Switch smart disable for all plugins | Switch | action |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-370 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Switch all audio clip channels to | Switch | submenu |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-371 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Switch selected audio clip channels to | Switch | submenu |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-372 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Switch all plugin editors to | Switch | submenu |  |  | — | NOT_STARTED | WF-009 |  |
+| MENU-373 | Channel menu |  | submenu |  |  | Channel Rack › channel menu | IMPLEMENTED | SEQ-007 | Right-click on a channel button: two columns in FL (channel; steps and MIDI). |
+| MENU-374 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Piano roll |  | toggle | `F7` | checked | Channel Rack › channel menu › Piano Roll | IMPLEMENTED | PR-001 |  |
+| MENU-375 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Graph editor |  | toggle |  |  | Channel Rack › channel menu › Graph editor | IMPLEMENTED | SEQ-011 |  |
+| MENU-376 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Rename, color and icon... |  | dialog |  |  | Channel Rack › channel menu › Rename… / Color | DIFFERENT | SEQ-007 | Separate items; no icons. |
+| MENU-377 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change color... |  | dialog |  |  | Channel Rack › channel menu › Color | DIFFERENT | SEQ-007 | A swatch submenu. |
+| MENU-378 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Random color |  | action |  |  | — | NOT_STARTED | SEQ-007 |  |
+| MENU-379 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Change icon... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-380 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Load sample... |  | dialog |  |  | Channel Rack › channel menu › Load sample… | IMPLEMENTED | INS-001 | Sampler channels. |
+| MENU-381 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Cut itself |  | toggle |  | checked | — | NOT_STARTED |  | A new note cuts the channel's sounding note. |
+| MENU-382 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Show waveform preview |  | toggle |  | disabled | — | NOT_STARTED |  |  |
+| MENU-383 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Insert |  | submenu |  |  | — | NOT_STARTED | SEQ-002 | Inserts a generator below this channel. |
+| MENU-384 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Replace |  | submenu |  |  | — | NOT_STARTED | SEQ-002 |  |
+| MENU-385 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Patcherize |  | action |  | disabled | — | NOT_PLANNED |  | FL's Patcher. |
+| MENU-386 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Clone |  | action |  |  | Channel Rack › channel menu › Clone | IMPLEMENTED | SEQ-007 |  |
+| MENU-387 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Delete... |  | dialog |  |  | Channel Rack › channel menu › Delete… | IMPLEMENTED | SEQ-007 |  |
+| MENU-388 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Assign to new instrument track |  | action |  |  | — | NOT_STARTED |  |  |
+| MENU-389 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Cut |  | action |  |  | Edit › Cut | DIFFERENT | SEQ-015 | LimeShot: Edit menu and Cmd+X with the Channel Rack focused. |
+| MENU-390 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Copy |  | action |  |  | Edit › Copy | DIFFERENT | SEQ-015 |  |
+| MENU-391 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Paste |  | action |  | disabled | Edit › Paste | DIFFERENT | SEQ-015 |  |
+| MENU-392 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Fill each 2 steps |  | action |  |  | Channel Rack › channel menu fill items | IMPLEMENTED | SEQ-014 |  |
+| MENU-393 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Fill each 4 steps |  | action |  |  | Channel Rack › channel menu fill items | IMPLEMENTED | SEQ-014 |  |
+| MENU-394 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Fill each 8 steps |  | action |  |  | Channel Rack › channel menu fill items | IMPLEMENTED | SEQ-014 |  |
+| MENU-395 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Advanced fill... |  | dialog |  |  | — | NOT_STARTED | SEQ-014 |  |
+| MENU-396 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto fill |  | action |  | disabled | — | NOT_STARTED | SEQ-014 |  |
+| MENU-397 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Rotate left |  | action | `Shift+Cmd+Left` |  | Channel Rack › channel menu › Rotate left | IMPLEMENTED | SEQ-014 |  |
+| MENU-398 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Rotate right |  | action | `Shift+Cmd+Right` |  | Channel Rack › channel menu › Rotate right | IMPLEMENTED | SEQ-014 |  |
+| MENU-399 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MIDI channel through |  | toggle |  | checked | — | NOT_STARTED | WF-003 |  |
+| MENU-400 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Receive notes from |  | submenu |  |  | — | NOT_STARTED | WF-003 |  |
+| MENU-401 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Create DirectWave instrument... |  | dialog |  |  | — | NOT_PLANNED |  | FL's DirectWave. |
+| MENU-402 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Burn MIDI to |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-403 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Channel Settings | LimeShot | action |  |  | Channel Rack › channel menu › Channel Settings | LIMESHOT_ONLY | SEQ-007 | Opens the channel's settings window. |
+| MENU-404 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Clear notes in this pattern | LimeShot | action |  |  | Channel Rack › channel menu › Clear notes in this pattern | LIMESHOT_ONLY | SEQ-007 |  |
+| MENU-405 | Display filter |  | list |  |  | Channel Rack › filter | IMPLEMENTED | SEQ-012 | All, Unsorted and the filter groups (Audio for audio clip channels). |
+
+## Piano Roll
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| MENU-406 | Options |  | submenu |  |  | — | NOT_STARTED |  | The ▸ at the Piano Roll's top left. LimeShot has no Piano Roll menu; its commands are keys (shortcuts help) and the tool buttons. |
+| MENU-407 | &nbsp;&nbsp;&nbsp;&nbsp;↳ File |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-408 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Open score... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-409 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Browse scores |  | action |  |  | — | NOT_STARTED |  |  |
+| MENU-410 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Save score as... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-411 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Import MIDI file... |  | dialog | `Cmd+M` |  | File › Import MIDI file… | DIFFERENT | PR-020 | LimeShot imports into new channels from the main File menu. |
+| MENU-412 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Export as MIDI file... |  | dialog | `Shift+Cmd+M` |  | File › Export MIDI file (pattern)… | DIFFERENT | PR-020 |  |
+| MENU-413 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Paste from MIDI clipboard... |  | dialog | `Shift+Cmd+V` | disabled | — | NOT_STARTED |  |  |
+| MENU-414 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Copy to MIDI clipboard... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-415 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Export as score sheet... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-416 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Edit |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-417 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Cut |  | action | `Cmd+X` |  | Edit › Cut | DIFFERENT | PR-019 | Main Edit menu and Cmd+X with the Piano Roll focused. |
+| MENU-418 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Copy |  | action | `Cmd+C` |  | Edit › Copy | DIFFERENT | PR-019 |  |
+| MENU-419 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Paste |  | action | `Cmd+V` | disabled | Edit › Paste | DIFFERENT | PR-019 |  |
+| MENU-420 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Duplicate |  | action | `Cmd+B` |  | Piano Roll › key Cmd+B | DIFFERENT | PR-008 |  |
+| MENU-421 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Delete |  | action | `Del` |  | Piano Roll › key Delete | DIFFERENT | PR-001 |  |
+| MENU-422 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Shift left |  | action | `Shift+Left` |  | Piano Roll › key Shift+Left | DIFFERENT | PR-009 | By the snap. |
+| MENU-423 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Shift right |  | action | `Shift+Right` |  | Piano Roll › key Shift+Right | DIFFERENT | PR-009 |  |
+| MENU-424 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Rotate left |  | action | `Shift+Cmd+Left` |  | Piano Roll › key Shift+Cmd+Left | DIFFERENT | PR-009 |  |
+| MENU-425 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Rotate right |  | action | `Shift+Cmd+Right` |  | Piano Roll › key Shift+Cmd+Right | DIFFERENT | PR-009 |  |
+| MENU-426 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Transpose up |  | action | `Shift+Up` |  | Piano Roll › key Shift+Up | DIFFERENT | PR-009 |  |
+| MENU-427 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Transpose down |  | action | `Shift+Down` |  | Piano Roll › key Shift+Down | DIFFERENT | PR-009 |  |
+| MENU-428 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Transpose one octave up |  | action | `Cmd+Up` |  | Piano Roll › key Cmd+Up | DIFFERENT | PR-009 |  |
+| MENU-429 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Transpose one octave down |  | action | `Cmd+Down` |  | Piano Roll › key Cmd+Down | DIFFERENT | PR-009 |  |
+| MENU-430 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Discard lengths |  | action | `Shift+D` |  | — | NOT_STARTED |  |  |
+| MENU-431 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Allow resizing from left |  | toggle | `Cmd+Opt+Home` | checked | Piano Roll › left note edge | DIFFERENT | PR-024 | Always on in LimeShot. |
+| MENU-432 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Nudge notes with mouse wheel |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-433 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Change color |  | action | `Opt+C` |  | — | NOT_STARTED | PR-018 |  |
+| MENU-434 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Mute |  | action | `Opt+M` |  | Piano Roll › key Alt+M | DIFFERENT | PR-012 |  |
+| MENU-435 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Unmute |  | action | `Shift+Opt+M` |  | Piano Roll › key Shift+Alt+M | DIFFERENT | PR-012 |  |
+| MENU-436 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Insert space |  | action | `Cmd+Ins` | disabled | — | NOT_STARTED |  |  |
+| MENU-437 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Slice & insert space |  | action | `Cmd+Opt+Ins` | disabled | — | NOT_STARTED |  |  |
+| MENU-438 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Delete space |  | action | `Cmd+Del` | disabled | — | NOT_STARTED |  |  |
+| MENU-439 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Trim selection |  | action |  | disabled | — | NOT_STARTED |  |  |
+| MENU-440 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Insert current controller value |  | action | `Cmd+I` | disabled | — | NOT_STARTED |  |  |
+| MENU-441 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Turn into automation clip... |  | dialog |  | disabled | — | NOT_STARTED |  |  |
+| MENU-442 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Purge unused audio clips |  | action |  |  | Tools › Purge unused audio clips | DIFFERENT | WF-009 |  |
+| MENU-443 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select tracks when samples are dropped |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-444 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Tools |  | submenu |  |  | — | NOT_STARTED |  | Built-in tools on the left, scripts on the right. |
+| MENU-445 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Riff machine... |  | dialog | `Opt+E` |  | — | NOT_STARTED | PR-029 |  |
+| MENU-446 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Generate chord progression... |  | dialog | `Opt+P` |  | — | NOT_STARTED | PR-028 |  |
+| MENU-447 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick legato |  | action | `Cmd+L` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-448 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Articulate... |  | dialog | `Opt+L` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-449 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick quantize |  | action | `Cmd+Q` |  | Piano Roll › key Alt+Q | DIFFERENT | PR-014 | LimeShot's Alt+Q quantizes to the snap (Cmd+Q quits on macOS). |
+| MENU-450 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick quantize start times |  | action | `Shift+Q` |  | — | NOT_STARTED | PR-014 |  |
+| MENU-451 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quantize... |  | dialog | `Opt+Q` |  | Piano Roll › Quantize | DIFFERENT | PR-014 | LimeShot's Quantize button quantizes at once; no dialog. |
+| MENU-452 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick chop |  | action | `Cmd+U` |  | Piano Roll › key Cmd+U | DIFFERENT | PR-023 |  |
+| MENU-453 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Chop... |  | dialog | `Opt+U` |  | — | NOT_STARTED | PR-023 |  |
+| MENU-454 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Glue |  | action | `Cmd+G` |  | Piano Roll › key Cmd+G | DIFFERENT | PR-023 |  |
+| MENU-455 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Arpeggiate... |  | dialog | `Opt+A` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-456 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Strum... |  | dialog | `Opt+S` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-457 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flam... |  | dialog | `Opt+F` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-458 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Claw machine... |  | dialog | `Opt+W` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-459 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Limit... |  | dialog | `Opt+K` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-460 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flip... |  | dialog | `Opt+Y` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-461 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Randomize... |  | dialog | `Opt+R` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-462 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Scale levels... |  | dialog | `Opt+X` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-463 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ LFO... |  | dialog | `Opt+O` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-464 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Run last script again |  | action |  | disabled | — | NOT_PLANNED |  | FL's Python scripts. |
+| MENU-465 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Open script folder... |  | action |  |  | — | NOT_PLANNED |  |  |
+| MENU-466 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ <scripts> |  | list |  |  | — | NOT_PLANNED |  | Arpeggiator, Euclidean, Humanize, Note repeater sprinkler, Select by velocity and more. |
+| MENU-467 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Stamp |  | submenu |  |  | — | NOT_STARTED | PR-027 | Chords and scales to stamp. |
+| MENU-468 | &nbsp;&nbsp;&nbsp;&nbsp;↳ View |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-469 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Grid color... |  | dialog |  |  | — | NOT_STARTED |  |  |
+| MENU-470 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Grid contrast |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-471 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Invert grid |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-472 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Time segments |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-473 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Keep labels on screen |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-474 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Shadow |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-475 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Rounded |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-476 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note colors |  | submenu |  |  | — | NOT_STARTED | PR-018 |  |
+| MENU-477 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Incremental scrolling |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-478 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Precise time indicator |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-479 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Mini piano roll preview |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-480 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note grid highlights |  | toggle | `Opt+B` | checked | — | NOT_STARTED |  |  |
+| MENU-481 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Scale highlighting |  | submenu |  |  | — | NOT_STARTED | PR-013 |  |
+| MENU-482 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Show chord name for selection |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-483 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note length in note properties |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-484 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Ghost channels |  | toggle | `Opt+V` | checked | Piano Roll › ghost notes | DIFFERENT | PR-010 | Always on in LimeShot. |
+| MENU-485 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Editable ghosts |  | toggle | `Cmd+Opt+V` |  | — | NOT_STARTED |  |  |
+| MENU-486 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Background waveform |  | toggle | `Opt+N` |  | — | NOT_STARTED | PR-025 |  |
+| MENU-487 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Keyboard options |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-488 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Swap panels |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-489 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flip separator |  | action | `Shift+Enter` |  | — | NOT_STARTED |  |  |
+| MENU-490 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Remove background picture |  | action |  | disabled | — | NOT_STARTED |  |  |
+| MENU-491 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Snap |  | submenu |  |  | Toolbar › snap selector | DIFFERENT | PR-003 | FL's Piano Roll has its own snap: Main (the toolbar's), Line, Cell, (none) … Bar, Events, Markers. LimeShot's editors follow the toolbar snap. |
+| MENU-492 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Select |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-493 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Deselect |  | action | `Cmd+D` | disabled | Piano Roll › key Cmd+D | DIFFERENT | PR-002 |  |
+| MENU-494 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select all |  | action | `Cmd+A` |  | Piano Roll › key Cmd+A | DIFFERENT | PR-002 |  |
+| MENU-495 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select one at random |  | action | `Shift+R` |  | — | NOT_STARTED |  |  |
+| MENU-496 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select more at random |  | action | `Shift+M` |  | — | NOT_STARTED |  |  |
+| MENU-497 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select by color |  | action | `Shift+C` |  | — | NOT_STARTED | PR-018 |  |
+| MENU-498 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select odd |  | action | `Shift+O` |  | — | NOT_STARTED |  |  |
+| MENU-499 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select muted |  | action |  |  | — | NOT_STARTED |  |  |
+| MENU-500 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select overlapping notes |  | action |  |  | — | NOT_STARTED |  |  |
+| MENU-501 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select stacked notes |  | action |  |  | — | NOT_STARTED |  |  |
+| MENU-502 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Invert selection |  | action | `Shift+I` |  | Piano Roll › key Shift+I | DIFFERENT | PR-002 |  |
+| MENU-503 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select time around selection |  | action | `Cmd+Enter` |  | — | NOT_STARTED |  |  |
+| MENU-504 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select previous time |  | action | `Cmd+Left` | disabled | — | NOT_STARTED |  |  |
+| MENU-505 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select next time |  | action | `Cmd+Right` | disabled | — | NOT_STARTED |  |  |
+| MENU-506 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Magic lasso |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-507 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-508 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Group |  | action | `Shift+G` |  | — | NOT_STARTED |  |  |
+| MENU-509 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Ungroup |  | action | `Opt+G` |  | — | NOT_STARTED |  |  |
+| MENU-510 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom |  | submenu |  |  | — | NOT_STARTED |  |  |
+| MENU-511 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom in |  | action | `PgUp` |  | Piano Roll › key Cmd+wheel | DIFFERENT | PR-005 | LimeShot zooms with Cmd+wheel and pinch. |
+| MENU-512 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom out |  | action | `PgDn` |  | Piano Roll › key Cmd+wheel | DIFFERENT | PR-005 |  |
+| MENU-513 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick zoom 1 |  | action | `Shift+1` |  | — | NOT_STARTED |  |  |
+| MENU-514 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick zoom 2 |  | action | `Shift+2` |  | — | NOT_STARTED |  |  |
+| MENU-515 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick zoom 3 |  | action | `Shift+3` |  | — | NOT_STARTED |  |  |
+| MENU-516 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom out far |  | action | `Shift+4` |  | — | NOT_STARTED |  |  |
+| MENU-517 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom on selection |  | action | `Shift+5` |  | — | NOT_STARTED |  |  |
+| MENU-518 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Step sequencer mode zoom |  | action | `Shift+6` |  | — | NOT_STARTED |  |  |
+| MENU-519 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Time markers |  | submenu |  |  | — | NOT_STARTED | PR-022 | The Playlist has time markers (PL); the Piano Roll's are separate in FL. |
+| MENU-520 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add one... |  | dialog | `Opt+T` |  | — | NOT_STARTED | PR-022 |  |
+| MENU-521 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add auto |  | action | `Cmd+T` |  | — | NOT_STARTED | PR-022 |  |
+| MENU-522 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add two... |  | dialog |  | disabled | — | NOT_STARTED | PR-022 |  |
+| MENU-523 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add one every |  | submenu |  |  | — | NOT_STARTED | PR-022 |  |
+| MENU-524 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add time signature change... |  | dialog | `Shift+Opt+T` |  | — | NOT_STARTED | PR-022 |  |
+| MENU-525 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Add key marker |  | submenu |  |  | — | NOT_STARTED | PR-022 |  |
+| MENU-526 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Delete |  | action |  |  | — | NOT_STARTED | PR-022 |  |
+| MENU-527 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Target channel |  | list |  |  | Piano Roll › channel selector | DIFFERENT | PR-011 | FL lists the channels; LimeShot's Piano Roll header has a channel selector. |
+| MENU-528 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Target control |  | submenu |  |  | — | NOT_STARTED | PR-016 | Which note property the lower panel edits. |
+| MENU-529 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note pan |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-530 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note velocity |  | radio |  | selected | Piano Roll › velocity lane | DIFFERENT | PR-004 | LimeShot's lower panel edits velocity only. |
+| MENU-531 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note release |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-532 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note filter cutoff frequency |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-533 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note filter resonance (Q) |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-534 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note fine pitch |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-535 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note repeat |  | radio |  |  | — | NOT_STARTED | PR-016 |  |
+| MENU-536 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Channel panning |  | radio |  |  | — | NOT_STARTED | AUT-003 |  |
+| MENU-537 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Channel volume |  | radio |  |  | — | NOT_STARTED | AUT-003 |  |
+| MENU-538 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Channel pitch |  | radio |  |  | — | NOT_STARTED | AUT-003 |  |
+| MENU-539 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Auto smoothing |  | toggle |  | checked | — | NOT_STARTED |  |  |
+| MENU-540 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Preview notes during playback |  | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-541 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Center |  | action | `Shift+0` |  | — | NOT_STARTED | PR-005 |  |
+| MENU-542 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Detached |  | toggle |  |  | Piano Roll › detach button | DIFFERENT | UI-007 | The title bar's detach button. |
+
+## Playlist
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+
+## Mixer
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
 
 ## Lists
 
