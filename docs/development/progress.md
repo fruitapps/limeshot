@@ -883,3 +883,10 @@ sequencer passes them in seconds on the clip's `NoteEvent`; the engine gives the
 the clip's start and to its end) that ramps its gain, including when playback chases into a clip. The Playlist
 draws fade lines and two handles on audio clips; dragging a handle sets the fade (`Drag::Fade`). `ui_shot --audio`
 shows a faded clip.
+
+### Session 16, part 16: MP3, FLAC, Ogg Vorbis and AIFF samples (INS-008; next-steps Then 8)
+
+`limeshot_dsp::load_audio` (WAV with hound, the rest with symphonia 0.5, decision D37), `is_audio_file` and
+`AUDIO_EXTENSIONS`; the sample loader, the Browser (`browser::is_sample`) and the file pickers use them. Fixtures: a
+0.1 s stereo sine as AIFF (afconvert) and FLAC (a hand-written verbatim encoder, as afconvert's FLAC output failed),
+both checked sample for sample; truncated and junk files fail cleanly.

@@ -4,7 +4,7 @@
 //! project folder and decodes it on a worker thread. Decoded samples stay cached for the life of
 //! the cache, which also guarantees the audio thread never drops the last reference to a buffer.
 
-use limeshot_dsp::{SampleData, load_wav};
+use limeshot_dsp::{SampleData, load_audio};
 use limeshot_sequencer::SampleLookup;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -42,7 +42,7 @@ impl SampleCache {
             .name("limeshot-sample-loader".into())
             .spawn(move || {
                 while let Ok(path) = job_rx.recv() {
-                    let r = load_wav(&path).map(Arc::new).map_err(|e| e.to_string());
+                    let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
                     if res_tx.send((path, r)).is_err() {
                         break;
                     }
@@ -92,7 +92,7 @@ impl SampleCache {
             }
             _ => {
                 // No loader thread: decode here.
-                let r = load_wav(&path).map(Arc::new).map_err(|e| e.to_string());
+                let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
                 self.entries.insert(path, status(r));
             }
         }
@@ -104,7 +104,7 @@ impl SampleCache {
         if let Some(SampleStatus::Ready(s)) = self.entries.get(&path) {
             return Ok(s.clone());
         }
-        let r = load_wav(&path).map(Arc::new).map_err(|e| e.to_string());
+        let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
         self.entries.insert(path, status(r.clone()));
         r
     }

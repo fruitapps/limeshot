@@ -136,7 +136,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
         ui.label(RichText::new(label).font(semibold(12.5)));
         if ui.button("Load…").clicked()
             && let Some(path) = rfd::FileDialog::new()
-                .add_filter("WAV audio", &["wav", "WAV"])
+                .add_filter("Audio files", &limeshot_dsp::AUDIO_EXTENSIONS)
                 .pick_file()
         {
             browser::assign_sample(app, cid, &path);

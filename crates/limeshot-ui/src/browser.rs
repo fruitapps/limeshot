@@ -53,7 +53,7 @@ impl State {
                         })
                         .filter(|(p, d)| {
                             let hidden = p.file_name().is_some_and(|n| n.to_string_lossy().starts_with('.'));
-                            !hidden && (*d || is_wav(p))
+                            !hidden && (*d || is_sample(p))
                         })
                         .collect()
                 })
@@ -83,8 +83,9 @@ impl State {
     }
 }
 
-pub fn is_wav(p: &Path) -> bool {
-    p.extension().is_some_and(|e| e.eq_ignore_ascii_case("wav"))
+/// A sample file the Browser lists and LimeShot can load (WAV, MP3, FLAC, Ogg Vorbis, AIFF).
+pub fn is_sample(p: &Path) -> bool {
+    limeshot_dsp::is_audio_file(p)
 }
 
 pub fn file_label(p: &Path) -> String {

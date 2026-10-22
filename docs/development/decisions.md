@@ -206,3 +206,10 @@ passed over a channel to the UI thread, which plays them like other auditions; t
 Sending them straight to the audio thread would save one frame of latency at most, but the engine's message ring
 has a single producer (the UI), and recording needs the notes on the UI side anyway. Revisit if live-play latency
 proves noticeable.
+
+### D37. Compressed samples with symphonia
+**Why:** MP3, FLAC, Ogg Vorbis and AIFF samples (INS-008) are decoded with `symphonia` 0.5, a pure-Rust decoder (no
+system codecs, so every platform reads the same files). It is MPL-2.0: file-level copyleft that covers only
+symphonia's own files, used unmodified from crates.io, so LimeShot stays MIT OR Apache-2.0 (as with `option-ext`).
+WAV keeps `hound`. Encoding (MP3/FLAC export) is not part of this decision.
+

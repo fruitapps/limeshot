@@ -25,6 +25,7 @@ thiserror = "2"
 log = "0.4"
 env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
 hound = "3.5"
+symphonia = { version = "0.5.4", default-features = false, features = ["mp3", "flac", "ogg", "vorbis", "aiff", "pcm"] }
 rtrb = "0.3"
 cpal = "0.16"
 midir = "0.11"

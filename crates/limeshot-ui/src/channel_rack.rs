@@ -749,7 +749,7 @@ pub(crate) fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
     }
     if matches!(ch.instrument, Instrument::Sampler(_)) && ui.button("Load sample…").clicked() {
         if let Some(p) = rfd::FileDialog::new()
-            .add_filter("WAV audio", &["wav", "WAV"])
+            .add_filter("Audio files", &limeshot_dsp::AUDIO_EXTENSIONS)
             .pick_file()
         {
             browser::assign_sample(app, ch.id, &p);

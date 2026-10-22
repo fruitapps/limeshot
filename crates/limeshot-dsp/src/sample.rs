@@ -1,4 +1,5 @@
-//! Decoded audio held in memory, and WAV reading/writing.
+//! Decoded audio held in memory, WAV reading/writing, and reading MP3, FLAC, Ogg Vorbis and AIFF
+//! (symphonia).
 
 use std::path::{Path, PathBuf};
 
@@ -111,6 +112,108 @@ pub fn load_wav(path: &Path) -> Result<SampleData, SampleError> {
     }
     Ok(SampleData {
         sample_rate: spec.sample_rate.max(1),
+        data,
+        source: Some(path.to_path_buf()),
+    })
+}
+
+/// The sample file extensions LimeShot reads (lower case).
+pub const AUDIO_EXTENSIONS: [&str; 6] = ["wav", "mp3", "flac", "ogg", "aif", "aiff"];
+
+/// Whether `path` has one of [`AUDIO_EXTENSIONS`].
+pub fn is_audio_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| AUDIO_EXTENSIONS.iter().any(|x| e.eq_ignore_ascii_case(x)))
+}
+
+/// Read a sample in any supported format: WAV with hound, MP3, FLAC, Ogg Vorbis and AIFF with
+/// symphonia.
+pub fn load_audio(path: &Path) -> Result<SampleData, SampleError> {
+    let wav = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("wav"));
+    if wav { load_wav(path) } else { load_compressed(path) }
+}
+
+fn load_compressed(path: &Path) -> Result<SampleData, SampleError> {
+    use symphonia::core::audio::SampleBuffer;
+    use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
+    use symphonia::core::errors::Error;
+    use symphonia::core::formats::FormatOptions;
+    use symphonia::core::io::MediaSourceStream;
+    use symphonia::core::meta::MetadataOptions;
+    use symphonia::core::probe::Hint;
+    let fail = |message: String| SampleError::Decode {
+        path: path.to_path_buf(),
+        message,
+    };
+    let file = std::fs::File::open(path).map_err(|e| fail(e.to_string()))?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        hint.with_extension(ext);
+    }
+    let probed = symphonia::default::get_probe()
+        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+        .map_err(|e| fail(e.to_string()))?;
+    let mut format = probed.format;
+    let track = format
+        .tracks()
+        .iter()
+        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or_else(|| fail("no audio track".into()))?;
+    let track_id = track.id;
+    let mut sample_rate = track.codec_params.sample_rate.unwrap_or(44_100);
+    let mut decoder = symphonia::default::get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .map_err(|e| fail(e.to_string()))?;
+    let mut data: Vec<f32> = Vec::new();
+    let mut buf: Option<SampleBuffer<f32>> = None;
+    loop {
+        let packet = match format.next_packet() {
+            Ok(p) => p,
+            Err(Error::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(Error::ResetRequired) => break,
+            Err(e) => return Err(fail(e.to_string())),
+        };
+        if packet.track_id() != track_id {
+            continue;
+        }
+        let decoded = match decoder.decode(&packet) {
+            Ok(d) => d,
+            // A damaged frame is skipped, as players do.
+            Err(Error::DecodeError(_)) => continue,
+            Err(e) => return Err(fail(e.to_string())),
+        };
+        let spec = *decoded.spec();
+        sample_rate = spec.rate;
+        let channels = spec.channels.count().max(1);
+        let b = buf.get_or_insert_with(|| SampleBuffer::new(decoded.capacity() as u64, spec));
+        if b.capacity() < decoded.capacity() * channels {
+            *b = SampleBuffer::new(decoded.capacity() as u64, spec);
+        }
+        b.copy_interleaved_ref(decoded);
+        for frame in b.samples().chunks_exact(channels) {
+            let l = frame.first().copied().unwrap_or(0.0);
+            let r = if channels > 1 {
+                frame.get(1).copied().unwrap_or(l)
+            } else {
+                l
+            };
+            let clean = |v: f32| if v.is_finite() { v } else { 0.0 };
+            data.push(clean(l));
+            data.push(clean(r));
+        }
+        if data.len() / 2 > MAX_FRAMES {
+            return Err(SampleError::TooLong {
+                path: path.to_path_buf(),
+            });
+        }
+    }
+    if data.is_empty() {
+        return Err(fail("no audio in the file".into()));
+    }
+    Ok(SampleData {
+        sample_rate: sample_rate.max(1),
         data,
         source: Some(path.to_path_buf()),
     })

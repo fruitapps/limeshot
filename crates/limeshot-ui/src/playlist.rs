@@ -419,7 +419,9 @@ fn picker_ui(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
                 PickerTab::Audio => {
                     if icon_button(ui, Icon::Plus, false, 20.0, "Add a sample as an audio clip").clicked()
-                        && let Some(path) = rfd::FileDialog::new().add_filter("WAV audio", &["wav"]).pick_file()
+                        && let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Audio files", &limeshot_dsp::AUDIO_EXTENSIONS)
+                            .pick_file()
                     {
                         add_audio_source(app, &path);
                     }

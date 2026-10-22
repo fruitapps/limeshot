@@ -3641,17 +3641,25 @@
       "name": "Additional audio formats (MP3, FLAC, OGG, AIFF)",
       "description": "More sample formats.",
       "fl_reference": "WAV/MP3/OGG supported.",
-      "limeshot_behavior": "Decoder crate (e.g. symphonia) behind the SampleData interface.",
+      "limeshot_behavior": "Samples in MP3, FLAC, Ogg Vorbis and AIFF load like WAVs (symphonia; stereo, first two channels, damaged frames skipped): the Browser lists them, the sample pickers offer them, samplers and audio clips play them.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp",
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp tests/formats.rs::aiff_and_flac_decode_sample_for_sample",
+        "limeshot-dsp tests/formats.rs::audio_extensions_and_bad_files",
+        "crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3660,7 +3668,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are."
     },
     {
       "id": "INS-009",

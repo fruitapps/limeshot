@@ -18,7 +18,7 @@ pub mod sample;
 pub use envelope::{Adsr, Envelope};
 pub use instrument::{Instrument, NoteEvent, NoteEventKind, Transport};
 pub use osc::Oscillator;
-pub use sample::{BitDepth, SampleData, SampleError, load_wav, write_wav};
+pub use sample::{AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, is_audio_file, load_audio, load_wav, write_wav};
 
 /// Decibels to linear gain. −120 dB and below is silence.
 pub fn db_to_gain(db: f32) -> f32 {

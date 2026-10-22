@@ -5337,3 +5337,36 @@ fn audio_clip_fade_handles_set_the_fades() {
         "the clip did not move"
     );
 }
+
+/// INS-008: a FLAC (or MP3, Ogg, AIFF) sample shows in the Browser and loads into a sampler
+/// like a WAV.
+#[test]
+fn compressed_samples_list_load_and_play() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../limeshot-dsp/tests/fixtures/sine.flac");
+    let flac = dir.path().join("Sine.flac");
+    std::fs::copy(&src, &flac).expect("copy");
+    std::fs::write(dir.path().join("notes.txt"), "not a sample").expect("write");
+    assert!(limeshot_ui::browser::is_sample(&flac));
+    assert!(!limeshot_ui::browser::is_sample(&dir.path().join("notes.txt")));
+    let mut h = harness(true);
+    let kick = h.state().project().channels[0].id;
+    limeshot_ui::browser::assign_sample(h.state_mut(), kick, &flac);
+    let stored = flac.to_string_lossy().into_owned();
+    wait_for(&mut h, "the FLAC to load", |a| {
+        matches!(
+            a.samples.status(&stored),
+            Some(limeshot_audio::assets::SampleStatus::Ready(_))
+        )
+    });
+    if let Some(limeshot_audio::assets::SampleStatus::Ready(s)) = h.state().samples.status(&stored) {
+        assert_eq!((s.sample_rate, s.frames()), (22_050, 2205));
+    }
+    // The playback snapshot holds the decoded sample (a voice of 0.1 s is too short to poll for).
+    wait_for(&mut h, "the snapshot", |a| {
+        matches!(
+            &a.snapshot().channels[0].instrument,
+            limeshot_sequencer::InstrumentState::Sampler { sample: Some(s), .. } if s.frames() == 2205
+        )
+    });
+}
