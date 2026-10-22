@@ -2635,6 +2635,20 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-007",
       "notes": "Settings › General › Hints and warnings: 'Ask before deleting channels'."
+    },
+    {
+      "id": "SET-189",
+      "page": "Options",
+      "section": "Switches",
+      "setting": "Auto scrolling",
+      "control": "switch",
+      "fl_default": "",
+      "fl_reference": "Options › Auto scrolling; toolbar Auto scrolling button (session 15)",
+      "confidence": "OBSERVED",
+      "limeshot_setting": "settings.auto_scroll",
+      "status": "IMPLEMENTED",
+      "feature": "UI-016",
+      "notes": "Off by default. Shared Options/toolbar switch, saved with application settings; no project edit."
     }
   ]
 }

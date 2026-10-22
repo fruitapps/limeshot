@@ -421,6 +421,8 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         full.right_bottom(),
     );
 
+    let follow = app.settings.auto_scroll && app.is_playing() && app.ui.mode == limeshot_engine::PlayMode::Pattern;
+    let position = app.player.status().position();
     let st = &mut app.ui.piano;
     if !st.scrolled_once {
         // Centre on C6 (key 72): the melody range of most patterns.
@@ -430,6 +432,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let max_y = (128.0 * st.key_h - grid.height()).max(0.0);
     st.scroll.y = st.scroll.y.clamp(0.0, max_y);
     st.scroll.x = st.scroll.x.max(0.0);
+    if follow && st.drag.is_none() {
+        crate::widgets::follow_playhead(&mut st.scroll.x, position as f32 * st.zoom_x / PPQ as f32, grid.width());
+    }
     let view = View {
         grid,
         ppt: st.zoom_x / PPQ as f32,

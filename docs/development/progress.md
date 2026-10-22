@@ -995,3 +995,20 @@ normalised paste across pan/fader scales, undo, reset, typing validation, cancel
 Validation: `cargo test --workspace` (329 tests, including 122 headless UI tests), workspace Clippy with warnings
 denied, workspace build, rustfmt, inventory check (730 menus) and `git diff --check`. Rendered and inspected the
 new dialog with `ui_shot --mixer --dialog=control` (`/tmp/limeshot-control-value.png`). No live UI checks performed.
+
+
+### 2026-10-22 — Codex continuation: Auto scrolling (UI-016)
+
+Added a saved `settings.auto_scroll` switch shared by Options and the toolbar's painter arrow icon. It is off by
+default to preserve existing settings behavior. While enabled and playing, Playlist follows Song position and
+Piano Roll follows Pattern position, paging only when the playhead leaves view; a return to the loop/locate start
+brings the view back. Stopped transport and active editor drags leave the view alone. Thresholds are LimeShot's
+own, not a claim about FL's exact scroll algorithm. No shortcut was added.
+
+Tests cover both switches, no project edits, both editors' playback/return behavior, disabling follow and manual
+inspection while stopped, plus settings save/load and old settings defaults. The playback tests locate outside the
+viewport after sending the new pattern snapshot instead of depending on long wall-clock waits.
+
+Validation: `cargo test --workspace` (331 tests, 124 headless UI tests), workspace Clippy with warnings denied,
+rustfmt, inventory validation (189 settings, 730 menus) and `git diff --check`. Rendered and inspected the toolbar
+and Options switch using `ui_shot --menu=Options --auto-scroll` (`/tmp/limeshot-auto-scroll.png`).

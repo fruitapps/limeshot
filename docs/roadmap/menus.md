@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **730** — IMPLEMENTED 195, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 385, NOT_PLANNED 41
+Tracked: **730** — IMPLEMENTED 197, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 383, NOT_PLANNED 41
 
 ## Summary
 
@@ -17,10 +17,10 @@ Tracked: **730** — IMPLEMENTED 195, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTE
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 16 | 1 | 26 | 5 | 4 |
-| Options | 24 | 8 | 0 | 14 | 2 | 2 |
+| Options | 24 | 9 | 0 | 13 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
-| Toolbar | 52 | 23 | 8 | 18 | 3 | 2 |
+| Toolbar | 52 | 24 | 8 | 17 | 3 | 2 |
 | Channel Rack | 72 | 25 | 12 | 31 | 4 | 2 |
 | Piano Roll | 137 | 45 | 22 | 67 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
@@ -74,7 +74,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | SEQ-012 | P2 | VERIFIED | Channel filter groups | MENU-359 Channel Rack › Options › Auto switch display filter |
 | SEQ-014 | P2 | VERIFIED | Fill / rotate / advanced fill | MENU-395 Channel Rack › Channel menu › Advanced fill...<br>MENU-396 Channel Rack › Channel menu › Auto fill |
 | UI-013 | P2 | IMPLEMENTED | Window layout commands | MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate) |
-| UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling<br>MENU-318 Toolbar › Auto scrolling |
 | WF-004 | P2 | NOT_STARTED | Controller mapping (link to controller) | MENU-144 View › Remote control<br>MENU-175 Options › Multilink to controllers<br>MENU-218 Tools › Last tweaked › Link to controller...<br>MENU-219 Tools › Last tweaked › Override global link...<br>MENU-224 Tools › Last tweaked › Override volatile link...<br>MENU-233 Tools › Next to last tweaked › Link to controller...<br>MENU-234 Tools › Next to last tweaked › Override global link...<br>MENU-239 Tools › Next to last tweaked › Override volatile link...<br>MENU-685 Mixer › Options › Link all parameters... |
 | WF-005 | P2 | NOT_STARTED | External MIDI devices / MIDI out | MENU-164 Options › Enable MIDI output |
 | WF-010 | P2 | NOT_STARTED | Score logger | MENU-194 Tools › Dump score log to selected pattern<br>MENU-195 Tools › Dump score log to selected pattern › Last 2 minutes<br>MENU-196 Tools › Dump score log to selected pattern › Last 5 minutes<br>MENU-197 Tools › Dump score log to selected pattern › Last 10 minutes<br>MENU-198 Tools › Dump score log to selected pattern › Last 20 minutes<br>MENU-199 Tools › Dump score log to selected pattern › Last 30 minutes<br>MENU-200 Tools › Clear log |
@@ -311,7 +310,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-170 | Blend recorded notes | Switches | toggle | `Cmd+B` |  | — | NOT_STARTED | REC-010 |  |
 | MENU-171 | Step edit | Switches | toggle | `Cmd+E` |  | — | NOT_STARTED | REC-009 |  |
 | MENU-172 | Loop record | Switches | toggle |  |  | — | NOT_STARTED | REC-005 |  |
-| MENU-173 | Auto scrolling | Switches | toggle |  |  | — | NOT_STARTED | UI-016 |  |
+| MENU-173 | Auto scrolling | Switches | toggle |  |  | Options › Auto scrolling | IMPLEMENTED | UI-016 | Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default. |
 | MENU-174 | Enable groups | Switches | toggle | `Shift+Opt+G` | checked | — | NOT_STARTED | WF-013 |  |
 | MENU-175 | Multilink to controllers | Switches | toggle | `Cmd+J` |  | — | NOT_STARTED | WF-004 |  |
 | MENU-176 | Manage accounts... | 3rd party services | dialog |  |  | — | NOT_PLANNED |  |  |
@@ -471,7 +470,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-315 | Piano roll / Maximize Piano roll | Shortcut icons | toggle | `F7` |  | Toolbar › Piano Roll | IMPLEMENTED | UI-002 | A click toggles it; a right-click shows it maximised, as in FL. |
 | MENU-316 | Playlist / Maximize Play list | Shortcut icons | toggle | `F5` |  | Toolbar › Playlist | IMPLEMENTED | UI-002 | As Piano roll. |
 | MENU-317 | Mixer | Shortcut icons | toggle | `F9` |  | Toolbar › Mixer | IMPLEMENTED | UI-002 |  |
-| MENU-318 | Auto scrolling | Shortcut icons | toggle |  |  | — | NOT_STARTED | UI-016 |  |
+| MENU-318 | Auto scrolling | Shortcut icons | toggle |  |  | Toolbar › Auto scrolling — follow the playhead | IMPLEMENTED | UI-016 | Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default. |
 | MENU-319 | One-click audio recording | Shortcut icons | control |  |  | — | NOT_STARTED | REC-001 |  |
 | MENU-320 | Main snap / quantization / step edit step | Snap | list | `BkSp` |  | Toolbar › snap selector | DIFFERENT | PR-005 | LimeShot has FL's list in FL's order: (none), 1/6, 1/4, 1/3, 1/2 step, Step, 1/6, 1/4, 1/3, 1/2 beat, Beat, Bar; not FL's Line and Cell (the Piano Roll's own grid modes) or the BkSp key. |
 | MENU-321 | Pattern options | Patterns | submenu |  |  | Toolbar › pattern selector | DIFFERENT | SEQ-021 | The ▸ left of the selector opens the Patterns menu (pattern list and commands). LimeShot's selector menu lists the patterns and Create new; the commands are in the main Patterns menu. |

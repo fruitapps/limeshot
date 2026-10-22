@@ -5543,3 +5543,95 @@ fn control_value_dialog_validates_commits_once_and_cancels() {
     assert_eq!(h.state().project().mixer.tracks[1].pan, 0.0);
     assert_eq!(h.state().doc.history().len(), history);
 }
+
+#[test]
+fn auto_scrolling_switches_follow_each_other_without_editing_the_project() {
+    let mut h = harness(false);
+    assert!(!h.state().settings.auto_scroll);
+    h.get_by_label("Auto scrolling — follow the playhead").click();
+    h.step();
+    assert!(h.state().settings.auto_scroll);
+    let options = h.get_by_label("Options").rect().center();
+    click(&mut h, options, PointerButton::Primary);
+    h.step();
+    h.get_all_by_label_contains("Auto scrolling")
+        .find(|n| n.rect().top() > 90.0)
+        .expect("Options menu switch")
+        .click();
+    h.step();
+    assert!(!h.state().settings.auto_scroll);
+    assert!(!h.state().doc.is_modified());
+    assert!(h.state().doc.history().is_empty());
+}
+
+/// UI-016: locate beyond the viewport instead of waiting for wall-clock playback to get there.
+#[test]
+fn auto_scrolling_follows_playback_and_loop_returns_only_when_enabled() {
+    use limeshot_engine::PlayMode;
+    for (mode, window) in [(PlayMode::Pattern, Win::PianoRoll), (PlayMode::Song, Win::Playlist)] {
+        let mut h = harness(true);
+        let channel = h.state().project().channels[0].id;
+        let pattern = h.state().current_pattern();
+        h.state_mut().select_channel(channel);
+        h.state_mut().exec(Command::SetPatternLength {
+            pattern,
+            steps: Some(128),
+        });
+        h.state_mut().doc.mark_saved();
+        h.state_mut().ui.workspace.close(Win::ChannelRack);
+        h.state_mut().show_window(window);
+        h.state_mut().ui.workspace.state_mut(window).maximized = true;
+        h.state_mut().ui.piano.zoom_x = 160.0;
+        h.state_mut().ui.playlist.zoom_x = 160.0;
+        h.state_mut().set_auto_scroll(true);
+        h.state_mut().set_mode(mode);
+        let target = 16 * PPQ;
+        h.step(); // send the new pattern length before locating beyond the original loop
+        h.state_mut().locate(target);
+        wait_for(&mut h, "locate before playback", |a| {
+            a.player.status().position() == target
+        });
+        h.step();
+        let scroll = |a: &LimeShotApp| {
+            if mode == PlayMode::Pattern {
+                a.ui.piano.scroll.x
+            } else {
+                a.ui.playlist.scroll.x
+            }
+        };
+        assert_eq!(scroll(h.state()), 0.0, "stopped editors do not follow");
+        h.state_mut().toggle_play();
+        wait_for(&mut h, "playback", |a| a.is_playing());
+        h.step();
+        assert!(scroll(h.state()) > 0.0, "the active editor follows");
+        let position = h.state().player.status().position();
+        let (x, grid) = if mode == PlayMode::Pattern {
+            let g = h.state().ui.piano.geometry.expect("piano");
+            (g.pos(position, 60).x, g.grid)
+        } else {
+            let g = h.state().ui.playlist.geometry.expect("playlist");
+            (g.pos(position, 0).x, g.grid)
+        };
+        assert!(x >= grid.left() && x <= grid.right(), "the playhead is visible");
+        h.state_mut().set_auto_scroll(false);
+        h.state_mut().ui.piano.scroll.x = 0.0;
+        h.state_mut().ui.playlist.scroll.x = 0.0;
+        h.step();
+        h.step();
+        assert_eq!(scroll(h.state()), 0.0, "switch off leaves the view alone");
+        h.state_mut().set_auto_scroll(true);
+        h.step();
+        assert!(scroll(h.state()) > 0.0);
+        h.state_mut().locate(0);
+        wait_for(&mut h, "return to the start", |a| a.player.status().position() < PPQ);
+        h.step();
+        assert_eq!(scroll(h.state()), 0.0, "loop/locate returns bring the view back");
+        h.state_mut().stop();
+        wait_for(&mut h, "stop", |a| !a.is_playing());
+        h.state_mut().ui.piano.scroll.x = 1000.0;
+        h.state_mut().ui.playlist.scroll.x = 1000.0;
+        h.step();
+        assert_eq!(scroll(h.state()), 1000.0, "manual inspection works while stopped");
+        assert!(!h.state().doc.is_modified());
+    }
+}

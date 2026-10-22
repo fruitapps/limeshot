@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 84, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 146, DEFERRED 4
+- By status: NOT_STARTED 83, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 147, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -28,7 +28,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Export | 18 | 6 | 0 | 0 | 12 |
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
-| UI | 18 | 8 | 2 | 1 | 7 |
+| UI | 18 | 9 | 2 | 1 | 6 |
 | Platform | 6 | 1 | 4 | 1 | 0 |
 
 ## Application
@@ -368,7 +368,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | UI-013 | Window layout commands | P2 |  | IMPLEMENTED | View › Layout: Close all windows (F12; editors and plugin windows), Close all plugin windows (Opt+F12), Close all unfocused windows (Cmd+F12; keeps the focused editor), Align all channel editors (Shift+F12; stacks the open plugin windows at the main window's top left), Arrange windows › Realign (Cmd+Shift+H), Into workspace (docks detached windows), Layouts › Desktop (default) (FL's new-project layout), Custom (enabled once saved) and Save custom layout (open/maximised/detached/pinned states and each window's place as fractions of the workspace, kept in LimeShot's settings so it survives a restart). Not done: FL's Desktop (alternate) and Tablet layouts, the Background submenu (UI-015).<br>*Session 15. Headless tests apply a saved layout and round-trip it through JSON; the restart itself (settings.json) was not exercised in the live app.* | `crates/limeshot-app/tests/ui.rs::view_layout_commands_close_align_and_restore_windows` |
 | UI-014 | Toolbar customisation and presets | P3 |  | NOT_STARTED | Not implemented. | — |
 | UI-015 | Workspace background | P3 |  | NOT_STARTED | Not implemented. | — |
-| UI-016 | Auto scrolling option | P2 |  | NOT_STARTED | Not implemented.<br>*Check what LimeShot's editors do today before implementing.* | — |
+| UI-016 | Auto scrolling option | P2 |  | VERIFIED | Options › Auto scrolling and the toolbar arrow share a saved switch (off by default). While playing, Playlist follows Song position and Piano Roll follows Pattern position. The view pages when the playhead leaves the visible span and returns on loop/locate; it stays still while stopped, switched off, or during an active editor drag.<br>*Codex continuation 2026-10-22. Follows existing editor playheads (Piano Roll in Pattern mode, Playlist in Song mode). Off by default to preserve existing settings behavior. Paging is LimeShot's own; FL's exact scrolling thresholds were not measured. No shortcut was claimed.* | `limeshot-app tests/ui.rs::auto_scrolling_switches_follow_each_other_without_editing_the_project`<br>`limeshot-app tests/ui.rs::auto_scrolling_follows_playback_and_loop_returns_only_when_enabled`<br>`limeshot-ui settings::tests::round_trip_and_recent_list` |
 | UI-017 | Control creator | P3 |  | DEFERRED | Not implemented. | — |
 | UI-018 | Plugin picker | P3 |  | NOT_STARTED | Not implemented. | — |
 

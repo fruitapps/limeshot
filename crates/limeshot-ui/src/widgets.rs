@@ -650,3 +650,11 @@ pub fn user_changed(r: &Response) -> bool {
 pub fn clickable(r: &Response) -> Response {
     r.interact(egui::Sense::click())
 }
+
+/// Page horizontally only when the playhead leaves the visible span; returning to the loop
+/// start brings the view back too. Leave room ahead without moving content every frame.
+pub(crate) fn follow_playhead(scroll: &mut f32, playhead: f32, width: f32) {
+    if width > 8.0 && (playhead < *scroll || playhead > *scroll + width - 4.0) {
+        *scroll = (playhead - width * 0.1).max(0.0);
+    }
+}

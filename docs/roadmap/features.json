@@ -8154,9 +8154,9 @@
       "name": "Auto scrolling option",
       "description": "Editors follow the playhead during playback; one switch turns it off.",
       "fl_reference": "Options › Auto scrolling.",
-      "limeshot_behavior": "Not implemented.",
+      "limeshot_behavior": "Options › Auto scrolling and the toolbar arrow share a saved switch (off by default). While playing, Playlist follows Song position and Piano Roll follows Pattern position. The view pages when the playhead leaves the visible span and returns on loop/locate; it stays still while stopped, switched off, or during an active editor drag.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -8166,7 +8166,11 @@
         "When on, Playlist and Piano Roll scroll to keep the playhead visible.",
         "The switch is saved in settings."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-app tests/ui.rs::auto_scrolling_switches_follow_each_other_without_editing_the_project",
+        "limeshot-app tests/ui.rs::auto_scrolling_follows_playback_and_loop_returns_only_when_enabled",
+        "limeshot-ui settings::tests::round_trip_and_recent_list"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -8175,7 +8179,7 @@
           "docs/research/evidence/screenshots/fl-menu-options.png"
         ]
       },
-      "notes": "Check what LimeShot's editors do today before implementing."
+      "notes": "Codex continuation 2026-10-22. Follows existing editor playheads (Piano Roll in Pattern mode, Playlist in Song mode). Off by default to preserve existing settings behavior. Paging is LimeShot's own; FL's exact scrolling thresholds were not measured. No shortcut was claimed."
     },
     {
       "id": "UI-017",

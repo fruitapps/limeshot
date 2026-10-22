@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **188** — IMPLEMENTED 21, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED 15
+Tracked: **189** — IMPLEMENTED 22, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED 15
 
 ## MIDI
 
@@ -269,3 +269,9 @@ Tracked: **188** — IMPLEMENTED 21, IN_PROGRESS 1, NOT_STARTED 151, NOT_PLANNED
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | SET-028 |  | Confirm channel deletion |  |  | Confirm dialog › Remember my choice | OBSERVED | `settings.confirm_channel_delete` | IMPLEMENTED | SEQ-007 | Settings › General › Hints and warnings: 'Ask before deleting channels'. |
+
+## Options
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-189 | Switches | Auto scrolling | switch |  | Options › Auto scrolling; toolbar Auto scrolling button (session 15) | OBSERVED | `settings.auto_scroll` | IMPLEMENTED | UI-016 | Off by default. Shared Options/toolbar switch, saved with application settings; no project edit. |

@@ -79,6 +79,10 @@ of notes/clips. Type-in uses the control's units and commits once on OK; invalid
 
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
 
+Options › Auto scrolling and the toolbar arrow share `settings.auto_scroll` (off by default). When enabled,
+Playlist follows Song playback and Piano Roll follows Pattern playback. They page when the playhead leaves
+view, including returning to a loop start; stopped transport and active editor drags leave the view alone.
+
 ## Keyboard
 
 Global: Space play/stop, Cmd+Space play/pause, L Pattern/Song, Cmd+M metronome, Cmd+H panic, F4 new pattern, F5/F6/F7/F9

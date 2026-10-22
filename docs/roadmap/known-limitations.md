@@ -56,6 +56,8 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * The Playback tool scrubs notes only: the Playlist's line sounds the pattern clips' notes under it, not audio clips
   (no audio scrubbing). Notes start from their beginning when the line reaches them. FL Studio's Playback tool plays
   on from the pointer instead; LimeShot scrubs at the owner's request.
+* Auto scrolling follows the existing playheads: Playlist in Song mode and Piano Roll in Pattern mode only.
+  It starts off; enable it from Options or the toolbar. Paging thresholds are LimeShot's own.
 * Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
 * The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Its ⏵ menu has no Zip /
   Unzip, layers, per-channel swing mix or display options; Sort by offers name, type and colour only.

@@ -611,6 +611,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     let m = !app.ui.metronome;
                     app.set_metronome(m);
                 }
+                if toggle(ui, app.settings.auto_scroll, "Auto scrolling", "") {
+                    app.set_auto_scroll(!app.settings.auto_scroll);
+                }
                 if toggle(ui, app.ui.song_loop, "Loop song", "") {
                     let l = !app.ui.song_loop;
                     app.set_song_loop(l);

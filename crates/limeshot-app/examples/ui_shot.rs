@@ -25,6 +25,9 @@ fn main() {
             app.select_channel(c);
         }
     }
+    if args.iter().any(|a| a == "--auto-scroll") {
+        app.set_auto_scroll(true);
+    }
     if args.iter().any(|a| a == "--markers") {
         // Two time markers and a time selection over bars 3–4, Channel Rack closed.
         let bar = app.project().time_signature.ticks_per_bar();

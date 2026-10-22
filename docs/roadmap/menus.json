@@ -2998,10 +2998,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Auto scrolling",
+      "status": "IMPLEMENTED",
       "feature": "UI-016",
-      "notes": ""
+      "notes": "Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default."
     },
     {
       "id": "MENU-174",
@@ -5541,10 +5541,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › Auto scrolling — follow the playhead",
+      "status": "IMPLEMENTED",
       "feature": "UI-016",
-      "notes": ""
+      "notes": "Shared saved settings.auto_scroll switch. Playlist follows Song playback; Piano Roll follows Pattern playback. Off by default."
     },
     {
       "id": "MENU-319",

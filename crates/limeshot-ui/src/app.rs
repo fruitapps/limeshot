@@ -494,6 +494,11 @@ impl LimeShotApp {
         }
     }
 
+    pub fn set_auto_scroll(&mut self, on: bool) {
+        self.settings.auto_scroll = on;
+        self.save_settings();
+    }
+
     pub fn is_playing(&self) -> bool {
         self.player.status().is_playing()
     }
