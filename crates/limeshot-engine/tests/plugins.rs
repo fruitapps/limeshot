@@ -364,3 +364,161 @@ fn plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames(
         }
     }
 }
+
+/// A plugin instrument that sounds an impulse `latency` frames after each note-on, and reports
+/// that latency, as a look-ahead plugin would.
+struct Click {
+    latency: u32,
+    /// Frames until the next impulse, if one is due.
+    due: Vec<u64>,
+    frame: u64,
+}
+
+impl PluginInstrument for Click {
+    fn process(&mut self, out: &mut [f32], notes: &[NoteEvent], _t: &Transport) {
+        out.fill(0.0);
+        for e in notes {
+            if matches!(e.kind, NoteEventKind::On { .. }) {
+                self.due
+                    .push(self.frame + u64::from(e.offset) + u64::from(self.latency));
+            }
+        }
+        let n = (out.len() / 2) as u64;
+        for &d in &self.due {
+            if d >= self.frame && d < self.frame + n {
+                let i = (d - self.frame) as usize;
+                out[2 * i] = 1.0;
+                out[2 * i + 1] = 1.0;
+            }
+        }
+        self.due.retain(|&d| d >= self.frame + n);
+        self.frame += n;
+    }
+    fn reset(&mut self) {}
+    fn latency(&self) -> u32 {
+        self.latency
+    }
+}
+
+/// An insert that delays its input by `latency` frames and reports it.
+struct Lag {
+    line: Vec<f32>,
+    pos: usize,
+}
+
+impl limeshot_dsp::effects::Effect for Lag {
+    fn set_params(&mut self, _params: &[f32]) {}
+    fn process(&mut self, buf: &mut [f32]) {
+        let len = self.line.len();
+        for s in buf.iter_mut() {
+            std::mem::swap(&mut self.line[self.pos], s);
+            self.pos = (self.pos + 1) % len;
+        }
+    }
+    fn reset(&mut self) {}
+    fn latency(&self) -> u32 {
+        (self.line.len() / 2) as u32
+    }
+}
+
+#[test]
+fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
+    // Three plugin channels play one note together at tick 960 (frame 24 000): A on insert 1
+    // through a 1000-frame look-ahead insert, B on insert 2 with nothing, and C on insert 2 with
+    // a 300-frame instrument latency. Insert 3 routes into insert 1 (through its lag) and has
+    // channel D. Every impulse must reach the master on the same frame, and the export starts
+    // where the music starts.
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let pat = doc.project().patterns[0].id;
+    let mut channels = Vec::new();
+    for (name, track) in [("A", 1u16), ("B", 2), ("C", 2), ("D", 3)] {
+        let ch = ChannelId(
+            doc.execute(Command::AddChannel {
+                name: name.into(),
+                instrument: Instrument::Plugin(PluginRef::vst3("/x.vst3", "00", name)),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        doc.execute(Command::SetChannelMixerTrack { channel: ch, track })
+            .unwrap();
+        doc.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel: ch,
+                key: 60,
+                start: 960,
+                length: 480,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+        channels.push(ch);
+    }
+    let lag = doc
+        .execute(Command::AddPluginEffect {
+            track: 1,
+            plugin: PluginRef::vst3("/lag.vst3", "01", "Lag"),
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    doc.execute(Command::SetRoute {
+        from: 3,
+        to: 0,
+        level: None,
+    })
+    .unwrap();
+    doc.execute(Command::SetRoute {
+        from: 3,
+        to: 1,
+        level: Some(1.0),
+    })
+    .unwrap();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    for block in [64, 333, 1024] {
+        let click = |latency| {
+            Box::new(Click {
+                latency,
+                due: Vec::new(),
+                frame: 0,
+            }) as Box<dyn PluginInstrument>
+        };
+        let processors = Processors {
+            effects: vec![(
+                lag,
+                Box::new(Lag {
+                    line: vec![0.0; 2 * 1000],
+                    pos: 0,
+                }),
+            )],
+            instruments: vec![
+                (channels[0].0, click(0)),
+                (channels[1].0, click(0)),
+                (channels[2].0, click(300)),
+                (channels[3].0, click(0)),
+            ],
+        };
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 0.0,
+            block,
+        };
+        let (audio, report) = render_offline_with(snap.clone(), &settings, processors).unwrap();
+        let hits: Vec<usize> = audio
+            .chunks(2)
+            .enumerate()
+            .filter(|(_, f)| f[0].abs() > 1e-6)
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(hits, [24_000], "block {block}: every path lines up on the note's frame");
+        assert_eq!(
+            audio.len() / 2,
+            report.music_frames,
+            "the compensation delay is trimmed"
+        );
+    }
+}

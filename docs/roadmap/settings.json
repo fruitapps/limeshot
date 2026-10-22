@@ -352,7 +352,7 @@
       "limeshot_setting": "settings.audio.device",
       "status": "IMPLEMENTED",
       "feature": "APP-012",
-      "notes": "FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Audio settings show the open device and rate."
+      "notes": "FL: 'Open, set to 48000Hz, 1x2 outputs, 0x2 inputs available' and input/output/plugin latency in samples and ms. LimeShot's Audio settings show the open device, rate and plugin delay compensation."
     },
     {
       "id": "SET-003",
@@ -2326,7 +2326,7 @@
       "limeshot_setting": "",
       "status": "NOT_STARTED",
       "feature": "MIX-012",
-      "notes": ""
+      "notes": "LimeShot always trims the compensation delay from exports (no switch)."
     },
     {
       "id": "SET-172",

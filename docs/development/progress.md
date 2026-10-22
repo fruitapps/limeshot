@@ -561,3 +561,16 @@ tests for the menu, the last-tweaked item, the plugin's control following the cu
 right-click. `cargo test --workspace`, Clippy (`-D warnings`, also `x86_64-pc-windows-msvc`), `cargo fmt --check` and
 `scripts/features.py check` pass. Not done: listening to automation on a commercial plugin in the live app.
 
+### Session 15, part 3: plugin delay compensation (PLG-009, MIX-012)
+
+Processors report their latency through the DSP traits (`Effect`/`Instrument::latency`; a VST3 processor returns
+what the control thread last read, refreshed on kLatencyChanged). The renderer plans compensation itself
+(`engine/src/pdc.rs`) whenever the snapshot or a latency changes: each track's arrival latency is the latest of its
+inputs, its voices and earlier plugin channels are delayed to match, and routes read the source track's output ring
+at their own tap. 64 rings of 16 384 frames are allocated with the renderer; planning keeps rings already in use, so
+edits do not interrupt delayed audio. Exports drop the leading delay (FL's Trim PDC silence) and render that much
+longer; the Audio settings show the total. Verification: an engine test where a 1000-frame look-ahead insert, a
+300-frame instrument latency, a plain track and a track routed through the latent one all land on frame 24 000 at
+block sizes 64, 333 and 1024 (without compensation they land on 24 000, 24 300 and 25 000); the full suite, Clippy
+(also for Windows) and fmt pass. Not done: listening with a commercial latent plugin.
+

@@ -56,4 +56,8 @@ pub trait Instrument: Send {
     /// Set a hosted plugin's parameter `id` (normalised) at frame `offset` of the next `process`
     /// call (automation). Only plugins have such parameters.
     fn set_plugin_param(&mut self, _id: u32, _offset: u32, _value: f64) {}
+    /// How many frames the output lags the notes (a plugin's reported latency).
+    fn latency(&self) -> u32 {
+        0
+    }
 }

@@ -466,8 +466,14 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                             });
                         ui.end_row();
                     });
+                let sr = app.player.sample_rate();
+                let pdc = app.player.status().latency();
                 let status = match app.player.output_description() {
-                    Ok(n) => format!("Now: {n}, {} Hz", app.player.sample_rate()),
+                    // FL Studio's device status also lists the plugin latency.
+                    Ok(n) => format!(
+                        "Now: {n}, {sr} Hz. Plugin delay compensation: {pdc} samples ({:.1} ms)",
+                        f64::from(pdc) * 1000.0 / f64::from(sr.max(1))
+                    ),
                     Err(e) => format!("Now: no output ({e})"),
                 };
                 ui.label(RichText::new(status).small().color(Theme::current().text_dim));

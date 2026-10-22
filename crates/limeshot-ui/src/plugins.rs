@@ -590,6 +590,9 @@ impl limeshot_dsp::effects::Effect for ReturnOnDrop {
             p.set_param_at(id, offset, value);
         }
     }
+    fn latency(&self) -> u32 {
+        self.inner.as_ref().map_or(0, |p| p.latency())
+    }
 }
 
 impl limeshot_dsp::Instrument for ReturnOnDrop {
@@ -608,6 +611,9 @@ impl limeshot_dsp::Instrument for ReturnOnDrop {
         if let Some(p) = &mut self.inner {
             p.set_param_at(id, offset, value);
         }
+    }
+    fn latency(&self) -> u32 {
+        self.inner.as_ref().map_or(0, |p| p.latency())
     }
 }
 

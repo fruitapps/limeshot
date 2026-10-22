@@ -1,7 +1,7 @@
 //! A VST3 plugin instance, split into its control-thread and audio-thread halves.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use vst3::Steinberg::Vst::*;
 use vst3::Steinberg::*;
@@ -65,6 +65,9 @@ struct Core {
     handler: ComWrapper<ComponentHandler>,
     _host: ComWrapper<HostApp>,
     active: AtomicBool,
+    /// The plugin's latency in samples, read on the control thread for the audio thread's
+    /// delay compensation.
+    latency: AtomicU32,
     _module: Arc<Vst3Module>,
 }
 
@@ -218,6 +221,7 @@ impl Vst3Instance {
                 handler,
                 _host: host,
                 active: AtomicBool::new(false),
+                latency: AtomicU32::new(0),
                 _module: module.clone(),
             };
             if let Some(c) = &core.controller {
@@ -271,6 +275,8 @@ impl Vst3Instance {
                 return Err(PluginError::Call("activate"));
             }
             core.active.store(true, Ordering::Release);
+            core.latency
+                .store(core.processor.getLatencySamples(), Ordering::Relaxed);
 
             let params = Self::read_params(&core);
             let core = Arc::new(core);
@@ -517,13 +523,20 @@ impl Vst3Instance {
     /// Whether the plugin reported changed parameter values or settings (`restartComponent`)
     /// since the last call, as plugins do after loading one of their own presets.
     pub fn take_restart(&mut self) -> bool {
-        self.core.handler.restart_flags.swap(0, Ordering::Relaxed) != 0
+        let flags = self.core.handler.restart_flags.swap(0, Ordering::Relaxed);
+        if flags & RestartFlags_::kLatencyChanged as i32 != 0 {
+            self.latency_samples();
+        }
+        flags != 0
     }
 
-    /// The plugin's latency in samples, for delay compensation.
+    /// The plugin's latency in samples, for delay compensation. Reading it also passes it to the
+    /// audio thread's half.
     pub fn latency_samples(&self) -> u32 {
         // SAFETY: a plain query on the live processor.
-        unsafe { self.core.processor.getLatencySamples() }
+        let l = unsafe { self.core.processor.getLatencySamples() };
+        self.core.latency.store(l, Ordering::Relaxed);
+        l
     }
 
     /// The processor's and the controller's state, as one blob for the project file.
@@ -799,6 +812,12 @@ impl Vst3Processor {
         c.timeSigDenominator = t.time_sig.1;
     }
 
+    /// The plugin's latency as last read on the control thread
+    /// ([`Vst3Instance::latency_samples`]).
+    pub fn latency(&self) -> u32 {
+        self.core.latency.load(Ordering::Relaxed)
+    }
+
     /// Restart processing (clears tails), from the audio thread.
     pub fn restart(&mut self) {
         if self.processing {
@@ -841,6 +860,10 @@ impl limeshot_dsp::effects::Effect for Vst3Processor {
     fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
         self.set_param_at(id, offset, value);
     }
+
+    fn latency(&self) -> u32 {
+        Vst3Processor::latency(self)
+    }
 }
 
 impl limeshot_dsp::Instrument for Vst3Processor {
@@ -855,6 +878,10 @@ impl limeshot_dsp::Instrument for Vst3Processor {
 
     fn set_plugin_param(&mut self, id: u32, offset: u32, value: f64) {
         self.set_param_at(id, offset, value);
+    }
+
+    fn latency(&self) -> u32 {
+        Vst3Processor::latency(self)
     }
 }
 

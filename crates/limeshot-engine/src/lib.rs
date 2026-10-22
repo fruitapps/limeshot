@@ -12,6 +12,7 @@
 
 pub mod export;
 pub mod fx;
+mod pdc;
 mod plugins;
 pub mod renderer;
 pub mod voice;

@@ -203,6 +203,15 @@ impl FxRack {
         }
     }
 
+    /// The summed latency of track `t`'s enabled effects, in frames.
+    pub fn track_latency(&self, t: usize) -> u32 {
+        self.chains.get(t).map_or(0, |c| {
+            c.iter()
+                .filter(|p| p.enabled)
+                .fold(0u32, |sum, p| sum.saturating_add(p.fx.latency()))
+        })
+    }
+
     pub fn has_effects(&self) -> bool {
         self.chains.iter().any(|c| !c.is_empty())
     }

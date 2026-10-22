@@ -3184,21 +3184,30 @@
       "id": "MIX-012",
       "category": "Mixer",
       "name": "Plugin delay compensation",
-      "description": "Latency alignment.",
-      "fl_reference": "Automatic PDC.",
-      "limeshot_behavior": "Latency reported by effects aligned across paths.",
+      "description": "Align every path to the master when plugins report latency.",
+      "fl_reference": "FL Studio compensates plugin latency automatically (mixer), shows it under Audio settings › Device status (input, output and plugin latency) and trims it from renders ('Trim PDC silence', on by default).",
+      "limeshot_behavior": "Automatic, always on. For each mixer track the engine works out the latest arrival of its inputs (plugin channels with their latency; routed tracks through their insert latencies) and delays everything that arrives earlier: the track's sampler/LimeSynth voices, plugin channels with less latency, and routes from tracks with less (one delay line per source track, a tap per route). Latencies come from the plugins (`IAudioProcessor::getLatencySamples`, read again when a plugin reports kLatencyChanged) and are rechecked every 16 blocks; the plan keeps its delay lines across edits, so changing the project does not interrupt the delayed audio. Up to 16 384 frames (about 340 ms at 48 kHz) per path and 64 delay lines; paths beyond that stay uncompensated. Exports leave out the delay (FL's Trim PDC silence). The Audio settings show the total ('Plugin delay compensation: N samples').",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "MIX-007"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-plugins",
+        "limeshot-dsp",
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-engine/tests/plugins.rs::plugin_latency_is_compensated_so_parallel_paths_line_up",
+        "crates/limeshot-engine/src/pdc.rs::tests::a_ring_returns_what_was_written_delay_frames_earlier"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3206,7 +3215,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 15. Engine test with impulse plugins at block sizes 64, 333 and 1024 (fails without compensation: impulses at 24 000, 24 300 and 25 000). Not checked by ear with a commercial latent plugin (Elephant reports 1080 samples) in the live app. FL's per-track manual PDC and the Trim PDC silence switch are not offered (always on)."
     },
     {
       "id": "MIX-013",
@@ -5285,21 +5294,25 @@
       "name": "Plugin latency reporting",
       "description": "Plugin latency reporting.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "`Vst3Instance::latency_samples` reports the plugin's latency (for example 1080 samples for Elephant on the dev Mac) and the plugin panel shows it. Delay compensation does not use it yet.",
+      "limeshot_behavior": "`Vst3Instance::latency_samples` reports the plugin's latency (for example 1080 samples for Elephant on the dev Mac), the plugin panel shows it, and the processor passes it to the engine for plugin delay compensation (MIX-012).",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "PLG-004"
       ],
       "modules": [
-        "limeshot-plugins"
+        "limeshot-plugins",
+        "limeshot-engine"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-engine/tests/plugins.rs::plugin_latency_is_compensated_so_parallel_paths_line_up",
+        "crates/limeshot-engine/src/pdc.rs::tests::a_ring_returns_what_was_written_delay_frames_earlier"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5308,7 +5321,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
+      "notes": "Session 15: delay compensation uses it (MIX-012); kLatencyChanged makes the host read it again."
     },
     {
       "id": "PLG-010",

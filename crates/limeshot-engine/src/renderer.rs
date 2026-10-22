@@ -100,6 +100,10 @@ pub struct Renderer {
     /// overridden by automation in Song mode.
     chan_mix: Vec<(f32, f32)>,
     track_mix: Vec<(f32, f32)>,
+    /// Plugin delay compensation.
+    pdc: crate::pdc::Pdc,
+    /// Blocks until plugin latencies are checked again.
+    pdc_check: u32,
 }
 
 impl Renderer {
@@ -137,6 +141,8 @@ impl Renderer {
             chase: true,
             chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
             track_mix: vec![(1.0, 0.0); limeshot_core::Mixer::MAX_TRACKS],
+            pdc: crate::pdc::Pdc::new(),
+            pdc_check: 0,
         };
         r.design_eqs();
         r
@@ -157,6 +163,7 @@ impl Renderer {
         let old = std::mem::replace(&mut self.snapshot, snapshot);
         self.fx.arrange(&self.snapshot);
         self.instruments.arrange(&self.snapshot);
+        self.plan_pdc(true);
         self.design_eqs();
         if tempo_changed {
             // Keep the musical position; continue at the new tempo from here.
@@ -320,6 +327,7 @@ impl Renderer {
     fn reset_effects(&mut self) {
         self.fx_reset_at = None;
         self.fx.reset();
+        self.pdc.clear();
         for eq in &mut self.eqs {
             limeshot_dsp::effects::Effect::reset(eq);
         }
@@ -468,6 +476,15 @@ impl Renderer {
             }
         }
 
+        // Plugins may report a new latency at any time (after loading a preset, say).
+        if self.pdc_check == 0 {
+            self.plan_pdc(false);
+            self.pdc_check = 16;
+        }
+        self.pdc_check -= 1;
+        for t in 0..tracks {
+            self.pdc.voices(t, &mut self.buses[t][..2 * frames]);
+        }
         self.render_instruments(block_start, frames, tracks, &transport);
         self.mix(tracks, frames, out);
     }
@@ -492,15 +509,17 @@ impl Renderer {
     fn render_instruments(&mut self, start: u64, frames: usize, tracks: usize, transport: &limeshot_dsp::Transport) {
         let snapshot = &self.snapshot;
         let chan_mix = &self.chan_mix;
-        self.instruments.render(start, frames, transport, &mut self.buses, |i| {
-            let ch = snapshot.channels.get(i)?;
-            if !ch.audible {
-                return None;
-            }
-            let (volume, pan) = chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
-            let (pl, pr) = pan_gains(pan.clamp(-1.0, 1.0));
-            Some((ch.mixer_track.min(tracks - 1), volume * pl, volume * pr))
-        });
+        let pdc = &mut self.pdc;
+        self.instruments
+            .render(start, frames, transport, &mut self.buses, pdc, |i| {
+                let ch = snapshot.channels.get(i)?;
+                if !ch.audible {
+                    return None;
+                }
+                let (volume, pan) = chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
+                let (pl, pr) = pan_gains(pan.clamp(-1.0, 1.0));
+                Some((ch.mixer_track.min(tracks - 1), volume * pl, volume * pr))
+            });
     }
 
     /// Load channel and mixer settings from the snapshot and apply automation at the current
@@ -792,6 +811,25 @@ impl Renderer {
         let snapshot = self.snapshot.clone();
         self.fx.arrange(&snapshot);
         self.instruments.arrange(&snapshot);
+        self.plan_pdc(true);
+    }
+
+    /// Plan delay compensation for the current snapshot and plugin latencies (`force`: the
+    /// layout changed; otherwise only when a latency did).
+    fn plan_pdc(&mut self, force: bool) {
+        let (fx, instruments) = (&self.fx, &self.instruments);
+        self.pdc.plan(
+            &self.snapshot,
+            |t| fx.track_latency(t),
+            |i| instruments.latency(i),
+            force,
+        );
+    }
+
+    /// How far the output lags the transport, in frames: the longest plugin latency on the way
+    /// to the master (plugin delay compensation delays every other path to match).
+    pub fn latency(&self) -> u32 {
+        self.pdc.total()
     }
 
     /// Take ownership of the plugin instrument of channel `channel` (its id), built on the
@@ -873,6 +911,7 @@ impl Renderer {
                 }
             }
             self.peaks[i] = peak;
+            self.pdc.record(i, &self.buses[i][..2 * frames]);
             for &(to, level) in &t.routes {
                 if to == i || to >= tracks {
                     continue;
@@ -884,9 +923,7 @@ impl Renderer {
                     let (a, b) = self.buses.split_at_mut(i);
                     (&b[0], &mut a[to])
                 };
-                for (d, s) in dst[..2 * frames].iter_mut().zip(&src[..2 * frames]) {
-                    *d += s * level;
-                }
+                self.pdc.route(i, to, &src[..2 * frames], &mut dst[..2 * frames], level);
             }
         }
         self.track_fx(0, frames, &snapshot.mixer);

@@ -116,13 +116,31 @@ pub fn render_offline_with(
     let block = settings.block.clamp(1, crate::MAX_BLOCK);
     let mut out = Vec::with_capacity(2 * (music + tail_max.min(sample_rate as usize)));
     let mut buf = vec![0.0f32; 2 * block];
-    // The music itself: exactly `music` frames.
-    while out.len() / 2 < music {
-        let n = block.min(music - out.len() / 2);
+    // Plugin delay compensation delays the whole mix; its first frames are silence, left out as
+    // FL Studio's "Trim PDC silence" does, and the music ends that much later.
+    let latency = r.latency() as usize;
+    let mut skip = latency;
+    let mut rendered = 0;
+    // The music itself: exactly `music` frames of transport.
+    while rendered < music {
+        let n = block.min(music - rendered);
         r.render(&mut buf[..2 * n]);
-        out.extend_from_slice(&buf[..2 * n]);
+        let s = skip.min(n);
+        skip -= s;
+        out.extend_from_slice(&buf[2 * s..2 * n]);
+        rendered += n;
     }
     r.pause();
+    // The compensation delay's last frames finish the music.
+    let mut flush = latency;
+    while flush > 0 {
+        let n = block.min(flush);
+        r.render(&mut buf[..2 * n]);
+        let s = skip.min(n);
+        skip -= s;
+        out.extend_from_slice(&buf[2 * s..2 * n]);
+        flush -= n;
+    }
     // The tail: until every voice has finished or the limit is reached.
     let mut tail = 0;
     while tail < tail_max && (r.active_voices() > 0 || r.is_ringing()) {

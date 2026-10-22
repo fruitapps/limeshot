@@ -143,6 +143,11 @@ impl InstrumentRack {
         }
     }
 
+    /// The latency of the plugin on snapshot channel `channel`, if it has one.
+    pub(crate) fn latency(&self, channel: usize) -> Option<u32> {
+        self.slots.get(channel)?.as_ref().map(|s| s.inst.latency())
+    }
+
     pub(crate) fn has_instruments(&self) -> bool {
         self.slots.iter().any(Option::is_some)
     }
@@ -273,6 +278,7 @@ impl InstrumentRack {
         frames: usize,
         transport: &Transport,
         buses: &mut [Vec<f32>],
+        pdc: &mut crate::pdc::Pdc,
         mix: impl Fn(usize) -> Option<(usize, f32, f32)>,
     ) {
         let n = (2 * frames).min(self.buf.len());
@@ -301,6 +307,7 @@ impl InstrumentRack {
             let Some(slot) = self.slots[i].as_mut() else { continue };
             slot.inst.process(&mut self.buf[..n], &self.events[i], transport);
             self.events[i].clear();
+            pdc.channel(i, &mut self.buf[..n]);
             if let Some((bus, gl, gr)) = mix(i)
                 && let Some(bus) = buses.get_mut(bus)
             {

@@ -79,6 +79,7 @@ pub struct Status {
     playing: AtomicBool,
     song_mode: AtomicBool,
     voices: AtomicU32,
+    latency: AtomicU32,
     /// Callback time / buffer duration, in thousandths.
     load: AtomicU32,
     peaks: Vec<AtomicU32>,
@@ -95,6 +96,7 @@ impl Status {
             playing: AtomicBool::new(false),
             song_mode: AtomicBool::new(false),
             voices: AtomicU32::new(0),
+            latency: AtomicU32::new(0),
             load: AtomicU32::new(0),
             peaks: (0..2 * METER_SLOTS).map(|_| AtomicU32::new(0)).collect(),
             reductions: (0..METER_SLOTS).map(|_| AtomicU32::new(0)).collect(),
@@ -113,6 +115,11 @@ impl Status {
 
     pub fn is_song_mode(&self) -> bool {
         self.song_mode.load(Ordering::Relaxed)
+    }
+
+    /// Plugin delay compensation: how far the output lags the transport, in frames.
+    pub fn latency(&self) -> u32 {
+        self.latency.load(Ordering::Relaxed)
     }
 
     pub fn voices(&self) -> u32 {
@@ -254,6 +261,7 @@ impl AudioState {
         s.song_mode
             .store(self.renderer.mode() == PlayMode::Song, Ordering::Relaxed);
         s.voices.store(self.renderer.active_voices() as u32, Ordering::Relaxed);
+        s.latency.store(self.renderer.latency(), Ordering::Relaxed);
         s.callbacks.fetch_add(1, Ordering::Relaxed);
     }
 }
