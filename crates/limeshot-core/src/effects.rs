@@ -93,7 +93,22 @@ const DELAY: &[ParamSpec] = &[
     p("Spread", 0.0, 1.0, 0.5, "", false),
     p("Tone", 500.0, 18000.0, 6000.0, "Hz", true),
     p("Mix", 0.0, 1.0, 0.3, "", false),
+    // Tempo sync (FL Studio's Fruity Delay sets its time in steps of the tempo): when on, the
+    // time follows the project tempo and the Time parameter is ignored.
+    ParamSpec {
+        name: "Sync",
+        min: 0.0,
+        max: 8.0,
+        default: 0.0,
+        unit: "",
+        log: false,
+        labels: &["Off", "1/16", "1/8T", "1/8", "1/8.", "1/4", "1/4.", "1/2", "1/1"],
+    },
 ];
+
+/// Index of the delay's tempo-sync parameter, and each choice's length in beats.
+pub const DELAY_SYNC: usize = 5;
+const DELAY_SYNC_BEATS: [f64; 9] = [0.0, 0.25, 1.0 / 3.0, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 const REVERB: &[ParamSpec] = &[
     p("Size", 0.0, 1.0, 0.6, "", false),
     p("Damping", 0.0, 1.0, 0.4, "", false),
@@ -218,6 +233,22 @@ impl EffectSlot {
         }
     }
 
+    /// The parameters as the processor gets them: a tempo-synced delay's time in ms at `bpm`
+    /// (within the Time range).
+    pub fn resolved_params(&self, bpm: f64) -> Vec<f32> {
+        let mut out = self.params.clone();
+        if self.kind == EffectKind::Delay {
+            let choice = out.get(DELAY_SYNC).map_or(0, |v| v.round().max(0.0) as usize);
+            if let (Some(&beats), Some(time)) = (DELAY_SYNC_BEATS.get(choice), out.first_mut())
+                && choice > 0
+                && bpm > 0.0
+            {
+                *time = (beats * 60_000.0 / bpm).clamp(10.0, 2000.0) as f32;
+            }
+        }
+        out
+    }
+
     /// Bring `params` to the right length and clamp every value to its range.
     pub fn sanitize(&mut self) {
         if self.kind != EffectKind::Plugin {
@@ -260,6 +291,23 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_synced_delay_takes_its_time_from_the_tempo() {
+        let mut e = EffectSlot::new(1, EffectKind::Delay);
+        assert_eq!(e.resolved_params(120.0)[0], 375.0, "off: the Time parameter");
+        e.params[DELAY_SYNC] = 5.0; // 1/4
+        assert_eq!(e.resolved_params(120.0)[0], 500.0);
+        e.params[DELAY_SYNC] = 4.0; // 1/8 dotted
+        assert_eq!(e.resolved_params(100.0)[0], 450.0);
+        e.params[DELAY_SYNC] = 8.0; // a whole note at 60 BPM is longer than the delay allows
+        assert_eq!(e.resolved_params(60.0)[0], 2000.0);
+        // Projects from before the Sync parameter load with it off.
+        let mut old = EffectSlot::new(2, EffectKind::Delay);
+        old.params.truncate(5);
+        old.sanitize();
+        assert_eq!(old.params[DELAY_SYNC], 0.0);
     }
 
     #[test]

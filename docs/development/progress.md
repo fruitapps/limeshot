@@ -727,3 +727,13 @@ display options (button width, name alignment …), declicking and plugin-editor
 chosen, a Draw click places it from the clicked key (one undo step, selected and draggable), and the header shows
 "Stamp: <name> ×". ⏵ › View › Scale highlighting: key and scale; off-scale rows are dark, the root's tinted.
 `ui_shot --scale` shows both.
+
+### Session 16, part 7: delay tempo sync (FX-008; next-steps Then 7)
+
+Lime Delay has a Sync parameter (Off, 1/16 … 1/1, with triplet and dotted values): `EffectSlot::resolved_params`
+turns it into a time from the tempo when the sequencer compiles the mix, so tempo changes follow; the stored Time
+stays and is greyed out in the effect panel. Choices with more than four labels show as a drop-down. Older projects
+load with Sync off (sanitize pads parameters).
+
+Mixer pre-fader sends (Then 6) are not started: the delay-compensation rings record each track's post-fader output,
+so a pre-fader send needs its own ring per track (in `Pdc::plan`) or the fader applied when routes are read.

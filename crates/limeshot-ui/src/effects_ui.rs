@@ -127,6 +127,27 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             sidechain_choice(app, ui, track, e.id, cur.round() as u16);
                             return;
                         }
+                        if spec.labels.len() > 4 {
+                            // Many choices (the delay's Sync): a drop-down, not a segmented row.
+                            let mut choice = cur.round() as usize;
+                            egui::ComboBox::from_id_salt((track, e.id, i))
+                                .width(90.0)
+                                .selected_text(spec.labels.get(choice).copied().unwrap_or("?"))
+                                .show_ui(ui, |ui| {
+                                    for (k, l) in spec.labels.iter().enumerate() {
+                                        ui.selectable_value(&mut choice, k, *l);
+                                    }
+                                });
+                            if choice != cur.round() as usize {
+                                app.exec(Command::SetEffectParam {
+                                    track,
+                                    effect: e.id,
+                                    index: i,
+                                    value: choice as f32,
+                                });
+                            }
+                            return;
+                        }
                         if !spec.labels.is_empty() {
                             if let Some(choice) = segmented(ui, spec.labels, cur.round() as usize, 22.0, spec.name) {
                                 app.exec(Command::SetEffectParam {
@@ -139,33 +160,39 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                             return;
                         }
                         let mut v = cur;
-                        ui.spacing_mut().slider_width = (ui.available_width() - 74.0).max(60.0);
-                        let unit = spec.unit;
-                        let r = crate::widgets::reset_on_double_click(
-                            ui.add(
-                                egui::Slider::new(&mut v, spec.min..=spec.max)
-                                    .logarithmic(spec.log)
-                                    .custom_formatter(move |x, _| format_value(x as f32, unit)),
-                            ),
-                            &mut v,
-                            spec.default,
-                        );
-                        let cmd = crate::widgets::user_changed(&r).then_some(Command::SetEffectParam {
-                            track,
-                            effect: e.id,
-                            index: i,
-                            value: v,
-                        });
-                        app.exec_gesture(&r, cmd);
-                        crate::automation_ui::menu(
-                            app,
-                            &r,
-                            AutomationTarget::EffectParam {
+                        // A tempo-synced delay ignores its Time.
+                        let synced = e.kind == EffectKind::Delay
+                            && i == 0
+                            && e.params.get(limeshot_core::DELAY_SYNC).is_some_and(|s| *s >= 1.0);
+                        ui.add_enabled_ui(!synced, |ui| {
+                            ui.spacing_mut().slider_width = (ui.available_width() - 74.0).max(60.0);
+                            let unit = spec.unit;
+                            let r = crate::widgets::reset_on_double_click(
+                                ui.add(
+                                    egui::Slider::new(&mut v, spec.min..=spec.max)
+                                        .logarithmic(spec.log)
+                                        .custom_formatter(move |x, _| format_value(x as f32, unit)),
+                                ),
+                                &mut v,
+                                spec.default,
+                            );
+                            let cmd = crate::widgets::user_changed(&r).then_some(Command::SetEffectParam {
                                 track,
                                 effect: e.id,
                                 index: i,
-                            },
-                        );
+                                value: v,
+                            });
+                            app.exec_gesture(&r, cmd);
+                            crate::automation_ui::menu(
+                                app,
+                                &r,
+                                AutomationTarget::EffectParam {
+                                    track,
+                                    effect: e.id,
+                                    index: i,
+                                },
+                            );
+                        });
                     });
                 }
                 if e.kind == EffectKind::Compressor {

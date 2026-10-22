@@ -3979,7 +3979,7 @@
       "name": "Delay",
       "description": "Delay.",
       "fl_reference": "Fruity Delay 3",
-      "limeshot_behavior": "Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide.",
+      "limeshot_behavior": "Lime Delay: stereo, up to 2 s, feedback with a tone low-pass, cross-feedback spread, mix; time changes glide. Sync (Off, 1/16, 1/8T, 1/8, 1/8., 1/4, 1/4., 1/2, 1/1) sets the time from the project tempo; Time is then greyed out.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -3987,7 +3987,10 @@
         "FX-001"
       ],
       "modules": [
-        "limeshot-dsp"
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-sequencer",
+        "limeshot-ui"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
@@ -3995,7 +3998,9 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::delay_echoes_after_the_delay_time",
-        "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail"
+        "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail",
+        "limeshot-core effects::tests::a_synced_delay_takes_its_time_from_the_tempo",
+        "limeshot-sequencer tests::a_tempo_synced_delay_gets_its_time_from_the_tempo"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4005,7 +4010,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No tempo sync yet."
+      "notes": "No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s."
     },
     {
       "id": "FX-009",

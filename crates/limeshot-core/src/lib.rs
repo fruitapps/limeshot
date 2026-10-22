@@ -23,7 +23,7 @@ pub mod time;
 pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
 pub use command::{Command, CommandError, Created, ImportedChannel, NewNote, NoteProp};
 pub use document::{Document, PluginTarget};
-pub use effects::{COMPRESSOR_SIDECHAIN, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
+pub use effects::{COMPRESSOR_SIDECHAIN, DELAY_SYNC, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
 pub use model::*;
 pub use note_tools::NoteTool;
 pub use plugin::{PluginRef, PluginState, PluginWindow};

@@ -391,7 +391,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                     id: e.id,
                     kind: e.kind,
                     enabled: e.enabled,
-                    params: e.params.clone(),
+                    params: e.resolved_params(project.tempo.bpm()),
                 })
                 .collect(),
             routes: if i == 0 {
@@ -795,6 +795,30 @@ mod tests {
         assert!(snap.mixer[0].audible, "master is never solo-muted");
         assert!(!snap.mixer[1].audible);
         assert!(snap.mixer[2].audible);
+    }
+
+    #[test]
+    fn a_tempo_synced_delay_gets_its_time_from_the_tempo() {
+        let (mut d, _, _, pat) = setup();
+        let fx = d
+            .execute(Command::AddEffect {
+                track: 1,
+                kind: limeshot_core::EffectKind::Delay,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        d.execute(Command::SetEffectParam {
+            track: 1,
+            effect: fx,
+            index: limeshot_core::DELAY_SYNC,
+            value: 3.0, // 1/8
+        })
+        .unwrap();
+        d.execute(Command::SetTempo(limeshot_core::Tempo::from_bpm(150.0))).unwrap();
+        let snap = compile(d.project(), pat, &NoSamples);
+        assert_eq!(snap.mixer[1].effects[0].params[0], 200.0);
+        assert_eq!(d.project().mixer.tracks[1].effects[0].params[0], 375.0, "the stored Time stays");
     }
 
     #[test]
