@@ -1,12 +1,12 @@
-# Main menu bar: FL Studio and LimeShot
+# Main menu bar and toolbar: FL Studio and LimeShot
 
 > Generated from [`menus.json`](menus.json) by `python3 scripts/inventories.py generate`. Do not edit by hand.
 > Reference: FL Studio 2026 (26.1.1.5313), macOS.
-> Source: Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png.
+> Source: Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png. Toolbar (menu 'Toolbar') observed live on 2026-10-22 (session 15): each control's name and keys from FL's hint panel while hovering it (fl-toolbar-hints-*.png), and its right-click menus (fl-toolbar-*-menu.png, fl-toolbar-snap.png).
 
-One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.
+One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths.
 
-Tracked: **277** — IMPLEMENTED 48, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 162, NOT_PLANNED 27
+Tracked: **331** — IMPLEMENTED 57, DIFFERENT 40, LIMESHOT_ONLY 11, NOT_STARTED 193, NOT_PLANNED 30
 
 ## Summary
 
@@ -20,6 +20,7 @@ Tracked: **277** — IMPLEMENTED 48, DIFFERENT 31, LIMESHOT_ONLY 9, NOT_STARTED 
 | Options | 24 | 6 | 0 | 16 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
+| Toolbar | 52 | 9 | 9 | 31 | 3 | 2 |
 
 ## Open work by feature
 
@@ -27,12 +28,15 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 
 | Feature | Pri | Status | Name | Menu items |
 |---|---|---|---|---|
+| TR-002 | P0 | VERIFIED | Play / pause / stop | MENU-296 Toolbar › Tempo › <BPM presets> |
 | APP-020 | P1 | NOT_STARTED | MIDI settings | MENU-153 Options › MIDI settings |
 | AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip... |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
-| REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording |
+| REC-001 | P1 | NOT_STARTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording<br>MENU-319 Toolbar › One-click audio recording |
+| REC-002 | P1 | NOT_STARTED | MIDI recording | MENU-281 Toolbar › Record (automation, score, audio, clips)<br>MENU-282 Toolbar › Record (automation, score, audio, clips) › Recording filter › Automation<br>MENU-283 Toolbar › Record (automation, score, audio, clips) › Recording filter › Notes<br>MENU-284 Toolbar › Record (automation, score, audio, clips) › Recording filter › Audio<br>MENU-285 Toolbar › Record (automation, score, audio, clips) › Recording filter › Clips<br>MENU-286 Toolbar › Record (automation, score, audio, clips) › Options › Recording starts playback<br>MENU-287 Toolbar › Record (automation, score, audio, clips) › Options › Disarm on stop<br>MENU-288 Toolbar › Record (automation, score, audio, clips) › Options › Enable recording markers<br>MENU-289 Toolbar › Record (automation, score, audio, clips) › Quantize › Note start time<br>MENU-290 Toolbar › Record (automation, score, audio, clips) › Quantize › Note end time<br>MENU-291 Toolbar › Record (automation, score, audio, clips) › Quantize › Leave note duration<br>MENU-292 Toolbar › Record (automation, score, audio, clips) › Quantize › Record to step sequencer<br>MENU-293 Toolbar › Record (automation, score, audio, clips) › Quantize › Automations |
+| TR-008 | P1 | VERIFIED | Metronome | MENU-298 Toolbar › Song position › Mode<br>MENU-299 Toolbar › Song position › Middle unit |
 | UI-004 | P1 | VERIFIED | Hint bar and tooltips | MENU-117 View › Toolbars › Hint bar |
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
 | WF-003 | P1 | NOT_STARTED | MIDI controller input | MENU-163 Options › Enable MIDI remote control |
@@ -50,13 +54,13 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PL-022 | P2 | NOT_STARTED | Consolidate / render to audio clip | MENU-098 Patterns › Quick render as audio clip<br>MENU-099 Patterns › Render as audio clip...<br>MENU-100 Patterns › Render and replace... |
 | PL-023 | P2 | NOT_STARTED | Crossfades and time stretching | MENU-250 Tools › Switch all audio clip channels to<br>MENU-251 Tools › Switch selected audio clip channels to |
 | PLG-008 | P2 | IMPLEMENTED | Plugin preset management | MENU-070 Add › Browse presets |
-| REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record |
-| REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount |
+| REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record<br>MENU-302 Toolbar › Loop record |
+| REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount<br>MENU-301 Toolbar › Recording precount |
 | REC-010 | P2 | NOT_STARTED | Start on input and blend recorded notes | MENU-169 Options › Start on input<br>MENU-170 Options › Blend recorded notes |
-| TR-012 | P2 | NOT_STARTED | Tap tempo | MENU-108 View › Tempo tapper |
+| TR-012 | P2 | NOT_STARTED | Tap tempo | MENU-108 View › Tempo tapper<br>MENU-295 Toolbar › Tempo › Tempo tapper |
 | UI-013 | P2 | IMPLEMENTED | Window layout commands | MENU-131 View › Arrange windows › Desktop (alternate)<br>MENU-132 View › Arrange windows › Tablet (default)<br>MENU-133 View › Arrange windows › Tablet (alternate) |
-| UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling |
-| WF-002 | P2 | NOT_STARTED | Typing keyboard to piano | MENU-166 Options › Typing keyboard to piano |
+| UI-016 | P2 | NOT_STARTED | Auto scrolling option | MENU-173 Options › Auto scrolling<br>MENU-318 Toolbar › Auto scrolling |
+| WF-002 | P2 | NOT_STARTED | Typing keyboard to piano | MENU-166 Options › Typing keyboard to piano<br>MENU-300 Toolbar › Typing keyboard to piano |
 | WF-004 | P2 | NOT_STARTED | Controller mapping (link to controller) | MENU-144 View › Remote control<br>MENU-175 Options › Multilink to controllers<br>MENU-218 Tools › Last tweaked › Link to controller...<br>MENU-219 Tools › Last tweaked › Override global link...<br>MENU-224 Tools › Last tweaked › Override volatile link...<br>MENU-233 Tools › Next to last tweaked › Link to controller...<br>MENU-234 Tools › Next to last tweaked › Override global link...<br>MENU-239 Tools › Next to last tweaked › Override volatile link... |
 | WF-005 | P2 | NOT_STARTED | External MIDI devices / MIDI out | MENU-164 Options › Enable MIDI output |
 | WF-010 | P2 | NOT_STARTED | Score logger | MENU-194 Tools › Dump score log to selected pattern<br>MENU-195 Tools › Dump score log to selected pattern › Last 2 minutes<br>MENU-196 Tools › Dump score log to selected pattern › Last 5 minutes<br>MENU-197 Tools › Dump score log to selected pattern › Last 10 minutes<br>MENU-198 Tools › Dump score log to selected pattern › Last 20 minutes<br>MENU-199 Tools › Dump score log to selected pattern › Last 30 minutes<br>MENU-200 Tools › Clear log |
@@ -87,6 +91,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | WF-011 | P3 | NOT_STARTED | Touch controller | MENU-109 View › Touch controller |
 | WF-012 | P3 | NOT_STARTED | MIDI clock sync | MENU-165 Options › Enable MIDI master sync |
 | WF-013 | P3 | NOT_STARTED | Item groups | MENU-174 Options › Enable groups |
+| — |  |  |  | MENU-304 Toolbar › Detected chord<br>MENU-305 Toolbar › Monitor (master)<br>MENU-308 Toolbar › CPU load › Refresh<br>MENU-309 Toolbar › CPU load › View voice count<br>MENU-310 Toolbar › CPU load › View FPS<br>MENU-311 Toolbar › CPU load history<br>MENU-324 Toolbar › Shift key modifier<br>MENU-325 Toolbar › Command key modifier<br>MENU-326 Toolbar › Option key modifier |
 
 ## File
 
@@ -404,6 +409,65 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-275 | Support - Knowledgebase | Internet links | link |  |  | — | NOT_PLANNED |  | Image-Line web page. LimeShot's counterpart would link the project's repository and docs. |
 | MENU-276 | About... |  | dialog |  |  | Help › About LimeShot | DIFFERENT | APP-032 | Opens the settings window's About tab; LimeShot names itself in the label. |
 | MENU-277 | Keyboard shortcuts |  | dialog |  |  | Help › Keyboard shortcuts | LIMESHOT_ONLY | APP-013 | FL has no shortcut list in Help; LimeShot opens it with F1 (FL's F1 is context help). |
+
+## Toolbar
+
+| ID | Item | Section | Kind | FL keys | FL state | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| MENU-278 | Pattern or song mode | Transport | control | `L` |  | Toolbar › PAT / SONG | DIFFERENT | TR-004 | FL's hint: 'Pattern or song mode / Show channel rack or playlist' (a right-click shows the matching window). LimeShot switches the mode only. |
+| MENU-279 | Play | Transport | control | `Space` |  | Toolbar › play button | IMPLEMENTED | TR-001 | LimeShot's button plays and pauses; Space stops, as in FL. |
+| MENU-280 | Stop | Transport | control | `Space` |  | Toolbar › stop button | IMPLEMENTED | TR-001 |  |
+| MENU-281 | Record (automation, score, audio, clips) | Transport | control | `R` |  | — | NOT_STARTED | REC-002 | Right-click opens the menu below. LimeShot shows the button disabled. |
+| MENU-282 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Automation | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-283 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Notes | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-284 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Audio | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-285 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Clips | Record menu › Recording filter | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-286 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Recording starts playback | Record menu › Options | toggle |  |  | — | NOT_STARTED | REC-002 |  |
+| MENU-287 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Disarm on stop | Record menu › Options | toggle |  |  | — | NOT_STARTED | REC-002 |  |
+| MENU-288 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Enable recording markers | Record menu › Options | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-289 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note start time | Record menu › Quantize | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-290 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Note end time | Record menu › Quantize | toggle |  | checked | — | NOT_STARTED | REC-002 |  |
+| MENU-291 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Leave note duration | Record menu › Quantize | toggle |  |  | — | NOT_STARTED | REC-002 |  |
+| MENU-292 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Record to step sequencer | Record menu › Quantize | toggle |  |  | — | NOT_STARTED | REC-002 |  |
+| MENU-293 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Automations | Record menu › Quantize | toggle |  |  | — | NOT_STARTED | REC-002 |  |
+| MENU-294 | Tempo | Transport | control |  |  | Toolbar › tempo field | DIFFERENT | TR-002 | Drag or type, as in FL. FL's right-click menu has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…) and tempo presets: Tempo tapper (Cmd+F5), 80 BPM, 90 BPM … in steps of 10 (partly hidden in the capture). LimeShot has no tempo menu or automation (AUT-008). |
+| MENU-295 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Tempo tapper | Tempo menu | dialog | `Cmd+F5` |  | — | NOT_STARTED | TR-012 |  |
+| MENU-296 | &nbsp;&nbsp;&nbsp;&nbsp;↳ <BPM presets> | Tempo menu | list |  |  | — | NOT_STARTED | TR-002 | 80, 90, 100, 110, 120, 130, 140 BPM and more (cut off by a system prompt in the capture). |
+| MENU-297 | Song position | Song position | display |  |  | Toolbar › song position | DIFFERENT | TR-008 | FL shows one format chosen with the right-click menu (Mode: Bar:Beat/Step:Tick, Minute:Second:Centisecond, SMPTE 23.976 … 120 fps; Middle unit: Step / Beat). LimeShot shows bar:beat:tick and minutes:seconds together; a click returns to the start. |
+| MENU-298 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Mode | Song position menu | radio |  |  | — | NOT_STARTED | TR-008 | Bar : Beat/Step : Tick (selected), Minute : Second : Centisecond, SMPTE 23.976, 24, 25, 29.97 drop, 29.97 non-drop, 30, 48, 50, 59.94 drop/non-drop, 60, 72, 120 fps. |
+| MENU-299 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Middle unit | Song position menu | radio |  |  | — | NOT_STARTED | TR-008 | Step (selected) / Beat. |
+| MENU-300 | Typing keyboard to piano | Recording switches | toggle | `Cmd+T` |  | — | NOT_STARTED | WF-002 |  |
+| MENU-301 | Recording precount | Recording switches | toggle | `Cmd+P` |  | — | NOT_STARTED | REC-007 | Shown as '3.2.1'. |
+| MENU-302 | Loop record | Recording switches | toggle |  |  | — | NOT_STARTED | REC-005 |  |
+| MENU-303 | Metronome | Recording switches | toggle | `Cmd+M` |  | Toolbar › Metronome | IMPLEMENTED | TR-006 |  |
+| MENU-304 | Detected chord | Info | display |  |  | — | NOT_STARTED |  | Names the chord being played ('---' when none). |
+| MENU-305 | Monitor (master) | Info | display |  |  | — | NOT_STARTED |  | Oscilloscope / spectrum of the master output; a click changes the view. |
+| MENU-306 | Peak meter (master) | Info | display |  |  | Toolbar › Master output | IMPLEMENTED | MIX-001 |  |
+| MENU-307 | CPU load | CPU | display |  |  | Toolbar › audio load readout | DIFFERENT | UI-004 | LimeShot shows the audio load once per second. FL's right-click menu: Refresh (Slow, Medium, Fast) and Misc (View voice count, View FPS); FL also shows memory use. |
+| MENU-308 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Refresh | CPU menu | radio |  |  | — | NOT_STARTED |  | Slow (selected), Medium, Fast. |
+| MENU-309 | &nbsp;&nbsp;&nbsp;&nbsp;↳ View voice count | CPU menu | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-310 | &nbsp;&nbsp;&nbsp;&nbsp;↳ View FPS | CPU menu | toggle |  |  | — | NOT_STARTED |  |  |
+| MENU-311 | CPU load history | CPU | display |  |  | — | NOT_STARTED |  | A graph of recent CPU load next to the readout. |
+| MENU-312 | Hint panel | Hint panel | display |  |  | Toolbar › hint panel | IMPLEMENTED | UI-004 | Top left: what LimeShot is doing, then the control under the pointer and its shortcut. |
+| MENU-313 | Browser / Plugin picker | Shortcut icons | toggle | `Opt+F8` |  | Toolbar › Browser | IMPLEMENTED | BR-001 | FL: a right-click shows the Plugin picker; LimeShot has no plugin picker. |
+| MENU-314 | Channel rack | Shortcut icons | toggle | `F6` |  | Toolbar › Channel Rack | IMPLEMENTED | UI-002 |  |
+| MENU-315 | Piano roll / Maximize Piano roll | Shortcut icons | toggle | `F7` |  | Toolbar › Piano Roll | DIFFERENT | UI-002 | FL: a right-click maximises it; LimeShot toggles it. |
+| MENU-316 | Playlist / Maximize Play list | Shortcut icons | toggle | `F5` |  | Toolbar › Playlist | DIFFERENT | UI-002 | As Piano roll. |
+| MENU-317 | Mixer | Shortcut icons | toggle | `F9` |  | Toolbar › Mixer | IMPLEMENTED | UI-002 |  |
+| MENU-318 | Auto scrolling | Shortcut icons | toggle |  |  | — | NOT_STARTED | UI-016 |  |
+| MENU-319 | One-click audio recording | Shortcut icons | control |  |  | — | NOT_STARTED | REC-001 |  |
+| MENU-320 | Main snap / quantization / step edit step | Snap | list | `BkSp` |  | Toolbar › snap selector | DIFFERENT | PR-005 | FL's list: Line, Cell, (none), 1/6 step, 1/4 step, 1/3 step, 1/2 step, Step, 1/6 beat, 1/4 beat, 1/3 beat, 1/2 beat, Beat, Bar; the hint also names BkSp. LimeShot offers Bar, Beat, 1/2 beat, Step, 1/2 step, 1/3 step, 1/4 step and None. |
+| MENU-321 | Pattern options | Patterns | submenu |  |  | Toolbar › pattern selector | DIFFERENT | SEQ-021 | The ▸ left of the selector opens the Patterns menu (pattern list and commands). LimeShot's selector menu lists the patterns and Create new; the commands are in the main Patterns menu. |
+| MENU-322 | Pattern selector | Patterns | list | `+ / -` |  | Toolbar › pattern selector | IMPLEMENTED | SEQ-018 | + and − step through the patterns. |
+| MENU-323 | New pattern (find first / next empty) | Patterns | control |  |  | Toolbar › pattern selector | DIFFERENT | SEQ-021 | FL's + button; a left click finds the next empty pattern. LimeShot: Create new in the selector, F4 and Shift+F4. |
+| MENU-324 | Shift key modifier | Modifiers | toggle |  |  | — | NOT_STARTED |  | On-screen modifier keys for touch screens. |
+| MENU-325 | Command key modifier | Modifiers | toggle |  |  | — | NOT_STARTED |  | On-screen modifier keys for touch screens. |
+| MENU-326 | Option key modifier | Modifiers | toggle |  |  | — | NOT_STARTED |  | On-screen modifier keys for touch screens. |
+| MENU-327 | Gopher (chat assistant) | Online | link | `Opt+F1` |  | — | NOT_PLANNED |  | Image-Line service. |
+| MENU-328 | Buy FL Studio and upgrades | Online | link |  |  | — | NOT_PLANNED |  | Image-Line shop. |
+| MENU-329 | Online content & events | Online | display |  |  | — | NOT_PLANNED |  | Image-Line news panel. |
+| MENU-330 | Time signature | LimeShot | control |  |  | Toolbar › Beats per bar / Beat unit (power of two) | LIMESHOT_ONLY |  | LimeShot shows the project's time signature next to the tempo; FL keeps it in Project settings. |
+| MENU-331 | Undo, redo, save and export | LimeShot | control |  |  | Toolbar › undo, redo, save and export buttons | LIMESHOT_ONLY |  | LimeShot's own buttons on the right of the toolbar. |
 
 ## Lists
 

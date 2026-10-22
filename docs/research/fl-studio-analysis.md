@@ -307,3 +307,25 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
   "Do not show this in the future".
 - **LimeShot equivalent:** an Audio settings dialog and an Export WAV dialog (range, sample rate, bit depth). APP-025
   (one settings window with pages) should follow FL's tab layout; the per-control gaps are in `settings.md`.
+
+## 20. Toolbar (session 15, outside-in pass)
+- **OBSERVED live (2026-10-22, synthetic input):** each control was hovered and FL's hint panel read for its name and
+  keys (`fl-toolbar-hints-1.png`, `-2.png`; the whole bar in `fl-toolbar.png`), and the right-click menus opened
+  (`fl-toolbar-record-menu.png`, `-tempo-menu.png`, `-time-menu.png`, `-cpu-menu.png`, `fl-toolbar-snap.png`). Every
+  control is a record in `docs/roadmap/menus.json` under the menu "Toolbar" (54 records). Nothing was saved.
+- **Row 1** (right of the menu bar): PAT/SONG ("Pattern or song mode / Show channel rack or playlist", L), Play,
+  Stop (Space), Record ("automation, score, audio, clips", R; right-click: Recording filter Automation/Notes/Audio/
+  Clips, Options Recording starts playback/Disarm on stop/Enable recording markers, Quantize Note start time/Note end
+  time/Leave note duration/Record to step sequencer/Automations), Tempo (right-click: the control menu plus Tempo
+  tapper Cmd+F5 and BPM presets from 80 in steps of 10), Song position (right-click: Mode Bar:Beat/Step:Tick,
+  Minute:Second:Centisecond, SMPTE 23.976–120 fps; Middle unit Step/Beat), Typing keyboard to piano (Cmd+T),
+  Recording precount (Cmd+P), Loop record, Metronome (Cmd+M), Detected chord, Monitor (master), Peak meter (master),
+  CPU load (right-click: Refresh Slow/Medium/Fast, View voice count, View FPS) with memory and CPU load history.
+- **Row 2:** Hint panel; window icons Browser / Plugin picker (Opt+F8), Channel rack (F6), Piano roll / Maximize
+  (F7), Playlist / Maximize (F5), Mixer (F9); Auto scrolling; One-click audio recording; Snap panel with Main snap
+  (Line, Cell, (none), 1/6–1/2 step, Step, 1/6–1/2 beat, Beat, Bar; the hint names BkSp); Pattern options (▸, the
+  Patterns menu), Pattern selector (+/−), New pattern (find first / next empty); on-screen Shift / Command / Option
+  modifier keys; Gopher (Opt+F1), Buy, and the Online content & events panel.
+- A macOS permission prompt for this session's screen capture appeared during the capture and was left for the owner;
+  it hides part of the tempo preset list and the SMPTE entries' right halves.
+

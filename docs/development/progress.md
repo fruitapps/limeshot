@@ -631,3 +631,11 @@ new `Project::info` and `SetProjectInfo`, one undo step per field edit) and Abou
 File settings, Project general settings and Project info (F11); the old Audio settings and About dialogs are gone.
 `ui_shot --prefs=<page>` shows a page. UI test added.
 
+### Session 15, part 10: FL's toolbar documented (next-steps Then 0)
+
+Third outside-in layer: FL's two toolbar rows, every control named from FL's own hint panel (hovered one by one) and
+its right-click menus opened (`fl-studio-analysis.md` §20, `fl-toolbar-*.png`). Recorded in `menus.json` as the
+pseudo-menu "Toolbar" (54 records; new kinds control and display), so `menus.md` shows the toolbar's open work with
+the menus'. LimeShot has 9 of FL's 52 toolbar items as in FL and 9 differently, plus 2 of its own; 31 are not started, 3 not planned.
+A macOS screen-capture permission prompt appeared during the capture and was left for the owner.
+

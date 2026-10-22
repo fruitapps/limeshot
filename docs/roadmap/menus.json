@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313), macOS",
-  "source": "Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png.",
-  "notes": "One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu.",
+  "source": "Observed live on 2026-10-22 (session 13): FL's in-window menu bar (FILE … HELP), cross-checked with the native macOS menu bar FL mirrors (Accessibility dump in docs/research/evidence/menus/). Screenshots: docs/research/evidence/screenshots/fl-menu-*.png. Toolbar (menu 'Toolbar') observed live on 2026-10-22 (session 15): each control's name and keys from FL's hint panel while hovering it (fl-toolbar-hints-*.png), and its right-click menus (fl-toolbar-*-menu.png, fl-toolbar-snap.png).",
+  "notes": "One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths.",
   "menus": [
     {
       "id": "MENU-001",
@@ -4817,6 +4817,955 @@
       "status": "LIMESHOT_ONLY",
       "feature": "APP-013",
       "notes": "FL has no shortcut list in Help; LimeShot opens it with F1 (FL's F1 is context help)."
+    },
+    {
+      "id": "MENU-278",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Pattern or song mode"
+      ],
+      "section": "Transport",
+      "kind": "control",
+      "fl_keys": "L",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › PAT / SONG",
+      "status": "DIFFERENT",
+      "feature": "TR-004",
+      "notes": "FL's hint: 'Pattern or song mode / Show channel rack or playlist' (a right-click shows the matching window). LimeShot switches the mode only."
+    },
+    {
+      "id": "MENU-279",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Play"
+      ],
+      "section": "Transport",
+      "kind": "control",
+      "fl_keys": "Space",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › play button",
+      "status": "IMPLEMENTED",
+      "feature": "TR-001",
+      "notes": "LimeShot's button plays and pauses; Space stops, as in FL."
+    },
+    {
+      "id": "MENU-280",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Stop"
+      ],
+      "section": "Transport",
+      "kind": "control",
+      "fl_keys": "Space",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › stop button",
+      "status": "IMPLEMENTED",
+      "feature": "TR-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-281",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)"
+      ],
+      "section": "Transport",
+      "kind": "control",
+      "fl_keys": "R",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": "Right-click opens the menu below. LimeShot shows the button disabled."
+    },
+    {
+      "id": "MENU-282",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Recording filter",
+        "Automation"
+      ],
+      "section": "Record menu › Recording filter",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-283",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Recording filter",
+        "Notes"
+      ],
+      "section": "Record menu › Recording filter",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-284",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Recording filter",
+        "Audio"
+      ],
+      "section": "Record menu › Recording filter",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-285",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Recording filter",
+        "Clips"
+      ],
+      "section": "Record menu › Recording filter",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-286",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Options",
+        "Recording starts playback"
+      ],
+      "section": "Record menu › Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-287",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Options",
+        "Disarm on stop"
+      ],
+      "section": "Record menu › Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-288",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Options",
+        "Enable recording markers"
+      ],
+      "section": "Record menu › Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-289",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Quantize",
+        "Note start time"
+      ],
+      "section": "Record menu › Quantize",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-290",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Quantize",
+        "Note end time"
+      ],
+      "section": "Record menu › Quantize",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-291",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Quantize",
+        "Leave note duration"
+      ],
+      "section": "Record menu › Quantize",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-292",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Quantize",
+        "Record to step sequencer"
+      ],
+      "section": "Record menu › Quantize",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-293",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Record (automation, score, audio, clips)",
+        "Quantize",
+        "Automations"
+      ],
+      "section": "Record menu › Quantize",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-294",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Tempo"
+      ],
+      "section": "Transport",
+      "kind": "control",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › tempo field",
+      "status": "DIFFERENT",
+      "feature": "TR-002",
+      "notes": "Drag or type, as in FL. FL's right-click menu has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…) and tempo presets: Tempo tapper (Cmd+F5), 80 BPM, 90 BPM … in steps of 10 (partly hidden in the capture). LimeShot has no tempo menu or automation (AUT-008)."
+    },
+    {
+      "id": "MENU-295",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Tempo",
+        "Tempo tapper"
+      ],
+      "section": "Tempo menu",
+      "kind": "dialog",
+      "fl_keys": "Cmd+F5",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-012",
+      "notes": ""
+    },
+    {
+      "id": "MENU-296",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Tempo",
+        "<BPM presets>"
+      ],
+      "section": "Tempo menu",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-002",
+      "notes": "80, 90, 100, 110, 120, 130, 140 BPM and more (cut off by a system prompt in the capture)."
+    },
+    {
+      "id": "MENU-297",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Song position"
+      ],
+      "section": "Song position",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › song position",
+      "status": "DIFFERENT",
+      "feature": "TR-008",
+      "notes": "FL shows one format chosen with the right-click menu (Mode: Bar:Beat/Step:Tick, Minute:Second:Centisecond, SMPTE 23.976 … 120 fps; Middle unit: Step / Beat). LimeShot shows bar:beat:tick and minutes:seconds together; a click returns to the start."
+    },
+    {
+      "id": "MENU-298",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Song position",
+        "Mode"
+      ],
+      "section": "Song position menu",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-008",
+      "notes": "Bar : Beat/Step : Tick (selected), Minute : Second : Centisecond, SMPTE 23.976, 24, 25, 29.97 drop, 29.97 non-drop, 30, 48, 50, 59.94 drop/non-drop, 60, 72, 120 fps."
+    },
+    {
+      "id": "MENU-299",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Song position",
+        "Middle unit"
+      ],
+      "section": "Song position menu",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "TR-008",
+      "notes": "Step (selected) / Beat."
+    },
+    {
+      "id": "MENU-300",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Typing keyboard to piano"
+      ],
+      "section": "Recording switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-301",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Recording precount"
+      ],
+      "section": "Recording switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+P",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-007",
+      "notes": "Shown as '3.2.1'."
+    },
+    {
+      "id": "MENU-302",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Loop record"
+      ],
+      "section": "Recording switches",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-303",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Metronome"
+      ],
+      "section": "Recording switches",
+      "kind": "toggle",
+      "fl_keys": "Cmd+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Metronome",
+      "status": "IMPLEMENTED",
+      "feature": "TR-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-304",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Detected chord"
+      ],
+      "section": "Info",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "Names the chord being played ('---' when none)."
+    },
+    {
+      "id": "MENU-305",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Monitor (master)"
+      ],
+      "section": "Info",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "Oscilloscope / spectrum of the master output; a click changes the view."
+    },
+    {
+      "id": "MENU-306",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Peak meter (master)"
+      ],
+      "section": "Info",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Master output",
+      "status": "IMPLEMENTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-307",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "CPU load"
+      ],
+      "section": "CPU",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › audio load readout",
+      "status": "DIFFERENT",
+      "feature": "UI-004",
+      "notes": "LimeShot shows the audio load once per second. FL's right-click menu: Refresh (Slow, Medium, Fast) and Misc (View voice count, View FPS); FL also shows memory use."
+    },
+    {
+      "id": "MENU-308",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "CPU load",
+        "Refresh"
+      ],
+      "section": "CPU menu",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "Slow (selected), Medium, Fast."
+    },
+    {
+      "id": "MENU-309",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "CPU load",
+        "View voice count"
+      ],
+      "section": "CPU menu",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-310",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "CPU load",
+        "View FPS"
+      ],
+      "section": "CPU menu",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-311",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "CPU load history"
+      ],
+      "section": "CPU",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "A graph of recent CPU load next to the readout."
+    },
+    {
+      "id": "MENU-312",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Hint panel"
+      ],
+      "section": "Hint panel",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › hint panel",
+      "status": "IMPLEMENTED",
+      "feature": "UI-004",
+      "notes": "Top left: what LimeShot is doing, then the control under the pointer and its shortcut."
+    },
+    {
+      "id": "MENU-313",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Browser / Plugin picker"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "Opt+F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Browser",
+      "status": "IMPLEMENTED",
+      "feature": "BR-001",
+      "notes": "FL: a right-click shows the Plugin picker; LimeShot has no plugin picker."
+    },
+    {
+      "id": "MENU-314",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Channel rack"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "F6",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Channel Rack",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-315",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Piano roll / Maximize Piano roll"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "F7",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Piano Roll",
+      "status": "DIFFERENT",
+      "feature": "UI-002",
+      "notes": "FL: a right-click maximises it; LimeShot toggles it."
+    },
+    {
+      "id": "MENU-316",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Playlist / Maximize Play list"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "F5",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Playlist",
+      "status": "DIFFERENT",
+      "feature": "UI-002",
+      "notes": "As Piano roll."
+    },
+    {
+      "id": "MENU-317",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Mixer"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "F9",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Mixer",
+      "status": "IMPLEMENTED",
+      "feature": "UI-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-318",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Auto scrolling"
+      ],
+      "section": "Shortcut icons",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "UI-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-319",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "One-click audio recording"
+      ],
+      "section": "Shortcut icons",
+      "kind": "control",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-320",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Main snap / quantization / step edit step"
+      ],
+      "section": "Snap",
+      "kind": "list",
+      "fl_keys": "BkSp",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › snap selector",
+      "status": "DIFFERENT",
+      "feature": "PR-005",
+      "notes": "FL's list: Line, Cell, (none), 1/6 step, 1/4 step, 1/3 step, 1/2 step, Step, 1/6 beat, 1/4 beat, 1/3 beat, 1/2 beat, Beat, Bar; the hint also names BkSp. LimeShot offers Bar, Beat, 1/2 beat, Step, 1/2 step, 1/3 step, 1/4 step and None."
+    },
+    {
+      "id": "MENU-321",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Pattern options"
+      ],
+      "section": "Patterns",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › pattern selector",
+      "status": "DIFFERENT",
+      "feature": "SEQ-021",
+      "notes": "The ▸ left of the selector opens the Patterns menu (pattern list and commands). LimeShot's selector menu lists the patterns and Create new; the commands are in the main Patterns menu."
+    },
+    {
+      "id": "MENU-322",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Pattern selector"
+      ],
+      "section": "Patterns",
+      "kind": "list",
+      "fl_keys": "+ / -",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › pattern selector",
+      "status": "IMPLEMENTED",
+      "feature": "SEQ-018",
+      "notes": "+ and − step through the patterns."
+    },
+    {
+      "id": "MENU-323",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "New pattern (find first / next empty)"
+      ],
+      "section": "Patterns",
+      "kind": "control",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › pattern selector",
+      "status": "DIFFERENT",
+      "feature": "SEQ-021",
+      "notes": "FL's + button; a left click finds the next empty pattern. LimeShot: Create new in the selector, F4 and Shift+F4."
+    },
+    {
+      "id": "MENU-324",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Shift key modifier"
+      ],
+      "section": "Modifiers",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "On-screen modifier keys for touch screens."
+    },
+    {
+      "id": "MENU-325",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Command key modifier"
+      ],
+      "section": "Modifiers",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "On-screen modifier keys for touch screens."
+    },
+    {
+      "id": "MENU-326",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Option key modifier"
+      ],
+      "section": "Modifiers",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "On-screen modifier keys for touch screens."
+    },
+    {
+      "id": "MENU-327",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Gopher (chat assistant)"
+      ],
+      "section": "Online",
+      "kind": "link",
+      "fl_keys": "Opt+F1",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line service."
+    },
+    {
+      "id": "MENU-328",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Buy FL Studio and upgrades"
+      ],
+      "section": "Online",
+      "kind": "link",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line shop."
+    },
+    {
+      "id": "MENU-329",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Online content & events"
+      ],
+      "section": "Online",
+      "kind": "display",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "Image-Line news panel."
+    },
+    {
+      "id": "MENU-330",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Time signature"
+      ],
+      "section": "LimeShot",
+      "kind": "control",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › Beats per bar / Beat unit (power of two)",
+      "status": "LIMESHOT_ONLY",
+      "feature": "",
+      "notes": "LimeShot shows the project's time signature next to the tempo; FL keeps it in Project settings."
+    },
+    {
+      "id": "MENU-331",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Undo, redo, save and export"
+      ],
+      "section": "LimeShot",
+      "kind": "control",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › undo, redo, save and export buttons",
+      "status": "LIMESHOT_ONLY",
+      "feature": "",
+      "notes": "LimeShot's own buttons on the right of the toolbar."
     }
   ],
   "lists": {

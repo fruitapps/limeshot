@@ -42,8 +42,8 @@
      windows View opens (Project picker, Tempo tapper, Touch controller, Plugin performance monitor, Script output).
    Implementing from it: APP-025 should become FL's tabbed settings window (MIDI, Audio, General, File, Theme,
    Project, Info), starting with the pages LimeShot already has settings for.
-   * [ ] Toolbar: every panel, button and drop-down (pattern selector, snap, hint bar, CPU panel, the toolbar's own
-     menus) and the Browser's top bar.
+   * [x] Toolbar (session 15): 54 records under the menu "Toolbar" in `menus.json` (names and keys from FL's hint
+     panel, the right-click menus). Not yet: the Browser's top bar.
    * [ ] Each editor's own menus and context menus (Channel Rack, Piano Roll, Playlist, Mixer; partly recorded in
      `fl-studio-analysis.md` §2–6).
    Then implement the menu bar (APP-026) from `menus.md`'s "open work by feature" table, highest priority first:
