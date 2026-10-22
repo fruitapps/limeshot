@@ -162,7 +162,7 @@ impl Pdc {
             if i == 0 {
                 continue;
             }
-            for &(to, _) in &snapshot.mixer[i].routes {
+            for &(to, _, _) in &snapshot.mixer[i].routes {
                 if to < tracks && to != i {
                     // A track with nothing feeding it carries only silence: no compensation.
                     if fed[i] {
@@ -192,7 +192,7 @@ impl Pdc {
                 && snapshot.mixer[t]
                     .routes
                     .iter()
-                    .any(|&(to, _)| to < tracks && to != t && self.arrival[to] > self.out[t]);
+                    .any(|&(to, _, _)| to < tracks && to != t && self.arrival[to] > self.out[t]);
             if needs_output[t] {
                 output[t] = self.output[t];
             }
@@ -279,9 +279,10 @@ impl Pdc {
         }
     }
 
-    /// Add track `t`'s post-fader output `src` into `dst` at `level`, delayed as the route to
-    /// track `to` needs.
-    pub(crate) fn route(&mut self, t: usize, to: usize, src: &[f32], dst: &mut [f32], level: f32) {
+    /// Add track `t`'s pre-fader output `src` into `dst` at `(left, right)` gains (the fader
+    /// and pan times the send level, or the level alone for a pre-fader send), delayed as the
+    /// route to track `to` needs.
+    pub(crate) fn route(&mut self, t: usize, to: usize, src: &[f32], dst: &mut [f32], level: (f32, f32)) {
         let delay = self
             .arrival
             .get(to)
@@ -293,19 +294,26 @@ impl Pdc {
             Some(r) if delay > 0 => {
                 let n = src.len().min(self.scratch.len());
                 r.read(delay as usize, &mut self.scratch[..n]);
-                for (d, s) in dst.iter_mut().zip(&self.scratch[..n]) {
-                    *d += s * level;
+                for (d, s) in dst
+                    .as_chunks_mut::<2>()
+                    .0
+                    .iter_mut()
+                    .zip(self.scratch[..n].as_chunks::<2>().0)
+                {
+                    d[0] += s[0] * level.0;
+                    d[1] += s[1] * level.1;
                 }
             }
             _ => {
-                for (d, s) in dst.iter_mut().zip(src) {
-                    *d += s * level;
+                for (d, s) in dst.as_chunks_mut::<2>().0.iter_mut().zip(src.as_chunks::<2>().0) {
+                    d[0] += s[0] * level.0;
+                    d[1] += s[1] * level.1;
                 }
             }
         }
     }
 
-    /// Record track `t`'s post-fader output for its delayed routes. Call once per block, before
+    /// Record track `t`'s pre-fader output for its delayed routes. Call once per block, before
     /// [`Pdc::route`].
     pub(crate) fn record(&mut self, t: usize, src: &[f32]) {
         let ring = self.output.get(t).copied().unwrap_or(NONE);

@@ -157,8 +157,8 @@ pub struct MixerTrackState {
     pub audible: bool,
     /// Insert chain in processing order. The engine keys processors by `id`.
     pub effects: Vec<EffectState>,
-    /// Post-fader outputs: (destination track, linear level). Empty for the master.
-    pub routes: Vec<(usize, f32)>,
+    /// Outputs: (destination track, linear level, pre-fader). Empty for the master.
+    pub routes: Vec<(usize, f32, bool)>,
     /// The built-in EQ's bands as (frequency, gain dB, width).
     pub eq: [(f32, f32, f32); 3],
 }
@@ -397,7 +397,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
             routes: if i == 0 {
                 Vec::new()
             } else {
-                t.routes.iter().map(|r| (usize::from(r.to), r.level)).collect()
+                t.routes.iter().map(|r| (usize::from(r.to), r.level, r.pre)).collect()
             },
         })
         .collect::<Vec<_>>();
@@ -815,10 +815,15 @@ mod tests {
             value: 3.0, // 1/8
         })
         .unwrap();
-        d.execute(Command::SetTempo(limeshot_core::Tempo::from_bpm(150.0))).unwrap();
+        d.execute(Command::SetTempo(limeshot_core::Tempo::from_bpm(150.0)))
+            .unwrap();
         let snap = compile(d.project(), pat, &NoSamples);
         assert_eq!(snap.mixer[1].effects[0].params[0], 200.0);
-        assert_eq!(d.project().mixer.tracks[1].effects[0].params[0], 375.0, "the stored Time stays");
+        assert_eq!(
+            d.project().mixer.tracks[1].effects[0].params[0],
+            375.0,
+            "the stored Time stays"
+        );
     }
 
     #[test]

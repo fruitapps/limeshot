@@ -870,6 +870,81 @@ fn mixer_routes_through_buses() {
     assert_eq!(peak(&f), 0.0);
 }
 
+/// MIX-008: a pre-fader send carries the track's signal whatever its fader and pan; a
+/// post-fader one follows them. The track's own (post-fader) output still follows the fader.
+#[test]
+fn pre_fader_sends_ignore_the_fader() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let peak = |f: &Fixture| {
+        let (a, _) = render(snapshot(f), ExportRange::Pattern, 256, SR);
+        a.iter().fold(0.0f32, |m, v| m.max(v.abs()))
+    };
+    let run = |f: &mut Fixture, c: Command| f.doc.execute(c).unwrap();
+    let full = peak(&f);
+    // Kick (insert 1) sends to insert 3 only, the fader at half.
+    run(&mut f, Command::SetMixerVolume { track: 3, volume: 1.0 });
+    run(
+        &mut f,
+        Command::SetRoute {
+            from: 1,
+            to: 3,
+            level: Some(1.0),
+        },
+    );
+    run(
+        &mut f,
+        Command::SetRoute {
+            from: 1,
+            to: 0,
+            level: None,
+        },
+    );
+    let base = f.doc.project().mixer.tracks[1].volume;
+    run(
+        &mut f,
+        Command::SetMixerVolume {
+            track: 1,
+            volume: base / 2.0,
+        },
+    );
+    let post = peak(&f);
+    assert!((post / full - 0.5).abs() < 1e-3, "post-fader: {post} vs {full}");
+    run(
+        &mut f,
+        Command::SetRoutePre {
+            from: 1,
+            to: 3,
+            pre: true,
+        },
+    );
+    let pre = peak(&f);
+    assert!(
+        (pre * base / full - 1.0).abs() < 1e-3,
+        "pre-fader: the fader no longer counts ({pre})"
+    );
+    run(&mut f, Command::SetMixerVolume { track: 1, volume: 0.0 });
+    assert!((peak(&f) - pre).abs() < 1e-4, "fader down: the send still sounds");
+    run(&mut f, Command::SetMixerMute { track: 1, muted: true });
+    assert_eq!(peak(&f), 0.0, "a muted track sends nothing");
+    assert!(
+        f.doc
+            .execute(Command::SetRoutePre {
+                from: 1,
+                to: 5,
+                pre: true
+            })
+            .is_err()
+    );
+}
+
 /// A one-second ramp whose value encodes the frame index (value = i / 48000), placed as an audio
 /// clip at bar 1 beat 3 (tick 1920 = 48 000 frames at 120 BPM), trimmed by a quarter of a second
 /// at the start and half a second long.

@@ -3083,7 +3083,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). No pre-fader/post-fader choice, no plugin effects."
+      "notes": "Processors are built on the control thread and handed to the audio thread by id (see audio-engine.md). Effects are pre-fader inserts; sends can be pre- or post-fader (MIX-008)."
     },
     {
       "id": "MIX-008",
@@ -3091,7 +3091,7 @@
       "name": "Routing and sends between tracks",
       "description": "Bus routing.",
       "fl_reference": "Send switches/levels.",
-      "limeshot_behavior": "Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent.",
+      "limeshot_behavior": "Each insert routes (post-fader) to the master by default and can route to any other insert at a send level, to several destinations at once (parallel buses). In the Mixer, the selected track shows a route button on every other strip (lit when routed, with a send knob; dimmed when it would loop); the track panel lists outputs with levels and '+ Route to…'. Routes that would create feedback are refused; a track without routes is silent. Each output route has a PRE toggle: a pre-fader send takes the signal before the track's fader and pan (a muted track still sends nothing).",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -3111,7 +3111,8 @@
         "limeshot-core document::tests::sanitize_breaks_routing_loops_from_files",
         "limeshot-engine tests/audio.rs::mixer_routes_through_buses",
         "limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track",
-        "limeshot-app tests/ui.rs::send_knob_covers_the_send_range"
+        "limeshot-app tests/ui.rs::send_knob_covers_the_send_range",
+        "limeshot-engine tests/audio.rs::pre_fader_sends_ignore_the_fader"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3120,7 +3121,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Sends are post-fader only (no pre-fader option yet); routes are summed with no latency compensation (not needed until effects report latency). Session 9: the route button's send knob covers the whole send range (to +6 dB, 0 dB at about 80 %, as the faders)."
+      "notes": "Session 16: pre-fader sends (Route::pre); the delay-compensation rings now hold each track's pre-fader signal and the fader is applied per route, so a fader move reaches a delayed route at once rather than after the delay. routes are summed with no latency compensation (not needed until effects report latency). Session 9: the route button's send knob covers the whole send range (to +6 dB, 0 dB at about 80 %, as the faders)."
     },
     {
       "id": "MIX-009",

@@ -457,6 +457,12 @@ pub enum Command {
         to: u16,
         level: Option<f32>,
     },
+    /// Make the route `from` → `to` a pre-fader send (before the fader and pan) or post-fader.
+    SetRoutePre {
+        from: u16,
+        to: u16,
+        pre: bool,
+    },
     /// Append an effect to a mixer track's insert chain (returns the effect id).
     AddEffect {
         track: u16,
@@ -566,7 +572,7 @@ fn remap_mixer(p: &mut Project, map: impl Fn(u16) -> Option<u16>) {
             .filter_map(|r| map(r.to).map(|to| Route { to, ..*r }))
             .collect();
         if t.routes.is_empty() && k != 0 {
-            t.routes.push(Route { to: 0, level: 1.0 });
+            t.routes.push(Route::new(0, 1.0));
         }
         for e in &mut t.effects {
             if e.kind == crate::effects::EffectKind::Compressor
@@ -687,6 +693,8 @@ impl Command {
             SetMixerTrackColor { .. } => "Mixer track color",
             SetRoute { level: None, .. } => "Remove route",
             SetRoute { .. } => "Route mixer track",
+            SetRoutePre { pre: true, .. } => "Pre-fader send",
+            SetRoutePre { .. } => "Post-fader send",
             AddEffect { .. } => "Add effect",
             AddPluginEffect { .. } => "Add plugin",
             SetPluginSeparateProcess { .. } => "Plugin process",
@@ -1698,7 +1706,7 @@ impl Command {
             }
             ResetMixerRouting(track) => {
                 if track != 0 {
-                    mixer_track(p, track)?.routes = vec![Route { to: 0, level: 1.0 }];
+                    mixer_track(p, track)?.routes = vec![Route::new(0, 1.0)];
                 }
             }
             UnrouteMixerTrack(track) => {
@@ -1706,11 +1714,19 @@ impl Command {
                 for t in p.mixer.tracks.iter_mut().skip(1) {
                     t.routes.retain(|r| r.to != track);
                     if t.routes.is_empty() {
-                        t.routes.push(Route { to: 0, level: 1.0 });
+                        t.routes.push(Route::new(0, 1.0));
                     }
                 }
             }
             SetMixerTrackColor { track, color } => mixer_track(p, track)?.color = color,
+            SetRoutePre { from, to, pre } => {
+                let r = mixer_track(p, from)?
+                    .routes
+                    .iter_mut()
+                    .find(|r| r.to == to)
+                    .ok_or_else(|| CommandError::Invalid(format!("track {from} does not route to {to}")))?;
+                r.pre = pre;
+            }
             SetMixerVolume { track, volume } => mixer_track(p, track)?.volume = finite(volume)?.clamp(0.0, 2.0),
             SetMixerPan { track, pan } => mixer_track(p, track)?.pan = finite(pan)?.clamp(-1.0, 1.0),
             SetMixerEq { track, band, value } => {
@@ -1742,7 +1758,7 @@ impl Command {
                                     "routing mixer track {from} to {to} would create a feedback loop"
                                 )));
                             }
-                            mixer_track(p, from)?.routes.push(Route { to, level });
+                            mixer_track(p, from)?.routes.push(Route::new(to, level));
                         }
                     }
                 }

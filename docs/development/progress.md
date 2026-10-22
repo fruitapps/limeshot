@@ -735,5 +735,10 @@ turns it into a time from the tempo when the sequencer compiles the mix, so temp
 stays and is greyed out in the effect panel. Choices with more than four labels show as a drop-down. Older projects
 load with Sync off (sanitize pads parameters).
 
-Mixer pre-fader sends (Then 6) are not started: the delay-compensation rings record each track's post-fader output,
-so a pre-fader send needs its own ring per track (in `Pdc::plan`) or the fader applied when routes are read.
+
+### Session 16, part 8: pre-fader sends (MIX-008; next-steps Then 6)
+
+`Route::pre` (saved only when set) and `Command::SetRoutePre`; the track panel's Output rows have a PRE toggle. The
+engine now records each track's pre-fader signal for delay compensation and applies the fader and pan per route
+(`Pdc::route` takes left/right gains), then scales the bus in place so meters and sidechain keys still read the
+post-fader signal. A muted track sends nothing, pre or post. Engine test with the fader at half and at zero.

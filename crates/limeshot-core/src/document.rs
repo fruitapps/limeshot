@@ -478,7 +478,7 @@ mod tests {
         assert_eq!(d.project().mixer.tracks[2].name, "Insert 2");
         assert_eq!(
             d.project().mixer.tracks[2].routes,
-            vec![Route { to: 0, level: 1.0 }, Route { to: 1, level: 0.5 }]
+            vec![Route::new(0, 1.0), Route::new(1, 0.5)]
         );
         // Insert one at 1: everything moves up.
         x(&mut d, Command::InsertMixerTrack(1));
@@ -486,12 +486,12 @@ mod tests {
             state(&d),
             (Some(2), 2, Some(AutomationTarget::MixerVolume(2)), Some(2.0))
         );
-        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 0, level: 1.0 }]);
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route::new(0, 1.0)]);
         // Delete Drums: its channel plays on the master, routes to it fall back, its automation goes.
         x(&mut d, Command::RemoveMixerTrack(2));
         assert_eq!(state(&d), (None, 0, None, Some(0.0)));
         assert!(d.project().playlist.clips.is_empty());
-        assert_eq!(d.project().mixer.tracks[2].routes, vec![Route { to: 0, level: 1.0 }]);
+        assert_eq!(d.project().mixer.tracks[2].routes, vec![Route::new(0, 1.0)]);
         assert!(d.execute(Command::RemoveMixerTrack(0)).is_err());
         assert!(d.execute(Command::MoveMixerTrack { track: 1, to: 0 }).is_err());
         // Reset, colour, routing.
@@ -1086,7 +1086,7 @@ mod tests {
     #[test]
     fn routing_refuses_feedback_and_orders_tracks() {
         let (mut d, _, _) = doc_with_channel();
-        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 0, level: 1.0 }]);
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route::new(0, 1.0)]);
         assert!(d.project().mixer.tracks[0].routes.is_empty());
         // 1 → 2 (a bus), 2 → master already.
         d.execute(Command::SetRoute {
@@ -1101,7 +1101,7 @@ mod tests {
             level: None,
         })
         .unwrap();
-        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route { to: 2, level: 0.5 }]);
+        assert_eq!(d.project().mixer.tracks[1].routes, vec![Route::new(2, 0.5)]);
         assert!(
             d.execute(Command::SetRoute {
                 from: 2,
@@ -1144,9 +1144,9 @@ mod tests {
     #[test]
     fn sanitize_breaks_routing_loops_from_files() {
         let mut p = Project::new();
-        p.mixer.tracks[1].routes = vec![Route { to: 2, level: 1.0 }];
-        p.mixer.tracks[2].routes = vec![Route { to: 1, level: 1.0 }, Route { to: 99, level: 1.0 }];
-        p.mixer.tracks[0].routes = vec![Route { to: 3, level: 1.0 }];
+        p.mixer.tracks[1].routes = vec![Route::new(2, 1.0)];
+        p.mixer.tracks[2].routes = vec![Route::new(1, 1.0), Route::new(99, 1.0)];
+        p.mixer.tracks[0].routes = vec![Route::new(3, 1.0)];
         p.sanitize();
         assert!(p.mixer.tracks[0].routes.is_empty());
         assert_eq!(p.mixer.tracks[1].routes.len(), 1);

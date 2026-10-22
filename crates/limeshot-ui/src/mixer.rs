@@ -655,7 +655,7 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     )
                     .hint(tip);
                     let mut db = limeshot_dsp::gain_to_db(route.level).max(-60.0);
-                    ui.spacing_mut().slider_width = (ui.available_width() - 110.0).max(50.0);
+                    ui.spacing_mut().slider_width = (ui.available_width() - 142.0).max(50.0);
                     let r = reset(
                         ui.add(egui::Slider::new(&mut db, -60.0..=6.0).fixed_decimals(1).suffix(" dB")),
                         &mut db,
@@ -668,6 +668,17 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                         level: Some(level),
                     });
                     app.exec_gesture(&r, cmd);
+                    if ui
+                        .add(egui::Button::selectable(route.pre, RichText::new("PRE").small()))
+                        .hint("Pre-fader send: the signal before this track's fader and pan")
+                        .clicked()
+                    {
+                        app.exec(Command::SetRoutePre {
+                            from: i,
+                            to: route.to,
+                            pre: !route.pre,
+                        });
+                    }
                     if ui.small_button("×").hint("Remove route").clicked() {
                         app.exec(Command::SetRoute {
                             from: i,

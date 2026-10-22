@@ -510,10 +510,20 @@ fn is_default_eq(eq: &[EqBand; 3]) -> bool {
 pub struct Route {
     pub to: u16,
     pub level: f32,
+    /// Send before the fader and pan (a pre-fader send); post-fader by default. Saved only when
+    /// set.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pre: bool,
+}
+
+impl Route {
+    pub const fn new(to: u16, level: f32) -> Self {
+        Route { to, level, pre: false }
+    }
 }
 
 fn default_routes() -> Vec<Route> {
-    vec![Route { to: 0, level: 1.0 }]
+    vec![Route::new(0, 1.0)]
 }
 
 impl MixerTrack {
@@ -861,7 +871,7 @@ impl Project {
                     && !self.mixer.would_cycle(from16, r.to);
                 if valid {
                     let level = finite(r.level, 1.0).clamp(0.0, 2.0);
-                    self.mixer.tracks[from].routes.push(Route { to: r.to, level });
+                    self.mixer.tracks[from].routes.push(Route::new(r.to, level));
                 }
             }
         }

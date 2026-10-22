@@ -900,6 +900,30 @@ impl Renderer {
             let (gain, pan) = self.track_mix.get(i).copied().unwrap_or((t.gain, t.pan));
             let (pl, pr) = pan_gains(pan);
             let (gl, gr) = if t.audible { (gain * pl, gain * pr) } else { (0.0, 0.0) };
+            // Routes read the pre-fader signal: a post-fader route applies the fader and pan, a
+            // pre-fader send only its level (a muted track sends nothing either way). The
+            // delay-compensation rings hold the pre-fader signal for the same reason.
+            self.pdc.record(i, &self.buses[i][..2 * frames]);
+            let on = if t.audible { 1.0 } else { 0.0 };
+            for &(to, level, pre) in &t.routes {
+                if to == i || to >= tracks {
+                    continue;
+                }
+                let gains = if pre {
+                    (level * on, level * on)
+                } else {
+                    (level * gl, level * gr)
+                };
+                let (src, dst) = if i < to {
+                    let (a, b) = self.buses.split_at_mut(to);
+                    (&a[i], &mut b[0])
+                } else {
+                    let (a, b) = self.buses.split_at_mut(i);
+                    (&b[0], &mut a[to])
+                };
+                self.pdc.route(i, to, &src[..2 * frames], &mut dst[..2 * frames], gains);
+            }
+            // The bus ends post-fader: the meters and sidechain keys read it.
             let mut peak = Peak::default();
             {
                 let bus = &mut self.buses[i];
@@ -911,20 +935,6 @@ impl Renderer {
                 }
             }
             self.peaks[i] = peak;
-            self.pdc.record(i, &self.buses[i][..2 * frames]);
-            for &(to, level) in &t.routes {
-                if to == i || to >= tracks {
-                    continue;
-                }
-                let (src, dst) = if i < to {
-                    let (a, b) = self.buses.split_at_mut(to);
-                    (&a[i], &mut b[0])
-                } else {
-                    let (a, b) = self.buses.split_at_mut(i);
-                    (&b[0], &mut a[to])
-                };
-                self.pdc.route(i, to, &src[..2 * frames], &mut dst[..2 * frames], level);
-            }
         }
         self.track_fx(0, frames, &snapshot.mixer);
         let master = &mut self.buses[0];
