@@ -5411,3 +5411,47 @@ fn an_audio_take_becomes_an_audio_clip() {
     // Audio recording is off until the Audio filter is chosen.
     assert!(!h.state().ui.record.audio);
 }
+
+/// INS-014: sampler envelope controls reset through commands and remain undoable.
+#[test]
+fn sampler_envelope_controls_reset_and_undo() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    let Instrument::Sampler(mut params) = h.state().project().channels[0].instrument.clone() else {
+        panic!("demo sampler expected");
+    };
+    params.attack_ms = 500.0;
+    params.decay_ms = 800.0;
+    params.sustain = 0.3;
+    h.state_mut().exec(Command::SetInstrument {
+        channel,
+        instrument: Instrument::Sampler(params.clone()),
+    });
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    h.step();
+    h.step();
+    for label in ["Attack", "Decay", "Sustain"] {
+        let rect = h.get_by_label(label).rect();
+        double_click(&mut h, egui::pos2(rect.right() + 30.0, rect.center().y));
+        let Instrument::Sampler(p) = &h.state().project().channels[0].instrument else {
+            panic!("sampler expected");
+        };
+        match label {
+            "Attack" => assert_eq!(p.attack_ms, 0.0),
+            "Decay" => assert_eq!(p.decay_ms, 0.0),
+            "Sustain" => assert_eq!(p.sustain, 1.0),
+            _ => unreachable!(),
+        }
+        // The first click can move the slider before the second click resets it.
+        assert!(h.state_mut().doc.undo());
+        if h.state().project().channels[0].instrument != Instrument::Sampler(params.clone()) {
+            assert!(h.state_mut().doc.undo());
+        }
+        h.step();
+        assert_eq!(
+            h.state().project().channels[0].instrument,
+            Instrument::Sampler(params.clone())
+        );
+    }
+}

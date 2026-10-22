@@ -7439,19 +7439,28 @@
       "name": "Sampler volume envelope",
       "description": "ADSR for sampler channels.",
       "fl_reference": "Channel Sampler › Envelope/instrument settings: volume, panning, cutoff, resonance and pitch envelopes with LFOs.",
-      "limeshot_behavior": "Planned: the sampler has a release only.",
+      "limeshot_behavior": "The Sampler's Playback section has a volume envelope: Attack, Decay, Sustain and Release (defaults 0 ms / 0 ms / 100 % / 10 ms keep a sample's start exact).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "INS-002"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::sampler_volume_envelope",
+        "limeshot-core model::tests::sampler_envelope_defaults_round_trip_and_sanitize",
+        "limeshot-app tests/ui.rs::sampler_envelope_controls_reset_and_undo"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7459,7 +7468,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024."
     },
     {
       "id": "EXP-013",

@@ -288,6 +288,43 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
+    row(ui, "Attack", |ui| {
+        let r = reset(
+            ui.add(
+                egui::Slider::new(&mut q.attack_ms, 0.0..=2000.0)
+                    .logarithmic(true)
+                    .max_decimals(1)
+                    .suffix(" ms"),
+            ),
+            &mut q.attack_ms,
+            d.attack_ms,
+        );
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
+    row(ui, "Decay", |ui| {
+        let r = reset(
+            ui.add(
+                egui::Slider::new(&mut q.decay_ms, 0.0..=4000.0)
+                    .logarithmic(true)
+                    .max_decimals(1)
+                    .suffix(" ms"),
+            ),
+            &mut q.decay_ms,
+            d.decay_ms,
+        );
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
+    row(ui, "Sustain", |ui| {
+        let r = reset(
+            ui.add(egui::Slider::new(&mut q.sustain, 0.0..=1.0).custom_formatter(|v, _| format!("{:.0}%", v * 100.0))),
+            &mut q.sustain,
+            d.sustain,
+        );
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
     row(ui, "Release", |ui| {
         let r = reset(
             ui.add(

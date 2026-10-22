@@ -103,7 +103,8 @@ is applied once per block. Evaluation is a binary search, allocation-free.
 
 * **Sampler**: linear-interpolated playback of interleaved stereo `SampleData`;
   `step = src_rate / out_rate · 2^((key − root + pitch)/12)`; region `[start, end)` as fractions; reverse plays from
-  the end. Envelope: no attack (the onset lands on the exact sample), release = `release_ms`. One-shot samplers ignore
+  the end. Envelope: configurable attack, decay, sustain and release; defaults preserve the exact sample onset
+  (0 ms attack/decay, full sustain, 10 ms release). One-shot samplers ignore
   the note length.
 * **LimeSynth**: one or two PolyBLEP oscillators (sine/square/saw/triangle; the second detuned by `detune_cents`), octave
   offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud. An optional

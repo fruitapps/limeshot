@@ -91,7 +91,11 @@ pub struct SamplerParams {
     /// Playback end, as a fraction of the sample length.
     pub end: f32,
     pub reverse: bool,
-    /// Release (fade-out) after note-off, in milliseconds.
+    /// Volume envelope (FL Studio's sampler envelope): attack and decay in milliseconds, sustain
+    /// level 0–1, and the release (fade-out) after note-off.
+    pub attack_ms: f32,
+    pub decay_ms: f32,
+    pub sustain: f32,
     pub release_ms: f32,
     /// Play the whole sample regardless of note length (one-shot, as drums usually want).
     pub one_shot: bool,
@@ -114,6 +118,9 @@ impl Default for SamplerParams {
             start: 0.0,
             end: 1.0,
             reverse: false,
+            attack_ms: 0.0,
+            decay_ms: 0.0,
+            sustain: 1.0,
             release_ms: 10.0,
             one_shot: true,
             looping: false,
@@ -919,6 +926,9 @@ impl Project {
                     p.pitch = finite(p.pitch, 0.0).clamp(-48.0, 48.0);
                     p.start = finite(p.start, 0.0).clamp(0.0, 1.0);
                     p.end = finite(p.end, 1.0).clamp(p.start, 1.0);
+                    p.attack_ms = finite(p.attack_ms, 0.0).clamp(0.0, 10_000.0);
+                    p.decay_ms = finite(p.decay_ms, 0.0).clamp(0.0, 10_000.0);
+                    p.sustain = finite(p.sustain, 1.0).clamp(0.0, 1.0);
                     p.release_ms = finite(p.release_ms, 10.0).clamp(0.0, 10_000.0);
                 }
                 Instrument::Synth(p) => {
@@ -1100,6 +1110,49 @@ mod tests {
                 width: 0.0
             }
         );
+    }
+
+    #[test]
+    fn sampler_envelope_defaults_round_trip_and_sanitize() {
+        // Older projects and presets omit the new stages and must retain the original onset.
+        let old: SamplerParams = serde_json::from_str(r#"{"release_ms":25.0}"#).unwrap();
+        assert_eq!((old.attack_ms, old.decay_ms, old.sustain), (0.0, 0.0, 1.0));
+        assert_eq!(old.release_ms, 25.0);
+        let settings = SamplerParams {
+            attack_ms: 20.0,
+            decay_ms: 100.0,
+            sustain: 0.4,
+            ..old
+        };
+        let saved = serde_json::to_string(&settings).unwrap();
+        assert_eq!(serde_json::from_str::<SamplerParams>(&saved).unwrap(), settings);
+        for (attack_ms, decay_ms, sustain, expected) in [
+            (f32::NAN, f32::INFINITY, f32::NEG_INFINITY, (0.0, 0.0, 1.0)),
+            (-1.0, 20_000.0, 2.0, (0.0, 10_000.0, 1.0)),
+            (20_000.0, -1.0, -1.0, (10_000.0, 0.0, 0.0)),
+        ] {
+            let mut doc = crate::Document::default();
+            let id = ChannelId(
+                doc.execute(crate::Command::AddChannel {
+                    name: "Sampler".into(),
+                    instrument: Instrument::Sampler(SamplerParams {
+                        attack_ms,
+                        decay_ms,
+                        sustain,
+                        ..Default::default()
+                    }),
+                })
+                .unwrap()
+                .0
+                .unwrap(),
+            );
+            let mut project = doc.project().clone();
+            project.sanitize();
+            let Instrument::Sampler(p) = &project.channel(id).unwrap().instrument else {
+                panic!("sampler expected");
+            };
+            assert_eq!((p.attack_ms, p.decay_ms, p.sustain), expected);
+        }
     }
 
     #[test]

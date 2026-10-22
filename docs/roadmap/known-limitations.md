@@ -29,8 +29,8 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
   height.
 * Audio clips are not time-stretched; there are no crossfades or fades on clip edges.
-* Sampler: no loop points, no time stretching, no filter; it declicks only on note-off. Linear interpolation (some
-  aliasing when pitched far up).
+* Sampler: volume ADSR, loop points and a low-pass filter are available. No envelope delay/hold stages or
+  panning, cutoff or pitch envelopes; no time stretching. Linear interpolation aliases when pitched far up.
 * LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
   glide are not available.
 * The voice pool is fixed at 128 voices; the oldest voice is stolen abruptly (no fade).

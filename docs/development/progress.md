@@ -948,3 +948,22 @@ tone low-pass, mix and output; factory presets. No oversampling yet (noted in th
 
 `EffectKind::Chorus` / `effects::Chorus` with a Mode choice: modulated delay (chorus, flanger with feedback) or a
 six-stage swept all-pass phaser; rate, depth, feedback, spread and mix; factory presets.
+
+### Session 16, part 23: sampler volume envelope (INS-014)
+
+`SamplerParams::attack_ms / decay_ms / sustain` feed the sampler voice's ADSR (it used only the release before);
+Channel Settings shows them above Release.
+
+
+### 2026-10-22 — Codex continuation: finish sampler volume envelope (INS-014)
+
+Resumed Claude's uncommitted part 23 in `/Users/sebastian/Developer/limeshot-s16` after its usage limit.
+Completed load sanitization for the new stages, backward-compatible defaults and serialization checks; exercised
+attack/decay/sustain at block sizes 1, 64, 333 and 1024. Added a headless UI regression covering each new control's
+reset and undo. Rendered and inspected Channel Settings; limited Attack/Decay readouts to one decimal so zero
+values fit the window. Updated architecture and the sampler's known limitations.
+
+Validation: `cargo test --workspace` (including 120 headless UI tests), workspace Clippy with warnings denied,
+`cargo fmt --all --check`, inventory validation and `git diff --check`. Offscreen UI:
+`cargo run -p limeshot-app --example ui_shot -- /tmp/limeshot-sampler-envelope.png --settings`.
+Delay/hold stages and envelopes for pan, cutoff and pitch remain open; native plugin embedding remains unverified.

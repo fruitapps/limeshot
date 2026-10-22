@@ -193,6 +193,9 @@ impl Voice {
                 start,
                 end,
                 reverse,
+                attack,
+                decay,
+                sustain,
                 release,
                 one_shot: _,
                 looping,
@@ -232,13 +235,13 @@ impl Voice {
                         looping,
                     },
                     filter,
-                    // Declick on the way out only (samples are expected to start cleanly), so the
-                    // first sample frame lands exactly on the note's onset.
+                    // With no attack set, the first sample frame lands exactly on the note's onset
+                    // (samples are expected to start cleanly); the release declicks the end.
                     env: Envelope::start(
                         Adsr {
-                            attack: 0.0,
-                            decay: 0.0,
-                            sustain: 1.0,
+                            attack: *attack,
+                            decay: *decay,
+                            sustain: *sustain,
                             release: *release,
                         },
                         sample_rate,

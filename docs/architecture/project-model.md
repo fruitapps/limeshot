@@ -9,7 +9,7 @@ Project
 ├── title, tempo (milli-BPM), time_signature, next_id, extra{}
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
 │     id, name, color, instrument, volume, pan, muted, solo, mute_locked, mixer_track, root_key, extra{}
-│     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, release_ms, one_shot}
+│     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot}
 │                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
 │                        cutoff_hz, resonance, filter_env, filter_decay_ms, lfo_rate_hz, vibrato_cents, lfo_cutoff}
 │                | Unsupported(raw JSON)    (kept verbatim, silent)
