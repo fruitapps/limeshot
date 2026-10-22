@@ -7039,19 +7039,27 @@
       "name": "Automation point modes",
       "description": "Per-segment curve types.",
       "fl_reference": "Automation clip points offer modes such as single curve, double curve, hold, stairs, smooth stairs, pulse and wave.",
-      "limeshot_behavior": "Planned: LimeShot has single-curve tension only (AUT-002).",
+      "limeshot_behavior": "Right-click an automation point in the Playlist: Delete, then the point modes for the segment after it — Single curve, Double curve, Hold, Stairs, Smooth stairs, Pulse, Wave. For stairs, pulse and wave the tension handle sets the count (1–16). Playback reads each clip's window of the curve, so steps and cycles keep their places when a clip starts mid-curve.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "AUT-002"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core automation::tests::point_modes_shape_their_segment",
+        "limeshot-sequencer tests::lanes_follow_point_modes_inside_clips_that_start_mid_curve",
+        "crates/limeshot-app/tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7059,7 +7067,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/automation_clips.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16 (next-steps Then 8). FL's modes from the manual; their exact shapes and how FL maps the handle to step counts were not observed live. Right-click on a point no longer deletes it at once (FL opens this menu)."
     },
     {
       "id": "AUT-013",

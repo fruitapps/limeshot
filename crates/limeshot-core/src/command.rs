@@ -1511,6 +1511,7 @@ impl Command {
                         tick: 0,
                         value: norm,
                         tension: 0.0,
+                        mode: Default::default(),
                     }],
                     length: length.max(1),
                     extra: Extra::new(),

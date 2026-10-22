@@ -657,8 +657,19 @@ fn automation_clips_are_created_from_controls_and_edited_in_the_playlist() {
     let p = points(&h)[1];
     assert_eq!((p.tick, p.value), (2 * bar, 1.0));
     assert_eq!(h.state().doc.history().len(), undo + 1);
-    // Right-click the point deletes it.
+    // AUT-012: right-click the point opens its menu; Stairs sets the segment's mode, then
+    // Delete removes the point (FL Studio).
     click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
+    assert!(h.state().ui.playlist.point_menu.is_some(), "the point menu is open");
+    h.step();
+    h.get_by_label("Stairs").click();
+    h.step();
+    assert_eq!(points(&h)[1].mode, PointMode::Stairs);
+    assert!(h.state().ui.playlist.point_menu.is_none());
+    click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
+    h.step();
+    h.get_by_label("Delete").click();
+    h.step();
     assert_eq!(points(&h).len(), 1);
 }
 
@@ -4134,11 +4145,13 @@ fn a_plugin_parameter_is_automated_from_its_menu_and_as_the_last_tweaked_paramet
                 tick: 0,
                 value: 0.0,
                 tension: 0.0,
+                mode: Default::default(),
             },
             AutomationPoint {
                 tick: 960,
                 value: 1.0,
                 tension: 0.0,
+                mode: Default::default(),
             },
         ],
     });
@@ -5157,11 +5170,13 @@ fn automated_controls_follow_the_song() {
                 tick: 0,
                 value: 0.0,
                 tension: 0.0,
+                mode: Default::default(),
             },
             AutomationPoint {
                 tick: 8 * bar,
                 value: 1.0,
                 tension: 0.0,
+                mode: Default::default(),
             },
         ],
     });

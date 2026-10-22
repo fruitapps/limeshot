@@ -20,7 +20,7 @@ pub mod note_tools;
 pub mod plugin;
 pub mod time;
 
-pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping};
+pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget, Mapping, PointMode};
 pub use command::{Command, CommandError, Created, ImportedChannel, NewNote, NoteProp};
 pub use document::{Document, PluginTarget};
 pub use effects::{COMPRESSOR_SIDECHAIN, DELAY_SYNC, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};

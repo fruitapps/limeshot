@@ -843,3 +843,11 @@ the main checkout holds a Codex session's uncommitted changes, which go in throu
 `LimeShotApp::automated(target)` evaluates the snapshot's automation lane at the song position while the song plays;
 the Channel Rack's volume/pan knobs, the Mixer's faders, pan knobs and track panel sliders, and built-in effect
 parameters display it. Stored values are untouched.
+
+### Session 16, part 11: automation point modes (AUT-012; next-steps Then 8)
+
+`AutomationPoint::mode` (`PointMode`: single and double curve, hold, stairs, smooth stairs, pulse, wave; saved only
+when set) and `automation::segment`. A point's right-click in the Playlist opens FL's point menu (Delete and the
+modes) instead of deleting at once. Automation lanes now keep the automation's own points and each clip's
+start/end/offset (`LaneClip`) and evaluate the curve directly, so stepped and periodic segments stay in place when a
+clip starts mid-curve. `ui_shot --automation` shows stairs and a wave.

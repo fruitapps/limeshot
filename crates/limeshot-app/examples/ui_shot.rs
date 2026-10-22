@@ -192,16 +192,24 @@ fn main() {
             limeshot_ui::automation_ui::create(&mut app, limeshot_core::AutomationTarget::ChannelPan(lead))
         && let Some(a) = app.project().clip(clip).and_then(|c| c.automation())
     {
-        // A pan sweep with a curved segment, as a user would draw it.
+        // A pan sweep with a curved segment, as a user would draw it, then stairs and a wave
+        // (point modes).
         let bar = app.project().time_signature.ticks_per_bar();
-        let pt = |tick, value, tension| limeshot_core::AutomationPoint { tick, value, tension };
+        let pt = |tick, value, tension, mode| limeshot_core::AutomationPoint {
+            tick,
+            value,
+            tension,
+            mode,
+        };
+        use limeshot_core::PointMode as M;
         app.exec(limeshot_core::Command::SetAutomationPoints {
             automation: a,
             points: vec![
-                pt(0, 0.5, 0.0),
-                pt(2 * bar, 0.1, 0.6),
-                pt(5 * bar, 0.9, 0.0),
-                pt(7 * bar, 0.5, -0.5),
+                pt(0, 0.5, 0.0, M::SingleCurve),
+                pt(2 * bar, 0.1, 0.6, M::SingleCurve),
+                pt(4 * bar, 0.9, -0.6, M::Stairs),
+                pt(5 * bar, 0.5, -0.8, M::Wave),
+                pt(7 * bar, 0.2, 0.0, M::SingleCurve),
             ],
         });
         app.ui.workspace.close(Win::ChannelRack);

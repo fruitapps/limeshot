@@ -1076,6 +1076,7 @@ fn automate(doc: &mut Document, target: AutomationTarget, track: u32, start: Tic
                 tick,
                 value,
                 tension: 0.0,
+                mode: Default::default(),
             })
             .collect(),
     })

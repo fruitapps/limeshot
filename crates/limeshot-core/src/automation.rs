@@ -230,9 +230,110 @@ pub struct AutomationPoint {
     pub tick: Tick,
     /// Normalised value, 0–1.
     pub value: f32,
-    /// Shape of the segment to the next point, −1–1 (0 = straight line).
+    /// Shape of the segment to the next point, −1–1 (0 = straight line). For the stepped and
+    /// periodic modes it sets the number of steps or cycles.
     #[serde(default)]
     pub tension: f32,
+    /// How the segment to the next point is drawn (FL Studio's point modes). Saved only when
+    /// not the default single curve.
+    #[serde(default, skip_serializing_if = "PointMode::is_single")]
+    pub mode: PointMode,
+}
+
+/// FL Studio's automation point modes: the shape of the segment after a point.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum PointMode {
+    #[default]
+    SingleCurve,
+    DoubleCurve,
+    Hold,
+    Stairs,
+    SmoothStairs,
+    Pulse,
+    Wave,
+}
+
+impl PointMode {
+    pub const ALL: [PointMode; 7] = [
+        PointMode::SingleCurve,
+        PointMode::DoubleCurve,
+        PointMode::Hold,
+        PointMode::Stairs,
+        PointMode::SmoothStairs,
+        PointMode::Pulse,
+        PointMode::Wave,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PointMode::SingleCurve => "Single curve",
+            PointMode::DoubleCurve => "Double curve",
+            PointMode::Hold => "Hold",
+            PointMode::Stairs => "Stairs",
+            PointMode::SmoothStairs => "Smooth stairs",
+            PointMode::Pulse => "Pulse",
+            PointMode::Wave => "Wave",
+        }
+    }
+
+    fn is_single(&self) -> bool {
+        *self == PointMode::SingleCurve
+    }
+
+    /// Whether the tension handle sets a count (steps, pulses, cycles) rather than a bend.
+    pub fn counts(self) -> bool {
+        matches!(
+            self,
+            PointMode::Stairs | PointMode::SmoothStairs | PointMode::Pulse | PointMode::Wave
+        )
+    }
+}
+
+/// Steps or cycles for the counting modes: tension −1–1 gives 1–16.
+fn count(tension: f32) -> f32 {
+    (((tension.clamp(-1.0, 1.0) + 1.0) / 2.0 * 15.0).round() + 1.0).max(1.0)
+}
+
+/// Position 0–1 along a segment of `mode` with `tension` at `x` (0–1): 0 is the segment's
+/// first value, 1 the next point's. Allocation-free.
+pub fn segment(x: f32, tension: f32, mode: PointMode) -> f32 {
+    let x = x.clamp(0.0, 1.0);
+    match mode {
+        PointMode::SingleCurve => shape(x, tension),
+        // Symmetric S: the first half bends one way, the second the other.
+        PointMode::DoubleCurve => {
+            if x < 0.5 {
+                0.5 * shape(2.0 * x, tension)
+            } else {
+                1.0 - 0.5 * shape(2.0 * (1.0 - x), tension)
+            }
+        }
+        PointMode::Hold => 0.0,
+        PointMode::Stairs => {
+            let n = count(tension);
+            ((x * n).floor() / n).min(1.0)
+        }
+        PointMode::SmoothStairs => {
+            let n = count(tension);
+            let k = (x * n).floor();
+            let f = x * n - k;
+            // Each step eases into the next.
+            let ease = f * f * (3.0 - 2.0 * f);
+            ((k + ease) / n).min(1.0)
+        }
+        PointMode::Pulse => {
+            let n = count(tension);
+            if (x * n * 2.0).floor() as i64 % 2 == 0 {
+                0.0
+            } else {
+                1.0
+            }
+        }
+        PointMode::Wave => {
+            let n = count(tension);
+            0.5 - 0.5 * (x * n * std::f32::consts::TAU).cos()
+        }
+    }
 }
 
 /// An automation curve (FL Studio's automation clip), placed by `ClipSource::Automation` clips.
@@ -301,7 +402,7 @@ pub fn curve_value(points: &[AutomationPoint], tick: Tick) -> Option<f32> {
     };
     let span = (b.tick - a.tick).max(1) as f32;
     let x = (tick - a.tick) as f32 / span;
-    Some(a.value + (b.value - a.value) * shape(x, a.tension))
+    Some(a.value + (b.value - a.value) * segment(x, a.tension, a.mode))
 }
 
 #[cfg(test)]
@@ -309,7 +410,35 @@ mod tests {
     use super::*;
 
     fn pt(tick: Tick, value: f32, tension: f32) -> AutomationPoint {
-        AutomationPoint { tick, value, tension }
+        AutomationPoint {
+            tick,
+            value,
+            tension,
+            mode: PointMode::SingleCurve,
+        }
+    }
+
+    #[test]
+    fn point_modes_shape_their_segment() {
+        let x = |m, t, at| segment(at, t, m);
+        assert_eq!(x(PointMode::Hold, 0.0, 0.9), 0.0);
+        // Stairs with tension −1/1: 1 and 16 steps; 0 gives 9 (rounded).
+        assert_eq!(x(PointMode::Stairs, -1.0, 0.99), 0.0);
+        assert_eq!(x(PointMode::Stairs, 1.0, 0.5), 0.5);
+        assert!((x(PointMode::Stairs, 1.0, 0.51) - 0.5).abs() < 1e-6);
+        assert!((x(PointMode::DoubleCurve, 0.7, 0.5) - 0.5).abs() < 1e-6);
+        assert!(x(PointMode::DoubleCurve, 0.7, 0.25) < 0.25);
+        assert_eq!(x(PointMode::Pulse, -1.0, 0.25), 0.0);
+        assert_eq!(x(PointMode::Pulse, -1.0, 0.75), 1.0);
+        assert!((x(PointMode::Wave, -1.0, 0.5) - 1.0).abs() < 1e-6);
+        let s = x(PointMode::SmoothStairs, -1.0, 0.5);
+        assert!((s - 0.5).abs() < 1e-6, "{s}");
+        // A point's mode shapes the curve after it, and is saved only when set.
+        let mut pts = [pt(0, 0.0, 0.0), pt(100, 1.0, 0.0)];
+        pts[0].mode = PointMode::Hold;
+        assert_eq!(curve_value(&pts, 99), Some(0.0));
+        assert!(!serde_json::to_string(&pt(0, 0.0, 0.0)).unwrap().contains("mode"));
+        assert!(serde_json::to_string(&pts[0]).unwrap().contains("Hold"));
     }
 
     #[test]

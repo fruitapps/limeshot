@@ -122,6 +122,9 @@ pub struct State {
     pub marker_rects: Vec<(MarkerId, Rect)>,
     drag: Option<Drag>,
     menu: Option<(ClipId, Pos2)>,
+    /// The automation point menu (FL Studio's right-click on a point): automation, point index,
+    /// where, and the frame it opened in.
+    pub point_menu: Option<(AutomationId, usize, Pos2, u64)>,
     /// Waveform overviews of audio clip samples, by stored sample path.
     peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
@@ -169,6 +172,7 @@ impl Default for State {
             marker_rects: Vec::new(),
             drag: None,
             menu: None,
+            point_menu: None,
             peaks: Default::default(),
             geometry: None,
             cursor: None,
@@ -308,6 +312,72 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     body(app, &mut body_ui);
     let ctx = ui.ctx().clone();
     clip_menu(app, &ctx);
+    point_menu(app, &ctx);
+}
+
+/// An automation point's menu: Delete, then FL Studio's point modes for the segment after it.
+fn point_menu(app: &mut LimeShotApp, ctx: &Context) {
+    let Some((a, i, pos, opened)) = app.ui.playlist.point_menu else {
+        return;
+    };
+    let Some(points) = app.project().automation(a).map(|x| x.points.clone()) else {
+        app.ui.playlist.point_menu = None;
+        return;
+    };
+    let Some(point) = points.get(i).copied() else {
+        app.ui.playlist.point_menu = None;
+        return;
+    };
+    let mut close = false;
+    let area = egui::Area::new(egui::Id::new("automation_point_menu"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(pos)
+        .show(ctx, |ui| {
+            egui::Frame::menu(ui.style()).show(ui, |ui| {
+                ui.set_min_width(150.0);
+                if ui
+                    .add_enabled(
+                        points.len() > 1,
+                        egui::Button::new(RichText::new("Delete").color(Theme::current().danger)),
+                    )
+                    .clicked()
+                {
+                    let mut pts = points.clone();
+                    pts.remove(i);
+                    app.exec(Command::SetAutomationPoints {
+                        automation: a,
+                        points: pts,
+                    });
+                    close = true;
+                }
+                ui.separator();
+                for mode in PointMode::ALL {
+                    if ui
+                        .add(egui::Button::selectable(point.mode == mode, mode.label()))
+                        .clicked()
+                    {
+                        let mut pts = points.clone();
+                        if let Some(p) = pts.get_mut(i) {
+                            p.mode = mode;
+                            // A counting mode starts at a few steps rather than the curve's bend.
+                            if mode.counts() && !point.mode.counts() {
+                                p.tension = -1.0 + 2.0 * 3.0 / 15.0;
+                            }
+                        }
+                        app.exec(Command::SetAutomationPoints {
+                            automation: a,
+                            points: pts,
+                        });
+                        close = true;
+                    }
+                }
+            });
+        });
+    let fresh = ctx.cumulative_pass_nr() == opened;
+    let clicked_outside = !fresh && ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer();
+    if close || clicked_outside || ctx.input(|i| i.key_pressed(Key::Escape)) {
+        app.ui.playlist.point_menu = None;
+    }
 }
 
 /// FL Studio's clip picker, with its three tabs: the project's patterns, audio clips and
@@ -1751,7 +1821,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     {
         let name = app.project().automation(*a).map(|a| a.name.clone()).unwrap_or_default();
         app.hint(format!(
-            "{name} — drag a point · drag ○ between points: curve · left/right-click the line: add a point · right-click a point: delete"
+            "{name} — drag a point · drag ○ between points: curve (or steps) · left/right-click the line: add a point · right-click a point: delete, point mode"
         ));
     }
     let mut primary = primary;
@@ -1775,14 +1845,9 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 });
             }
             (AutoHit::Point(i), false) => {
-                if points.len() > 1 {
-                    let mut pts = points;
-                    pts.remove(i);
-                    app.exec(Command::SetAutomationPoints {
-                        automation: a,
-                        points: pts,
-                    });
-                }
+                // FL Studio: a point's right-click menu (Delete and the point modes).
+                let pass = ui.ctx().cumulative_pass_nr();
+                app.ui.playlist.point_menu = Some((a, i, p, pass));
             }
             (AutoHit::Tension(i), true) => {
                 app.doc.begin_gesture();
@@ -1804,6 +1869,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                             tick,
                             value,
                             tension: 0.0,
+                            mode: Default::default(),
                         },
                     );
                     if left {
@@ -2403,6 +2469,7 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                                         tick: 0,
                                         value,
                                         tension: 0.0,
+                                        mode: Default::default(),
                                     }],
                                 });
                             }

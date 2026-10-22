@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 100, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 19, VERIFIED 137, DEFERRED 4
+- By status: NOT_STARTED 99, RESEARCHED 1, IN_PROGRESS 11, IMPLEMENTED 20, VERIFIED 137, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Mixer | 16 | 12 | 0 | 1 | 3 |
 | Instruments | 14 | 6 | 1 | 0 | 7 |
 | Effects | 15 | 8 | 1 | 0 | 6 |
-| Automation | 13 | 4 | 0 | 0 | 9 |
+| Automation | 13 | 4 | 1 | 0 | 8 |
 | Recording | 11 | 0 | 0 | 0 | 11 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 11 | 5 | 3 | 0 | 3 |
@@ -239,7 +239,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | AUT-009 | Plugin parameter automation | P2 |  | NOT_STARTED | Planned (after plugin hosting). | — |
 | AUT-010 | Automation clip channels in the Channel Rack | P2 |  | NOT_STARTED | Planned. Automations are listed in the Playlist picker instead. | — |
 | AUT-011 | Init song with this position | P3 |  | NOT_STARTED | Planned. | — |
-| AUT-012 | Automation point modes | P2 |  | NOT_STARTED | Planned: LimeShot has single-curve tension only (AUT-002). | — |
+| AUT-012 | Automation point modes | P2 |  | IMPLEMENTED | Right-click an automation point in the Playlist: Delete, then the point modes for the segment after it — Single curve, Double curve, Hold, Stairs, Smooth stairs, Pulse, Wave. For stairs, pulse and wave the tension handle sets the count (1–16). Playback reads each clip's window of the curve, so steps and cycles keep their places when a clip starts mid-curve.<br>*Session 16 (next-steps Then 8). FL's modes from the manual; their exact shapes and how FL maps the handle to step counts were not observed live. Right-click on a point no longer deletes it at once (FL opens this menu).* | `limeshot-core automation::tests::point_modes_shape_their_segment`<br>`limeshot-sequencer tests::lanes_follow_point_modes_inside_clips_that_start_mid_curve`<br>`crates/limeshot-app/tests/ui.rs::automation_clips_are_created_from_controls_and_edited_in_the_playlist` |
 | AUT-013 | Automated controls follow their automation | P2 |  | VERIFIED | While the song plays, automated channel volume/pan knobs, mixer faders, pan knobs and track panel sliders and built-in effect parameters show the automation's current value (LimeShotApp::automated reads the playback snapshot's lanes at the song position); stopped, they show their own setting. Dragging an automated control still edits the stored value.<br>*Session 16 (next-steps Then 8). Plugin parameters are not shown moving (their editors show the plugin's own values).* | `crates/limeshot-app/tests/ui.rs::automated_controls_follow_the_song` |
 
 ## Recording

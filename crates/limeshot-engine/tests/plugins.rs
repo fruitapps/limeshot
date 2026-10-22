@@ -323,11 +323,13 @@ fn plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames(
                     tick: 0,
                     value: from,
                     tension: 0.0,
+                    mode: Default::default(),
                 },
                 AutomationPoint {
                     tick: 3840,
                     value: to,
                     tension: 0.0,
+                    mode: Default::default(),
                 },
             ],
         })

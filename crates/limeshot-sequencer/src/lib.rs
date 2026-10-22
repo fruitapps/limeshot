@@ -17,7 +17,7 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
-use limeshot_core::automation::{curve_value, shape as curve_shape};
+use limeshot_core::automation::{AutomationPoint, curve_value};
 use limeshot_core::{
     AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, PluginTarget, Project, STEP_TICKS, Tempo, Tick,
     TimeSignature, Waveform,
@@ -196,45 +196,39 @@ pub enum LaneTarget {
     },
 }
 
-/// A breakpoint in song time. `hold` keeps the value until the next point (gaps between clips).
+/// Where one clip plays its automation: song ticks `start..end`, reading the curve from
+/// `offset`.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct LanePoint {
-    pub tick: Tick,
-    /// Normalised value, 0–1.
-    pub value: f32,
-    pub tension: f32,
-    pub hold: bool,
+pub struct LaneClip {
+    pub start: Tick,
+    pub end: Tick,
+    pub offset: Tick,
 }
 
-/// One automation flattened over the arrangement (Song mode only, as in FL Studio).
+/// One automation over the arrangement (Song mode only, as in FL Studio).
 #[derive(Debug, Clone, PartialEq)]
 pub struct AutomationLane {
     pub target: LaneTarget,
     pub mapping: Mapping,
-    /// Sorted by tick.
-    pub points: Vec<LanePoint>,
+    /// The automation's own curve (with its point modes).
+    pub points: Vec<AutomationPoint>,
+    /// Its unmuted clips, sorted by start.
+    pub clips: Vec<LaneClip>,
 }
 
 impl AutomationLane {
     /// The parameter value at song tick `tick`, in the parameter's own units. Before the first
-    /// clip the lane takes the first clip's starting value; after the last it holds the last.
-    /// Allocation-free.
+    /// clip the lane takes the first clip's starting value; between and after clips it holds the
+    /// last clip's end value. Allocation-free.
     pub fn value_at(&self, tick: Tick) -> Option<f32> {
-        let first = self.points.first()?;
-        let norm = if tick <= first.tick {
-            first.value
-        } else {
-            let i = self.points.partition_point(|p| p.tick <= tick);
-            match (self.points.get(i.wrapping_sub(1)), self.points.get(i)) {
-                (Some(a), Some(b)) if !a.hold => {
-                    let x = (tick - a.tick) as f32 / (b.tick - a.tick).max(1) as f32;
-                    a.value + (b.value - a.value) * curve_shape(x, a.tension)
-                }
-                (Some(a), _) => a.value,
-                _ => first.value,
-            }
+        let first = self.clips.first()?;
+        let i = self.clips.partition_point(|c| c.start <= tick);
+        let at = match self.clips.get(i.wrapping_sub(1)) {
+            None => first.offset,
+            Some(c) if tick < c.end => c.offset + (tick - c.start),
+            Some(c) => c.offset + (c.end - c.start),
         };
-        Some(self.mapping.to_value(norm))
+        curve_value(&self.points, at).map(|norm| self.mapping.to_value(norm))
     }
 }
 
@@ -536,41 +530,18 @@ fn automation_lanes(project: &Project) -> Vec<AutomationLane> {
             continue;
         }
         clips.sort_by_key(|c| c.start);
-        let tension_at = |t: Tick| {
-            let i = a.points.partition_point(|p| p.tick <= t);
-            a.points.get(i.wrapping_sub(1)).map_or(0.0, |p| p.tension)
-        };
-        let value = |t| curve_value(&a.points, t).unwrap_or(0.0);
-        let mut points = Vec::new();
-        for c in clips {
-            let (o, len) = (c.offset, c.length);
-            points.push(LanePoint {
-                tick: c.start,
-                value: value(o),
-                tension: tension_at(o),
-                hold: false,
-            });
-            for p in a.points.iter().filter(|p| p.tick > o && p.tick < o + len) {
-                points.push(LanePoint {
-                    tick: c.start + (p.tick - o),
-                    value: p.value,
-                    tension: p.tension,
-                    hold: false,
-                });
-            }
-            points.push(LanePoint {
-                tick: c.end(),
-                value: value(o + len),
-                tension: 0.0,
-                hold: true,
-            });
-        }
-        // Stable: at a shared tick the next clip's start comes after the previous clip's end.
-        points.sort_by_key(|p| p.tick);
         lanes.push(AutomationLane {
             target,
             mapping,
-            points,
+            points: a.points.clone(),
+            clips: clips
+                .iter()
+                .map(|c| LaneClip {
+                    start: c.start,
+                    end: c.end(),
+                    offset: c.offset,
+                })
+                .collect(),
         });
     }
     lanes
@@ -795,6 +766,53 @@ mod tests {
         assert!(snap.mixer[0].audible, "master is never solo-muted");
         assert!(!snap.mixer[1].audible);
         assert!(snap.mixer[2].audible);
+    }
+
+    #[test]
+    fn lanes_follow_point_modes_inside_clips_that_start_mid_curve() {
+        use limeshot_core::{AutomationPoint, AutomationTarget, PointMode};
+        let (mut d, _, _, pat) = setup();
+        let clip = d
+            .execute(Command::AddAutomationClip {
+                target: AutomationTarget::MixerPan(1),
+                track: 3,
+                start: 4000,
+                length: 1000,
+                value: None,
+                name: None,
+            })
+            .unwrap()
+            .0
+            .map(ClipId)
+            .unwrap();
+        let a = d.project().clip(clip).unwrap().automation().unwrap();
+        d.execute(Command::SetAutomationPoints {
+            automation: a,
+            points: vec![
+                AutomationPoint {
+                    tick: 0,
+                    value: 0.0,
+                    tension: -1.0 + 2.0 * 3.0 / 15.0,
+                    mode: PointMode::Stairs,
+                },
+                AutomationPoint {
+                    tick: 2000,
+                    value: 1.0,
+                    tension: 0.0,
+                    mode: PointMode::SingleCurve,
+                },
+            ],
+        })
+        .unwrap();
+        // Read the curve from 500 on: four stairs of 500 ticks each over the 2000-tick curve.
+        d.execute(Command::SlipClip { clip, offset: 500 }).unwrap();
+        let snap = compile(d.project(), pat, &NoSamples);
+        let lane = &snap.automation[0];
+        let norm = |t| (lane.value_at(t).unwrap() + 1.0) / 2.0;
+        assert_eq!(norm(0), 0.25, "before the clip: its first value (the second stair)");
+        assert_eq!(norm(4000 + 499), 0.25);
+        assert_eq!(norm(4000 + 500), 0.5, "the stairs keep their places in the curve");
+        assert_eq!(norm(9000), 0.75, "after the clip: its last value");
     }
 
     #[test]
