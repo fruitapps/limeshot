@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 80, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 150, DEFERRED 4
+- By status: NOT_STARTED 79, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 24, VERIFIED 151, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -19,7 +19,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Piano Roll | 29 | 19 | 3 | 0 | 7 |
 | Playlist | 29 | 20 | 1 | 3 | 5 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
-| Instruments | 14 | 8 | 1 | 1 | 4 |
+| Instruments | 14 | 9 | 1 | 1 | 3 |
 | Effects | 15 | 11 | 1 | 0 | 3 |
 | Automation | 13 | 5 | 1 | 0 | 7 |
 | Recording | 11 | 1 | 1 | 1 | 8 |
@@ -201,7 +201,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | INS-010 | Instrument presets | P2 |  | IMPLEMENTED | Channel Settings has a Presets menu for LimeSynth (factory: Saw lead, Soft pad, Pluck, Sub bass) and the Sampler (one-shot, sustained, reversed), plus the user's own and Save preset as…. A sampler preset keeps the channel's sample.<br>*Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008).* | `limeshot-project preset::tests::factory_presets_are_valid_for_their_slot`<br>`limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back`<br>`crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save` |
 | INS-011 | Per-channel polyphony limit / mono / porta | P2 |  | NOT_STARTED | Max voices, mono mode, glide. | — |
 | INS-012 | Drum synthesizer | P3 |  | NOT_STARTED | — | — |
-| INS-013 | LimeSynth filter modes and key tracking | P2 |  | NOT_STARTED | Planned (after INS-006). | — |
+| INS-013 | LimeSynth filter modes and key tracking | P2 |  | VERIFIED | LimeSynth's Filter section has a Type (Low-pass, Band-pass, High-pass: outputs of the same state-variable filter) and Key track (0–100 %: the cutoff moves that many octaves per octave of the played note, around C5). Choosing High-pass with the cutoff fully open starts it at 200 Hz.<br>*Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type.* | `limeshot-dsp filter::tests::high_and_band_pass_outputs`<br>`limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking` |
 | INS-014 | Sampler volume envelope | P2 |  | VERIFIED | The Sampler's Playback section has a volume envelope: Attack, Decay, Sustain and Release (defaults 0 ms / 0 ms / 100 % / 10 ms keep a sample's start exact).<br>*Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024.* | `limeshot-engine tests/audio.rs::sampler_volume_envelope`<br>`limeshot-core model::tests::sampler_envelope_defaults_round_trip_and_sanitize`<br>`limeshot-app tests/ui.rs::sampler_envelope_controls_reset_and_undo` |
 
 ## Effects

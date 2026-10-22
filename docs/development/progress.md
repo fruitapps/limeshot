@@ -1099,3 +1099,10 @@ value differs from the transport's, every automation interval in Song mode, so t
 carry over; `current_tempo()` and `frames_until()`. Offline export renders until the end tick is reached at the
 playing tempo (re-read every block, stopping before Pattern mode wraps). The tempo field's right-click has Create
 automation clip and shows the automated tempo while playing. Engine and UI tests added.
+
+### Session 16 continuation: LimeSynth filter modes and key tracking (INS-013)
+
+`limeshot_dsp::filter::Mode` and `Svf::process` (low-, band- and high-pass outputs of the TPT state-variable
+filter); `SynthParams::filter_mode` / `key_track` (saved with defaults that keep old projects unchanged) feed
+`SynthMods`; the voice adds `key_track × log2(f / C5)` octaves to the cutoff. Channel Settings: Type and Key track
+rows in the Filter section.

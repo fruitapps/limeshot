@@ -7467,25 +7467,34 @@
       "name": "LimeSynth filter modes and key tracking",
       "description": "More filter options for LimeSynth.",
       "fl_reference": "FL's synths offer low/high/band-pass filters and keyboard tracking.",
-      "limeshot_behavior": "Planned (after INS-006).",
+      "limeshot_behavior": "LimeSynth's Filter section has a Type (Low-pass, Band-pass, High-pass: outputs of the same state-variable filter) and Key track (0–100 %: the cutoff moves that many octaves per octave of the played note, around C5). Choosing High-pass with the cutoff fully open starts it at 200 Hz.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [
         "INS-006"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp filter::tests::high_and_band_pass_outputs",
+        "limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": ""
+      "notes": "Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type."
     },
     {
       "id": "INS-014",

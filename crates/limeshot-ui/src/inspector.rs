@@ -519,6 +519,20 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
     ui.painter().add(egui::Shape::line(pts, Stroke::new(1.5, t.accent)));
     ui.add_space(4.0);
     section(ui, "Filter");
+    row(ui, "Type", |ui| {
+        let labels: Vec<&str> = FilterMode::ALL.iter().map(|m| m.label()).collect();
+        let cur = FilterMode::ALL.iter().position(|m| *m == q.filter_mode).unwrap_or(0);
+        if let Some(i) = segmented(ui, &labels, cur, 22.0, "Filter type")
+            && let Some(m) = FilterMode::ALL.get(i)
+        {
+            q.filter_mode = *m;
+            // An open high-pass would silence the synth: start it low.
+            if *m == FilterMode::HighPass && q.cutoff_hz >= 19_999.0 {
+                q.cutoff_hz = 200.0;
+            }
+            waveform_changed = true;
+        }
+    });
     row(ui, "Cutoff", |ui| {
         track(
             reset(
@@ -538,7 +552,7 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
                 &mut q.cutoff_hz,
                 d.cutoff_hz,
             )
-            .hint("Low-pass cutoff (12 dB/oct); fully right leaves the filter open"),
+            .hint("Filter cutoff (12 dB/oct); a low-pass fully right is open"),
         )
     });
     row(ui, "Resonance", |ui| {
@@ -549,6 +563,19 @@ fn synth_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &SynthP
             &mut q.resonance,
             d.resonance,
         ))
+    });
+    row(ui, "Key track", |ui| {
+        track(
+            reset(
+                ui.add(
+                    egui::Slider::new(&mut q.key_track, 0.0..=1.0)
+                        .custom_formatter(|v, _| format!("{:.0}%", v * 100.0)),
+                ),
+                &mut q.key_track,
+                d.key_track,
+            )
+            .hint("How much the cutoff follows the played note (100%: an octave per octave, around C5)"),
+        )
     });
     row(ui, "Envelope", |ui| {
         track(

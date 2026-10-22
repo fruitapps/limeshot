@@ -85,7 +85,9 @@ impl ModState {
                 }
             }
             if self.cfg.filter_on() {
-                let oct = self.cfg.env_octaves * self.env + self.cfg.lfo_cutoff * lfo;
+                // Key tracking: octaves of the note above or below C5 (261.63 Hz).
+                let keys = self.cfg.key_track * (self.freq_a.max(1.0) / 261.626).log2();
+                let oct = self.cfg.env_octaves * self.env + self.cfg.lfo_cutoff * lfo + keys;
                 self.svf
                     .set(self.cfg.cutoff * 2f32.powf(oct), self.cfg.resonance, self.sample_rate);
             }
@@ -93,7 +95,11 @@ impl ModState {
         self.countdown -= 1;
         self.lfo_phase = (self.lfo_phase + self.lfo_inc).fract();
         self.env *= self.env_coef;
-        if self.cfg.filter_on() { self.svf.lowpass(x) } else { x }
+        if self.cfg.filter_on() {
+            self.svf.process(x, self.cfg.mode)
+        } else {
+            x
+        }
     }
 }
 

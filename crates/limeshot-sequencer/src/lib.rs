@@ -138,13 +138,20 @@ pub struct SynthMods {
     pub vibrato_cents: f32,
     /// LFO to cutoff in octaves.
     pub lfo_cutoff: f32,
+    pub mode: limeshot_dsp::filter::Mode,
+    /// Cutoff key tracking, 0–1 (octaves of cutoff per octave of pitch, around C5).
+    pub key_track: f32,
 }
 
 impl SynthMods {
     /// Whether the filter does anything (an open filter without modulation is bypassed, so
     /// default settings sound exactly as before the filter existed).
     pub fn filter_on(&self) -> bool {
-        self.cutoff < 19_999.0 || self.env_octaves > 0.0 || self.lfo_cutoff > 0.0 || self.resonance > 0.0
+        self.cutoff < 19_999.0
+            || self.env_octaves > 0.0
+            || self.lfo_cutoff > 0.0
+            || self.resonance > 0.0
+            || self.mode != limeshot_dsp::filter::Mode::LowPass
     }
 
     pub fn any(&self) -> bool {
@@ -378,6 +385,12 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                         lfo_rate: p.lfo_rate_hz,
                         vibrato_cents: p.vibrato_cents,
                         lfo_cutoff: p.lfo_cutoff,
+                        mode: match p.filter_mode {
+                            limeshot_core::FilterMode::LowPass => limeshot_dsp::filter::Mode::LowPass,
+                            limeshot_core::FilterMode::BandPass => limeshot_dsp::filter::Mode::BandPass,
+                            limeshot_core::FilterMode::HighPass => limeshot_dsp::filter::Mode::HighPass,
+                        },
+                        key_track: p.key_track.clamp(0.0, 1.0),
                     },
                 },
                 Instrument::Plugin(_) => InstrumentState::Plugin { channel: c.id.0 },

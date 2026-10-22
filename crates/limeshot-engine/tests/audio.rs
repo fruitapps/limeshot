@@ -1172,6 +1172,11 @@ fn automation_drives_effect_parameters() {
 
 /// A two-beat 220 Hz saw on the fixture's synth with `params`, rendered in Pattern mode.
 fn synth_note(params: SynthParams) -> Vec<f32> {
+    synth_key(params, 57)
+}
+
+/// [`synth_note`] at MIDI key `key`.
+fn synth_key(params: SynthParams, key: u8) -> Vec<f32> {
     let mut f = fixture();
     f.doc
         .execute(Command::SetInstrument {
@@ -1189,7 +1194,7 @@ fn synth_note(params: SynthParams) -> Vec<f32> {
             pattern: f.pat,
             note: NewNote {
                 channel: f.synth,
-                key: 57,
+                key,
                 start: 0,
                 length: 1920,
                 velocity: 1.0,
@@ -1892,4 +1897,45 @@ fn tempo_automation_changes_the_song_length() {
     assert_eq!(r.current_tempo(), Tempo::from_bpm(120.0));
     // The project tempo itself is untouched.
     assert_eq!(doc.project().tempo, Tempo::from_bpm(120.0));
+}
+
+fn rms_of(audio: &[f32], a: usize, b: usize) -> f32 {
+    let l = &audio[2 * a..2 * b];
+    (l.iter().map(|x| x * x).sum::<f32>() / l.len() as f32).sqrt()
+}
+
+/// INS-013: LimeSynth's high-pass removes a low note's body and keeps a high note's; the
+/// band-pass sits between; key tracking opens a low-pass for higher notes.
+#[test]
+fn synth_filter_modes_and_key_tracking() {
+    let hp = SynthParams {
+        filter_mode: FilterMode::HighPass,
+        cutoff_hz: 2000.0,
+        ..Default::default()
+    };
+    let low = rms_of(&synth_key(hp, 33), 10_000, 40_000);
+    let open_low = rms_of(&synth_key(SynthParams::default(), 33), 10_000, 40_000);
+    assert!(
+        low < 0.35 * open_low,
+        "a 2 kHz high-pass thins a 55 Hz saw: {low} vs {open_low}"
+    );
+    let bp = synth_note(SynthParams {
+        filter_mode: FilterMode::BandPass,
+        cutoff_hz: 1000.0,
+        ..Default::default()
+    });
+    assert!(bp.iter().all(|x| x.is_finite()) && rms_of(&bp, 10_000, 40_000) > 0.0);
+    // A 300 Hz low-pass on a note two octaves above C5: with full key tracking the cutoff
+    // follows to about 1.2 kHz and the note is brighter.
+    let lp = |track| SynthParams {
+        cutoff_hz: 300.0,
+        key_track: track,
+        ..Default::default()
+    };
+    let fixed = brightness(&synth_key(lp(0.0), 84), 10_000, 40_000);
+    let tracked = brightness(&synth_key(lp(1.0), 84), 10_000, 40_000);
+    assert!(
+        tracked > 2.0 * fixed,
+        "key tracking opens the filter: {tracked} vs {fixed}"
+    );
 }
