@@ -29,6 +29,12 @@ pub enum SampleError {
 }
 
 impl EmbeddedSample {
+    /// Read a WAV into embedded stereo PCM, keeping its filename for display.
+    /// Mono is duplicated; extra channels are discarded and non-finite values become zero.
+    ///
+    /// # Errors
+    /// Returns `TooLong` above 4 million frames, `Wav` for errors opening or reading the
+    /// WAV header, or `Decode` for errors propagated by the shared WAV loader.
     pub fn load(path: &Path) -> Result<Self, SampleError> {
         let reader = hound::WavReader::open(path)?;
         if reader.duration() as usize > MAX_FRAMES {
@@ -46,6 +52,13 @@ impl EmbeddedSample {
         })
     }
 
+    /// Decode embedded stereo PCM, replacing non-finite values with zero.
+    /// Empty PCM returns `Ok(None)` without validating the sample rate.
+    ///
+    /// # Errors
+    /// Returns `TooLong` if the encoded text exceeds the frame-limit allowance, or `Invalid`
+    /// for a rate outside 8,000–384,000 Hz, malformed base64, incomplete stereo frames,
+    /// or fewer than two frames.
     fn decode(&self) -> Result<Option<Arc<SampleData>>, SampleError> {
         if self.pcm.is_empty() {
             return Ok(None);
@@ -73,21 +86,27 @@ impl EmbeddedSample {
 pub struct SampleStore(Arc<RwLock<(EmbeddedSample, Option<Arc<SampleData>>)>>);
 
 impl SampleStore {
+    /// Share the decoded audio, or return `None` for an empty or rejected embedded sample.
+    /// Acquires a read lock; use outside audio processing.
     pub fn audio(&self) -> Option<Arc<SampleData>> {
         self.0.read().1.clone()
     }
+    /// Copy the stored display name under a read lock.
     pub fn name(&self) -> String {
         self.0.read().0.name.clone()
     }
 }
 
 impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
+    /// Decode and replace the embedded sample and cached audio under a write lock.
+    /// Decode errors clear both to their defaults rather than reaching the caller.
     fn set(&self, sample: EmbeddedSample) {
         match sample.decode() {
             Ok(audio) => *self.0.write() = (sample, audio),
             Err(_) => *self.0.write() = Default::default(),
         }
     }
+    /// Return the callback's result while holding a read lock on the embedded sample.
     fn map<F, R>(&self, f: F) -> R
     where
         F: Fn(&EmbeddedSample) -> R,

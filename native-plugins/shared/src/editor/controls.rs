@@ -5,6 +5,10 @@ use nice_plug::prelude::*;
 use std::f32::consts::PI;
 
 impl NativeEditor {
+    /// Handle host parameter gestures in an egui rectangle, returning its interaction response.
+    /// `index` selects a control; `absolute` supplies a normalized click/drag value, otherwise
+    /// vertical dragging adjusts relatively. Supports fine dragging, reset, wheel, and text entry.
+    /// Parameter writes require a host context; synced delay disables manual-time interaction.
     pub(super) fn control_response(&mut self, ui: &mut Ui, r: Rect, index: usize, absolute: Option<f32>) -> Response {
         let p = &self.params.controls[index].value;
         ui.ctx()

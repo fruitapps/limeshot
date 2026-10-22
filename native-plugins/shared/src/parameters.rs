@@ -87,6 +87,8 @@ pub const SAMPLER: &[ParamSpec] = &[
     spec("Root key", 0.0, 127.0, 60.0, "MIDI", false),
 ];
 
+/// Return controls in the stable native plugin order (IDs 0–8), or an empty slice for other IDs.
+/// Compressor controls omit the DAW's mixer-track selector; its key comes from a host bus.
 pub fn specs(id: u8) -> &'static [ParamSpec] {
     match id {
         0 => SYNTH,
@@ -116,6 +118,9 @@ pub struct NativeParams {
 }
 
 impl NativeParams {
+    /// Create default controls for a native plugin ID, with bypass off and an empty sample.
+    /// Choices, synth octave, and sampler root key are stepped; other controls use 5 ms
+    /// linear smoothing. The external-key toggle is visible only for the compressor (ID 7).
     pub fn new(id: u8) -> Self {
         let controls = specs(id)
             .iter()
@@ -166,6 +171,8 @@ impl NativeParams {
         }
     }
 
+    /// Read current plain control values in specification order without advancing smoothing.
+    /// Unused entries are zero; bypass and external-key toggles are excluded.
     pub fn values(&self) -> [f32; 16] {
         let mut out = [0.0; 16];
         for (v, p) in out.iter_mut().zip(&self.controls) {
@@ -174,6 +181,8 @@ impl NativeParams {
         out
     }
 
+    /// Advance each control's smoother by one sample and return plain values in specification
+    /// order. Unused entries are zero; bypass and external-key toggles are excluded.
     pub fn next_values(&self) -> [f32; 16] {
         let mut out = [0.0; 16];
         for (v, p) in out.iter_mut().zip(&self.controls) {
@@ -183,6 +192,8 @@ impl NativeParams {
     }
 }
 
+/// Format a plain value without appending its unit, using choice labels when present.
+/// Frequencies at or above 1,000 Hz use a `k` suffix; an unavailable label index yields empty text.
 pub fn display(s: ParamSpec, value: f32) -> String {
     if !s.labels.is_empty() {
         return s.labels.get(value.round() as usize).copied().unwrap_or("").to_string();
@@ -195,6 +206,8 @@ pub fn display(s: ParamSpec, value: f32) -> String {
     }
 }
 
+/// Parse a case-insensitive choice label or a number with an optional unit and lowercase `k`
+/// multiplier. Clamp finite numbers to the specification's bounds; invalid input returns `None`.
 fn parse(s: ParamSpec, text: &str) -> Option<f32> {
     if let Some(index) = s
         .labels

@@ -1,4 +1,7 @@
 //! Use the nested plugin workspace rather than xtask's outermost-manifest heuristic.
+/// Build and bundle packages selected by leading `-p` arguments in the native workspace.
+/// Changes the working directory and forwards remaining arguments to the build and bundler.
+/// Returns errors for invalid arguments, directory/metadata failures, or build/bundle failures.
 fn main() -> nice_plug_xtask::Result<()> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     std::env::set_current_dir(root)?;

@@ -64,6 +64,7 @@ pub(super) struct Canvas {
     pub h: f32,
 }
 impl Canvas {
+    /// Fit a design-space size uniformly inside an egui rectangle, centered in unused space.
     pub fn new(rect: Rect, size: (f32, f32)) -> Self {
         let s = (rect.width() / size.0).min(rect.height() / size.1);
         Self {

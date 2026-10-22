@@ -284,6 +284,11 @@ impl Voice {
 
     /// Apply instrument automation and pitch bend while preserving oscillator phase,
     /// sample position, and the current envelope stage. Call with the note's original velocity.
+    /// `root_key` is the sampler's MIDI root note; `bend_semitones` offsets pitch and
+    /// `sample_rate` is the output rate in Hz. Mismatched source/instrument kinds do nothing.
+    /// Sampler updates keep the loaded audio, loop, and filter; trim and direction changes
+    /// take effect at the existing playback position. Newly enabled synth oscillators or
+    /// modulation start with fresh state.
     pub fn update_instrument(
         &mut self,
         instrument: &InstrumentState,

@@ -121,6 +121,7 @@ impl NativeEditor {
         p.with_clip_rect(r)
             .add(Shape::line(points, Stroke::new(1.4 * c.s, color)));
     }
+    /// Draw the configured synth ADSR with an illustrative 400 ms sustain segment.
     pub(super) fn envelope(&self, p: &Painter, c: Canvas, r: Rect, t: &Theme) {
         grid(p, r, t, c.s);
         let v = self.params.values();
@@ -137,6 +138,9 @@ impl NativeEditor {
         p.add(Shape::convex_polygon(fill, t.accent.gamma_multiply(0.08), Stroke::NONE));
         p.add(Shape::line(points, Stroke::new(2.0 * c.s, t.accent)));
     }
+    /// Plot the shared EQ's response at the metered sample rate with editable band nodes.
+    /// Dragging changes frequency/gain, the middle node's wheel changes Q, and double-click
+    /// resets band frequency/gain. Parameter edits require a host context.
     pub(super) fn eq_graph(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         let p = ui.painter_at(r);
         grid(&p, r, t, c.s);
@@ -278,6 +282,8 @@ impl NativeEditor {
             .collect();
         p.add(Shape::line(points, Stroke::new(1.8 * c.s, t.accent)));
     }
+    /// Draw input/output levels and reduction history with the configured ceiling.
+    /// Append at most one meter snapshot per call, spaced more than 1/60 second apart.
     pub(super) fn limiter_history(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         let now = ui.input(|i| i.time);
         if now - self.history_time > 1.0 / 60.0 {
@@ -409,6 +415,9 @@ impl NativeEditor {
             t.dim,
         );
     }
+    /// Refresh and draw the cached sample peaks, handle trim gestures, and request root-note
+    /// audition while held away from trim handles. Loads the first dropped file through
+    /// the host context; trim gestures keep start at or before end.
     pub(super) fn sample_waveform(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         ui.ctx().data_mut(|d| d.insert_temp(Id::unique("sampler-waveform"), r));
         let sample = self.params.sample.audio();
@@ -531,6 +540,8 @@ impl NativeEditor {
             self.load_sample(path);
         }
     }
+    /// Draw the sampler keyboard and request audition of the held key, prioritizing black keys.
+    /// A right-click changes the root key when a host context is attached.
     pub(super) fn keyboard(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         ui.ctx().data_mut(|d| d.insert_temp(Id::unique("sampler-keyboard"), r));
         let root = self.params.controls[7].value.value().round() as u8;
@@ -604,9 +615,11 @@ fn is_black(key: u8) -> bool {
 fn clamp(p: &FloatParam, v: f32) -> f32 {
     p.preview_plain(p.preview_normalized(v))
 }
+/// Map Hz to the graph's logarithmic 20 Hz–20 kHz x-axis without clamping.
 fn frequency_x(hz: f32, r: Rect) -> f32 {
     r.left() + (hz / 20.0).log10() / 3.0 * r.width()
 }
+/// Map an x-coordinate to Hz on the logarithmic graph, clamping to 20 Hz–20 kHz.
 fn x_frequency(x: f32, r: Rect) -> f32 {
     20.0 * 1000.0_f32.powf(((x - r.left()) / r.width()).clamp(0.0, 1.0))
 }

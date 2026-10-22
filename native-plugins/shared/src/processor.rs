@@ -36,6 +36,7 @@ impl Default for Meters {
     }
 }
 impl Meters {
+    /// Read an atomically shared float stored as IEEE 754 bits.
     pub fn read(value: &AtomicU32) -> f32 {
         f32::from_bits(value.load(Ordering::Relaxed))
     }
@@ -74,6 +75,7 @@ pub struct LimePlugin<const ID: u8> {
 }
 
 impl<const ID: u8> Default for LimePlugin<ID> {
+    /// Create an inactive plugin with default parameters; activation prepares its sample and DSP.
     fn default() -> Self {
         Self {
             params: Arc::new(NativeParams::new(ID)),
@@ -99,6 +101,9 @@ impl<const ID: u8> Default for LimePlugin<ID> {
 }
 
 impl<const ID: u8> LimePlugin<ID> {
+    /// Prepare DSP for an output rate in Hz and refresh the cached embedded sample.
+    /// Allocates effect state, acquires the sample-store lock, and clears sounding notes and meters;
+    /// call outside audio processing.
     pub(crate) fn prepare(&mut self, rate: f32) {
         self.sample_rate = rate;
         Meters::store(&self.meters.sample_rate, rate);
@@ -115,6 +120,8 @@ impl<const ID: u8> LimePlugin<ID> {
         };
         self.clear();
     }
+    /// Apply the editor's audition request at a block boundary using current plain controls.
+    /// Zero releases the previous preview; 1–128 select MIDI keys 0–127. Effects ignore requests.
     fn sync_preview(&mut self, values: &[f32; 16]) {
         let requested = self.meters.preview_note.load(Ordering::Relaxed).min(128);
         if ID >= 2 || requested == self.preview_note {
@@ -147,6 +154,8 @@ impl<const ID: u8> LimePlugin<ID> {
         self.preview_note = requested;
     }
 
+    /// Stop voices and audition, clear pedal/bend state, and reset DSP and meters.
+    /// Retains the prepared sample, output rate, and parameters.
     fn clear(&mut self) {
         self.preview_note = 0;
         self.meters.preview_note.store(0, Ordering::Relaxed);
@@ -169,6 +178,8 @@ impl<const ID: u8> LimePlugin<ID> {
         }
     }
 
+    /// Convert plain controls in specification order into shared instrument settings.
+    /// Converts dB to gain and milliseconds to seconds; sampler audio uses the prepared cache.
     fn instrument(&self, p: &[f32; 16]) -> InstrumentState {
         if ID == 0 {
             InstrumentState::Synth {
@@ -213,6 +224,8 @@ impl<const ID: u8> LimePlugin<ID> {
         }
     }
 
+    /// Apply current plain controls and each channel's pitch bend to active voices without
+    /// retriggering, using their original velocities.
     fn update_voices(&mut self, p: &[f32; 16]) {
         let state = self.instrument(p);
         let root = if ID == 1 { p[7].round() as u8 } else { 60 };
@@ -229,6 +242,11 @@ impl<const ID: u8> LimePlugin<ID> {
         }
     }
 
+    /// Apply a note, choke, pitch-bend, or supported MIDI controller event immediately.
+    /// The caller schedules its timestamp; `p` contains plain controls in specification order.
+    /// Nonpositive note-on velocity releases a note. At capacity, steal the oldest unheld
+    /// voice, then the oldest held voice. Pitch bend spans ±2 semitones; CC 64, 120, and 123
+    /// control sustain, all-sound-off, and all-notes-off. Other events are ignored.
     pub(crate) fn event(&mut self, e: NoteEvent<()>, p: &[f32; 16]) {
         match e {
             NoteEvent::NoteOn {
@@ -319,6 +337,8 @@ impl<const ID: u8> LimePlugin<ID> {
         }
     }
 
+    /// Release the oldest held voice matching the note selectors, respecting sustain.
+    /// Sampler one-shot mode only marks it unheld; unmatched selectors do nothing.
     fn release_note(&mut self, id: VoiceID, channel: Channel, key: Key, p: &[f32; 16]) {
         // Hosts without note IDs pair repeated keys in start order.
         let index = self
@@ -341,6 +361,10 @@ impl<const ID: u8> LimePlugin<ID> {
         }
     }
 
+    /// Render one stereo frame using plain controls in specification order, updating meters.
+    /// `key` supplies an optional external sidechain frame; `tempo` is host BPM. Synced delay
+    /// time is clamped to 10–2,000 ms; invalid tempo leaves the manual time in use.
+    /// Bypass returns input for effects and silence for instruments while DSP/voices advance.
     pub(crate) fn frame(&mut self, input: [f32; 2], key: Option<[f32; 2]>, p: &[f32; 16], tempo: f64) -> [f32; 2] {
         let mut out = if ID < 2 {
             if *p != self.last_values {
@@ -409,6 +433,7 @@ impl<const ID: u8> LimePlugin<ID> {
     }
 }
 
+/// Match all supplied note selectors; a wildcard in any selector imposes no constraint.
 fn matches_note(s: &Slot, id: VoiceID, channel: Channel, key: Key) -> bool {
     channel.number().is_none_or(|c| s.channel == c)
         && key.number().is_none_or(|k| s.voice.key == k)
@@ -456,6 +481,7 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
     }
+    /// Create a resizable editor sharing this plugin's parameters, meters, and editor state.
     fn editor(&mut self, _executor: AsyncExecutor<Self>) -> Option<Self::Editor> {
         create_egui_editor(
             self.editor_state.clone(),
@@ -467,6 +493,7 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
             NativeEditor::new(ID, self.params.clone(), self.meters.clone()),
         )
     }
+    /// Prepare the plugin, rejecting non-finite rates and rates outside 8,000–384,000 Hz.
     fn activate(
         &mut self,
         _layout: &AudioIOLayout,
@@ -482,6 +509,9 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
     fn reset(&mut self) {
         self.clear();
     }
+    /// Process a host block with per-sample smoothing and timestamped instrument events.
+    /// Applies audition requests at the block boundary and uses 120 BPM when host tempo is absent.
+    /// Requests an editor repaint and returns `KeepAlive` so tails and releasing voices continue.
     fn process(
         &mut self,
         buffer: &mut Buffer,

@@ -27,14 +27,23 @@ pub const EDITOR_SIZES: [(f32, f32); 9] = [
     (720.0, 380.0),
     (900.0, 530.0),
 ];
+/// Return the default editor width and height in logical points for plugin IDs 0–8.
+///
+/// # Panics
+/// Panics for an ID outside 0–8.
 pub fn editor_size(id: u8) -> (f32, f32) {
     EDITOR_SIZES[id as usize]
 }
+/// Return 90% of the default editor dimensions in logical points.
+///
+/// # Panics
+/// Panics for a plugin ID outside 0–8.
 pub fn minimum_size(id: u8) -> (f32, f32) {
     let (w, h) = editor_size(id);
     (w * 0.9, h * 0.9)
 }
 
+/// Install the bundled fonts and Lime Dark styling in the supplied egui context.
 pub fn install_theme(ctx: &egui::Context) {
     let t = Theme::current();
     let mut fonts = FontDefinitions::default();
@@ -93,6 +102,7 @@ pub struct NativeEditor {
 }
 
 impl NativeEditor {
+    /// Create editor state sharing plugin parameters and meters, initially without a host context.
     pub(crate) fn new(id: u8, params: Arc<NativeParams>, meters: Arc<Meters>) -> Self {
         Self {
             id,
@@ -110,9 +120,14 @@ impl NativeEditor {
             history_time: -1.0,
         }
     }
+    /// Create an editor with independent default parameters and meters for offscreen use.
+    /// Use a plugin ID in 0–8; drawing requires a valid ID. No host context is attached.
     pub fn preview(id: u8) -> Self {
         Self::new(id, Arc::new(NativeParams::new(id)), Arc::new(Meters::default()))
     }
+    /// Create an offscreen sampler editor with an embedded WAV.
+    /// Propagates file/header, decode, and size-limit errors from [`EmbeddedSample::load`];
+    /// embedded data rejected by the sample store instead leaves the preview empty.
     pub fn preview_sampler(path: &std::path::Path) -> Result<Self, crate::sample::SampleError> {
         use nice_plug::params::persist::PersistentField;
         let editor = Self::preview(1);
@@ -127,7 +142,10 @@ impl NativeEditor {
         }
     }
 
+    /// Draw the plugin and handle parameter, preset, sample, and audition interactions.
     /// Shared by the embedded editor and the screenshot/interaction harness.
+    /// File actions may open dialogs and perform I/O; failures appear in the status text.
+    /// Host parameter/state edits require an attached context. Requests a repaint after 33 ms.
     pub fn draw(&mut self, ui: &mut Ui) {
         let t = Theme::for_plugin(self.id);
         let params = self.params.clone();
@@ -235,6 +253,8 @@ impl NativeEditor {
         ui.ctx().request_repaint_after(Duration::from_millis(33));
     }
 
+    /// Apply preset controls through host gestures and update the displayed preset name.
+    /// Sampler presets preserve embedded audio and root key. Does nothing without a host context.
     fn apply_preset(&mut self, preset: preset::Preset) {
         let Some(context) = &self.context else {
             return;
@@ -248,6 +268,8 @@ impl NativeEditor {
         self.status.clear();
     }
 
+    /// Load a WAV into the host's embedded-sample state, preserving other state fields.
+    /// Load or serialization errors become status text. Does nothing without a host context.
     fn load_sample(&mut self, path: &std::path::Path) {
         let Some(context) = &self.context else {
             return;
@@ -280,18 +302,22 @@ impl NiceEguiApp for NativeEditor {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut nice_plug_egui::Frame) {
         self.draw(ui);
     }
+    /// Clear the audition request and detach the host context when the editor closes.
     fn editor_closed(&mut self) {
         self.meters.preview_note.store(0, std::sync::atomic::Ordering::Relaxed);
         self.context = None;
     }
 }
 
+/// Set a plain parameter value within one complete host automation gesture.
 fn set<P: Param>(setter: &ParamSetter<'_>, p: &P, value: P::Plain) {
     setter.begin_set_parameter(p);
     setter.set_parameter(p, value);
     setter.end_set_parameter(p);
 }
 
+/// Convert preset content to plain native controls in specification order.
+/// Sampler content excludes audio and root key so applying it preserves both.
 fn values(content: &Content) -> Vec<f32> {
     match content {
         Content::Effect { params, .. } => params.clone(),
@@ -328,6 +354,8 @@ fn values(content: &Content) -> Vec<f32> {
         ],
     }
 }
+/// Convert plain native controls to preset content, omitting bypass and external-key toggles.
+/// Sampler content omits embedded audio and root key and defaults DAW-only settings.
 fn content(id: u8, p: &[f32; 16]) -> Content {
     match id {
         0 => Content::Synth(limeshot_core::SynthParams {
@@ -370,6 +398,8 @@ fn content(id: u8, p: &[f32; 16]) -> Content {
     }
 }
 
+/// Write or overwrite a preset with LimeShot's format marker and version 1 envelope.
+/// Returns serialization, invalid-object, or filesystem errors as strings.
 fn save_preset_file(path: &std::path::Path, preset: &preset::Preset) -> Result<(), String> {
     let mut object = serde_json::to_value(preset).map_err(|e| e.to_string())?;
     let map = object.as_object_mut().ok_or_else(|| "Invalid preset".to_string())?;

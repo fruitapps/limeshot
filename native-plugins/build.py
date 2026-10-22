@@ -14,6 +14,13 @@ NAMES = ["LimeSynth", "Lime Sampler", "Lime Utility", "Lime EQ", "Lime Filter", 
 
 
 def main():
+    """Build all bundles, collect licenses, and create a ZIP for release builds.
+
+    Read --debug and --target from the command line. Replace matching bundles in
+    dist/ (release) or target/debug-bundled/, nested by target when supplied.
+    Missing bundles exit with an error; subprocess, filesystem, metadata parsing,
+    and archive errors propagate. Output already written may remain on failure.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--debug", action="store_true", help="Keep processing allocation assertions enabled")
     parser.add_argument("--target", help="Rust compilation target (must already be installed)")

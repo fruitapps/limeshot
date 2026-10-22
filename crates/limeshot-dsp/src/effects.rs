@@ -736,6 +736,8 @@ pub struct Limiter {
 }
 
 impl Limiter {
+    /// Create a limiter with a −0.3 dB ceiling and 80 ms release.
+    /// `sample_rate` is in Hz and is clamped to at least 1.
     pub fn new(sample_rate: f32) -> Self {
         let mut l = Self {
             sr: sample_rate.max(1.0),
@@ -769,10 +771,13 @@ impl Effect for Limiter {
         }
     }
 
+    /// Return the largest positive attenuation in dB from the last processed block,
+    /// or zero before processing, after reset, or when no limiting occurred.
     fn gain_reduction_db(&self) -> f32 {
         self.reduction_db
     }
 
+    /// Clear the peak envelope and gain-reduction reading, retaining parameter settings.
     fn reset(&mut self) {
         self.env = 0.0;
         self.reduction_db = 0.0;
