@@ -89,6 +89,12 @@ fn load(path: &Path) -> Result<Project, String> {
 }
 
 fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
+    // Instruments and effects are the Lime VST3s (D39), as in the app.
+    let mut converted = project.clone();
+    for w in limeshot_core::lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio) {
+        eprintln!("warning: {w}");
+    }
+    let project = &converted;
     let mut cache = SampleCache::new();
     for r in project.sample_refs() {
         if let Err(e) = cache.load_blocking(&r.path) {

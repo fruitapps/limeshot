@@ -54,10 +54,10 @@ Next, in order:
    and the inspector, rack, browser and preset UIs). The importers can keep producing built-ins, because the
    normalizer converts them.
 4. P0 gaps PLG-017…PLG-020 and PLG-022. PLG-021 (effect automation is retargeted to plugin parameters) is done. PLG-014…016 are done: Lime Sampler now has every built-in sampler setting (envelope 9–11, filter 12–13, loop 14–16), and the converter carries them over.
-5. The command-line renderer (`crates/limeshot-app/src/cli.rs`) already instantiates plugins for export
-   (`PluginHost::offline`). It only needs `doc.set_normalizer(limeshot_ui::lime::normalizer())`. When you add it,
-   set `LIMESHOT_LIME_PLUGINS` in CI's "Headless demo render" step too. That step only compares two renders with
-   each other, so it would still pass if both were silent: also assert that the render is not silent.
+5. Done: `limeshot-cli render` converts to Lime VST3s, and CI's headless demo render fails if it is silent. The
+   whole demo plays through the bundles; with the bundles hidden it renders silence without an error message, so
+   missing-bundle reporting in the CLI and the app is still to do.
+   CLI-created documents (`script`, `import-midi`) still save built-ins, which the app converts on open.
 
 ## Session policy
 
