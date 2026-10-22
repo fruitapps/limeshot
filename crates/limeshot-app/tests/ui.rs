@@ -4429,3 +4429,69 @@ fn piano_roll_menu_tools_select_and_zoom() {
         "the selected notes fill the grid"
     );
 }
+
+/// PR-015: the tool dialogs preview on the notes; Accept keeps one undo step, closing reverts.
+#[test]
+fn piano_roll_tool_dialogs_preview_accept_and_cancel() {
+    use limeshot_ui::piano_tools::{Kind, Params};
+    let (mut h, pat, lead) = empty_piano_roll();
+    let chord: Vec<NewNote> = [60, 64, 67]
+        .into_iter()
+        .map(|key| NewNote {
+            channel: lead,
+            key,
+            start: 0,
+            length: PPQ,
+            velocity: 0.8,
+        })
+        .collect();
+    h.state_mut().exec(Command::AddNotes {
+        pattern: pat,
+        notes: chord,
+    });
+    h.step();
+    let before = notes_by_start(&h, pat, lead);
+    // Opt+S opens the strumizer; its default spreads the chord at once.
+    h.key_press_modifiers(Modifiers::ALT, Key::S);
+    h.step();
+    assert_eq!(
+        h.state().ui.piano.tool_dialog.as_ref().map(|d| d.kind),
+        Some(Kind::Strum)
+    );
+    h.get_by_label("Piano roll - strumizer");
+    let starts: Vec<Tick> = notes_by_start(&h, pat, lead).iter().map(|n| n.1).collect();
+    assert_eq!(starts, vec![0, PPQ / 8, PPQ / 4], "previewed");
+    // A change replaces the preview: still one step away from the original.
+    if let Some(Params::Strum(s)) = h.state_mut().ui.piano.tool_dialog.as_mut().map(|d| &mut d.params) {
+        s.time = 0.5;
+    }
+    h.get_by_label("Reset").click();
+    h.step();
+    h.get_by_label("Accept").click();
+    h.step();
+    assert!(h.state().ui.piano.tool_dialog.is_none());
+    assert_eq!(h.state().doc.undo_label(), Some("Strum"));
+    h.state_mut().doc.undo();
+    assert_eq!(notes_by_start(&h, pat, lead), before, "Accept is one undo step");
+    // Arpeggiate from the ⏵ menu, then Esc: the notes come back.
+    piano_menu(&mut h, "Tools", "Arpeggiate…");
+    assert!(notes_by_start(&h, pat, lead).len() > 3, "the chord became an arpeggio");
+    h.key_press(Key::Escape);
+    h.step();
+    assert!(h.state().ui.piano.tool_dialog.is_none());
+    assert_eq!(notes_by_start(&h, pat, lead), before, "closing reverts the preview");
+    // Alt+Q opens the quantizer.
+    h.key_press_modifiers(Modifiers::ALT, Key::Q);
+    h.step();
+    assert_eq!(
+        h.state().ui.piano.tool_dialog.as_ref().map(|d| d.kind),
+        Some(Kind::Quantize)
+    );
+    h.get_by_label("Accept").click();
+    h.step();
+    assert_eq!(
+        notes_by_start(&h, pat, lead),
+        before,
+        "already on the grid: nothing to do"
+    );
+}

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **124** — IMPLEMENTED 85, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 29, NOT_PLANNED 2
+Tracked: **131** — IMPLEMENTED 94, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 27, NOT_PLANNED 3
 
 ## Global
 
@@ -114,10 +114,10 @@ Tracked: **124** — IMPLEMENTED 85, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 2
 | KB-056 | Transpose an octave | `Ctrl+Up / Ctrl+Down` | VERIFIED | `Cmd+↑ / Cmd+↓` | IMPLEMENTED | PR-009 |  |
 | KB-057 | Transpose a semitone | `Shift+Up / Shift+Down` | OBSERVED | `Shift+↑ / Shift+↓` | IMPLEMENTED | PR-009 | Applies to every note of the channel when none is selected (observed). Plain arrows scroll. |
 | KB-058 | Nudge the selection | `Shift+Left / Shift+Right` | OBSERVED | `Shift+← / Shift+→` | IMPLEMENTED | PR-009 | FL calls it Shift left/right (moves by the snap). |
-| KB-059 | Quick quantize | `Cmd+Q (macOS menu)` | OBSERVED | `Alt+Q` | DIFFERENT | PR-014 | FL 2026.1.1's macOS Tools menu: Quick quantize Cmd+Q, Quick quantize start times Shift+Q, Quantize… Opt+Q. LimeShot keeps Cmd+Q for Quit and uses Alt+Q for quick quantize. |
-| KB-060 | Quantize dialog | `Opt+Q (macOS menu)` | OBSERVED | — | NOT_STARTED | PR-014 | FL 2026.1.1 Tools menu. |
+| KB-059 | Quick quantize | `Cmd+Q (macOS menu)` | OBSERVED | — | NOT_PLANNED | PR-014 | Quick quantize is in the ⏵ menu without a key: Cmd+Q quits LimeShot (session 16). |
+| KB-060 | Quantize dialog | `Opt+Q (macOS menu)` | OBSERVED | `Alt+Q` | IMPLEMENTED | PR-014 | FL 2026.1.1 Tools menu. Session 16: the Quantize… dialog. |
 | KB-061 | Legato | `Cmd+L (macOS menu)` | OBSERVED | `Cmd+L` | IMPLEMENTED | PR-015 | Quick legato in FL 2026.1.1's Tools menu. Session 16: in the Piano Roll (the Channel Rack keeps Cmd+L for routing). |
-| KB-062 | Arpeggiate / strum / randomize | `Alt+A / Alt+S / Alt+R` | INFERRED | — | NOT_STARTED | PR-015 |  |
+| KB-062 | Arpeggiate / strum / randomize | `Alt+A / Alt+S / Alt+R` | OBSERVED | `Alt+A / Alt+S / Alt+R` | IMPLEMENTED | PR-015 | Session 16: Arpeggiate…, Strum…, Randomize… dialogs. |
 | KB-063 | Edit without snapping | `Alt+drag` | VERIFIED | `Alt+click` | IMPLEMENTED | PR-003 | A mouse modifier. |
 | KB-079 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PR-002 | From FL 2026.1.1's Select menu. |
 | KB-080 | Scroll the view | `Up / Down / Left / Right` | OBSERVED | `↑ / ↓ / ← / →` | IMPLEMENTED | PR-005 | Up/Down move about three rows per press in FL 2026.1.1. |
@@ -132,6 +132,13 @@ Tracked: **124** — IMPLEMENTED 85, DIFFERENT 6, LIMESHOT_ONLY 2, NOT_STARTED 2
 | KB-122 | Zoom in / out | `PgUp / PgDn` | OBSERVED | `PgUp / PgDn` | IMPLEMENTED | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). |
 | KB-123 | Quick zoom 1–3, zoom out far, zoom on selection, step sequencer mode zoom | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6` | OBSERVED | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6` | DIFFERENT | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's zoom levels; matched by key position, so they work on QWERTZ. |
 | KB-124 | Center | `Shift+0` | OBSERVED | `Shift+0` | DIFFERENT | PR-005 | FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's centring (playback position and notes). |
+| KB-125 | Articulate… | `Opt+L` | OBSERVED | `Alt+L` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-126 | Chop… | `Opt+U` | OBSERVED | `Alt+U` | IMPLEMENTED | PR-023 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-127 | Flam… | `Opt+F` | OBSERVED | `Alt+F` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-128 | Limit… | `Opt+K` | OBSERVED | `Alt+K` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-129 | Flip… | `Opt+Y` | OBSERVED | `Alt+Y` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-130 | Scale levels… | `Opt+X` | OBSERVED | `Alt+X` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
+| KB-131 | LFO… | `Opt+O` | OBSERVED | `Alt+O` | IMPLEMENTED | PR-015 | FL 2026.1.1 Piano Roll Tools menu (menus.json). |
 
 ## Playlist
 

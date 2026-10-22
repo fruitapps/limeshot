@@ -648,10 +648,10 @@
       "action": "Quick quantize",
       "fl_keys": "Cmd+Q (macOS menu)",
       "confidence": "OBSERVED",
-      "limeshot_keys": "Alt+Q",
-      "status": "DIFFERENT",
+      "limeshot_keys": "",
+      "status": "NOT_PLANNED",
       "feature": "PR-014",
-      "notes": "FL 2026.1.1's macOS Tools menu: Quick quantize Cmd+Q, Quick quantize start times Shift+Q, Quantize… Opt+Q. LimeShot keeps Cmd+Q for Quit and uses Alt+Q for quick quantize."
+      "notes": "Quick quantize is in the ⏵ menu without a key: Cmd+Q quits LimeShot (session 16)."
     },
     {
       "id": "KB-060",
@@ -659,10 +659,10 @@
       "action": "Quantize dialog",
       "fl_keys": "Opt+Q (macOS menu)",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Alt+Q",
+      "status": "IMPLEMENTED",
       "feature": "PR-014",
-      "notes": "FL 2026.1.1 Tools menu."
+      "notes": "FL 2026.1.1 Tools menu. Session 16: the Quantize… dialog."
     },
     {
       "id": "KB-061",
@@ -680,11 +680,11 @@
       "context": "Piano Roll",
       "action": "Arpeggiate / strum / randomize",
       "fl_keys": "Alt+A / Alt+S / Alt+R",
-      "confidence": "INFERRED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+A / Alt+S / Alt+R",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: Arpeggiate…, Strum…, Randomize… dialogs."
     },
     {
       "id": "KB-063",
@@ -1367,6 +1367,83 @@
       "status": "DIFFERENT",
       "feature": "PR-005",
       "notes": "FL 2026.1.1 Piano Roll menu (menus.json). LimeShot's centring (playback position and notes)."
+    },
+    {
+      "id": "KB-125",
+      "context": "Piano Roll",
+      "action": "Articulate…",
+      "fl_keys": "Opt+L",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+L",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-126",
+      "context": "Piano Roll",
+      "action": "Chop…",
+      "fl_keys": "Opt+U",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+U",
+      "status": "IMPLEMENTED",
+      "feature": "PR-023",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-127",
+      "context": "Piano Roll",
+      "action": "Flam…",
+      "fl_keys": "Opt+F",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+F",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-128",
+      "context": "Piano Roll",
+      "action": "Limit…",
+      "fl_keys": "Opt+K",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+K",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-129",
+      "context": "Piano Roll",
+      "action": "Flip…",
+      "fl_keys": "Opt+Y",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+Y",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-130",
+      "context": "Piano Roll",
+      "action": "Scale levels…",
+      "fl_keys": "Opt+X",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+X",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
+    },
+    {
+      "id": "KB-131",
+      "context": "Piano Roll",
+      "action": "LFO…",
+      "fl_keys": "Opt+O",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Alt+O",
+      "status": "IMPLEMENTED",
+      "feature": "PR-015",
+      "notes": "FL 2026.1.1 Piano Roll Tools menu (menus.json)."
     }
   ]
 }

@@ -680,3 +680,14 @@ overlapping, stacked, invert), Zoom (PgUp / PgDn, Shift+1 … 6) and Center (Shi
 so Shift+D must win over the D tool). Shift+digits match the key's position, so they work on QWERTZ. New core
 `note_tools` (pure tools, a seeded RNG) and `Command::EditNotes` (replace notes keeping ids; merges inside a gesture,
 for the coming dialogs' live preview). `ui_shot --menu=⏵/Tools` shows a submenu. egui's font has no "▸", hence ⏵.
+
+### Session 16, part 2: the Piano Roll's tool dialogs (PR-015, PR-014, PR-023)
+
+FL's strumizer, arpeggiator, flamer, limiter/transposer, randomizer, level scaling and claw machine observed live
+(`fl-studio-analysis.md` §22, `fl-piano-tool-*.png`). LimeShot now has Articulate… (Alt+L), Quantize… (Alt+Q, also
+the header's Quantize button), Chop… (Alt+U), Arpeggiate… (Alt+A), Strum… (Alt+S), Flam… (Alt+F), Limit… (Alt+K),
+Flip… (Alt+Y), Randomize… (Alt+R), Scale levels… (Alt+X) and LFO… (Alt+O) in the ⏵ menu's Tools. `piano_tools.rs`:
+a dialog previews on the notes while open (each change undoes the last preview and applies the new one), Accept
+keeps one undo step, × / Esc reverts; if something else changes the project meanwhile, the dialog closes and keeps
+it. The transforms are pure functions in `note_tools` with tests. `ui_shot --tool=strum` shows a dialog.
+Not done: Claw machine, FL's arpeggio presets and level knobs beyond velocity/pan.

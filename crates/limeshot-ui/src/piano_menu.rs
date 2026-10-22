@@ -3,6 +3,7 @@
 
 use crate::app::{ClipOp, LimeShotApp};
 use crate::piano_roll::chop;
+use crate::piano_tools::Kind;
 use crate::shortcuts::label as key;
 use egui::{Button, Context, Event, Key, Modifiers, Ui};
 use limeshot_core::note_tools::{self, Rng};
@@ -46,6 +47,8 @@ pub enum Act {
     /// Quick zoom 1–3, Zoom out far, Zoom on selection, Step sequencer mode zoom (Shift+1 … 6).
     QuickZoom(u8),
     Center,
+    /// A tool dialog (Quantize…, Strum… …).
+    Dialog(Kind),
 }
 
 /// The menu's items per submenu: (label, FL's key as LimeShot binds it, action).
@@ -70,10 +73,36 @@ const EDIT: &[(&str, &str, Act)] = &[
 
 const TOOLS: &[(&str, &str, Act)] = &[
     ("Quick legato", "Cmd+L", Act::QuickLegato),
+    ("Articulate…", "Alt+L", Act::Dialog(Kind::Articulate)),
     ("Quick quantize", "", Act::QuickQuantize),
     ("Quick quantize start times", "Shift+Q", Act::QuickQuantizeStarts),
+    ("Quantize…", "Alt+Q", Act::Dialog(Kind::Quantize)),
     ("Quick chop", "Cmd+U", Act::QuickChop),
+    ("Chop…", "Alt+U", Act::Dialog(Kind::Chop)),
     ("Glue", "Cmd+G", Act::Glue),
+    ("Arpeggiate…", "Alt+A", Act::Dialog(Kind::Arpeggiate)),
+    ("Strum…", "Alt+S", Act::Dialog(Kind::Strum)),
+    ("Flam…", "Alt+F", Act::Dialog(Kind::Flam)),
+    ("Limit…", "Alt+K", Act::Dialog(Kind::Limit)),
+    ("Flip…", "Alt+Y", Act::Dialog(Kind::Flip)),
+    ("Randomize…", "Alt+R", Act::Dialog(Kind::Randomize)),
+    ("Scale levels…", "Alt+X", Act::Dialog(Kind::ScaleLevels)),
+    ("LFO…", "Alt+O", Act::Dialog(Kind::Lfo)),
+];
+
+/// The tool dialogs' keys (FL Studio's Opt+letter).
+const DIALOG_KEYS: [(Key, Kind); 11] = [
+    (Key::L, Kind::Articulate),
+    (Key::Q, Kind::Quantize),
+    (Key::U, Kind::Chop),
+    (Key::A, Kind::Arpeggiate),
+    (Key::S, Kind::Strum),
+    (Key::F, Kind::Flam),
+    (Key::K, Kind::Limit),
+    (Key::Y, Kind::Flip),
+    (Key::R, Kind::Randomize),
+    (Key::X, Kind::ScaleLevels),
+    (Key::O, Kind::Lfo),
 ];
 
 const SELECT: &[(&str, &str, Act)] = &[
@@ -299,6 +328,7 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
         Act::ZoomOut => app.ui.piano.zoom_x = (app.ui.piano.zoom_x / 1.25).max(MIN_ZOOM),
         Act::QuickZoom(n) => quick_zoom(app, pid, cid, n),
         Act::Center => center(app, pid, cid),
+        Act::Dialog(kind) => crate::piano_tools::open(app, kind),
     }
 }
 
@@ -383,6 +413,11 @@ fn shift_digit(ctx: &Context, digit: Key) -> bool {
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key as k;
     let shift = Modifiers::SHIFT;
+    for (key, kind) in DIALOG_KEYS {
+        if k(ctx, Modifiers::ALT, key) {
+            run(app, Act::Dialog(kind));
+        }
+    }
     for (mods, key, act) in [
         (shift, Key::D, Act::DiscardLengths),
         (Modifiers::COMMAND, Key::L, Act::QuickLegato),

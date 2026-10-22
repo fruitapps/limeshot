@@ -373,3 +373,24 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
   processing). An empty slot's ▸ lists More plugins…, Plugin database (Shift+F8) and FL's effects by category.
 - Totals in `menus.json`: Channel Rack 74, Piano Roll 137, Playlist 139, Mixer 44 records.
 
+
+## 22. Piano Roll tool dialogs (session 16)
+
+Opened live in FL 2026.1.1 with their Opt keys on a three-note chord (nothing saved). All are non-modal windows titled
+"Piano roll - <tool>" with Reset and Accept; the notes change while the dialog is open.
+* **Strumizer** (Opt+S, `fl-piano-tool-strum.png`): Start — Time and Velocity, each with Strength and Tension knobs;
+  Preserve end, Trigger ahead. End — Time with Strength and Tension; Chop chords, Alternate direction.
+* **Arpeggiator** (Opt+A, `fl-piano-tool-arp.png`): pattern presets (Default) with a folder and arrow; Options — Pattern
+  (Normal), Range (1, and a mode), Sync (Time), Time mul, Gate; Levels — Pan, Vel, Rel, Mod X, Mod Y, Pitch; Group notes.
+* **Flamer** (Opt+F, `fl-piano-tool-flam.png`): Time with Absolute / Before, Velocity, Group notes.
+* **Claw machine** (Opt+W, `fl-piano-tool-claw.png`): Period (Beat), Trash every (1/4), Time dist, Stretch to
+  compensate, Remove short notes.
+* **Limiter / transposer** (Opt+K, `fl-piano-tool-limit.png`): Key / scale restriction (key, scale, Snap: Above);
+  Keyboard range (opens on the notes' range, C#5..F5 here) / transpose on a keyboard strip, Wrap to top / bottom.
+* **Randomizer** (Opt+R, `fl-piano-tool-random.png`): Pattern — Octave 4, Range 3, Key / scale, Length, Variation,
+  Population, Stack 1, Random portamento, Glue same notes, Seed ‹ ›; Levels — Pan, Vel, Rel, Mod X, Mod Y, Pitch, Reset
+  before processing, Bipolar, Seed.
+* **Level scaling** (Opt+X, `fl-piano-tool-scale.png`): Center, Multiply, Offset faders and a Tension knob.
+Not seen: Opt+Y (Flip), Opt+O (LFO), Opt+L (Articulate), Opt+U (Chop), Opt+Q (Quantize) — after Scale levels, one Opt
+key opened the Raycast launcher instead, so the sweep was stopped. Esc closes the dialogs; at one point the key sweep
+closed the Piano Roll and switched FL to Song mode (restored).

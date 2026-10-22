@@ -58,7 +58,11 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     (
         "Alt+Q",
-        "Piano Roll: quantize the selection (or the channel) to the snap",
+        "Piano Roll: Quantize… (the selection, or the channel, to the snap)",
+    ),
+    (
+        "Alt+L / Alt+U / Alt+A / Alt+S / Alt+F / Alt+K / Alt+Y / Alt+R / Alt+X / Alt+O",
+        "Piano Roll tools: Articulate… / Chop… / Arpeggiate… / Strum… / Flam… / Limit… / Flip… / Randomize… / Scale levels… / LFO…",
     ),
     (
         "↑ / ↓",

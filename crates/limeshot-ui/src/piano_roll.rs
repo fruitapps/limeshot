@@ -190,6 +190,8 @@ pub struct State {
     pub cursor: Option<Tool>,
     /// The notes the Playback tool is sounding, lit up on the grid.
     pub sounding: Vec<NoteId>,
+    /// The open tool dialog (Strum…, Arpeggiate… …), previewing on the notes.
+    pub tool_dialog: Option<crate::piano_tools::ToolDialog>,
 }
 
 impl Default for State {
@@ -210,6 +212,7 @@ impl Default for State {
             geometry: None,
             cursor: None,
             sounding: Vec::new(),
+            tool_dialog: None,
         }
     }
 }
@@ -292,6 +295,7 @@ impl Geometry {
 
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     body(app, ui);
+    crate::piano_tools::window(app, ui.ctx());
 }
 
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
@@ -351,10 +355,10 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 ui.label(RichText::new(format!("Snap: {}", app.ui.snap.label())).color(t.text_dim));
                 if ui
                     .small_button("Quantize")
-                    .hint("Snap the selected notes (or all of this channel's) to the grid (Alt+Q)")
+                    .hint("Quantize the selected notes (or all of this channel's) to the snap (Alt+Q)")
                     .clicked()
                 {
-                    quantize(app, pid, cid);
+                    crate::piano_tools::open(app, crate::piano_tools::Kind::Quantize);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (PgUp, Cmd+wheel)").clicked() {
@@ -1612,12 +1616,6 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     ] {
         if key(ctx, mods, k) {
             run(app, act);
-        }
-    }
-    if key(ctx, Modifiers::ALT, Key::Q) {
-        let pid = app.current_pattern();
-        if let Some(cid) = app.selected_channel() {
-            quantize(app, pid, cid);
         }
     }
     crate::piano_menu::keys(app, ctx);

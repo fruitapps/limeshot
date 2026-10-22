@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -290,6 +290,29 @@ fn main() {
         ];
         if let Some(p) = pages.into_iter().find(|p| p.label().eq_ignore_ascii_case(page)) {
             harness.state_mut().open_settings(p);
+            for _ in 0..4 {
+                harness.step();
+            }
+        }
+    }
+    if let Some(tool) = args.iter().find_map(|a| a.strip_prefix("--tool=")) {
+        // A Piano Roll tool dialog (with --piano --melody), e.g. --tool=strum.
+        use limeshot_ui::piano_tools::Kind;
+        let kinds = [
+            ("quantize", Kind::Quantize),
+            ("chop", Kind::Chop),
+            ("articulate", Kind::Articulate),
+            ("arpeggiate", Kind::Arpeggiate),
+            ("strum", Kind::Strum),
+            ("flam", Kind::Flam),
+            ("limit", Kind::Limit),
+            ("flip", Kind::Flip),
+            ("randomize", Kind::Randomize),
+            ("scale", Kind::ScaleLevels),
+            ("lfo", Kind::Lfo),
+        ];
+        if let Some((_, k)) = kinds.iter().find(|(n, _)| *n == tool) {
+            limeshot_ui::piano_tools::open(harness.state_mut(), *k);
             for _ in 0..4 {
                 harness.step();
             }

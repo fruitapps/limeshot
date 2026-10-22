@@ -7903,10 +7903,10 @@
       "fl_keys": "Opt+L",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Articulate…",
+      "status": "DIFFERENT",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: lengths as a share of the gap to the next note, or a fixed length in snap steps. FL's dialog was not opened (a system launcher caught the key)."
     },
     {
       "id": "MENU-449",
@@ -7960,10 +7960,10 @@
       "fl_keys": "Opt+Q",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › Quantize",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Tools › Quantize…",
+      "status": "IMPLEMENTED",
       "feature": "PR-014",
-      "notes": "LimeShot's Quantize button quantizes at once; no dialog."
+      "notes": "LimeShot's Quantize button quantizes at once; no dialog. Session 16: start-time and duration strength to the snap."
     },
     {
       "id": "MENU-452",
@@ -7998,10 +7998,10 @@
       "fl_keys": "Opt+U",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Chop…",
+      "status": "DIFFERENT",
       "feature": "PR-023",
-      "notes": ""
+      "notes": "Session 16: pieces of N snap steps with a gate. FL's dialog not observed."
     },
     {
       "id": "MENU-454",
@@ -8036,10 +8036,10 @@
       "fl_keys": "Opt+A",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Arpeggiate…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-arp.png): Pattern (up, down, up/down, down/up, random), Range in octaves, Time mul of the snap, Gate, a velocity slope. Not: FL's pattern presets, Sync modes, the pan/release/mod/pitch level knobs, Group notes."
     },
     {
       "id": "MENU-456",
@@ -8055,10 +8055,10 @@
       "fl_keys": "Opt+S",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Strum…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-strum.png): Start time and velocity with tension, Preserve end, Trigger ahead, End time and tension, Chop chords, Alternate direction."
     },
     {
       "id": "MENU-457",
@@ -8074,10 +8074,10 @@
       "fl_keys": "Opt+F",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Flam…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-flam.png): Time in ticks, Before, Velocity. Not: Absolute, Group notes."
     },
     {
       "id": "MENU-458",
@@ -8096,7 +8096,7 @@
       "limeshot": "",
       "status": "NOT_STARTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: dialog observed (fl-piano-tool-claw.png: Period, Trash every, Time dist, Stretch to compensate, Remove short notes); not implemented."
     },
     {
       "id": "MENU-459",
@@ -8112,10 +8112,10 @@
       "fl_keys": "Opt+K",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Limit…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-limit.png): Key / scale restriction with Snap (above, below, nearest), keyboard range (sliders, not FL's keyboard strip), Wrap to top / bottom."
     },
     {
       "id": "MENU-460",
@@ -8131,10 +8131,10 @@
       "fl_keys": "Opt+Y",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Flip…",
+      "status": "DIFFERENT",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: horizontally and/or vertically around the notes' span. FL's dialog not observed."
     },
     {
       "id": "MENU-461",
@@ -8150,10 +8150,10 @@
       "fl_keys": "Opt+R",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Randomize…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-random.png): Octave, Range, Key / scale, Length, Variation, Population, Stack, Glue same notes, Seed, velocity and pan spread; fills the selection's span (or the pattern). Not: Random portamento, release/mod/pitch levels, Bipolar."
     },
     {
       "id": "MENU-462",
@@ -8169,10 +8169,10 @@
       "fl_keys": "Opt+X",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › Scale levels…",
+      "status": "IMPLEMENTED",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16 (fl-piano-tool-scale.png): Center, Multiply, Offset, Tension on note velocity or pan."
     },
     {
       "id": "MENU-463",
@@ -8188,10 +8188,10 @@
       "fl_keys": "Opt+O",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Tools › LFO…",
+      "status": "DIFFERENT",
       "feature": "PR-015",
-      "notes": ""
+      "notes": "Session 16: shape, period, amount, center and phase on note velocity or pan. FL's dialog not observed."
     },
     {
       "id": "MENU-464",

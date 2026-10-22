@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **725** — IMPLEMENTED 117, DIFFERENT 108, LIMESHOT_ONLY 13, NOT_STARTED 446, NOT_PLANNED 41
+Tracked: **725** — IMPLEMENTED 124, DIFFERENT 111, LIMESHOT_ONLY 13, NOT_STARTED 436, NOT_PLANNED 41
 
 ## Summary
 
@@ -22,7 +22,7 @@ Tracked: **725** — IMPLEMENTED 117, DIFFERENT 108, LIMESHOT_ONLY 13, NOT_START
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
 | Toolbar | 52 | 16 | 7 | 26 | 3 | 2 |
 | Channel Rack | 72 | 13 | 18 | 37 | 4 | 2 |
-| Piano Roll | 137 | 37 | 17 | 80 | 3 | 0 |
+| Piano Roll | 137 | 44 | 20 | 70 | 3 | 0 |
 | Playlist | 139 | 2 | 25 | 112 | 0 | 0 |
 | Mixer | 44 | 0 | 10 | 30 | 4 | 0 |
 
@@ -73,9 +73,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PL-023 | P2 | NOT_STARTED | Crossfades and time stretching | MENU-250 Tools › Switch all audio clip channels to<br>MENU-251 Tools › Switch selected audio clip channels to<br>MENU-570 Playlist › Options › Edit › Pitch selected audio clips one semitone down<br>MENU-571 Playlist › Options › Edit › Pitch selected audio clips one semitone up<br>MENU-573 Playlist › Options › Edit › Automatic crossfades (current project)<br>MENU-574 Playlist › Options › Edit › Create new clips with manual fades<br>MENU-575 Playlist › Options › Edit › Snap fade handles<br>MENU-576 Playlist › Options › Edit › Create variants when stretching audio clips |
 | PLG-008 | P2 | IMPLEMENTED | Plugin preset management | MENU-070 Add › Browse presets |
 | PR-013 | P2 | NOT_STARTED | Scale highlighting / snap to scale | MENU-481 Piano Roll › Options › View › Scale highlighting |
-| PR-015 | P2 | IN_PROGRESS | Chords, arpeggiator, strum, humanize, legato | MENU-448 Piano Roll › Options › Tools › Articulate...<br>MENU-455 Piano Roll › Options › Tools › Arpeggiate...<br>MENU-456 Piano Roll › Options › Tools › Strum...<br>MENU-457 Piano Roll › Options › Tools › Flam...<br>MENU-458 Piano Roll › Options › Tools › Claw machine...<br>MENU-459 Piano Roll › Options › Tools › Limit...<br>MENU-460 Piano Roll › Options › Tools › Flip...<br>MENU-461 Piano Roll › Options › Tools › Randomize...<br>MENU-462 Piano Roll › Options › Tools › Scale levels...<br>MENU-463 Piano Roll › Options › Tools › LFO... |
+| PR-015 | P2 | IMPLEMENTED | Chords, arpeggiator, strum, humanize, legato | MENU-458 Piano Roll › Options › Tools › Claw machine... |
 | PR-016 | P2 | NOT_STARTED | Note properties: pan, release, mod X/Y, fine pitch | MENU-528 Piano Roll › Options › Target control<br>MENU-529 Piano Roll › Options › Target control › Note pan<br>MENU-531 Piano Roll › Options › Target control › Note release<br>MENU-532 Piano Roll › Options › Target control › Note filter cutoff frequency<br>MENU-533 Piano Roll › Options › Target control › Note filter resonance (Q)<br>MENU-534 Piano Roll › Options › Target control › Note fine pitch<br>MENU-535 Piano Roll › Options › Target control › Note repeat |
-| PR-023 | P2 | VERIFIED | Glue / slice notes | MENU-453 Piano Roll › Options › Tools › Chop... |
 | PR-027 | P2 | NOT_STARTED | Stamp tool (chords and scales) | MENU-467 Piano Roll › Options › Stamp |
 | REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record<br>MENU-302 Toolbar › Loop record |
 | REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount<br>MENU-301 Toolbar › Recording precount |
@@ -621,22 +620,22 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-445 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Riff machine... |  | dialog | `Opt+E` |  | — | NOT_STARTED | PR-029 |  |
 | MENU-446 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Generate chord progression... |  | dialog | `Opt+P` |  | — | NOT_STARTED | PR-028 |  |
 | MENU-447 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick legato |  | action | `Cmd+L` |  | Piano Roll › ⏵ › Tools › Quick legato | IMPLEMENTED | PR-015 | Session 16: each note ends where the next later note starts; chords stay together, the last notes keep their lengths. |
-| MENU-448 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Articulate... |  | dialog | `Opt+L` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-448 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Articulate... |  | dialog | `Opt+L` |  | Piano Roll › ⏵ › Tools › Articulate… | DIFFERENT | PR-015 | Session 16: lengths as a share of the gap to the next note, or a fixed length in snap steps. FL's dialog was not opened (a system launcher caught the key). |
 | MENU-449 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick quantize |  | action | `Cmd+Q` |  | Piano Roll › ⏵ › Tools › Quick quantize | DIFFERENT | PR-014 | LimeShot's Alt+Q quantizes to the snap (Cmd+Q quits on macOS). Session 16: starts and lengths to the snap. No key: Cmd+Q quits LimeShot. |
 | MENU-450 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick quantize start times |  | action | `Shift+Q` |  | Piano Roll › ⏵ › Tools › Quick quantize start times | IMPLEMENTED | PR-014 | Session 16: Shift+Q. |
-| MENU-451 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quantize... |  | dialog | `Opt+Q` |  | Piano Roll › Quantize | DIFFERENT | PR-014 | LimeShot's Quantize button quantizes at once; no dialog. |
+| MENU-451 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quantize... |  | dialog | `Opt+Q` |  | Piano Roll › ⏵ › Tools › Quantize… | IMPLEMENTED | PR-014 | LimeShot's Quantize button quantizes at once; no dialog. Session 16: start-time and duration strength to the snap. |
 | MENU-452 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Quick chop |  | action | `Cmd+U` |  | Piano Roll › ⏵ › Tools › Quick chop | IMPLEMENTED | PR-023 |  |
-| MENU-453 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Chop... |  | dialog | `Opt+U` |  | — | NOT_STARTED | PR-023 |  |
+| MENU-453 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Chop... |  | dialog | `Opt+U` |  | Piano Roll › ⏵ › Tools › Chop… | DIFFERENT | PR-023 | Session 16: pieces of N snap steps with a gate. FL's dialog not observed. |
 | MENU-454 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Glue |  | action | `Cmd+G` |  | Piano Roll › ⏵ › Tools › Glue | IMPLEMENTED | PR-023 |  |
-| MENU-455 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Arpeggiate... |  | dialog | `Opt+A` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-456 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Strum... |  | dialog | `Opt+S` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-457 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flam... |  | dialog | `Opt+F` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-458 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Claw machine... |  | dialog | `Opt+W` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-459 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Limit... |  | dialog | `Opt+K` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-460 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flip... |  | dialog | `Opt+Y` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-461 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Randomize... |  | dialog | `Opt+R` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-462 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Scale levels... |  | dialog | `Opt+X` |  | — | NOT_STARTED | PR-015 |  |
-| MENU-463 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ LFO... |  | dialog | `Opt+O` |  | — | NOT_STARTED | PR-015 |  |
+| MENU-455 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Arpeggiate... |  | dialog | `Opt+A` |  | Piano Roll › ⏵ › Tools › Arpeggiate… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-arp.png): Pattern (up, down, up/down, down/up, random), Range in octaves, Time mul of the snap, Gate, a velocity slope. Not: FL's pattern presets, Sync modes, the pan/release/mod/pitch level knobs, Group notes. |
+| MENU-456 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Strum... |  | dialog | `Opt+S` |  | Piano Roll › ⏵ › Tools › Strum… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-strum.png): Start time and velocity with tension, Preserve end, Trigger ahead, End time and tension, Chop chords, Alternate direction. |
+| MENU-457 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flam... |  | dialog | `Opt+F` |  | Piano Roll › ⏵ › Tools › Flam… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-flam.png): Time in ticks, Before, Velocity. Not: Absolute, Group notes. |
+| MENU-458 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Claw machine... |  | dialog | `Opt+W` |  | — | NOT_STARTED | PR-015 | Session 16: dialog observed (fl-piano-tool-claw.png: Period, Trash every, Time dist, Stretch to compensate, Remove short notes); not implemented. |
+| MENU-459 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Limit... |  | dialog | `Opt+K` |  | Piano Roll › ⏵ › Tools › Limit… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-limit.png): Key / scale restriction with Snap (above, below, nearest), keyboard range (sliders, not FL's keyboard strip), Wrap to top / bottom. |
+| MENU-460 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Flip... |  | dialog | `Opt+Y` |  | Piano Roll › ⏵ › Tools › Flip… | DIFFERENT | PR-015 | Session 16: horizontally and/or vertically around the notes' span. FL's dialog not observed. |
+| MENU-461 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Randomize... |  | dialog | `Opt+R` |  | Piano Roll › ⏵ › Tools › Randomize… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-random.png): Octave, Range, Key / scale, Length, Variation, Population, Stack, Glue same notes, Seed, velocity and pan spread; fills the selection's span (or the pattern). Not: Random portamento, release/mod/pitch levels, Bipolar. |
+| MENU-462 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Scale levels... |  | dialog | `Opt+X` |  | Piano Roll › ⏵ › Tools › Scale levels… | IMPLEMENTED | PR-015 | Session 16 (fl-piano-tool-scale.png): Center, Multiply, Offset, Tension on note velocity or pan. |
+| MENU-463 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ LFO... |  | dialog | `Opt+O` |  | Piano Roll › ⏵ › Tools › LFO… | DIFFERENT | PR-015 | Session 16: shape, period, amount, center and phase on note velocity or pan. FL's dialog not observed. |
 | MENU-464 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Run last script again |  | action |  | disabled | — | NOT_PLANNED |  | FL's Python scripts. |
 | MENU-465 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Open script folder... |  | action |  |  | — | NOT_PLANNED |  |  |
 | MENU-466 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ <scripts> |  | list |  |  | — | NOT_PLANNED |  | Arpeggiator, Euclidean, Humanize, Note repeater sprinkler, Select by velocity and more. |

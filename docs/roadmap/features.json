@@ -1705,7 +1705,7 @@
       "name": "Quantize",
       "description": "Quantise note starts/lengths.",
       "fl_reference": "Alt+Q quantize, Ctrl+Q quick quantize.",
-      "limeshot_behavior": "Alt+Q or the Quantize button snaps note starts of the selection (or the whole channel) to the snap grid. The command supports a strength and length rounding; the UI uses 100% starts only. ⏵ menu › Tools: Quick quantize (starts and lengths) and Quick quantize start times (Shift+Q).",
+      "limeshot_behavior": "Quantize… (Alt+Q or the Quantize button) opens FL's quantizer: start-time and duration strength to the snap, previewed live on the selection (or the channel). The ⏵ menu has Quick quantize (starts and lengths) and Quick quantize start times (Shift+Q).",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -1721,7 +1721,8 @@
       "tests": [
         "limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths",
         "limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll",
-        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_tool_dialogs_preview_accept_and_cancel"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1730,7 +1731,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "No quantize dialog (strength, lengths, swing template) yet."
+      "notes": "Session 16: the dialog replaces the old immediate Alt+Q. No swing templates or sensitivity."
     },
     {
       "id": "PR-015",
@@ -1738,9 +1739,9 @@
       "name": "Chords, arpeggiator, strum, humanize, legato",
       "description": "Generative note tools.",
       "fl_reference": "Chord progression, Riff machine, strum, arp, randomize, legato (Ctrl+L).",
-      "limeshot_behavior": "The Piano Roll's ⏵ menu › Tools: Quick legato (Cmd+L: every note ends where the next later note starts, chords together) and Edit › Discard lengths (Shift+D, one step), on the selection or the channel; one undo step each (Command::EditNotes, core note_tools). The tool dialogs (Arpeggiate, Strum, Flam, Limit, Flip, Randomize, Scale levels, LFO, Articulate, Chop…) come next.",
+      "limeshot_behavior": "The Piano Roll's ⏵ menu › Tools: Quick legato (Cmd+L), Discard lengths (Shift+D), and FL's tool dialogs with their Opt keys: Articulate… (Alt+L), Arpeggiate… (Alt+A), Strum… (Alt+S), Flam… (Alt+F), Limit… (Alt+K), Flip… (Alt+Y), Randomize… (Alt+R), Scale levels… (Alt+X), LFO… (Alt+O). They work on the selection or the channel's notes; a dialog previews on the notes while open, Accept keeps one undo step, × or Esc reverts (Command::EditNotes, core note_tools).",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
       "modules": [
@@ -1754,16 +1755,29 @@
       "tests": [
         "limeshot-core note_tools::tests::legato_reaches_the_next_start_and_keeps_chords_together",
         "limeshot-core document::tests::edit_notes_keeps_ids_and_merges_a_tool_gesture",
-        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom",
+        "limeshot-core note_tools::tests::strum_spreads_a_chord_upwards_and_alternates",
+        "limeshot-core note_tools::tests::arpeggiate_walks_the_chord_for_its_length",
+        "limeshot-core note_tools::tests::flam_limit_flip_and_levels",
+        "limeshot-core note_tools::tests::randomize_is_seeded_and_stays_on_the_scale",
+        "limeshot-core note_tools::tests::articulate_chop_and_quantize",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_tool_dialogs_preview_accept_and_cancel"
       ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/evidence/screenshots/fl-piano-tool-arp.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-strum.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-flam.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-limit.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-random.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-scale.png",
+          "docs/research/evidence/screenshots/fl-piano-tool-claw.png"
         ]
       },
-      "notes": "Session 16: menu and quick tools from FL 2026.1.1's Piano Roll menu (menus.json, pseudo-menu Piano Roll). Not yet: the dialog tools, Riff machine, chord progressions."
+      "notes": "Session 16: dialogs laid out after FL 2026.1.1's (strumizer, arpeggiator, flamer, limiter/transposer, randomizer, level scaling observed live; articulator, flip, LFO and chopper not, a system launcher caught their keys). Simplified: sliders instead of FL's knobs, the arpeggiator has no pattern presets or Sync modes, the level knobs cover velocity and pan only, no Claw machine, Riff machine or chord progressions (PR-028/029)."
     },
     {
       "id": "PR-016",
@@ -1974,7 +1988,7 @@
       "name": "Glue / slice notes",
       "description": "Join or split notes.",
       "fl_reference": "Tools › Glue (Cmd+G), Quick chop (Cmd+U), Chop… (Opt+U); Slice tool (C).",
-      "limeshot_behavior": "Glue (Cmd+G) joins selected notes of the same key that touch or overlap; Quick chop (Cmd+U) cuts notes at every snap step; the Slice tool cuts at a point. With nothing selected they apply to all of the channel's notes.",
+      "limeshot_behavior": "Glue (Cmd+G) joins selected notes of the same key that touch or overlap; Quick chop (Cmd+U) cuts notes at every snap step; the Slice tool cuts at a point. With nothing selected they apply to all of the channel's notes. Chop… (Alt+U) cuts into pieces of N snap steps with a gate.",
       "priority": "P2",
       "status": "VERIFIED",
       "mvp": false,
@@ -1989,7 +2003,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::slice_glue_chop_and_mute_tools",
-        "limeshot-core document::tests::slice_glue_and_mute_notes"
+        "limeshot-core document::tests::slice_glue_and_mute_notes",
+        "limeshot-core note_tools::tests::articulate_chop_and_quantize"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1998,7 +2013,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Shortcuts from FL 2026.1.1's Piano Roll Tools menu (fl-piano-tools-menu.png). The Chop… dialog is not implemented."
+      "notes": "Shortcuts from FL 2026.1.1's Piano Roll Tools menu (fl-piano-tools-menu.png). Session 16: a Chop… dialog (FL's chopper not observed: its pattern presets are not in)."
     },
     {
       "id": "PR-024",
