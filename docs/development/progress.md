@@ -654,3 +654,16 @@ all its submenus, recorded in `menus.json` under the pseudo-menus "Channel Rack"
 LimeShot's equivalent per item (often a key where LimeShot has no menu). `fl-studio-analysis.md` §21. Playlist and
 Mixer follow.
 
+### Session 15, part 13: editor menus documented (Playlist, Mixer); where to continue
+
+The Playlist's ▸ menu with its submenus and the Mixer's menu and effect-slot menu are recorded as well (139 and 44
+records; `fl-studio-analysis.md` §21, `fl-playlist-*.png`, `fl-mixer-*.png`). `menus.json` now holds 725 records:
+main menus, toolbar and the four editors. Nothing was saved in FL.
+
+**Where to continue (session 16):** implement from the editor menus, highest value first: Piano Roll menu with
+FL's Tools (Quick legato, Arpeggiate, Strum, Randomize, Chop…), Select and Zoom commands; Playlist Edit (Merge
+clips, Mute/Unmute Opt+M), Time markers and Zoom; Mixer track menu (Move left/right, Reset, colours). Then the
+remaining "Then" items in `next-steps.md` (live FL observation list, keybindings/settings follow-ups, Mixer
+pre-fader sends, effects polish, MIDI input). Open checks: a live pass with real plugins over presets, automation,
+delay compensation and the plugin bridge (sessions 12–15), and SMPTE / FL's Line and Cell snap modes.
+

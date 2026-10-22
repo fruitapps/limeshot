@@ -353,4 +353,23 @@ FL Studio is sold in Fruity, Producer, Signature and All Plugins editions. FL Cl
   machine (Opt+W), Limit (Opt+K), Flip (Opt+Y), Randomize (Opt+R), Scale levels (Opt+X), LFO (Opt+O) and Python
   scripts; Select (Cmd+D, Cmd+A, Shift+R/M/C/O/I, Cmd+Enter, Magic lasso); Zoom (PgUp/PgDn, Shift+1…6); its own Snap
   (Main, Line, Cell, (none) … Bar, Events, Markers).
+- **Playlist** (`fl-playlist-*.png`): the ▸ menu has Edit (Cut/Copy/Paste/Duplicate/Delete, Shift left/right/up/down,
+  Make unique Shift+Cmd+V, Allow resizing from left, Mute Opt+M / Unmute Shift+Opt+M, Insert/Slice & insert/Delete
+  space, Merge selected clips Cmd+G, Merge similar pattern clips Shift+Cmd+G, Merge automation clips Cmd+Opt+G, audio
+  clip pitch 7/8 and reverse 9, crossfade options), Tools (Quick quantize start times Shift+Q, Consolidate, Export all
+  playlist tracks / track groups, Clone selected playlist track(s) Shift+Cmd+B), View (grid, content, time and track
+  header display options), Snap, Select (Cmd+D, Cmd+A, Shift+C, Shift+I, Cmd+Enter, Magic lasso), Group (Shift+G /
+  Opt+G), Zoom (PgUp/PgDn, Shift+1…6), Time markers (Add one… Opt+T, Add auto Cmd+T, Add jump to next bar, Add time
+  signature change… Shift+Opt+T, Place loop Shift+T, Change to marker loop), Picker panel (Enable Opt+P, selection,
+  options, Select unused, Sort), Current clip source, Edit patterns in (Automatic / Channel rack / Piano roll / Piano roll
+  or event editor; Scroll to position), Quantize song jumps (Off, Beats, Bars, 2/4/8 bars), performance mode (Cmd+P),
+  track macros (lock/unlock to content, reset empty tracks, collapse/expand groups), Center, Detached.
+- **Mixer** (`fl-mixer-menu.png`, `fl-mixer-slot-menu.png`): the ▸ menu (the same as a track's right-click) has
+  *Options* (Disk recording, Plugin delay compensation ▸, Link all parameters…, View, Detached, Trim unused tracks,
+  smart disable, Edison), *Mixer track* (Rename, color and icon… F2, colours, icon, audio tracks, File ▸, audio editor
+  Cmd+E / Shift+E, Reset to default), *Routing* (Channel routing ▸, Track routing ▸, Select ▸, reset/unroute, Solo S,
+  Alt solo Opt+S, Arm/Disarm, Compensate for master latency), *Group* (Separator, Create group…), *Layout* (Dock to ▸,
+  Move left/right Opt+Left/Right, Delete, Insert one, Insert multiple…, Insert from state) and *CPU* (Allow threaded
+  processing). An empty slot's ▸ lists More plugins…, Plugin database (Shift+F8) and FL's effects by category.
+- Totals in `menus.json`: Channel Rack 74, Piano Roll 137, Playlist 139, Mixer 44 records.
 

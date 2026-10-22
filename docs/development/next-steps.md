@@ -44,8 +44,9 @@
    Project, Info), starting with the pages LimeShot already has settings for.
    * [x] Toolbar (session 15): 54 records under the menu "Toolbar" in `menus.json` (names and keys from FL's hint
      panel, the right-click menus). Not yet: the Browser's top bar.
-   * [ ] Each editor's own menus and context menus (Channel Rack, Piano Roll, Playlist, Mixer; partly recorded in
-     `fl-studio-analysis.md` §2–6).
+   * [x] Each editor's own menus (session 15): Channel Rack, Piano Roll, Playlist and Mixer menus in `menus.json`
+     (394 records, `fl-studio-analysis.md` §21). Not yet: context menus on clips, notes and mixer controls, the
+     Browser's top bar, and the floating View windows (Project picker, Script output, Plugin performance monitor).
    Then implement the menu bar (APP-026) from `menus.md`'s "open work by feature" table, highest priority first:
    SEQ-021 Pattern commands, Edit › Cut/Copy/Paste routed to the focused editor, a Tools menu with Macros, and
    View › Layout (UI-013). Keep `menus.json` in step with `menus.rs` (the check enforces labels).

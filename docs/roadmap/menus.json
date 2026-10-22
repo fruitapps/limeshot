@@ -9680,6 +9680,3410 @@
       "status": "DIFFERENT",
       "feature": "UI-007",
       "notes": "The title bar's detach button."
+    },
+    {
+      "id": "MENU-543",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": "The ▸ at the Playlist's top left. LimeShot has no Playlist menu; its commands are keys, the tool buttons and the clip and track menus."
+    },
+    {
+      "id": "MENU-544",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-545",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Cut"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+X",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Cut",
+      "status": "DIFFERENT",
+      "feature": "PL-026",
+      "notes": "Main Edit menu and Cmd+X with the Playlist focused."
+    },
+    {
+      "id": "MENU-546",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Copy"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+C",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Copy",
+      "status": "DIFFERENT",
+      "feature": "PL-026",
+      "notes": ""
+    },
+    {
+      "id": "MENU-547",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Paste"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+V",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Edit › Paste",
+      "status": "DIFFERENT",
+      "feature": "PL-026",
+      "notes": ""
+    },
+    {
+      "id": "MENU-548",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Duplicate"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+B",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+B",
+      "status": "DIFFERENT",
+      "feature": "PL-005",
+      "notes": ""
+    },
+    {
+      "id": "MENU-549",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Delete"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Del",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Delete",
+      "status": "DIFFERENT",
+      "feature": "PL-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-550",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Shift left"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Left",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Shift+Left",
+      "status": "DIFFERENT",
+      "feature": "PL-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-551",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Shift right"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Right",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Shift+Right",
+      "status": "DIFFERENT",
+      "feature": "PL-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-552",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Shift up"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Up",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Shift+Up",
+      "status": "DIFFERENT",
+      "feature": "PL-002",
+      "notes": "A track up."
+    },
+    {
+      "id": "MENU-553",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Shift down"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Down",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Shift+Down",
+      "status": "DIFFERENT",
+      "feature": "PL-002",
+      "notes": ""
+    },
+    {
+      "id": "MENU-554",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Make unique"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+V",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › clip menu make unique",
+      "status": "DIFFERENT",
+      "feature": "PL-011",
+      "notes": ""
+    },
+    {
+      "id": "MENU-555",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Make unique as sample"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-556",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Allow resizing from left"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Cmd+Opt+Home",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › left clip edge",
+      "status": "DIFFERENT",
+      "feature": "PL-003",
+      "notes": "Always on."
+    },
+    {
+      "id": "MENU-557",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Nudge clips with mouse wheel"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-558",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Dropping on track header locks to content"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-559",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Drop audio on track headers"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-560",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Mute"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Opt+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-013",
+      "notes": "LimeShot mutes clips with the mute tool and the clip menu."
+    },
+    {
+      "id": "MENU-561",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Unmute"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Opt+M",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-013",
+      "notes": ""
+    },
+    {
+      "id": "MENU-562",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Insert space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Ins",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-563",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Slice & insert space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Opt+Ins",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-564",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Delete space"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Del",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-565",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Trim selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-566",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Merge selected clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-567",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Merge similar pattern clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-568",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Merge automation clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Opt+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-015",
+      "notes": ""
+    },
+    {
+      "id": "MENU-569",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Purge unused audio clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Tools › Purge unused audio clips",
+      "status": "DIFFERENT",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-570",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Pitch selected audio clips one semitone down"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "7",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-571",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Pitch selected audio clips one semitone up"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-572",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Reverse selected audio clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "9",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-014",
+      "notes": ""
+    },
+    {
+      "id": "MENU-573",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Automatic crossfades (current project)"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-574",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Create new clips with manual fades"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-575",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Snap fade handles"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-576",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit",
+        "Create variants when stretching audio clips"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-023",
+      "notes": ""
+    },
+    {
+      "id": "MENU-577",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-578",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools",
+        "Quick quantize start times"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Q",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-579",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools",
+        "Consolidate playlist selection"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-580",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools",
+        "Export all playlist tracks"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "EXP-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-581",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools",
+        "Export all playlist track groups"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-582",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Tools",
+        "Clone selected playlist track(s)"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+Cmd+B",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-583",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-584",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Grid color..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-585",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Grid contrast"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-586",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Invert grid"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-587",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Track separators"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-588",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Time segments"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-589",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Keep labels on screen"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-590",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Content in titlebars"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-591",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Behind clips"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-592",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Shadow"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-593",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Resize all tracks"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Opt+wheel",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": "LimeShot sets every track's height with Opt+wheel."
+    },
+    {
+      "id": "MENU-594",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Hide collapsed grouped tracks"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-595",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show fade previews"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-596",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show gain value"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-597",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show gain scale"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-598",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Incremental scrolling"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-599",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Precise time indicator"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-600",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Performance clip progress"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-601",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Performance track progress"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-602",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Mini playlist preview"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-603",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show controls on audio tracks"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-604",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show levels on audio tracks"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-605",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Show levels on instrument tracks"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-606",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "View",
+        "Remove background picture"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-607",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Snap"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Toolbar › snap selector",
+      "status": "DIFFERENT",
+      "feature": "PL-007",
+      "notes": "FL's Playlist has its own snap list (as the Piano Roll's); LimeShot follows the toolbar snap."
+    },
+    {
+      "id": "MENU-608",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-609",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Deselect"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+D",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+D",
+      "status": "DIFFERENT",
+      "feature": "PL-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-610",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select all"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+A",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+A",
+      "status": "DIFFERENT",
+      "feature": "PL-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-611",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select by selected source"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+C",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-612",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select muted"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-613",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select overlapping clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-614",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select stacked clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-615",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Invert selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+I",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Shift+I",
+      "status": "DIFFERENT",
+      "feature": "PL-006",
+      "notes": ""
+    },
+    {
+      "id": "MENU-616",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select time around selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Enter",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-617",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select previous time"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Left",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-618",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Select next time"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+Right",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-619",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Select",
+        "Magic lasso"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-620",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Group"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-621",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Group",
+        "Group"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-622",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Group",
+        "Ungroup"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Opt+G",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-623",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-624",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Zoom in"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "PgUp",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+wheel",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-625",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Zoom out"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "PgDn",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+wheel",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-626",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Quick zoom 1"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+1",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-627",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Quick zoom 2"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+2",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-628",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Quick zoom 3"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+3",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-629",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Zoom out far"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+4",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-630",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Zoom on selection"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+5",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-631",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Zoom",
+        "Zoom on performance clips"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+6",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-632",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-633",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add one..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Opt+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Alt+T",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "Adds a marker at the song position and asks its name."
+    },
+    {
+      "id": "MENU-634",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add auto"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Cmd+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › key Cmd+T",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-635",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add two..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-636",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add one every"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-637",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add jump to next bar"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-638",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add time signature change..."
+      ],
+      "section": "",
+      "kind": "dialog",
+      "fl_keys": "Shift+Opt+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PR-022",
+      "notes": ""
+    },
+    {
+      "id": "MENU-639",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Add key marker"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-640",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Place loop"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+T",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-641",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Delete"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › marker menu",
+      "status": "DIFFERENT",
+      "feature": "PL-016",
+      "notes": "LimeShot deletes a marker from its right-click menu."
+    },
+    {
+      "id": "MENU-642",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Time markers",
+        "Change to marker loop"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-016",
+      "notes": ""
+    },
+    {
+      "id": "MENU-643",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-644",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Enable"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Opt+P",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › picker panel",
+      "status": "DIFFERENT",
+      "feature": "PL-021",
+      "notes": "Always shown in LimeShot."
+    },
+    {
+      "id": "MENU-645",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Show on right side"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-646",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Width"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-647",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Select linked channels"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-648",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Select from playlist/channel rack"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-649",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Show empty patterns"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-650",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Drag to rearrange"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-651",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Auto group patterns/channels"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-652",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Select unused"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-653",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Picker panel",
+        "Sort"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-654",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Current clip source"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-655",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Current clip source",
+        "<pattern clip sources>"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › picker panel",
+      "status": "DIFFERENT",
+      "feature": "PL-025",
+      "notes": "LimeShot picks the clip source in the picker panel."
+    },
+    {
+      "id": "MENU-656",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-657",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in",
+        "Automatic"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-658",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in",
+        "Channel rack"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-659",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in",
+        "Piano roll"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › pattern clip double-click",
+      "status": "DIFFERENT",
+      "feature": "PL-001",
+      "notes": "A double-click on a pattern clip opens it in the Piano Roll."
+    },
+    {
+      "id": "MENU-660",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in",
+        "Piano roll or event editor"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-661",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Edit patterns in",
+        "Scroll to position"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-662",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-663",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "Off"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "selected",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-664",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "Beats"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-665",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "Bars"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-666",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "2 bars"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-667",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "4 bars"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-668",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Quantize song jumps",
+        "8 bars"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-669",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Automation clips reset remote controls"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-670",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Prepare for performance mode"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-671",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Performance mode"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "Cmd+P",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-019",
+      "notes": ""
+    },
+    {
+      "id": "MENU-672",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Change declicking for selected channels to"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-673",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Switch all audio clip channels to"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-674",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Switch selected audio clip channels to"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-675",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Lock all playlist tracks to content"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-676",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Unlock all playlist tracks from content"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-677",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Reset empty playlist tracks"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Tools › Reset empty playlist tracks",
+      "status": "DIFFERENT",
+      "feature": "WF-009",
+      "notes": "In LimeShot's Tools menu."
+    },
+    {
+      "id": "MENU-678",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Collapse all grouped tracks"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-679",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Expand all grouped tracks"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-018",
+      "notes": ""
+    },
+    {
+      "id": "MENU-680",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Center"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+0",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "PL-008",
+      "notes": ""
+    },
+    {
+      "id": "MENU-681",
+      "menu": "Playlist",
+      "path": [
+        "Playlist",
+        "Options",
+        "Detached"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Playlist › detach button",
+      "status": "DIFFERENT",
+      "feature": "UI-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-682",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › track menu",
+      "status": "DIFFERENT",
+      "feature": "MIX-001",
+      "notes": "The ▸ at the Mixer's top left (also a track's right-click). LimeShot's mixer track menu has fewer items."
+    },
+    {
+      "id": "MENU-683",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Disk recording"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-684",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Plugin delay compensation"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › automatic delay compensation",
+      "status": "DIFFERENT",
+      "feature": "MIX-012",
+      "notes": "LimeShot compensates automatically; no per-track settings."
+    },
+    {
+      "id": "MENU-685",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Link all parameters..."
+      ],
+      "section": "Options",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-004",
+      "notes": ""
+    },
+    {
+      "id": "MENU-686",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "View"
+      ],
+      "section": "Options",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-687",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Detached"
+      ],
+      "section": "Options",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › detach button",
+      "status": "DIFFERENT",
+      "feature": "UI-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-688",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Trim unused tracks"
+      ],
+      "section": "Options",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-689",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Switch smart disable for all plugins"
+      ],
+      "section": "Options",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "WF-009",
+      "notes": ""
+    },
+    {
+      "id": "MENU-690",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Remove all Edison instances"
+      ],
+      "section": "Options",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's Edison."
+    },
+    {
+      "id": "MENU-691",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Rename, color and icon..."
+      ],
+      "section": "Mixer track",
+      "kind": "dialog",
+      "fl_keys": "F2",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › track menu rename",
+      "status": "DIFFERENT",
+      "feature": "MIX-001",
+      "notes": "LimeShot renames from the track's menu; no icon."
+    },
+    {
+      "id": "MENU-692",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Change color..."
+      ],
+      "section": "Mixer track",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-693",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Random color"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-694",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Gradient color..."
+      ],
+      "section": "Mixer track",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-695",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Change icon..."
+      ],
+      "section": "Mixer track",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-696",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Assign to new Audio track(s)"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-697",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Unassign from Audio track(s)"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-698",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "File"
+      ],
+      "section": "Mixer track",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-699",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Open audio editor"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "Cmd+E",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's Edison."
+    },
+    {
+      "id": "MENU-700",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Open audio editor and record"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "Shift+E",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-701",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Reset selected track(s) to default"
+      ],
+      "section": "Mixer track",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-702",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Channel routing"
+      ],
+      "section": "Routing",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Channel Rack › mixer track numbers",
+      "status": "DIFFERENT",
+      "feature": "SEQ-005",
+      "notes": "LimeShot routes channels from the Channel Rack and Cmd+L."
+    },
+    {
+      "id": "MENU-703",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Track routing"
+      ],
+      "section": "Routing",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › route buttons",
+      "status": "DIFFERENT",
+      "feature": "MIX-007",
+      "notes": "LimeShot's route buttons under each strip."
+    },
+    {
+      "id": "MENU-704",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Select"
+      ],
+      "section": "Routing",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-705",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Reset selected track(s) routing"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-706",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Unroute tracks routed to the selected track(s)"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-007",
+      "notes": ""
+    },
+    {
+      "id": "MENU-707",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Solo selected track(s)"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "S",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › solo button",
+      "status": "DIFFERENT",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-708",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Alt solo selected track(s)"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "Opt+S",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-709",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Arm selected track(s)"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-710",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Disarm selected track(s)"
+      ],
+      "section": "Routing",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "REC-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-711",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Compensate for master latency"
+      ],
+      "section": "Routing",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › automatic delay compensation",
+      "status": "DIFFERENT",
+      "feature": "MIX-012",
+      "notes": "Always on."
+    },
+    {
+      "id": "MENU-712",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Separator"
+      ],
+      "section": "Group",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-713",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Create group..."
+      ],
+      "section": "Group",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-714",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Auto color group"
+      ],
+      "section": "Group",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-715",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Dock to"
+      ],
+      "section": "Layout",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-716",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Move left"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Opt+Left",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-717",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Move right"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Opt+Right",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": ""
+    },
+    {
+      "id": "MENU-718",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Delete"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "Del",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "MIX-001",
+      "notes": "Disabled on the master."
+    },
+    {
+      "id": "MENU-719",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Insert one"
+      ],
+      "section": "Layout",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "Add › Mixer track",
+      "status": "DIFFERENT",
+      "feature": "MIX-001",
+      "notes": "LimeShot adds tracks at the end."
+    },
+    {
+      "id": "MENU-720",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Insert multiple..."
+      ],
+      "section": "Layout",
+      "kind": "dialog",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-721",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Insert from state"
+      ],
+      "section": "Layout",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "disabled",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-722",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Options",
+        "Allow threaded processing"
+      ],
+      "section": "CPU",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "checked",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "",
+      "notes": ""
+    },
+    {
+      "id": "MENU-723",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Effect slot menu"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Mixer › + Add effect",
+      "status": "DIFFERENT",
+      "feature": "FX-001",
+      "notes": "The ▸ of an empty insert slot: More plugins…, Plugin database (Shift+F8), FL's effects by category (Controller, Delay reverb, Distortion, Dynamics, Filter, Flanger, Gain, Misc, Patcher, Visual) and Categories / Simple / Tree. LimeShot's + Add effect lists its built-in effects and plugins."
+    },
+    {
+      "id": "MENU-724",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Effect slot menu",
+        "<FL effects by category>"
+      ],
+      "section": "",
+      "kind": "list",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_PLANNED",
+      "feature": "",
+      "notes": "FL's own plugins."
+    },
+    {
+      "id": "MENU-725",
+      "menu": "Mixer",
+      "path": [
+        "Mixer",
+        "Effect slot menu",
+        "Plugin database"
+      ],
+      "section": "",
+      "kind": "action",
+      "fl_keys": "Shift+F8",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "",
+      "status": "NOT_STARTED",
+      "feature": "APP-021",
+      "notes": ""
     }
   ],
   "lists": {
