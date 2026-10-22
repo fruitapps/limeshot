@@ -70,6 +70,20 @@ impl Envelope {
         e
     }
 
+    /// Change a running envelope without retriggering it (instrument automation).
+    pub fn set_adsr(&mut self, adsr: Adsr) {
+        self.sustain = adsr.sustain.clamp(0.0, 1.0);
+        self.attack_step = step(adsr.attack, 1.0, self.sample_rate);
+        self.decay_step = step(adsr.decay, 1.0 - self.sustain, self.sample_rate);
+        if self.stage == Stage::Sustain {
+            self.level = self.sustain;
+        }
+        if self.stage == Stage::Release && self.release_secs != adsr.release {
+            self.release_step = step(adsr.release, self.level, self.sample_rate);
+        }
+        self.release_secs = adsr.release;
+    }
+
     /// Enter the release stage from wherever the envelope is.
     pub fn release(&mut self) {
         if matches!(self.stage, Stage::Release | Stage::Done) {

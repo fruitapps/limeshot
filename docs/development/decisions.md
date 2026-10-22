@@ -213,3 +213,19 @@ system codecs, so every platform reads the same files). It is MPL-2.0: file-leve
 symphonia's own files, used unmodified from crates.io, so LimeShot stays MIT OR Apache-2.0 (as with `option-ext`).
 WAV keeps `hound`. Encoding (MP3/FLAC export) is not part of this decision.
 
+
+
+### D38. Standalone Lime Native plugins in a separate workspace
+The owner requested independent VST plugins usable in other DAWs, with dedicated Lime-themed native editors.
+`native-plugins/` is an isolated Cargo workspace to keep the DAW's dependency graph and egui version stable.
+Nine cdylib entry points use nice-plug 0.4.2 (ISC), its modern egui adapter, and the same permissively licensed
+`vst3` bindings already used by the host. No handwritten unsafe code is added: plugin crates forbid unsafe;
+FFI implementations are supplied by the framework's export/parameter macros. The existing D32 boundary in the
+DAW remains intact. `limeshot-engine::voice::Voice` and `fx::build` supply the actual instruments/effects.
+`Envelope::set_adsr` and `Voice::update_instrument` preserve running voices while parameters change.
+Host state embeds bounded PCM sample data so Sampler sessions do not depend on the source file's path.
+Sample decoding, allocation and locking happen during state restoration/activation, never processing; active
+voices hold the same sample Arc that the plugin owns, so finishing/stealing a voice cannot free sample data.
+Factory and file presets share LimeShot's schema and factory definitions. The bundler targets this nested
+workspace explicitly, avoiding its upstream helper's outermost-manifest heuristic. `build.py` collects separate
+VST3 bundles in `dist/`, with no automatic installation or changes to the user's DAW.

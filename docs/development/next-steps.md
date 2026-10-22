@@ -40,8 +40,8 @@ Completed work and verification evidence are retained in [progress.md](progress.
    persistence. Detachable panels and explicitly saved custom layouts already exist.
 5. **Packaging (PF-006)** and `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
    further arrangements and value-checked fixtures from older FL versions.
-6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); the owner's Lime Native VST request remains
-   open: package LimeSynth, Sampler and built-in effects as VST3 plugins sharing the existing DSP implementation.
+6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's nine standalone VST3 bundles now live in `native-plugins/` (PLG-012).
+   Complete hands-on DAW/editor checks and validate Windows/Linux/Intel builds; see `native-plugins/VALIDATION.md`.
 
 ## Research and verification rules
 

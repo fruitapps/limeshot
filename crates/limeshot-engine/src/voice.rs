@@ -282,6 +282,94 @@ impl Voice {
         }
     }
 
+    /// Apply instrument automation and pitch bend while preserving oscillator phase,
+    /// sample position, and the current envelope stage. Call with the note's original velocity.
+    /// `root_key` is the sampler's MIDI root note; `bend_semitones` offsets pitch and
+    /// `sample_rate` is the output rate in Hz. Mismatched source/instrument kinds do nothing.
+    /// Sampler updates keep the loaded audio, loop, and filter; trim and direction changes
+    /// take effect at the existing playback position. Newly enabled synth oscillators or
+    /// modulation start with fresh state.
+    pub fn update_instrument(
+        &mut self,
+        instrument: &InstrumentState,
+        root_key: u8,
+        velocity: f32,
+        bend_semitones: f32,
+        sample_rate: f32,
+    ) {
+        match (&mut self.source, instrument) {
+            (
+                Source::Synth { a, b, mods },
+                InstrumentState::Synth {
+                    shape,
+                    adsr,
+                    gain,
+                    octave,
+                    detune_cents,
+                    mods: cfg,
+                },
+            ) => {
+                let f = key_to_hz(f32::from(self.key) + 12.0 * f32::from(*octave) + bend_semitones);
+                let fb = f * 2f32.powf(detune_cents / 1200.0);
+                a.shape = *shape;
+                a.set_frequency(f, sample_rate);
+                if detune_cents.abs() > 0.01 {
+                    let second = b.get_or_insert_with(|| Oscillator::new(*shape, fb, sample_rate, 0.25));
+                    second.shape = *shape;
+                    second.set_frequency(fb, sample_rate);
+                } else {
+                    *b = None;
+                }
+                if cfg.any() {
+                    let m = mods.get_or_insert_with(|| ModState::new(*cfg, sample_rate, f, fb));
+                    m.cfg = *cfg;
+                    m.freq_a = f;
+                    m.freq_b = fb;
+                    m.lfo_inc = cfg.lfo_rate.max(0.0) / sample_rate.max(1.0);
+                    m.env_coef = 0.001f32.powf(1.0 / (cfg.env_decay.max(0.001) * sample_rate).max(1.0));
+                    m.countdown = 0;
+                } else {
+                    *mods = None;
+                }
+                let shape_gain = match shape {
+                    Shape::Sine | Shape::Triangle => 1.0,
+                    Shape::Square => 0.5,
+                    Shape::Saw => 0.6,
+                };
+                self.gain = velocity * gain * shape_gain * if b.is_some() { 0.5 } else { 1.0 };
+                self.env.set_adsr(*adsr);
+            }
+            (
+                Source::Sampler {
+                    sample,
+                    step,
+                    lo,
+                    hi,
+                    reverse,
+                    ..
+                },
+                InstrumentState::Sampler {
+                    gain,
+                    pitch,
+                    start,
+                    end,
+                    reverse: rev,
+                    release,
+                    ..
+                },
+            ) => {
+                let semis = f64::from(self.key) - f64::from(root_key) + f64::from(*pitch + bend_semitones);
+                *step = f64::from(sample.sample_rate) / f64::from(sample_rate) * 2f64.powf(semis / 12.0);
+                *lo = f64::from(start.min(*end)) * sample.frames() as f64;
+                *hi = f64::from(start.max(*end)) * sample.frames() as f64;
+                *reverse = *rev;
+                self.gain = velocity * gain;
+                self.env.set_adsr(Adsr::gate(*release));
+            }
+            _ => {}
+        }
+    }
+
     /// A metronome click: a short pitched blip, higher on the downbeat.
     pub fn click(downbeat: bool, sample_rate: f32) -> Self {
         let f = if downbeat { 1760.0 } else { 1320.0 };
