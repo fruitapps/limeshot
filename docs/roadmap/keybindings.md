@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **131** — IMPLEMENTED 94, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 27, NOT_PLANNED 3
+Tracked: **139** — IMPLEMENTED 102, DIFFERENT 7, LIMESHOT_ONLY 2, NOT_STARTED 25, NOT_PLANNED 3
 
 ## Global
 
@@ -154,11 +154,19 @@ Tracked: **131** — IMPLEMENTED 94, DIFFERENT 5, LIMESHOT_ONLY 2, NOT_STARTED 2
 | KB-071 | Song position to the start | `Home` | INFERRED | `Home` | IMPLEMENTED | PL-009 |  |
 | KB-084 | Invert selection | `Shift+I` | OBSERVED | `Shift+I` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
 | KB-085 | Deselect | `Cmd+D` | OBSERVED | `Cmd+D` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist Select menu. |
-| KB-086 | Mute / unmute selected clips | `Opt+M / Shift+Opt+M` | OBSERVED | — | NOT_STARTED | PL-005 | FL 2026.1.1 Playlist Edit menu. |
-| KB-087 | Merge selected clips | `Cmd+G` | OBSERVED | — | NOT_STARTED | PL-022 | FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G. |
+| KB-086 | Mute / unmute selected clips | `Opt+M / Shift+Opt+M` | OBSERVED | `Alt+M / Shift+Alt+M` | IMPLEMENTED | PL-005 | FL 2026.1.1 Playlist Edit menu. Session 16. |
+| KB-087 | Merge selected clips | `Cmd+G` | OBSERVED | `Cmd+G` | IMPLEMENTED | PL-022 | FL 2026.1.1 Playlist Edit menu; also Merge similar pattern clips Shift+Cmd+G. Session 16: pattern clips into a new pattern. |
 | KB-090 | Add a time marker at the song position | `Cmd+T` | OBSERVED | `Cmd+T` | IMPLEMENTED | PL-016 | FL 2026.1.1 Time markers menu: Add auto. Globally, Options › Typing keyboard to piano also shows Ctrl+T; the Playlist binding wins while the Playlist has focus. |
 | KB-091 | Time selection | `Ctrl+drag on the ruler` | OBSERVED | `Cmd+drag on the ruler` | IMPLEMENTED | PL-016 | A mouse binding. Song playback loops the selection. |
 | KB-092 | Place loop markers around the selection | `Shift+T` | OBSERVED | — | NOT_STARTED | PL-016 | FL 2026.1.1 Time markers menu. |
+| KB-132 | Insert space / slice & insert space / delete space | `Cmd+Ins / Cmd+Opt+Ins / Cmd+Del` | OBSERVED | `Cmd+Insert / Cmd+Alt+Insert / Cmd+Delete` | IMPLEMENTED | PL-016 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-133 | Make unique | `Shift+Cmd+V` | OBSERVED | `Shift+Cmd+V` | IMPLEMENTED | PL-011 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-134 | Select by selected source | `Shift+C` | OBSERVED | `Shift+C` | IMPLEMENTED | PL-006 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-135 | Select time around selection | `Cmd+Enter` | OBSERVED | `Cmd+Enter` | IMPLEMENTED | PL-016 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-136 | Quick quantize start times | `Shift+Q` | OBSERVED | `Shift+Q` | IMPLEMENTED | PL-002 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-137 | Zoom in / out | `PgUp / PgDn` | OBSERVED | `PgUp / PgDn` | IMPLEMENTED | PL-008 | FL 2026.1.1 Playlist menu (menus.json). |
+| KB-138 | Quick zoom 1–3, zoom out far, zoom on selection | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5` | OBSERVED | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5` | DIFFERENT | PL-008 | FL 2026.1.1 Playlist menu (menus.json). LimeShot's zoom levels. |
+| KB-139 | Center | `Shift+0` | OBSERVED | `Shift+0` | DIFFERENT | PL-008 | FL 2026.1.1 Playlist menu (menus.json). LimeShot's zoom levels. |
 
 ## Mixer
 

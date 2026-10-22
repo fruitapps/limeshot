@@ -319,12 +319,15 @@ fn main() {
         }
     }
     if let Some(menu) = args.iter().find_map(|a| a.strip_prefix("--menu=")) {
-        // Open a menu, to look at its items; "⏵/Tools" (with --piano) opens the Piano Roll's
-        // menu and hovers its Tools submenu.
+        // Open a menu, to look at its items; "⏵/Tools" opens an editor's menu (with --piano, the
+        // Piano Roll's) and hovers its Tools submenu.
         use egui_kittest::kittest::Queryable;
         let mut path = menu.split('/');
         if let Some(first) = path.next() {
-            harness.get_by_label(first).click();
+            // Each editor has a ⏵ menu: the last one drawn is the frontmost window's.
+            if let Some(node) = harness.get_all_by_label(first).last() {
+                node.click();
+            }
         }
         for _ in 0..3 {
             harness.step();

@@ -27,6 +27,7 @@ pub mod piano_menu;
 pub mod piano_roll;
 pub mod piano_tools;
 pub mod playlist;
+pub mod playlist_menu;
 pub mod plugin_window;
 pub mod plugins;
 pub mod settings;

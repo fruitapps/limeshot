@@ -118,7 +118,22 @@ pub const EDITING: &[(&str, &str)] = &[
         "Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5 / Shift+6",
         "Piano Roll: quick zoom 1 bar / 4 / 16 / whole pattern / selection / step size",
     ),
-    ("Shift+0", "Piano Roll: center on the playback position and the notes"),
+    ("Shift+0", "Piano Roll / Playlist: center on the playback position"),
+    ("Alt+M / Shift+Alt+M", "Playlist: mute / unmute the selected clips"),
+    ("Cmd+G", "Playlist: merge the selected pattern clips into one"),
+    (
+        "Cmd+Insert / Cmd+Alt+Insert / Cmd+Delete",
+        "Playlist: insert space / slice & insert space / delete space (the time selection)",
+    ),
+    ("Shift+Cmd+V", "Playlist: make the selected clips unique"),
+    ("Shift+C", "Playlist: select the clips of the selected source"),
+    ("Cmd+Enter", "Playlist: time selection around the selected clips"),
+    ("Shift+Q", "Playlist: quick quantize clip start times"),
+    ("PgUp / PgDn", "Playlist: zoom in / out"),
+    (
+        "Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5",
+        "Playlist: quick zoom 4 bars / 16 / 64 / whole song / selection",
+    ),
     ("Home", "Playlist: song position to the start"),
     (
         "Cmd+L",

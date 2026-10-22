@@ -691,3 +691,13 @@ a dialog previews on the notes while open (each change undoes the last preview a
 keeps one undo step, × / Esc reverts; if something else changes the project meanwhile, the dialog closes and keeps
 it. The transforms are pure functions in `note_tools` with tests. `ui_shot --tool=strum` shows a dialog.
 Not done: Claw machine, FL's arpeggio presets and level knobs beyond velocity/pan.
+
+### Session 16, part 3: the Playlist's ⏵ menu (PL-006, PL-008, PL-013, PL-016, PL-022)
+
+FL's Playlist menu from the inventory: a ⏵ button at the left of the Playlist header with Edit (the clip keys as
+items, Make unique Shift+Cmd+V, Mute / Unmute Alt+M / Shift+Alt+M, Insert space Cmd+Insert, Slice & insert space
+Cmd+Alt+Insert, Delete space Cmd+Delete, Merge selected clips Cmd+G), Tools (Quick quantize start times Shift+Q),
+Select (by selected source Shift+C, muted, overlapping, stacked, invert, time around selection Cmd+Enter), Zoom
+(PgUp / PgDn, Shift+1 … 5), Time markers (Add one…, Add auto, Delete) and Center. New core commands `InsertSpace`,
+`DeleteSpace` (clips cut at the edges, markers move) and `MergeClips` (a new pattern with the clips' notes where they
+sounded). `playlist_menu.rs` mirrors `piano_menu.rs`; the Playlist checks the menu's keys before its own.

@@ -4283,16 +4283,39 @@ fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
 
 /// Open the Piano Roll's ⏵ menu, then `submenu` (hovered, as a person would), then click `item`.
 fn piano_menu(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
-    h.get_by_label("⏵").click();
-    h.step();
+    let grid = piano_geometry(h).grid;
+    editor_menu(h, grid, submenu, item);
+}
+
+/// The ⏵ menu nearest the top-left of `grid` (each editor has one), then `submenu` › `item`.
+fn editor_menu(h: &mut Harness<'static, LimeShotApp>, grid: egui::Rect, submenu: &str, item: &str) {
+    let at = h
+        .get_all_by_label("⏵")
+        .map(|n| {
+            let c = n.rect().center();
+            Pos2::new(c.x, c.y)
+        })
+        .min_by(|a, b| {
+            let d = |p: &Pos2| (p.x - grid.left()).abs() + (p.y - grid.top()).abs();
+            d(a).total_cmp(&d(b))
+        })
+        .expect("a ⏵ menu");
+    click(h, at, PointerButton::Primary);
+    open_item(h, submenu, item);
+}
+
+fn open_item(h: &mut Harness<'static, LimeShotApp>, submenu: &str, item: &str) {
     h.get_by_label(&format!("{submenu} ⏵")).hover();
     for _ in 0..3 {
         h.step();
     }
     // Menu items carry their shortcut in the label ("Quick legato ⌘L").
     let with_key = format!("{item} ");
-    h.get_by(|n| n.label().is_some_and(|l| l == item || l.starts_with(&with_key)))
-        .click();
+    h.get_by(|n| {
+        n.label()
+            .is_some_and(|l| l.trim_end() == item || l.strip_prefix(&with_key).is_some_and(|k| !k.contains(' ')))
+    })
+    .click();
     h.step();
     h.step();
 }
@@ -4494,4 +4517,98 @@ fn piano_roll_tool_dialogs_preview_accept_and_cancel() {
         before,
         "already on the grid: nothing to do"
     );
+}
+
+/// FL's Playlist menu: Edit (mute, insert/delete space, merge), Select, Zoom, Time markers.
+#[test]
+fn playlist_menu_edit_select_zoom_and_markers() {
+    let mut h = playlist_harness();
+    let bar = h.state().project().time_signature.ticks_per_bar();
+    let g = h.state().ui.playlist.geometry.expect("playlist drawn");
+    let spans = |h: &Harness<'static, LimeShotApp>| -> Vec<(u32, Tick, Tick, bool)> {
+        let mut v: Vec<_> = h
+            .state()
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .map(|c| (c.track, c.start, c.length, c.muted))
+            .collect();
+        v.sort_by_key(|c| (c.0, c.1));
+        v
+    };
+    let first = h.state().project().playlist.clips[0].clone();
+    // Alt+M mutes the selection, Shift+Alt+M unmutes; Select muted finds it.
+    h.state_mut().ui.playlist.selection = vec![first.id];
+    h.key_press_modifiers(Modifiers::ALT, Key::M);
+    h.step();
+    assert!(
+        h.state()
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .any(|c| c.id == first.id && c.muted)
+    );
+    h.state_mut().ui.playlist.selection.clear();
+    editor_menu(&mut h, g.grid, "Select", "Select muted");
+    assert_eq!(h.state().ui.playlist.selection, vec![first.id]);
+    h.key_press_modifiers(Modifiers::ALT | Modifiers::SHIFT, Key::M);
+    h.step();
+    assert!(h.state().project().playlist.clips.iter().all(|c| !c.muted));
+    // Insert space (Cmd+Insert) over a one-bar time selection at bar 1, then Delete space.
+    let before = spans(&h);
+    h.state_mut().ui.playlist.time_sel = Some((bar, 2 * bar));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Insert);
+    h.step();
+    let moved = spans(&h);
+    assert!(
+        before
+            .iter()
+            .zip(&moved)
+            .all(|(a, b)| if a.1 >= bar { b.1 == a.1 + bar } else { b.1 == a.1 }),
+        "{before:?} → {moved:?}"
+    );
+    editor_menu(&mut h, g.grid, "Edit", "Delete space");
+    assert_eq!(spans(&h), before);
+    // Select time around selection (Cmd+Enter), then Shift+5 zooms on it.
+    h.state_mut().ui.playlist.selection = vec![first.id];
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Enter);
+    h.step();
+    assert_eq!(h.state().ui.playlist.time_sel, Some((first.start, first.end())));
+    h.event(Event::Key {
+        key: Key::Num5,
+        physical_key: Some(Key::Num5),
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::SHIFT,
+    });
+    h.step();
+    h.step();
+    let g2 = h.state().ui.playlist.geometry.expect("playlist drawn");
+    assert!((g2.ppt * first.length as f32 - g2.grid.width()).abs() < 2.0 || g2.ppt * PPQ as f32 >= 399.0);
+    // Merge the selected pattern clips (Cmd+G): one clip on the topmost track.
+    let pats: Vec<ClipId> = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| c.pattern().is_some())
+        .map(|c| c.id)
+        .take(2)
+        .collect();
+    let count = h.state().project().playlist.clips.len();
+    h.state_mut().ui.playlist.selection = pats;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::G);
+    h.step();
+    assert_eq!(h.state().project().playlist.clips.len(), count - 1);
+    assert_eq!(h.state().ui.playlist.selection.len(), 1);
+    assert_eq!(h.state().doc.undo_label(), Some("Merge clips"));
+    // Time markers › Add auto, then Delete (the one at the position).
+    h.state_mut().ui.playlist.time_sel = None;
+    editor_menu(&mut h, g.grid, "Time markers", "Add auto");
+    assert_eq!(h.state().project().playlist.markers.len(), 1);
+    editor_menu(&mut h, g.grid, "Time markers", "Delete");
+    assert!(h.state().project().playlist.markers.is_empty());
 }

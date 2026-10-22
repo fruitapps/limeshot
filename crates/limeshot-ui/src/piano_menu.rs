@@ -397,7 +397,7 @@ fn center(app: &mut LimeShotApp, pid: PatternId, cid: ChannelId) {
 
 /// Shift+digit, by the key's position (on QWERTZ and other layouts Shift+1 types another
 /// character, so the logical key alone would miss it).
-fn shift_digit(ctx: &Context, digit: Key) -> bool {
+pub(crate) fn shift_digit(ctx: &Context, digit: Key) -> bool {
     ctx.input_mut(|i| {
         let pos = i.events.iter().position(|e| {
             matches!(e, Event::Key { key, physical_key, pressed: true, modifiers, .. }

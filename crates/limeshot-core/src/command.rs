@@ -355,6 +355,24 @@ pub enum Command {
         clip: ClipId,
         muted: bool,
     },
+    /// Insert `length` ticks of empty time at `at` (FL Studio's Playlist Insert space): clips
+    /// and time markers from `at` on move right. With `slice`, clips crossing `at` are cut there
+    /// first (Slice & insert space); otherwise they stay.
+    InsertSpace {
+        at: Tick,
+        length: Tick,
+        slice: bool,
+    },
+    /// Remove the time `from..to` (FL Studio's Delete space): clips are cut at both ends, what
+    /// lies inside goes, later clips and markers move left.
+    DeleteSpace {
+        from: Tick,
+        to: Tick,
+    },
+    /// Merge pattern clips into one new pattern holding their notes where they sound, placed
+    /// as one clip on the topmost of their tracks (FL Studio's Merge selected clips). Returns the
+    /// new clip's id.
+    MergeClips(Vec<ClipId>),
     AddPlaylistTrack,
     /// A time marker on the Playlist; returns its id.
     AddMarker {
@@ -579,6 +597,9 @@ impl Command {
             DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
+            InsertSpace { .. } => "Insert space",
+            DeleteSpace { .. } => "Delete space",
+            MergeClips(_) => "Merge clips",
             AddPlaylistTrack => "Add playlist track",
             RenamePlaylistTrack { .. } => "Rename track",
             AddMarker { .. } => "Add marker",
@@ -1247,6 +1268,82 @@ impl Command {
                 length,
                 offset,
             } => return place_clip(p, source, track, start, length, offset),
+            InsertSpace { at, length, slice } => {
+                if slice {
+                    let all = p.playlist.clips.iter().map(|c| c.id).collect();
+                    SliceClips { clips: all, at }.apply(p)?;
+                }
+                for c in p.playlist.clips.iter_mut().filter(|c| c.start >= at) {
+                    c.start = c.start.saturating_add(length);
+                }
+                for m in p.playlist.markers.iter_mut().filter(|m| m.tick >= at) {
+                    m.tick = m.tick.saturating_add(length);
+                }
+            }
+            DeleteSpace { from, to } => {
+                if to <= from {
+                    return Err(CommandError::Invalid("the time to delete is empty".into()));
+                }
+                for at in [from, to] {
+                    let all = p.playlist.clips.iter().map(|c| c.id).collect();
+                    SliceClips { clips: all, at }.apply(p)?;
+                }
+                let gap = to - from;
+                p.playlist.clips.retain(|c| !(c.start >= from && c.end() <= to));
+                for c in p.playlist.clips.iter_mut().filter(|c| c.start >= to) {
+                    c.start -= gap;
+                }
+                p.playlist.markers.retain(|m| !(from..to).contains(&m.tick));
+                for m in p.playlist.markers.iter_mut().filter(|m| m.tick >= to) {
+                    m.tick -= gap;
+                }
+            }
+            MergeClips(ids) => {
+                let clips: Vec<Clip> = p
+                    .playlist
+                    .clips
+                    .iter()
+                    .filter(|c| ids.contains(&c.id) && c.pattern().is_some())
+                    .cloned()
+                    .collect();
+                let (Some(origin), Some(end), Some(track)) = (
+                    clips.iter().map(|c| c.start).min(),
+                    clips.iter().map(Clip::end).max(),
+                    clips.iter().map(|c| c.track).min(),
+                ) else {
+                    return Err(CommandError::Invalid("select pattern clips to merge".into()));
+                };
+                let mut notes: Vec<Note> = Vec::new();
+                for c in &clips {
+                    let Some(pat) = c.pattern().and_then(|id| p.pattern(id)) else {
+                        continue;
+                    };
+                    let window = c.offset..c.offset.saturating_add(c.length);
+                    notes.extend(pat.notes.iter().filter(|n| window.contains(&n.start)).map(|n| Note {
+                        start: n.start - c.offset + c.start - origin,
+                        length: n.length.min(window.end - n.start),
+                        ..*n
+                    }));
+                }
+                let name = clips
+                    .first()
+                    .and_then(|c| c.pattern())
+                    .and_then(|id| p.pattern(id))
+                    .map(|pat| format!("{} (merged)", pat.name))
+                    .unwrap_or_default();
+                let Created(Some(pid)) = AddPattern { name }.apply(p)? else {
+                    return ok();
+                };
+                for n in &mut notes {
+                    n.id = NoteId(p.alloc_id());
+                }
+                let pat = pattern(p, PatternId(pid))?;
+                pat.notes = notes;
+                pat.length_steps = Some((end - origin).div_ceil(STEP_TICKS).clamp(1, 512) as u32);
+                sort_notes(pat);
+                p.playlist.clips.retain(|c| !clips.iter().any(|m| m.id == c.id));
+                return place_clip(p, ClipSource::Pattern(PatternId(pid)), track, origin, end - origin, 0);
+            }
             AddAutomationClip {
                 target,
                 track,

@@ -2243,7 +2243,7 @@
       "name": "Select clips",
       "description": "Selection.",
       "fl_reference": "Ctrl+drag, Ctrl+A.",
-      "limeshot_behavior": "Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D, Shift+I invert.",
+      "limeshot_behavior": "Click, Cmd+click toggle, Cmd+drag rectangle, Cmd+A / Cmd+D, Shift+I invert. ⏵ menu › Select: by selected source (Shift+C), muted, overlapping, stacked, time around selection (Cmd+Enter).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2256,7 +2256,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows"
+        "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows",
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2266,7 +2267,7 @@
           "docs/research/evidence/screenshots/fl-playlist-select-menu.png"
         ]
       },
-      "notes": "FL 2026.1.1's Playlist Select menu (fl-playlist-select-menu.png): Cmd+A, Cmd+D, Shift+I invert; LimeShot has those. Select by source/muted/overlapping/stacked and time around selection are not implemented."
+      "notes": "FL 2026.1.1's Playlist Select menu (fl-playlist-select-menu.png): Cmd+A, Cmd+D, Shift+I invert; LimeShot has those. Session 16: by source, muted, overlapping, stacked and time around selection from the ⏵ menu. Not: previous/next time, magic lasso."
     },
     {
       "id": "PL-007",
@@ -2304,7 +2305,7 @@
       "name": "Zoom, scroll, bar/beat ruler",
       "description": "Timeline navigation.",
       "fl_reference": "Zoom, scroll, ruler.",
-      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers.",
+      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers. ⏵ menu › Zoom: PgUp / PgDn, Shift+1–5 (4, 16, 64 bars, whole song, selection), Center (Shift+0).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2319,7 +2320,8 @@
       "tests": [
         "crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position",
         "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows",
-        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically"
+        "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically",
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2328,7 +2330,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height."
+      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height. Session 16: the quick-zoom levels are LimeShot's."
     },
     {
       "id": "PL-009",
@@ -2462,7 +2464,7 @@
       "name": "Clip mute",
       "description": "Mute individual clips.",
       "fl_reference": "Mute tool (T).",
-      "limeshot_behavior": "Clip menu › Mute clip.",
+      "limeshot_behavior": "Clip menu › Mute clip. Alt+M / Shift+Alt+M (⏵ menu › Edit › Mute / Unmute) mute and unmute the selected clips.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -2477,7 +2479,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves"
+        "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2566,7 +2569,7 @@
       "name": "Markers and loop region / time selection",
       "description": "Navigation and looping a range.",
       "fl_reference": "Ctrl+drag on the Playlist ruler makes a time selection that Song playback loops; Time markers menu: Add one… (Opt+T), Add auto (Cmd+T), Place loop (Shift+T), key/time-signature/jump markers.",
-      "limeshot_behavior": "Cmd+drag on the ruler: time selection (snapped; Alt: free), shaded on the ruler and the arrangement; Song playback starts at it and loops it, even with song loop off; Cmd+click or Cmd+D clears it. Markers: Cmd+T adds one at the song position, Alt+T adds one and asks its name; flags in the ruler's lower half — click jumps, drag moves (one undo step), right-click renames or deletes; markers are saved with the project.",
+      "limeshot_behavior": "Cmd+drag on the ruler: time selection (snapped; Alt: free), shaded on the ruler and the arrangement; Song playback starts at it and loops it, even with song loop off; Cmd+click or Cmd+D clears it. Markers: Cmd+T adds one at the song position, Alt+T adds one and asks its name; flags in the ruler's lower half — click jumps, drag moves (one undo step), right-click renames or deletes; markers are saved with the project. ⏵ menu › Edit: Insert space (Cmd+Insert), Slice & insert space (Cmd+Alt+Insert), Delete space (Cmd+Delete) over the time selection; Time markers › Add one…, Add auto, Delete.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -2585,7 +2588,9 @@
         "crates/limeshot-app/tests/ui.rs::playlist_time_selection_loops_song_playback",
         "crates/limeshot-app/tests/ui.rs::playlist_markers_add_jump_move_and_delete",
         "limeshot-engine tests/audio.rs::song_loops_the_time_selection_at_any_block_size",
-        "limeshot-core document::tests::markers_are_added_sorted_renamed_moved_and_removed"
+        "limeshot-core document::tests::markers_are_added_sorted_renamed_moved_and_removed",
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers",
+        "limeshot-core document::tests::insert_and_delete_space_and_merge_clips"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2752,19 +2757,25 @@
       "name": "Consolidate / render to audio clip",
       "description": "Bounce clips.",
       "fl_reference": "Ctrl+Alt+C.",
-      "limeshot_behavior": "Render a selection to an audio clip.",
+      "limeshot_behavior": "Merge selected clips (Cmd+G): the selected pattern clips become one new pattern with their notes where they sounded, one clip on the topmost track. Not yet: Merge similar pattern clips, Consolidate (render to an audio clip).",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "PL-014"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::insert_and_delete_space_and_merge_clips",
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2772,7 +2783,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": "Session 16: from FL 2026.1.1's Playlist Edit menu (menus.json)."
     },
     {
       "id": "PL-023",

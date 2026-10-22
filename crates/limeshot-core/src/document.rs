@@ -395,6 +395,85 @@ mod tests {
     }
 
     #[test]
+    fn insert_and_delete_space_and_merge_clips() {
+        let (mut d, ch, pat) = doc_with_channel();
+        let bar = d.project().time_signature.ticks_per_bar();
+        for (start, key) in [(0, 60), (bar, 64)] {
+            d.execute(Command::AddNote {
+                pattern: pat,
+                note: NewNote {
+                    channel: ch,
+                    key,
+                    start,
+                    length: 240,
+                    velocity: 0.5,
+                },
+            })
+            .unwrap();
+        }
+        let clip = |d: &mut Document, track: u32, start: Tick| {
+            ClipId(
+                d.execute(Command::AddClip {
+                    pattern: pat,
+                    track,
+                    start,
+                    length: Some(2 * bar),
+                })
+                .unwrap()
+                .0
+                .unwrap(),
+            )
+        };
+        clip(&mut d, 0, 0);
+        clip(&mut d, 1, 4 * bar);
+        d.execute(Command::AddMarker {
+            tick: 4 * bar,
+            name: "Drop".into(),
+        })
+        .unwrap();
+        let spans = |d: &Document| {
+            let mut v: Vec<(u32, Tick, Tick)> = d
+                .project()
+                .playlist
+                .clips
+                .iter()
+                .map(|c| (c.track, c.start, c.length))
+                .collect();
+            v.sort();
+            v
+        };
+        // Slice & insert space at bar 1: the first clip is cut, everything after moves a bar.
+        d.execute(Command::InsertSpace {
+            at: bar,
+            length: bar,
+            slice: true,
+        })
+        .unwrap();
+        assert_eq!(spans(&d), vec![(0, 0, bar), (0, 2 * bar, bar), (1, 5 * bar, 2 * bar)]);
+        assert_eq!(d.project().playlist.markers[0].tick, 5 * bar);
+        // Delete the inserted bar again.
+        d.execute(Command::DeleteSpace { from: bar, to: 2 * bar }).unwrap();
+        assert_eq!(spans(&d), vec![(0, 0, bar), (0, bar, bar), (1, 4 * bar, 2 * bar)]);
+        assert_eq!(d.project().playlist.markers[0].tick, 4 * bar);
+        // Merge everything: one clip on track 0 whose pattern holds the notes where they sounded.
+        let ids: Vec<ClipId> = d.project().playlist.clips.iter().map(|c| c.id).collect();
+        d.execute(Command::MergeClips(ids)).unwrap();
+        assert_eq!(spans(&d), vec![(0, 0, 6 * bar)]);
+        let merged = d.project().playlist.clips[0].pattern().unwrap();
+        let keys: Vec<(Tick, u8)> = d
+            .project()
+            .pattern(merged)
+            .unwrap()
+            .notes
+            .iter()
+            .map(|n| (n.start, n.key))
+            .collect();
+        assert_eq!(keys, vec![(0, 60), (bar, 64), (4 * bar, 60), (5 * bar, 64)]);
+        assert_eq!(d.project().pattern(merged).unwrap().name, "Pattern 1 (merged)");
+        assert!(d.execute(Command::MergeClips(vec![])).is_err());
+    }
+
+    #[test]
     fn edit_notes_keeps_ids_and_merges_a_tool_gesture() {
         let (mut d, ch, pat) = doc_with_channel();
         d.execute(Command::AddNotes {

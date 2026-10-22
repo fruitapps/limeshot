@@ -266,11 +266,11 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let sig = app.project().time_signature;
     let bars = app.project().playlist.song_length(sig) / sig.ticks_per_bar();
     panel_header(ui, "", |ui| {
-        if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (Cmd+wheel)").clicked() {
-            app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x * 1.25).min(400.0);
+        if icon_button(ui, Icon::Plus, false, 22.0, "Zoom in (PgUp, Cmd+wheel)").clicked() {
+            crate::playlist_menu::run(app, crate::playlist_menu::Act::ZoomIn);
         }
-        if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out").clicked() {
-            app.ui.playlist.zoom_x = (app.ui.playlist.zoom_x / 1.25).max(3.0);
+        if icon_button(ui, Icon::Minus, false, 22.0, "Zoom out (PgDn)").clicked() {
+            crate::playlist_menu::run(app, crate::playlist_menu::Act::ZoomOut);
         }
         if ui.small_button("+ Track").hint("Add a playlist track").clicked() {
             app.exec(Command::AddPlaylistTrack);
@@ -279,6 +279,9 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
         // The tool strip on the left, as in FL Studio.
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
+            ui.menu_button("⏵", |ui| crate::playlist_menu::menu(app, ui))
+                .response
+                .hint("Playlist options: Edit, Tools, Select, Zoom, Time markers");
             app.ui.playlist.tool_rects.clear();
             for tool in Tool::PLAYLIST {
                 let resp = icon_button(ui, tool.icon(), app.ui.playlist.tool == tool, 22.0, tool_tip(tool));
@@ -2315,6 +2318,8 @@ pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
 
 pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     use crate::shortcuts::key;
+    // The ⏵ menu's keys first: Cmd+Shift+V before Cmd+V, Alt+T before the T tool …
+    crate::playlist_menu::keys(app, ctx);
     let sel = app.ui.playlist.selection.clone();
     if (key(ctx, Modifiers::NONE, Key::Delete) || key(ctx, Modifiers::NONE, Key::Backspace)) && !sel.is_empty() {
         app.exec(Command::RemoveClips(sel.clone()));
@@ -2326,20 +2331,6 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
     if key(ctx, Modifiers::COMMAND, Key::D) {
         app.ui.playlist.selection.clear();
         app.ui.playlist.time_sel = None;
-    }
-    // Time markers at the song position (FL Studio: Add auto Cmd+T, Add one… Opt+T asks a name).
-    let at = if app.ui.mode == PlayMode::Song {
-        app.player.status().position()
-    } else {
-        app.ui.playlist.time_sel.map_or(0, |s| s.0)
-    };
-    if key(ctx, Modifiers::COMMAND, Key::T) {
-        add_marker(app, at);
-    }
-    if key(ctx, Modifiers::ALT, Key::T)
-        && let Some(id) = add_marker(app, at)
-    {
-        app.dialog = Some(crate::dialogs::Dialog::rename_marker(app, id));
     }
     for (k, op) in [(Key::X, ClipOp::Cut), (Key::C, ClipOp::Copy), (Key::V, ClipOp::Paste)] {
         if key(ctx, Modifiers::COMMAND, k) {

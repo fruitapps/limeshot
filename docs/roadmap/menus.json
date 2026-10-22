@@ -9693,10 +9693,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵",
+      "status": "IMPLEMENTED",
       "feature": "",
-      "notes": "The ▸ at the Playlist's top left. LimeShot has no Playlist menu; its commands are keys, the tool buttons and the clip and track menus."
+      "notes": "The ▸ at the Playlist's top left. LimeShot has no Playlist menu; its commands are keys, the tool buttons and the clip and track menus. Session 16: LimeShot's ⏵ button at the left of the Playlist header: Edit, Tools, Select, Zoom, Time markers, Center."
     },
     {
       "id": "MENU-544",
@@ -9711,8 +9711,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Edit",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -9730,8 +9730,8 @@
       "fl_keys": "Cmd+X",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Cut",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Cut",
+      "status": "IMPLEMENTED",
       "feature": "PL-026",
       "notes": "Main Edit menu and Cmd+X with the Playlist focused."
     },
@@ -9749,8 +9749,8 @@
       "fl_keys": "Cmd+C",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Copy",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Copy",
+      "status": "IMPLEMENTED",
       "feature": "PL-026",
       "notes": ""
     },
@@ -9768,8 +9768,8 @@
       "fl_keys": "Cmd+V",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Edit › Paste",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Paste",
+      "status": "IMPLEMENTED",
       "feature": "PL-026",
       "notes": ""
     },
@@ -9787,8 +9787,8 @@
       "fl_keys": "Cmd+B",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+B",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Duplicate",
+      "status": "IMPLEMENTED",
       "feature": "PL-005",
       "notes": ""
     },
@@ -9806,8 +9806,8 @@
       "fl_keys": "Del",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Delete",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Delete",
+      "status": "IMPLEMENTED",
       "feature": "PL-004",
       "notes": ""
     },
@@ -9825,8 +9825,8 @@
       "fl_keys": "Shift+Left",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Shift+Left",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Shift left",
+      "status": "IMPLEMENTED",
       "feature": "PL-002",
       "notes": ""
     },
@@ -9844,8 +9844,8 @@
       "fl_keys": "Shift+Right",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Shift+Right",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Shift right",
+      "status": "IMPLEMENTED",
       "feature": "PL-002",
       "notes": ""
     },
@@ -9863,8 +9863,8 @@
       "fl_keys": "Shift+Up",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Shift+Up",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Shift up",
+      "status": "IMPLEMENTED",
       "feature": "PL-002",
       "notes": "A track up."
     },
@@ -9882,8 +9882,8 @@
       "fl_keys": "Shift+Down",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Shift+Down",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Shift down",
+      "status": "IMPLEMENTED",
       "feature": "PL-002",
       "notes": ""
     },
@@ -9901,8 +9901,8 @@
       "fl_keys": "Shift+Cmd+V",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › clip menu make unique",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Edit › Make unique",
+      "status": "IMPLEMENTED",
       "feature": "PL-011",
       "notes": ""
     },
@@ -10015,8 +10015,8 @@
       "fl_keys": "Opt+M",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Edit › Mute",
+      "status": "IMPLEMENTED",
       "feature": "PL-013",
       "notes": "LimeShot mutes clips with the mute tool and the clip menu."
     },
@@ -10034,8 +10034,8 @@
       "fl_keys": "Shift+Opt+M",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Edit › Unmute",
+      "status": "IMPLEMENTED",
       "feature": "PL-013",
       "notes": ""
     },
@@ -10053,10 +10053,10 @@
       "fl_keys": "Cmd+Ins",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Edit › Insert space",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "Session 16: the time selection's length at its start (a bar at the position without one); clips and markers after it move."
     },
     {
       "id": "MENU-563",
@@ -10072,10 +10072,10 @@
       "fl_keys": "Cmd+Opt+Ins",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Edit › Slice & insert space",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "Session 16: clips crossing the start are cut first."
     },
     {
       "id": "MENU-564",
@@ -10091,10 +10091,10 @@
       "fl_keys": "Cmd+Del",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Edit › Delete space",
+      "status": "IMPLEMENTED",
+      "feature": "PL-016",
+      "notes": "Session 16: needs a time selection; clips are cut at its ends."
     },
     {
       "id": "MENU-565",
@@ -10129,10 +10129,10 @@
       "fl_keys": "Cmd+G",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Edit › Merge selected clips",
+      "status": "IMPLEMENTED",
       "feature": "PL-022",
-      "notes": ""
+      "notes": "Session 16: pattern clips only, into a new pattern '<first> (merged)' on the topmost track; FL's naming not checked."
     },
     {
       "id": "MENU-567",
@@ -10337,8 +10337,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Tools",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -10356,10 +10356,10 @@
       "fl_keys": "Shift+Q",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Tools › Quick quantize start times",
+      "status": "IMPLEMENTED",
+      "feature": "PL-002",
+      "notes": "Session 16: clip starts to the snap."
     },
     {
       "id": "MENU-579",
@@ -10923,8 +10923,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Select",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -10942,8 +10942,8 @@
       "fl_keys": "Cmd+D",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+D",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Select › Deselect",
+      "status": "IMPLEMENTED",
       "feature": "PL-006",
       "notes": ""
     },
@@ -10961,8 +10961,8 @@
       "fl_keys": "Cmd+A",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+A",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Select › Select all",
+      "status": "IMPLEMENTED",
       "feature": "PL-006",
       "notes": ""
     },
@@ -10980,9 +10980,9 @@
       "fl_keys": "Shift+C",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Playlist › ⏵ › Select › Select by selected source",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
       "notes": ""
     },
     {
@@ -10999,9 +10999,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Playlist › ⏵ › Select › Select muted",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
       "notes": ""
     },
     {
@@ -11018,9 +11018,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Playlist › ⏵ › Select › Select overlapping clips",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
       "notes": ""
     },
     {
@@ -11037,9 +11037,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Playlist › ⏵ › Select › Select stacked clips",
+      "status": "IMPLEMENTED",
+      "feature": "PL-006",
       "notes": ""
     },
     {
@@ -11056,8 +11056,8 @@
       "fl_keys": "Shift+I",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Shift+I",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Select › Invert selection",
+      "status": "IMPLEMENTED",
       "feature": "PL-006",
       "notes": ""
     },
@@ -11075,8 +11075,8 @@
       "fl_keys": "Cmd+Enter",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Select › Select time around selection",
+      "status": "IMPLEMENTED",
       "feature": "PL-016",
       "notes": ""
     },
@@ -11206,9 +11206,9 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
+      "limeshot": "Playlist › ⏵ › Zoom",
+      "status": "IMPLEMENTED",
+      "feature": "PL-008",
       "notes": ""
     },
     {
@@ -11225,8 +11225,8 @@
       "fl_keys": "PgUp",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+wheel",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Zoom › Zoom in",
+      "status": "IMPLEMENTED",
       "feature": "PL-008",
       "notes": ""
     },
@@ -11244,8 +11244,8 @@
       "fl_keys": "PgDn",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+wheel",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Zoom › Zoom out",
+      "status": "IMPLEMENTED",
       "feature": "PL-008",
       "notes": ""
     },
@@ -11263,10 +11263,10 @@
       "fl_keys": "Shift+1",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Zoom › Quick zoom 1",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": "Session 16: LimeShot's levels (4, 16, 64 bars; the whole song), not observed in FL."
     },
     {
       "id": "MENU-627",
@@ -11282,10 +11282,10 @@
       "fl_keys": "Shift+2",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Zoom › Quick zoom 2",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": "Session 16: LimeShot's levels (4, 16, 64 bars; the whole song), not observed in FL."
     },
     {
       "id": "MENU-628",
@@ -11301,10 +11301,10 @@
       "fl_keys": "Shift+3",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Zoom › Quick zoom 3",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": "Session 16: LimeShot's levels (4, 16, 64 bars; the whole song), not observed in FL."
     },
     {
       "id": "MENU-629",
@@ -11320,10 +11320,10 @@
       "fl_keys": "Shift+4",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Zoom › Zoom out far",
+      "status": "DIFFERENT",
+      "feature": "PL-008",
+      "notes": "Session 16: LimeShot's levels (4, 16, 64 bars; the whole song), not observed in FL."
     },
     {
       "id": "MENU-630",
@@ -11339,10 +11339,10 @@
       "fl_keys": "Shift+5",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Playlist › ⏵ › Zoom › Zoom on selection",
+      "status": "IMPLEMENTED",
+      "feature": "PL-008",
+      "notes": "Session 16: the selected clips, or the time selection."
     },
     {
       "id": "MENU-631",
@@ -11376,8 +11376,8 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Time markers",
+      "status": "IMPLEMENTED",
       "feature": "",
       "notes": ""
     },
@@ -11395,7 +11395,7 @@
       "fl_keys": "Opt+T",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Alt+T",
+      "limeshot": "Playlist › ⏵ › Time markers › Add one…",
       "status": "IMPLEMENTED",
       "feature": "PL-016",
       "notes": "Adds a marker at the song position and asks its name."
@@ -11414,7 +11414,7 @@
       "fl_keys": "Cmd+T",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › key Cmd+T",
+      "limeshot": "Playlist › ⏵ › Time markers › Add auto",
       "status": "IMPLEMENTED",
       "feature": "PL-016",
       "notes": ""
@@ -11547,10 +11547,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "Playlist › marker menu",
-      "status": "DIFFERENT",
+      "limeshot": "Playlist › ⏵ › Time markers › Delete",
+      "status": "IMPLEMENTED",
       "feature": "PL-016",
-      "notes": "LimeShot deletes a marker from its right-click menu."
+      "notes": "LimeShot deletes a marker from its right-click menu. Session 16: the markers in the time selection, or the last one at or before the position."
     },
     {
       "id": "MENU-642",
@@ -12272,10 +12272,10 @@
       "fl_keys": "Shift+0",
       "fl_state": "disabled",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Playlist › ⏵ › Center",
+      "status": "DIFFERENT",
       "feature": "PL-008",
-      "notes": ""
+      "notes": "Session 16: scrolls the song position (Song mode) to the middle; FL's exact behaviour not observed."
     },
     {
       "id": "MENU-681",
