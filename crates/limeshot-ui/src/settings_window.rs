@@ -412,6 +412,18 @@ fn general(app: &mut LimeShotApp, ui: &mut Ui) {
                 .color(Theme::current().text_faint),
         );
     });
+    section(ui, "Miscellaneous", |ui| {
+        let mut auto_zip = app.settings.auto_zip_empty_channels;
+        if ui.checkbox(&mut auto_zip, "Auto zip empty channels").changed() {
+            app.settings.auto_zip_empty_channels = auto_zip;
+            app.save_settings();
+        }
+        ui.label(
+            RichText::new("Collapse empty channels when switching patterns.")
+                .small()
+                .color(Theme::current().text_faint),
+        );
+    });
     section(ui, "Hints and warnings", |ui| {
         let mut ask = app.settings.confirm_channel_delete;
         if ui.checkbox(&mut ask, "Ask before deleting channels").changed() {

@@ -62,6 +62,8 @@ impl RackFilter {
 
 #[derive(Default)]
 pub struct State {
+    /// Last effective pattern; catches fallback changes after deletion or undo.
+    pub(crate) viewed_pattern: Option<PatternId>,
     /// Compact rows are workspace state, independent of patterns and project undo.
     pub zipped: std::collections::BTreeSet<ChannelId>,
     /// Compact channel buttons drawn in the last frame (for tests and tools).
@@ -105,8 +107,13 @@ impl State {
 /// Finish edits before hiding their input surfaces, including a stroke held during Alt+Z.
 pub fn zip_selected(app: &mut LimeShotApp) {
     let selected = app.selected_channels();
+    finish_hidden_edits(app, &selected);
+    app.ui.rack.zipped.extend(selected);
+}
+
+fn finish_hidden_edits(app: &mut LimeShotApp, hidden: &[ChannelId]) {
     if let Some((channel, _)) = app.ui.rack.paint
-        && selected.contains(&channel)
+        && hidden.contains(&channel)
     {
         app.ui.rack.paint = None;
         app.doc.end_gesture();
@@ -114,14 +121,37 @@ pub fn zip_selected(app: &mut LimeShotApp) {
             app.preview_off(channel, key);
         }
     }
-    if app.selected_channel().is_some_and(|c| selected.contains(&c)) && app.ui.rack.graph_drag.take().is_some() {
+    if app.selected_channel().is_some_and(|c| hidden.contains(&c)) && app.ui.rack.graph_drag.take().is_some() {
         app.doc.end_gesture();
     }
-    app.ui.rack.zipped.extend(selected);
+}
+
+/// Pattern changes recompute the compact view once; manual restoration then remains usable.
+pub(crate) fn auto_zip(app: &mut LimeShotApp, pattern: PatternId) {
+    let Some(pattern) = app.project().pattern(pattern) else {
+        return;
+    };
+    let populated: std::collections::BTreeSet<_> = pattern.notes.iter().map(|n| n.channel).collect();
+    let empty: Vec<_> = app
+        .project()
+        .channels
+        .iter()
+        .map(|c| c.id)
+        .filter(|c| !populated.contains(c))
+        .collect();
+    // A held stroke still belongs to the previous pattern, even if its row stays expanded.
+    let channels: Vec<_> = app.project().channels.iter().map(|c| c.id).collect();
+    finish_hidden_edits(app, &channels);
+    app.ui.rack.zipped = empty.into_iter().collect();
 }
 
 /// Draw the current pattern's Channel Rack and handle channel controls, step edits, and drops.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
+    let pattern = app.current_pattern();
+    if app.ui.rack.viewed_pattern.is_some_and(|p| p != pattern) && app.settings.auto_zip_empty_channels {
+        auto_zip(app, pattern);
+    }
+    app.ui.rack.viewed_pattern = Some(pattern);
     app.ui.rack.step_strips.clear();
     app.ui.rack.leds.clear();
     app.ui.rack.zipped_buttons.clear();

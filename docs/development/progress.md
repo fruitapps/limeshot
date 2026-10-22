@@ -1060,3 +1060,33 @@ Validation: 338 workspace tests pass, including 128 headless UI tests; workspace
 denied, all-target build, rustfmt, inventory/reference checks and `git diff --check`. Live plugin embedding remains
 IMPLEMENTED, not VERIFIED. Continue remaining editor View/context-menu work and P1 production gaps according to
 dependencies; native GUI/audio verification is still separate from CI.
+
+### 2026-10-22 — New session: automatic empty-channel zip and session PR policy
+
+Created managed worktree `rack-auto-zip/limeshot` from `origin/codex/channel-rack-zip` (`8488fae`) and new branch
+`codex/rack-auto-zip`. PRs #4 and #3 were still open, so this session's new draft PR targets `codex/channel-rack-zip`
+and depends on both. The primary checkout and previous continuation sources/branches were left intact. Recorded the
+owner's standing policy in AGENTS.md and next-steps.md before implementation: every new development session must
+create its own new branch and NEW draft PR, never append feature work to an earlier session's PR, and repeat this
+policy in future handoffs before these docs merge. Do not merge automatically or create further sessions unless asked.
+
+Completed the existing SEQ-013 / SET-089 automatic-zip follow-up. General › Miscellaneous › Auto zip empty channels
+is saved in application settings and defaults off. Switching patterns replaces the compact set for all channels,
+including filtered-out ones: no note data collapses; steps or melodic notes expand. Muted notes count as data.
+Enabling waits for the next switch, and manual Zip/Unzip or right-click restoration remains effective until another
+switch. Note edits do not continuously collapse a restored row. New/open projects start expanded. Deletion/undo
+fallback pattern switches are handled too; held step/graph edits end before switching their surface.
+
+Read Image-Line's General settings manual for the transition behavior; recorded unmeasured edge choices in the
+research notes. Updated canonical feature/setting inventories, UI architecture and known limitations. Four new
+headless tests cover the actual setting control, empty/step/melodic/muted-note patterns, filters, manual restoration,
+deletion/undo fallbacks, new-project reset, unchanged project/revision and held-stroke undo separation. Settings
+round-trip tests also cover the saved switch and old-file default. `ui_shot --auto-zip --prefs=General` produced
+`/tmp/limeshot-auto-zip.png`, inspected offscreen.
+
+Validation: 342 workspace tests pass, including 132 headless UI tests; all-target workspace Clippy with warnings
+denied, all-target build, rustfmt, feature/shortcut/setting/menu inventories, repository-reference check and diff
+checks pass. Reused the existing `limeshot-s16/target` build cache. Prior PR runs `39831714286` and `39830009498`
+were still in progress when checked; no CI failure was observed. Live/native checks remain deferred while the Mac
+is locked, and PLG-006 remains IMPLEMENTED, not VERIFIED. Continue current priorities in next-steps.md using a new
+branch and NEW draft PR for each future development session.

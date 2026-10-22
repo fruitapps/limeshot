@@ -934,6 +934,191 @@ fn rack_zip_finishes_a_held_step_stroke_before_hiding_it() {
     assert!(pattern.step_note(cid, 60, 1).is_none());
 }
 
+#[test]
+fn rack_auto_zip_setting_is_off_by_default_and_does_not_edit_the_project() {
+    let mut h = harness(true);
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    assert!(!h.state().settings.auto_zip_empty_channels);
+    h.get_by_label("Options").click();
+    h.step();
+    h.get_by_label_contains("General settings").click();
+    h.step();
+    h.get_by_label("Auto zip empty channels").click();
+    h.step();
+    assert!(h.state().settings.auto_zip_empty_channels);
+    assert!(
+        h.state().ui.rack.zipped.is_empty(),
+        "applies on the next pattern switch"
+    );
+    h.get_by_label("Auto zip empty channels").click();
+    h.step();
+    assert!(!h.state().settings.auto_zip_empty_channels);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(h.state().doc.revision(), revision);
+}
+
+#[test]
+fn rack_auto_zip_follows_pattern_notes_and_preserves_manual_restoration_between_switches() {
+    use limeshot_ui::channel_rack::RackFilter;
+    let mut h = harness(true);
+    let ids = order(&h);
+    let original = h.state().current_pattern();
+    let sparse = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Sparse".into() })
+            .unwrap(),
+    );
+    let empty = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Empty".into() })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetStep {
+        pattern: sparse,
+        channel: ids[0],
+        step: 0,
+        on: true,
+    });
+    let note = NoteId(
+        h.state_mut()
+            .exec(Command::AddNote {
+                pattern: sparse,
+                note: NewNote {
+                    channel: ids[1],
+                    key: 73,
+                    start: 123,
+                    length: 700,
+                    velocity: 0.8,
+                },
+            })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetNotesMuted {
+        pattern: sparse,
+        notes: vec![note],
+        muted: true,
+    });
+    h.state_mut().exec(Command::SetChannelGroup {
+        channels: vec![ids[2]],
+        group: Some("Hidden".into()),
+    });
+    h.state_mut().ui.rack.filter = RackFilter::Unsorted;
+    h.state_mut().ui.rack.zipped.insert(ids[0]);
+    h.state_mut().set_current_pattern(sparse);
+    assert!(
+        h.state().ui.rack.zipped.contains(&ids[0]),
+        "disabled leaves manual state alone"
+    );
+    h.state_mut().set_current_pattern(original);
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    let before = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.iter().copied().collect::<Vec<_>>(), ids[2..]);
+    assert!(h.state().ui.rack.step_pos(ids[0], 0).is_some());
+    assert!(
+        h.state().ui.rack.step_pos(ids[1], 0).is_some(),
+        "muted melodic note data is nonempty"
+    );
+    h.state_mut().ui.rack.filter = RackFilter::All;
+    h.step();
+    let p = h
+        .state()
+        .ui
+        .rack
+        .zipped_buttons
+        .iter()
+        .find(|(c, _)| *c == ids[2])
+        .unwrap()
+        .1
+        .center();
+    click(&mut h, p, PointerButton::Secondary);
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert!(
+        h.state().ui.rack.step_pos(ids[2], 0).is_some(),
+        "same-pattern selection keeps restoration"
+    );
+    h.state_mut().set_current_pattern(empty);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::ChannelRack;
+    h.key_press_modifiers(Modifiers::ALT, Key::U);
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty());
+    h.state_mut().set_current_pattern(sparse);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len() - 2);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(h.state().doc.revision(), revision);
+    h.state_mut().settings.auto_zip_empty_channels = false;
+    h.state_mut().set_current_pattern(empty);
+    assert!(
+        !h.state().ui.rack.zipped.contains(&ids[0]),
+        "disabled preserves the current view"
+    );
+    h.state_mut().new_project();
+    h.step();
+    assert!(h.state().ui.rack.zipped.is_empty(), "new projects start expanded");
+}
+
+#[test]
+fn rack_auto_zip_handles_pattern_deletion_and_undo_fallbacks() {
+    let mut h = harness(true);
+    let ids = order(&h);
+    let original = h.state().current_pattern();
+    let empty = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Empty".into() })
+            .unwrap(),
+    );
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    h.state_mut().set_current_pattern(empty);
+    h.step();
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+    h.state_mut().exec(Command::RemovePattern(empty));
+    h.step();
+    assert_eq!(h.state().current_pattern(), original);
+    assert!(
+        !h.state().ui.rack.zipped.contains(&ids[0]),
+        "fallback expands populated rows"
+    );
+    h.state_mut().doc.undo();
+    h.step();
+    assert_eq!(h.state().current_pattern(), empty);
+    assert_eq!(h.state().ui.rack.zipped.len(), ids.len());
+}
+
+#[test]
+fn rack_auto_zip_finishes_a_held_stroke_in_the_old_pattern() {
+    let mut h = harness(true);
+    let cid = h.state().project().channels[3].id;
+    let old = h.state().current_pattern();
+    let next = PatternId(h.state_mut().exec(Command::AddPattern { name: "Next".into() }).unwrap());
+    h.state_mut().settings.auto_zip_empty_channels = true;
+    let p = h.state().ui.rack.step_pos(cid, 0).unwrap();
+    h.event(Event::PointerMoved(p));
+    h.step();
+    press(&mut h, p, PointerButton::Primary, true);
+    h.state_mut().set_current_pattern(next);
+    h.step();
+    press(&mut h, p, PointerButton::Primary, false);
+    assert!(h.state().project().pattern(next).unwrap().notes.is_empty());
+    h.state_mut().set_current_pattern(old);
+    h.step();
+    let p = h.state().ui.rack.step_pos(cid, 1).unwrap();
+    click(&mut h, p, PointerButton::Primary);
+    h.state_mut().doc.undo();
+    let pattern = h.state().project().pattern(old).unwrap();
+    assert!(
+        pattern.step_note(cid, 60, 0).is_some(),
+        "old stroke is its own undo step"
+    );
+    assert!(pattern.step_note(cid, 60, 1).is_none());
+}
+
 fn order(h: &Harness<'static, LimeShotApp>) -> Vec<ChannelId> {
     h.state().project().channels.iter().map(|c| c.id).collect()
 }
