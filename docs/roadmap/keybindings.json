@@ -332,7 +332,7 @@
       "limeshot_keys": "",
       "status": "NOT_STARTED",
       "feature": "APP-018",
-      "notes": "LimeShot uses Cmd+N for New (platform convention); a new-version shortcut is still to be chosen."
+      "notes": "File menu action is implemented. LimeShot keeps Cmd+N for New; a new-version shortcut remains unassigned."
     },
     {
       "id": "KB-031",

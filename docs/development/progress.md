@@ -1012,3 +1012,26 @@ viewport after sending the new pattern snapshot instead of depending on long wal
 Validation: `cargo test --workspace` (331 tests, 124 headless UI tests), workspace Clippy with warnings denied,
 rustfmt, inventory validation (189 settings, 730 menus) and `git diff --check`. Rendered and inspected the toolbar
 and Options switch using `ui_shot --menu=Options --auto-scroll` (`/tmp/limeshot-auto-scroll.png`).
+
+
+### 2026-10-22 — Codex new session: numbered saves and repository integrity
+
+Continued the clean `s16-automation` worktree at `ec46e8f`; attached draft PR #3. Full dispatch CI run 39826217710
+at `38d9a7b` has now passed all seven jobs, including native Intel macOS on `macos-15-intel`. Updated exact platform
+job evidence; no GUI/audio-device or PLG-006 verification claims were added. The owner still defers live UI checks.
+
+Completed APP-018: File › Save new version writes a numbered sibling, skips occupied files/directories and makes
+it active after success. A numeric trailing suffix increments; unsaved projects use Save as. Uses a complete,
+synced temporary file with no-clobber publishing, including concurrent saves. Original bytes, sample paths,
+modified-state/error behavior and undo history are covered. No shortcut was assigned (Cmd+N remains New).
+Rendered and inspected `/tmp/limeshot-save-version.png` with `ui_shot --menu=File`.
+
+Audited tracked/untracked/ignored files, duplicate content, references, manifests, fixtures and attribution.
+Removed an unused engine dev dependency; fixed stale current-facing docs and packaged missing font notices;
+added the offline repository-reference check to CI. No tracked file deletion was justified. Scope, cleanup decisions,
+checks and remaining questions are recorded in [repository-audit.md](repository-audit.md).
+
+Validation: 335 workspace tests pass (125 headless UI tests), Clippy with warnings denied, all-target build,
+rustfmt, inventories, repository-reference check and diff checks. Git object check passes. Rebuilt the macOS app
+and DMG; signature/plist/image checks, packaged font-text comparison and bundled CLI demo/reload render comparison
+pass. Native UI checks were not attempted. Continue with the latest PR CI and remaining roadmap priorities.

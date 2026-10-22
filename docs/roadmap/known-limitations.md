@@ -6,11 +6,12 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
   headless under Rosetta, but its GUI and audio were not exercised.
 * Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64 passes a cross-build.
-  Native GUI/audio-device checks remain open. Intel CI used a retired runner; its supported replacement needs a run.
+  Native GUI/audio-device checks remain open. Intel headless CI now passes on `macos-15-intel`.
   See [platform-validation.md](../development/platform-validation.md) for commit-specific evidence.
 
 ## Audio
-* Output only: no audio input or recording, no ASIO, no JACK, no surround (extra device channels are silent).
+* No ASIO, JACK or surround output (extra device channels are silent). Audio recording is implemented;
+  real input-device validation remains open.
 * Switching output devices was tested only with the default device.
 * MIDI input plays the selected channel from one device; it was checked with a virtual port, not a hardware
   keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes and (with the Audio filter) the audio input;
@@ -26,10 +27,10 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   Studio's exact curve shapes were not measured).
 * Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song
   mode only; no tempo automation (one project tempo), no synth/sampler parameter automation, single-curve segments
-  only. Automated controls do not move on screen, except inside a plugin's own editor. Add › Automation for last
+  only. Channel/mixer and built-in effect controls follow automation on screen; host plugin parameter sliders do not. Add › Automation for last
   tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
   height.
-* Audio clips are not time-stretched; there are no crossfades or fades on clip edges.
+* Audio clips are not time-stretched; there are no automatic crossfades. Manual clip-edge fades are implemented.
 * Sampler: volume ADSR, loop points and a low-pass filter are available. No envelope delay/hold stages or
   panning, cutoff or pitch envelopes; no time stretching. Linear interpolation aliases when pitched far up.
 * LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
@@ -65,17 +66,17 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
 * Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
   Playlist-only and not saved with the project. No performance mode.
-* No MIDI devices or MIDI recording. MIDI files: notes, tempo and time signature only; exported files were only read
+* MIDI files: notes, tempo and time signature only; exported files were only read
   back by LimeShot's own reader.
 * There is no confirmation when deleting a pattern (undo restores it). Channel deletion asks first, as in FL Studio;
   once "Remember my choice" is ticked the question can only be turned back on in `settings.json`.
 * The channel selection is not saved with the project (FL Studio saves it).
 
 ## Project and app
-* No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
+* Save new version is available from File only; it has no shortcut. No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
   (`docs/roadmap/keybindings.json`). The tabbed Settings window exposes implemented settings; FL-only controls remain absent or disabled (`docs/roadmap/settings.json`).
 * The main menus and editor menus implement a subset of FL Studio actions. Tools, pattern commands and layouts exist;
-  recording, templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
+  templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
 * One autosave slot per user: two LimeShot instances share it.
 * `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
   pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer

@@ -307,6 +307,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if item(ui, "Save as…", &key("Cmd+Shift+S")) {
                     app.save_as();
                 }
+                if item(ui, "Save new version", "") {
+                    app.save_new_version();
+                }
                 ui.separator();
                 if item(ui, "Import MIDI file…", "") {
                     let dialog = rfd::FileDialog::new().add_filter("MIDI file", &["mid", "midi"]);

@@ -804,16 +804,38 @@ impl LimeShotApp {
         }
     }
 
+    /// Save a numbered sibling, or choose the first path for a project not saved yet.
+    pub fn save_new_version(&mut self) -> bool {
+        let Some(current) = self.path.clone() else {
+            return self.save_as();
+        };
+        self.plugins.store_states(&mut self.doc);
+        match limeshot_project::save_new_version(self.doc.project(), &current) {
+            Ok(path) => {
+                self.saved_to(&path);
+                true
+            }
+            Err(e) => {
+                self.toast_error(e.to_string());
+                false
+            }
+        }
+    }
+
+    fn saved_to(&mut self, path: &Path) {
+        self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+        self.doc.mark_saved();
+        self.path = Some(path.to_path_buf());
+        self.settings.add_recent(path);
+        self.save_settings();
+        self.toast(format!("Saved {}", path.display()));
+    }
+
     pub fn save_to(&mut self, path: &Path) -> bool {
         self.plugins.store_states(&mut self.doc);
         match limeshot_project::save(self.doc.project(), path) {
             Ok(()) => {
-                self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
-                self.doc.mark_saved();
-                self.path = Some(path.to_path_buf());
-                self.settings.add_recent(path);
-                self.save_settings();
-                self.toast(format!("Saved {}", path.display()));
+                self.saved_to(path);
                 true
             }
             Err(e) => {

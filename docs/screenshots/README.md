@@ -12,6 +12,6 @@ cargo run -p limeshot-app --example ui_shot -- out/dialogs.png --dialog=export -
 ```
 
 Other scenarios include `--fx`, `--settings`, `--melody`, `--empty`, `--audio`, `--automation`, `--synth`,
-`--scale`, `--plugin` and `--plugin-window`. Dialog choices are `export`, `quit` and `marker`. Read the resulting PNG
+`--scale`, `--plugin` and `--plugin-window`. Dialog choices are `export`, `quit`, `marker` and `control`. Read the resulting PNG
 after UI edits. Offscreen plugin captures exercise the parameter fallback; native views require a live application
 and working capture/input permissions. See the latest [progress log](../development/progress.md) for review evidence.

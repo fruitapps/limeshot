@@ -166,6 +166,74 @@ pub fn save(project: &Project, path: &Path) -> Result<(), ProjectError> {
     result
 }
 
+/// Save a new numbered sibling without replacing any existing file. `song.lime` becomes
+/// `song_2.lime`; `song_2.lime` becomes `song_3.lime`, skipping occupied names.
+/// The complete, synced temporary file is published with a no-clobber operation so concurrent
+/// saves cannot overwrite one another. Sample paths remain relative to the same folder.
+pub fn save_new_version(project: &Project, current: &Path) -> Result<PathBuf, ProjectError> {
+    let dir = current
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let stem = current.file_stem().ok_or_else(|| {
+        io(current)(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "project has no file name",
+        ))
+    })?;
+    let mut base = stem.to_os_string();
+    let mut number = 1_u64;
+    if let Some((prefix, suffix)) = stem.to_str().and_then(|s| s.rsplit_once('_'))
+        && !prefix.is_empty()
+        && !suffix.is_empty()
+        && suffix.bytes().all(|b| b.is_ascii_digit())
+    {
+        number = suffix.parse().map_err(|_| {
+            io(current)(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "version number is too large",
+            ))
+        })?;
+        base = prefix.into();
+    }
+    let text = to_json(project, Some(dir)).map_err(|e| ProjectError::Corrupt {
+        path: current.to_path_buf(),
+        message: e.to_string(),
+    })?;
+    let mut temporary = tempfile::NamedTempFile::new_in(dir).map_err(io(dir))?;
+    temporary.write_all(text.as_bytes()).map_err(io(current))?;
+    temporary.as_file().sync_all().map_err(io(current))?;
+    loop {
+        number = number
+            .checked_add(1)
+            .ok_or_else(|| {
+                io(current)(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "version number is too large",
+                ))
+            })?
+            .max(2);
+        let mut name = base.clone();
+        name.push(format!("_{number}."));
+        name.push(current.extension().unwrap_or(std::ffi::OsStr::new(EXTENSION)));
+        let path = dir.join(name);
+        match temporary.persist_noclobber(&path) {
+            Ok(_) => {
+                #[cfg(unix)]
+                if let Ok(d) = fs::File::open(dir) {
+                    let _ = d.sync_all();
+                }
+                return Ok(path);
+            }
+            // An occupied directory can produce a platform-specific error instead of AlreadyExists.
+            Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists || path.symlink_metadata().is_ok() => {
+                temporary = e.file;
+            }
+            Err(e) => return Err(io(&path)(e.error)),
+        }
+    }
+}
+
 /// `target` relative to `dir` when it lies inside `dir`, otherwise unchanged. Separators are
 /// written as `/` so files move between operating systems.
 pub fn relative_path(target: &Path, dir: &Path) -> String {

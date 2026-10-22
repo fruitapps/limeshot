@@ -5635,3 +5635,41 @@ fn auto_scrolling_follows_playback_and_loop_returns_only_when_enabled() {
         assert!(!h.state().doc.is_modified());
     }
 }
+
+#[test]
+fn save_new_version_from_file_menu_keeps_previous_project_and_undo_history() {
+    let dir = tempfile::tempdir().expect("dir");
+    let original = dir.path().join("beat.lime");
+    let mut h = harness(true);
+    assert!(h.state_mut().save_to(&original));
+    let previous = std::fs::read(&original).expect("saved file");
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(103.0)));
+    let revision = h.state().doc.revision();
+    let undo = h.state().doc.undo_label();
+    h.step();
+    let file = h.get_by_label("File").rect().center();
+    click(&mut h, file, PointerButton::Primary);
+    h.get_by_label_contains("Save new version").click();
+    h.step();
+    let next = dir.path().join("beat_2.lime");
+    assert_eq!(h.state().path.as_ref(), Some(&next));
+    assert_eq!(h.state().settings.recent.first(), Some(&next));
+    assert!(!h.state().doc.is_modified());
+    assert_eq!(h.state().doc.revision(), revision);
+    assert_eq!(h.state().doc.undo_label(), undo);
+    assert_eq!(std::fs::read(&original).expect("original"), previous);
+    assert_eq!(
+        limeshot_project::load(&next).expect("new version").tempo,
+        Tempo::from_bpm(103.0)
+    );
+    assert!(h.state_mut().doc.undo(), "undo previous edit");
+    assert!(h.state().doc.is_modified());
+    assert_ne!(h.state().project().tempo, Tempo::from_bpm(103.0));
+
+    // A failed save retains the active path and unsaved state.
+    let unavailable = dir.path().join("missing/beat.lime");
+    h.state_mut().path = Some(unavailable.clone());
+    assert!(!h.state_mut().save_new_version());
+    assert_eq!(h.state().path.as_ref(), Some(&unavailable));
+    assert!(h.state().doc.is_modified());
+}

@@ -14,14 +14,17 @@ Completed work and verification evidence are retained in [progress.md](progress.
    headless fallback screenshot. See D35 and known limitations.
 2. **Platform CI (PF-002…PF-005).** Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64
    cross-build and Apple Silicon checks pass at the commits recorded in [platform-validation.md](platform-validation.md).
-   Intel CI was queued on retired `macos-13`; the matrix now uses `macos-15-intel`. Run the updated workflow and
-   fix remaining failures. Native GUI/audio-device validation stays separate from headless CI.
+   The `macos-15-intel` replacement has now passed too (full run `39826217710`, commit `38d9a7b`). Check
+   the latest PR commit and fix actual failures. Native GUI/audio-device validation stays separate from headless CI.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
    compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
    embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.
 4. **Hands-on interaction regression.** Repeat the owner's note drawing, sampler previews/dragging, waveform drops,
    rack multiselection and bounded scrolling, mixer selection, track mute locks, window raising and typing-keyboard
    workflows. Automated coverage and offscreen layout review exist; they do not replace audible/native checks.
+
+The owner deferred live UI checks while the Mac is locked; continue repository work and offscreen review without
+waiting for unlock. The latest integrity audit is [repository-audit.md](repository-audit.md).
 
 ## Next implementation work
 

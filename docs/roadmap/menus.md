@@ -6,13 +6,13 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **730** — IMPLEMENTED 197, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 383, NOT_PLANNED 41
+Tracked: **730** — IMPLEMENTED 198, DIFFERENT 96, LIMESHOT_ONLY 13, NOT_STARTED 382, NOT_PLANNED 41
 
 ## Summary
 
 | Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |
 |---|---|---|---|---|---|---|
-| File | 45 | 4 | 7 | 31 | 3 | 0 |
+| File | 45 | 5 | 7 | 30 | 3 | 0 |
 | Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
@@ -52,7 +52,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | UI-010 | P1 | IN_PROGRESS | Control context menu | MENU-220 Tools › Last tweaked › Copy value<br>MENU-221 Tools › Last tweaked › Paste value<br>MENU-222 Tools › Last tweaked › Type in value...<br>MENU-223 Tools › Last tweaked › Set...<br>MENU-235 Tools › Next to last tweaked › Copy value<br>MENU-236 Tools › Next to last tweaked › Paste value<br>MENU-237 Tools › Next to last tweaked › Type in value...<br>MENU-238 Tools › Next to last tweaked › Set... |
 | WF-003 | P1 | VERIFIED | MIDI controller input | MENU-163 Options › Enable MIDI remote control<br>MENU-399 Channel Rack › Channel menu › MIDI channel through<br>MENU-400 Channel Rack › Channel menu › Receive notes from |
 | APP-015 | P2 | NOT_STARTED | Project templates | MENU-002 File › New from template<br>MENU-003 File › New from template › Advanced<br>MENU-004 File › New from template › Minimal<br>MENU-005 File › New from template › Other<br>MENU-006 File › New from template › Performance<br>MENU-007 File › New from template › Power User<br>MENU-008 File › New from template › Utility<br>MENU-009 File › New from template › Empty<br>MENU-010 File › New from template › Change default template...<br>MENU-017 File › Save as template... |
-| APP-018 | P2 | NOT_STARTED | Save new version | MENU-014 File › Save new version |
 | APP-019 | P2 | NOT_STARTED | Project bundle (zip with samples) | MENU-040 File › Export › Zipped loop package... |
 | APP-021 | P2 | NOT_STARTED | Plugin manager | MENU-072 Add › Manage plugins<br>MENU-158 Options › Manage plugins<br>MENU-725 Mixer › Effect slot menu › Plugin database |
 | APP-027 | P2 | NOT_STARTED | Revert to last backup | MENU-044 File › Revert to last backup |
@@ -126,7 +125,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-011 | Open... |  | dialog | `Cmd+O` |  | File › Open… | IMPLEMENTED | APP-002 |  |
 | MENU-012 | Save |  | action | `Cmd+S` |  | File › Save | IMPLEMENTED | APP-003 |  |
 | MENU-013 | Save as... |  | dialog | `Shift+Cmd+S` |  | File › Save as… | IMPLEMENTED | APP-003 |  |
-| MENU-014 | Save new version |  | action | `Cmd+N` |  | — | NOT_STARTED | APP-018 | Saves name_2.flp, name_3.flp … next to the project. |
+| MENU-014 | Save new version |  | action | `Cmd+N` |  | File › Save new version | IMPLEMENTED | APP-018 | Numbered sibling, skips existing files; unsaved projects use Save as. No shortcut: Cmd+N remains New. |
 | MENU-015 | Save and back up to FL Cloud |  | action |  |  | — | NOT_PLANNED |  | Image-Line cloud service. |
 | MENU-016 | Save to new project folder... |  | dialog |  | disabled | — | NOT_STARTED | APP-028 | Disabled in a project that was never saved. |
 | MENU-017 | Save as template... |  | dialog |  |  | — | NOT_STARTED | APP-015 |  |

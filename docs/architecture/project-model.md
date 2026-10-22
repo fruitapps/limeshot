@@ -6,25 +6,26 @@ Source: `crates/limeshot-core/src/{model,command,document,time}.rs`, `crates/lim
 
 ```
 Project
-├── title, tempo (milli-BPM), time_signature, next_id, extra{}
+├── title, info, tempo (milli-BPM), time_signature, swing, next_id, extra{}
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
 │     id, name, color, instrument, volume, pan, muted, solo, mute_locked, mixer_track, root_key, extra{}
-│     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot}
+│     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot,
+│                           looping, loop_start, loop_end, cutoff_hz, resonance}
 │                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
 │                        cutoff_hz, resonance, filter_env, filter_decay_ms, lfo_rate_hz, vibrato_cents, lfo_cutoff}
 │                | Unsupported(raw JSON)    (kept verbatim, silent)
 ├── patterns: [Pattern]
 │     id, name, color, length_steps (None = auto), notes: [Note], extra{}
-│     Note = {id, channel, key, start, length, velocity, muted}   (ticks; muted omitted when false)
+│     Note = {id, channel, key, start, length, velocity, pan, muted}   (ticks; muted omitted when false)
 ├── playlist
 │     tracks: [{name, muted, mute_locked, color?}]
-│     clips:  [{id, source, track, start, length, offset, muted, extra{}}]
+│     clips:  [{id, source, track, start, length, offset, muted, fade_in, fade_out, extra{}}]
 │     source = Pattern(id) | Audio(channel id) | Automation(id)
 ├── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
 │     name, volume (linear, ≤ 2.0), pan, muted, solo, effects, routes, extra{}
 └── automations: [Automation]      — FL Studio's automation clips
-      id, name, color, target, points: [{tick, value 0–1, tension −1–1}], length, extra{}
-      target = ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index}
+      id, name, color, target, points: [{tick, value 0–1, tension −1–1, mode}], length, extra{}
+      target = ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index} | PluginParam{plugin, id}
 ```
 
 * **Stable ids.** `ChannelId`, `PatternId`, `ClipId` and `NoteId` are `u32`s from one project-wide counter
@@ -41,7 +42,7 @@ Project
 * **Audio clips** reference a sampler channel (FL Studio's audio-clip channel), so the channel's settings and mixer
   track apply. The clip plays the channel's sample from `offset` (ticks, converted at the project tempo) for `length`.
   `AddAudioClip` reuses the channel of an existing audio clip with the same sample. Deleting the channel deletes its
-  clips.
+  clips. Manual `fade_in` / `fade_out` durations are stored in ticks and applied by the audio-clip voice.
 * **Automation clips** are linked instances of an `Automation`, like pattern clips. Values are normalised on the
   control's own scale (`Mapping`: linear, logarithmic, or the fader's cube-root travel); a point's tension shapes the
   segment after it. A target that no longer exists leaves the automation inert, not deleted.
@@ -109,6 +110,11 @@ UTF-8 JSON:
 * Files larger than 256 MB are refused.
 * **Atomic save:** write `.<name>.tmp-<pid>` in the target folder, `fsync`, rename over the target, then `fsync` the
   folder on Unix. The temp file is removed if anything fails.
+
+* **Numbered save:** File › Save new version writes a complete, synced temporary file, then publishes it with
+  `tempfile::NamedTempFile::persist_noclobber`. Existing files and directories are skipped, including concurrent
+  saves. A trailing numeric suffix increments; other names start at `_2`. The new path becomes active only after
+  success; the document content and undo history are unchanged.
 
 ## Tests
 

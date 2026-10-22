@@ -551,17 +551,23 @@
       "name": "Save new version",
       "description": "Save with incrementing suffix.",
       "fl_reference": "Ctrl+N saves project_2.flp.",
-      "limeshot_behavior": "File › Save new version. (LimeShot uses Cmd+N for New.)",
+      "limeshot_behavior": "File › Save new version saves a numbered sibling (song_2.lime, song_3.lime …), skips occupied names and makes the new file active. Unsaved projects use Save as. No shortcut is assigned; Cmd+N remains New.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "VERIFIED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-project",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-project/tests/versions.rs",
+        "crates/limeshot-app/tests/ui.rs::save_new_version_from_file_menu_keeps_previous_project_and_undo_history"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -570,7 +576,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": ""
+      "notes": "A trailing numeric _suffix increments; otherwise _2 is appended. Atomic no-clobber publishing preserves existing files even during concurrent version saves. Save errors retain the active path and modified state."
     },
     {
       "id": "APP-019",
@@ -6796,7 +6802,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "cargo test --workspace (local)"
+        "cargo test --workspace (local)",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085852"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6813,7 +6820,7 @@
       "name": "macOS Intel",
       "description": "Native build.",
       "fl_reference": "—",
-      "limeshot_behavior": "x86_64-apple-darwin release build runs under Rosetta; headless render bit-identical to arm64. GUI and audio device not exercised on Intel.",
+      "limeshot_behavior": "Native Intel macOS CI passes Clippy, all-target build, workspace tests, deterministic CLI render/reload and inventories on macos-15-intel. The earlier release build also ran headless under Rosetta with bit-identical rendering. Native GUI/audio-device checks remain open.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": true,
@@ -6827,7 +6834,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "local: arch -x86_64 limeshot-cli demo … (render compared with cmp)"
+        "local: arch -x86_64 limeshot-cli demo … (render compared with cmp)",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085995"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6836,7 +6844,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: the macos-13 CI job never started (retired runner). Changed to macos-15-intel; remote confirmation remains pending. See docs/development/platform-validation.md. Intel GUI/audio remain unverified."
+      "notes": "2026-10-22: replacement Intel runner confirmed by successful CI 39826217710 at 38d9a7b. See docs/development/platform-validation.md. Intel GUI/audio remain unverified."
     },
     {
       "id": "PF-003",
@@ -6858,7 +6866,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648"
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085936"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6889,7 +6898,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022486"
+        "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022486",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085807"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6921,7 +6931,9 @@
       ],
       "tests": [
         "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022953",
-        "Windows ARM64 cross-build: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022229"
+        "Windows ARM64 cross-build: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022229",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085903",
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085709"
       ],
       "reference": {
         "application": "FL Studio",

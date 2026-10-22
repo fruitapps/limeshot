@@ -245,10 +245,10 @@
       "fl_keys": "Cmd+N",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "File › Save new version",
+      "status": "IMPLEMENTED",
       "feature": "APP-018",
-      "notes": "Saves name_2.flp, name_3.flp … next to the project."
+      "notes": "Numbered sibling, skips existing files; unsaved projects use Save as. No shortcut: Cmd+N remains New."
     },
     {
       "id": "MENU-015",

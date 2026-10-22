@@ -70,7 +70,7 @@ Tracked: **142** — IMPLEMENTED 108, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-027 | Open | `Ctrl+O` | VERIFIED | `Cmd+O` | IMPLEMENTED | APP-002 |  |
 | KB-028 | Save | `Ctrl+S` | VERIFIED | `Cmd+S` | IMPLEMENTED | APP-003 |  |
 | KB-029 | Save as | `Ctrl+Shift+S` | VERIFIED | `Cmd+Shift+S` | IMPLEMENTED | APP-003 |  |
-| KB-030 | Save new version | `Ctrl+N` | VERIFIED | — | NOT_STARTED | APP-018 | LimeShot uses Cmd+N for New (platform convention); a new-version shortcut is still to be chosen. |
+| KB-030 | Save new version | `Ctrl+N` | VERIFIED | — | NOT_STARTED | APP-018 | File menu action is implemented. LimeShot keeps Cmd+N for New; a new-version shortcut remains unassigned. |
 | KB-031 | New project | `—` | INFERRED | `Cmd+N` | LIMESHOT_ONLY | APP-001 |  |
 | KB-032 | Export WAV | `Ctrl+R` | VERIFIED | `Cmd+R` | IMPLEMENTED | EXP-001 |  |
 | KB-033 | Export MP3 | `Ctrl+Shift+R` | VERIFIED | — | NOT_STARTED | EXP-005 |  |

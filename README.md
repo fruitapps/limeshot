@@ -26,7 +26,7 @@ Every workflow below is covered by automated tests, and the core loop runs end t
 | Feature | Preview |
 | --- | --- |
 | **Channel Rack**<br>Program drums from WAV samples on a step grid, with swing, fill and rotate. | <a href="docs/screenshots/main.png"><img src="docs/screenshots/main.png" width="240" alt="Channel Rack and Playlist"></a> |
-| **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/piano-roll.png"><img src="docs/screenshots/piano-roll.png" width="240" alt="Piano Roll"></a> |
+| **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and a velocity lane. | <a href="docs/screenshots/piano-roll.png"><img src="docs/screenshots/piano-roll.png" width="240" alt="Piano Roll"></a> |
 | **Playlist**<br>Arrange pattern, audio and automation clips. Slip, slice, time selection, markers and a clip picker. | <a href="docs/screenshots/live-song-mixer.png"><img src="docs/screenshots/live-song-mixer.png" width="240" alt="Playlist in Song mode with the Mixer"></a> |
 | **Mixer**<br>Route channels to inserts with volume, pan, a built-in EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/mixer.png"><img src="docs/screenshots/mixer.png" width="240" alt="Mixer"></a> |
 | **Workspace windows**<br>Maximise, detach and toggle every editor with F5–F9, as in FL Studio. | <a href="docs/screenshots/live-mixer-detached.png"><img src="docs/screenshots/live-mixer-detached.png" width="240" alt="Detached Mixer window"></a> |
@@ -35,8 +35,8 @@ Every workflow below is covered by automated tests, and the core loop runs end t
 
 | Kind | What's included |
 | --- | --- |
-| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a WAV Sampler, with bundled Lime samples |
-| **Effects** | Lime EQ, Filter, Delay, Room (reverb), Comp (with sidechain), Limiter and Utility |
+| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a Sampler with ADSR, loop points and a low-pass filter; bundled Lime samples |
+| **Effects** | Lime EQ, Filter, Delay, Room (reverb), Comp (with sidechain), Limiter, Gate, Drive, Chorus (chorus/flanger/phaser) and Utility |
 | **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
 | **Automation** | Automation clips for channel and mixer volume and pan and effect parameters, in Song mode |
 | **Files** | `.lime` projects (versioned, atomic save), WAV export, MIDI import and export, and FL Studio `.flp` import |
@@ -44,10 +44,12 @@ Every workflow below is covered by automated tests, and the core loop runs end t
 <details>
 <summary><strong>Not there yet</strong></summary>
 
-Recording and audio input, MIDI devices, tempo automation, CLAP and Audio Units, MP3/FLAC/OGG, stems and templates.
+Tempo automation, CLAP and Audio Units, compressed audio export, stems and templates remain open. MIDI input and
+note/audio recording are implemented; hardware MIDI and real audio-input validation, monitoring, latency compensation
+and count-in remain open. Samples support WAV, MP3, FLAC, Ogg Vorbis and AIFF.
 VST3 parameter automation and delay compensation are implemented; the latest native editor embedding still needs a live verification pass. The full list is in
-[known-limitations.md](docs/roadmap/known-limitations.md). The inventory tracks 272 features in
-[features.md](docs/roadmap/features.md), and 136 of them are verified by tests.
+[known-limitations.md](docs/roadmap/known-limitations.md). Current feature counts and verification evidence live in
+[features.md](docs/roadmap/features.md).
 
 </details>
 
@@ -56,9 +58,11 @@ VST3 parameter automation and delay compensation are implemented; the latest nat
 | Platform | State |
 | --- | --- |
 | macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 processing tested; new native editor embedding unverified |
-| macOS Intel | Release build runs under Rosetta; headless render is bit-identical to arm64; GUI not exercised |
-| Windows x86-64 / ARM64 | Type-checks; CI jobs defined, not yet run |
-| Linux x86-64 / ARM64 | CI jobs defined, not yet run |
+| macOS Intel | Native headless CI passes; earlier Rosetta render matched arm64; GUI/audio-device checks remain open |
+| Windows x86-64 / ARM64 | x86-64 headless CI and ARM64 cross-build pass; native GUI/audio checks remain open |
+| Linux x86-64 / ARM64 | Native headless CI passes; GUI/audio-device checks remain open |
+
+Commit-specific CI evidence is recorded in [platform-validation.md](docs/development/platform-validation.md).
 
 ## Build from Source
 
@@ -105,6 +109,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all -- --check
 python3 scripts/features.py check
+python3 scripts/check_repository.py
 ```
 
 The suite covers musical timing, scheduling across buffer sizes and sample rates, synth and sampler behaviour,
