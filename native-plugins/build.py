@@ -27,8 +27,11 @@ def main():
         command += ["--target", args.target]
     subprocess.run(command, cwd=ROOT, check=True)
     profile = "debug" if args.debug else "release"
-    # nice-plug's bundler writes all bundles to target/bundled, independently of profile.
-    source = ROOT / "target" / "bundled"
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT
+    ))
+    # nice-plug's bundler writes to Cargo's target directory, independently of profile.
+    source = Path(metadata["target_directory"]) / "bundled"
     dest = ROOT / "target" / "debug-bundled" if args.debug else ROOT / "dist"
     if args.target:
         dest /= args.target
@@ -56,9 +59,6 @@ def main():
         shutil.copy2(ROOT.parent / name, license_dir / name)
     for path in (ROOT.parent / "assets/fonts").glob("OFL-*.txt"):
         shutil.copy2(path, license_dir / path.name)
-    metadata = json.loads(subprocess.check_output(
-        ["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT
-    ))
     for package in metadata["packages"]:
         package_dir = Path(package["manifest_path"]).parent
         texts = [p for pattern in ["LICENSE*", "COPYING*", "NOTICE*"]
