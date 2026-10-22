@@ -3614,17 +3614,24 @@
       "name": "Sampler loop points, time stretch, filter",
       "description": "Advanced sampler.",
       "fl_reference": "Loop points, stretch modes, CUT/RES.",
-      "limeshot_behavior": "Loop region, ping-pong, filter.",
+      "limeshot_behavior": "Channel Settings › Loop: Loop while held repeats loop start…end (shaded on the waveform) for as long as the note lasts, also on one-shot samplers; reversed samples loop backwards. Filter: a resonant low-pass (cutoff, resonance) per voice. Not yet: time stretching, ping-pong loops, crossfaded loop points.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-sequencer",
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::sampler_loops_and_filters"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -3633,7 +3640,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in."
     },
     {
       "id": "INS-008",

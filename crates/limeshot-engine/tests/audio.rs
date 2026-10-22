@@ -1680,3 +1680,43 @@ fn every_built_in_effect_runs_and_the_gate_gates() {
     .unwrap();
     assert!((peak(&doc) - open).abs() < 1e-3, "open");
 }
+
+/// INS-007: a looping sample plays its loop for as long as the note lasts (even when one-shot),
+/// and the sampler's low-pass filter smooths the attack.
+#[test]
+fn sampler_loops_and_filters() {
+    let v = 0.78;
+    let looped = ramp_snapshot(SamplerParams {
+        looping: true,
+        loop_start: 0.5,
+        loop_end: 0.75,
+        ..Default::default()
+    });
+    for block in [64, 512] {
+        let (a, _) = render(looped.clone(), ExportRange::Pattern, block, SR);
+        // One step at 120 BPM is 6000 frames: the note, not the 1000-frame sample, sets the length.
+        let n = sounding_frames(&a);
+        assert!((5990..=6010).contains(&n), "block {block}: {n} frames");
+        let (lo, hi) = ((0.1 + 500.0 / 2000.0) * v, (0.1 + 750.0 / 2000.0) * v);
+        for i in [600usize, 760, 2000, 5900] {
+            let x = a[2 * i];
+            assert!(x >= lo - 1e-4 && x < hi + 1e-4, "frame {i}: {x} outside the loop");
+        }
+    }
+    let (plain, _) = render(ramp_snapshot(SamplerParams::default()), ExportRange::Pattern, 512, SR);
+    let (filtered, _) = render(
+        ramp_snapshot(SamplerParams {
+            cutoff_hz: 200.0,
+            ..Default::default()
+        }),
+        ExportRange::Pattern,
+        512,
+        SR,
+    );
+    assert!(filtered[0] < plain[0] * 0.1, "the filter eases the jump at the start");
+    assert!(filtered.iter().all(|x| x.is_finite()));
+    assert!(
+        (filtered[2 * 900] - plain[2 * 900]).abs() < 0.05,
+        "the slow ramp passes"
+    );
+}

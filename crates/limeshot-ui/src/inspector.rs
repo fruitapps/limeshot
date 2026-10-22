@@ -182,6 +182,15 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
                     Stroke::new(1.0, t.accent_dim),
                 );
             }
+            if p.looping {
+                // The loop region, shaded.
+                let (a, b) = (p.loop_start.min(p.loop_end), p.loop_start.max(p.loop_end));
+                let lr = egui::Rect::from_min_max(
+                    pos2(r.left() + a * r.width(), r.top()),
+                    pos2(r.left() + b * r.width(), r.bottom()),
+                );
+                ui.painter().rect_filled(lr, 0.0, t.accent.gamma_multiply(0.12));
+            }
             for (f, c) in [(p.start, t.accent), (p.end, t.danger)] {
                 let x = r.left() + f * r.width();
                 ui.painter()
@@ -222,7 +231,7 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
             ui.painter().text(
                 r.center(),
                 Align2::CENTER_CENTER,
-                "Drop or load a WAV file",
+                "Drop or load a sample (WAV, MP3, FLAC, OGG, AIFF)",
                 mono(11.0),
                 t.text_dim,
             );
@@ -302,8 +311,65 @@ fn sampler_settings(app: &mut LimeShotApp, ui: &mut Ui, cid: ChannelId, p: &Samp
         let c = crate::widgets::user_changed(&r);
         track(r, c);
     });
+    ui.add_space(4.0);
+    section(ui, "Loop");
+    row(ui, "Loop", |ui| {
+        let r = ui
+            .checkbox(&mut q.looping, "Loop while held")
+            .hint("Repeat the loop region for as long as the note lasts");
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
+    if q.looping {
+        let pct = |v: f64, _| format!("{:.0}%", v * 100.0);
+        row(ui, "Loop start", |ui| {
+            let r = reset(
+                ui.add(egui::Slider::new(&mut q.loop_start, 0.0..=1.0).custom_formatter(pct)),
+                &mut q.loop_start,
+                d.loop_start,
+            );
+            let c = crate::widgets::user_changed(&r);
+            track(r, c);
+        });
+        row(ui, "Loop end", |ui| {
+            let r = reset(
+                ui.add(egui::Slider::new(&mut q.loop_end, 0.0..=1.0).custom_formatter(pct)),
+                &mut q.loop_end,
+                d.loop_end,
+            );
+            let c = crate::widgets::user_changed(&r);
+            track(r, c);
+        });
+    }
+    ui.add_space(4.0);
+    section(ui, "Filter");
+    row(ui, "Cutoff", |ui| {
+        let r = reset(
+            ui.add(
+                egui::Slider::new(&mut q.cutoff_hz, 20.0..=20_000.0)
+                    .logarithmic(true)
+                    .suffix(" Hz"),
+            ),
+            &mut q.cutoff_hz,
+            d.cutoff_hz,
+        );
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
+    row(ui, "Resonance", |ui| {
+        let r = reset(
+            ui.add(egui::Slider::new(&mut q.resonance, 0.0..=0.95)),
+            &mut q.resonance,
+            d.resonance,
+        );
+        let c = crate::widgets::user_changed(&r);
+        track(r, c);
+    });
     if q.end < q.start {
         q.end = q.start;
+    }
+    if q.loop_end < q.loop_start {
+        q.loop_end = q.loop_start;
     }
     if let Some(r) = changed {
         let cmd = (q != *p).then(|| set(q));

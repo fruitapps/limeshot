@@ -95,6 +95,14 @@ pub struct SamplerParams {
     pub release_ms: f32,
     /// Play the whole sample regardless of note length (one-shot, as drums usually want).
     pub one_shot: bool,
+    /// Loop `loop_start..loop_end` (fractions of the sample) while the note is held (FL Studio's
+    /// sampler loop). A looping sample follows the note length even when one-shot is on.
+    pub looping: bool,
+    pub loop_start: f32,
+    pub loop_end: f32,
+    /// Low-pass filter cutoff in Hz (20 000 = open) and resonance 0–0.95.
+    pub cutoff_hz: f32,
+    pub resonance: f32,
 }
 
 impl Default for SamplerParams {
@@ -108,6 +116,11 @@ impl Default for SamplerParams {
             reverse: false,
             release_ms: 10.0,
             one_shot: true,
+            looping: false,
+            loop_start: 0.0,
+            loop_end: 1.0,
+            cutoff_hz: 20_000.0,
+            resonance: 0.0,
         }
     }
 }

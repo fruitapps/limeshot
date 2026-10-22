@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **272**
 - MVP features: **69** — 67 implemented or verified, 66 verified
-- By status: NOT_STARTED 91, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 20, VERIFIED 142, DEFERRED 4
+- By status: NOT_STARTED 90, RESEARCHED 1, IN_PROGRESS 15, IMPLEMENTED 20, VERIFIED 142, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -19,7 +19,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Piano Roll | 29 | 19 | 3 | 0 | 7 |
 | Playlist | 29 | 20 | 1 | 3 | 5 |
 | Mixer | 16 | 12 | 0 | 1 | 3 |
-| Instruments | 14 | 7 | 1 | 0 | 6 |
+| Instruments | 14 | 7 | 1 | 1 | 5 |
 | Effects | 15 | 9 | 1 | 0 | 5 |
 | Automation | 13 | 4 | 1 | 0 | 8 |
 | Recording | 11 | 1 | 0 | 0 | 10 |
@@ -195,7 +195,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | INS-004 | LimeSynth: ADSR envelope | P0 | ✓ | VERIFIED | Linear ADSR with release from current level. | `limeshot-dsp envelope::tests::stages_follow_the_settings`<br>`limeshot-dsp envelope::tests::release_during_attack_starts_from_current_level` |
 | INS-005 | Polyphony and voice stealing | P0 | ✓ | VERIFIED | 128-voice pool shared by all channels; oldest voice stolen; no allocation. | `limeshot-engine tests/audio.rs::synth_polyphony_and_voice_limit` |
 | INS-006 | Synth filter and modulation (LFO, filter env) | P1 |  | VERIFIED | LimeSynth has a resonant 12 dB/oct low-pass per voice (TPT state-variable filter), a filter envelope (depth in octaves, exponential decay) and a sine LFO to pitch (vibrato, cents) and to cutoff (octaves); modulation updates every 16 samples. An open filter without modulation is bypassed, so existing sounds are unchanged. Channel Settings › Filter / LFO.<br>*No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note).* | `limeshot-dsp filter::tests::passes_below_and_cuts_above_the_cutoff`<br>`limeshot-engine tests/audio.rs::synth_filter_darkens_and_its_envelope_opens_it_at_the_note_start`<br>`limeshot-engine tests/audio.rs::synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch` |
-| INS-007 | Sampler loop points, time stretch, filter | P1 |  | NOT_STARTED | Loop region, ping-pong, filter. | — |
+| INS-007 | Sampler loop points, time stretch, filter | P1 |  | IN_PROGRESS | Channel Settings › Loop: Loop while held repeats loop start…end (shaded on the waveform) for as long as the note lasts, also on one-shot samplers; reversed samples loop backwards. Filter: a resonant low-pass (cutoff, resonance) per voice. Not yet: time stretching, ping-pong loops, crossfaded loop points.<br>*Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in.* | `limeshot-engine tests/audio.rs::sampler_loops_and_filters` |
 | INS-008 | Additional audio formats (MP3, FLAC, OGG, AIFF) | P1 |  | VERIFIED | Samples in MP3, FLAC, Ogg Vorbis and AIFF load like WAVs (symphonia; stereo, first two channels, damaged frames skipped): the Browser lists them, the sample pickers offer them, samplers and audio clips play them.<br>*Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are.* | `limeshot-dsp tests/formats.rs::aiff_and_flac_decode_sample_for_sample`<br>`limeshot-dsp tests/formats.rs::audio_extensions_and_bad_files`<br>`crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play` |
 | INS-009 | Multi-sample / drum kit instrument | P2 |  | NOT_STARTED | Key zones mapping samples. | — |
 | INS-010 | Instrument presets | P2 |  | IMPLEMENTED | Channel Settings has a Presets menu for LimeSynth (factory: Saw lead, Soft pad, Pluck, Sub bass) and the Sampler (one-shot, sustained, reversed), plus the user's own and Save preset as…. A sampler preset keeps the channel's sample.<br>*Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008).* | `limeshot-project preset::tests::factory_presets_are_valid_for_their_slot`<br>`limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back`<br>`crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save` |

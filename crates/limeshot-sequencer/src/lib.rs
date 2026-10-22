@@ -99,6 +99,10 @@ pub enum InstrumentState {
         reverse: bool,
         release: f32,
         one_shot: bool,
+        /// Loop range as fractions of the sample, when looping.
+        looping: Option<(f32, f32)>,
+        /// Low-pass cutoff (Hz) and resonance, when the filter is not fully open.
+        filter: Option<(f32, f32)>,
     },
     Synth {
         shape: Shape,
@@ -339,6 +343,12 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
                     reverse: p.reverse,
                     release: p.release_ms.max(0.0) / 1000.0,
                     one_shot: p.one_shot,
+                    looping: p.looping.then(|| {
+                        let (a, b) = (p.loop_start.clamp(0.0, 1.0), p.loop_end.clamp(0.0, 1.0));
+                        (a.min(b), a.max(b))
+                    }),
+                    filter: (p.cutoff_hz < 19_999.0 || p.resonance > 0.0)
+                        .then(|| (p.cutoff_hz.clamp(20.0, 20_000.0), p.resonance.clamp(0.0, 0.95))),
                 },
                 Instrument::Synth(p) => InstrumentState::Synth {
                     shape: shape(p.waveform),

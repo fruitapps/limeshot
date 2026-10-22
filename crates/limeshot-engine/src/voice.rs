@@ -20,6 +20,8 @@ pub enum Source {
         lo: f64,
         hi: f64,
         reverse: bool,
+        /// A loop inside `[lo, hi)`: playback wraps round it instead of running out.
+        looping: Option<(f64, f64)>,
     },
     Synth {
         a: Oscillator,
@@ -116,6 +118,8 @@ pub struct Voice {
     pub serial: u64,
     /// An audio clip's fades.
     pub fade: Option<ClipFade>,
+    /// The sampler's low-pass filter, one per side.
+    pub filter: Option<[Svf; 2]>,
 }
 
 /// An audio clip's fade-in and fade-out, counted in frames: `pos` from the clip's start, `left`
@@ -161,6 +165,7 @@ impl Default for Voice {
             end_tick: u64::MAX,
             serial: 0,
             fade: None,
+            filter: None,
         }
     }
 }
@@ -190,6 +195,8 @@ impl Voice {
                 reverse,
                 release,
                 one_shot: _,
+                looping,
+                filter,
             } => {
                 let sample = sample.as_ref()?;
                 let frames = sample.frames() as f64;
@@ -204,6 +211,16 @@ impl Voice {
                     return None;
                 }
                 let pos = if *reverse { hi - 1.0 } else { lo };
+                // The loop, inside the played window and at least a few frames long.
+                let looping = looping.and_then(|(a, b)| {
+                    let (a, b) = ((f64::from(a) * frames).max(lo), (f64::from(b) * frames).min(hi));
+                    (b - a >= 4.0).then_some((a, b))
+                });
+                let filter = filter.map(|(cutoff, res)| {
+                    let mut f = Svf::default();
+                    f.set(cutoff, res, sample_rate);
+                    [f, f]
+                });
                 Some(Self {
                     source: Source::Sampler {
                         sample: sample.clone(),
@@ -212,7 +229,9 @@ impl Voice {
                         lo,
                         hi,
                         reverse: *reverse,
+                        looping,
                     },
+                    filter,
                     // Declick on the way out only (samples are expected to start cleanly), so the
                     // first sample frame lands exactly on the note's onset.
                     env: Envelope::start(
@@ -299,6 +318,7 @@ impl Voice {
                 lo: 0.0,
                 hi: frames,
                 reverse: false,
+                looping: None,
             },
             env: Envelope::start(
                 Adsr {
@@ -354,16 +374,28 @@ impl Voice {
                 lo,
                 hi,
                 reverse,
+                looping,
             } => {
+                if let Some((a, b)) = *looping {
+                    // Wrap round the loop (both ways, for reversed samples).
+                    if !*reverse && *pos >= b {
+                        *pos = a + (*pos - b) % (b - a);
+                    } else if *reverse && *pos < a {
+                        *pos = b - (a - *pos) % (b - a);
+                    }
+                }
                 if *pos < *lo || *pos >= *hi {
                     self.source = Source::Off;
                     return (0.0, 0.0);
                 }
-                let f = sample.frame_at(*pos);
+                let mut f = sample.frame_at(*pos);
                 if *reverse {
                     *pos -= *step;
                 } else {
                     *pos += *step;
+                }
+                if let Some([l, r]) = &mut self.filter {
+                    f = (l.lowpass(f.0), r.lowpass(f.1));
                 }
                 f
             }

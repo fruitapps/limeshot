@@ -742,7 +742,11 @@ impl Renderer {
                 let one_shot = !clip
                     && matches!(
                         ch.instrument,
-                        limeshot_sequencer::InstrumentState::Sampler { one_shot: true, .. }
+                        limeshot_sequencer::InstrumentState::Sampler {
+                            one_shot: true,
+                            looping: None,
+                            ..
+                        }
                     );
                 let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, sr) else {
                     return;

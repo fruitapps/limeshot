@@ -896,3 +896,10 @@ both checked sample for sample; truncated and junk files fail cleanly.
 `EffectKind::Gate` and `limeshot_dsp::effects::Gate` (threshold, attack, hold, release, range; a fast peak detector
 drives a smoothed gain), wired into the engine's effect factory, the Add effect menu and factory presets. An engine
 test now runs every built-in effect as an insert.
+
+### Session 16, part 18: sampler loop points and filter (INS-007)
+
+`SamplerParams` gains `looping`, `loop_start` / `loop_end` and `cutoff_hz` / `resonance` (defaults keep old projects
+unchanged). The voice wraps round the loop (forwards or reversed) and runs a stereo state-variable low-pass when the
+filter is not open; a looping one-shot follows the note length. Channel Settings has Loop and Filter sections and
+shades the loop on the waveform.
