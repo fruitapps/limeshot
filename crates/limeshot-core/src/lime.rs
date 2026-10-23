@@ -21,14 +21,14 @@ pub const PATH_PREFIX: &str = "lime:";
 /// The vendor the Lime plugins report.
 pub const VENDOR: &str = "LimeShot";
 
-/// One of the nine Lime Native plugins, by its stable plugin number.
+/// One of the twelve Lime Native plugins, by its stable plugin number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LimePlugin(pub u8);
 
 impl LimePlugin {
     pub const SYNTH: Self = Self(0);
     pub const SAMPLER: Self = Self(1);
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 12] = [
         Self(0),
         Self(1),
         Self(2),
@@ -38,9 +38,12 @@ impl LimePlugin {
         Self(6),
         Self(7),
         Self(8),
+        Self(9),
+        Self(10),
+        Self(11),
     ];
     /// The effects exported as Lime plugins, in plugin-number order from 2.
-    pub const EFFECTS: [EffectKind; 7] = [
+    pub const EFFECTS: [EffectKind; 10] = [
         EffectKind::Utility,
         EffectKind::Eq3,
         EffectKind::Filter,
@@ -48,10 +51,12 @@ impl LimePlugin {
         EffectKind::Reverb,
         EffectKind::Compressor,
         EffectKind::Limiter,
+        EffectKind::Gate,
+        EffectKind::Drive,
+        EffectKind::Chorus,
     ];
 
-    /// The Lime plugin that replaces a former built-in effect (Gate, Drive and Chorus have none
-    /// yet).
+    /// The Lime plugin that replaces a former built-in effect.
     pub fn for_effect(kind: EffectKind) -> Option<Self> {
         Self::EFFECTS.iter().position(|k| *k == kind).map(|i| Self(i as u8 + 2))
     }
@@ -67,7 +72,10 @@ impl LimePlugin {
             "Lime Room",
             "Lime Comp",
             "Lime Limiter",
-        ][self.0 as usize % 9]
+            "Lime Gate",
+            "Lime Drive",
+            "Lime Chorus",
+        ][self.0 as usize % 12]
     }
 
     pub fn is_instrument(self) -> bool {
@@ -343,22 +351,9 @@ pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
 /// Replace the former built-in instruments and exported effects of `project` with Lime plugins,
 /// keeping their settings. `audio` decodes a sampler's stored sample path (`None`: missing or
 /// unreadable, and the sampler is converted without audio). Returns one warning per setting that
-/// could not be carried over; an empty list means nothing was lost. Gate, Drive and Chorus slots
-/// are preserved disabled until they have Lime plugins.
+/// could not be carried over; an empty list means nothing was lost.
 pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<EmbeddedAudio>) -> Vec<String> {
     let mut warnings = Vec::new();
-    if project.playlist.clips.iter().any(|c| c.audio_channel().is_some())
-        && !project.extra.contains_key("lime-hosted-audio-warning")
-    {
-        warnings.push("Playlist audio clips are preserved but silent with hosted samplers (PLG-024)".into());
-        project.extra.insert("lime-hosted-audio-warning".into(), json!(true));
-    }
-    if project.patterns.iter().flat_map(|p| &p.notes).any(|n| n.pan != 0.0)
-        && !project.extra.contains_key("lime-note-pan-warning")
-    {
-        warnings.push("Per-note pan is preserved but inaudible with hosted instruments (PLG-025)".into());
-        project.extra.insert("lime-note-pan-warning".into(), json!(true));
-    }
     // Effect automation becomes automation of the Lime plugin's parameter, before the slots change.
     let mut retarget = Vec::new();
     for (i, a) in project.automations.iter().enumerate() {
@@ -453,12 +448,6 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
         }
     }
     for (t, track) in project.mixer.tracks.iter_mut().enumerate() {
-        if track.eq != crate::EqBand::DEFAULTS && !track.extra.contains_key("lime-legacy-eq-inactive") {
-            warnings.push(format!(
-                "Mixer track {t}: legacy track equalizer is inactive; use a Lime EQ insert"
-            ));
-            track.extra.insert("lime-legacy-eq-inactive".into(), json!(true));
-        }
         for slot in &mut track.effects {
             let Some(lime) = LimePlugin::for_effect(slot.kind) else {
                 if slot.kind != EffectKind::Plugin && slot.enabled {
@@ -472,39 +461,43 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
             };
             let mut values = slot.params.clone();
             if slot.kind == EffectKind::Compressor && values.len() > COMPRESSOR_SIDECHAIN {
-                if values[COMPRESSOR_SIDECHAIN] > 0.0 {
-                    warnings.push(format!(
-                        "Mixer track {t}: Lime Comp has no mixer-track sidechain input yet"
-                    ));
-                }
                 values.truncate(COMPRESSOR_SIDECHAIN);
             }
-            slot.plugin = Some(lime.with_values(&values, !slot.enabled, None));
+            let mut plugin = lime.with_values(&values, !slot.enabled, None);
+            if slot.kind == EffectKind::Compressor {
+                let source = slot
+                    .params
+                    .get(COMPRESSOR_SIDECHAIN)
+                    .copied()
+                    .unwrap_or(0.0)
+                    .round()
+                    .max(0.0) as u64;
+                if source > 0 {
+                    plugin.extra.insert("lime-sidechain-track".into(), json!(source));
+                    let mut state: Value =
+                        serde_json::from_slice(component_state(&plugin.state).unwrap_or_default()).unwrap_or_default();
+                    state["params"]["key"] = json!({"bool":true});
+                    plugin.state = PluginState::new(host_state(state.to_string().as_bytes()));
+                }
+            }
+            slot.plugin = Some(plugin);
             slot.kind = EffectKind::Plugin;
             slot.params.clear();
         }
+    }
+    for track in 0..project.mixer.tracks.len() {
+        sync_track_eq(project, track);
     }
     warnings
 }
 
 /// Whether `project` still uses a former built-in instrument or an effect that has a Lime plugin.
 pub fn needs_conversion(project: &Project) -> bool {
-    if (project.playlist.clips.iter().any(|c| c.audio_channel().is_some())
-        && !project.extra.contains_key("lime-hosted-audio-warning"))
-        || (project.patterns.iter().flat_map(|p| &p.notes).any(|n| n.pan != 0.0)
-            && !project.extra.contains_key("lime-note-pan-warning"))
-    {
-        return true;
-    }
     project.channels.iter().any(|c| {
         matches!(c.instrument, Instrument::Synth(_) | Instrument::Sampler(_))
             || matches!(&c.instrument, Instrument::Plugin(p) if LimePlugin::of(p) == Some(LimePlugin::SAMPLER)
                 && p.extra.get("lime-sample-pending").and_then(Value::as_bool) == Some(true))
-    }) || project
-        .mixer
-        .tracks
-        .iter()
-        .any(|t| t.eq != crate::EqBand::DEFAULTS && !t.extra.contains_key("lime-legacy-eq-inactive"))
+    }) || project.mixer.tracks.iter().any(track_eq_needs_sync)
         || project
             .mixer
             .tracks
@@ -577,14 +570,15 @@ pub const SAMPLER_CONTROLS: &[ParamSpec] = &[
     spec("Loop end", 0.0, 1.0, 1.0, "", false),
 ];
 
-/// Return controls in the stable native plugin order (IDs 0–8), or an empty slice for other IDs.
+/// Return controls in the stable native plugin order (IDs 0–11), or an empty slice for other IDs.
 /// Compressor controls omit the DAW's mixer-track selector; its key comes from a host bus.
 pub fn control_specs(id: u8) -> &'static [ParamSpec] {
     match id {
         0 => SYNTH_CONTROLS,
         1 => SAMPLER_CONTROLS,
+        3 => EQ_CONTROLS,
         7 => &LimePlugin::EFFECTS[5].params()[..5], // The external key is a bus, not a mixer track number.
-        2..=8 => LimePlugin::EFFECTS[(id - 2) as usize].params(),
+        2..=11 => LimePlugin::EFFECTS[(id - 2) as usize].params(),
         _ => &[],
     }
 }
@@ -631,6 +625,120 @@ pub fn edited_param_state(plugin: &PluginRef, id: u32, normalized: f64) -> Optio
     Some(PluginState::new(host_state(state.to_string().as_bytes())))
 }
 
+/// Appended EQ controls preserve every legal legacy track-EQ response without changing
+/// existing insert parameter IDs, ranges or defaults.
+pub const EQ_CONTROLS: &[ParamSpec] = &[
+    spec("Low gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("Low freq", 30.0, 600.0, 120.0, "Hz", true),
+    spec("Mid gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("Mid freq", 200.0, 8000.0, 1000.0, "Hz", true),
+    spec("Mid Q", 0.2, 8.0, 0.8, "", true),
+    spec("High gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("High freq", 1500.0, 16000.0, 6000.0, "Hz", true),
+    choice("Track mode", &["Insert", "Track"], 0.0),
+    spec("Track low freq", 20.0, 20000.0, 90.0, "Hz", true),
+    spec("Track low gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("Track low width", 0.0, 1.0, 0.27, "", false),
+    spec("Track mid freq", 20.0, 20000.0, 1500.0, "Hz", true),
+    spec("Track mid gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("Track mid width", 0.0, 1.0, 0.27, "", false),
+    spec("Track high freq", 20.0, 20000.0, 8000.0, "Hz", true),
+    spec("Track high gain", -18.0, 18.0, 0.0, "dB", false),
+    spec("Track high width", 0.0, 1.0, 0.27, "", false),
+];
+/// A dedicated hosted processor after the ten insert slots. Its state is derived from the
+/// undoable track bands; it never consumes an insert slot or introduces a second EQ source.
+pub fn is_track_eq(slot: &crate::EffectSlot) -> bool {
+    slot.kind == EffectKind::Plugin
+        && slot.extra.get("lime-track-eq").and_then(Value::as_bool) == Some(true)
+        && slot.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(3))
+}
+fn track_eq_ref(eq: &[crate::EqBand; 3]) -> PluginRef {
+    let mut values: Vec<_> = EQ_CONTROLS.iter().map(|p| p.default).collect();
+    values[7] = 1.0;
+    for (i, b) in eq.iter().enumerate() {
+        values[8 + 3 * i..11 + 3 * i].copy_from_slice(&[b.freq, b.gain, b.width]);
+    }
+    LimePlugin(3).with_values(&values, false, None)
+}
+fn track_eq_needs_sync(track: &crate::MixerTrack) -> bool {
+    let slot = track.effects.iter().find(|e| is_track_eq(e));
+    if track.eq == crate::EqBand::DEFAULTS && slot.is_none() {
+        return false;
+    }
+    let expected = track_eq_ref(&track.eq);
+    slot.is_none_or(|e| {
+        !e.enabled
+            || e.plugin.as_ref().is_none_or(|p| {
+                plain_values(p, &EQ_CONTROLS.iter().map(|s| s.default).collect::<Vec<_>>())
+                    != plain_values(&expected, &EQ_CONTROLS.iter().map(|s| s.default).collect::<Vec<_>>())
+            })
+    }) || track.effects.last().is_none_or(|e| !is_track_eq(e))
+}
+pub(crate) fn sync_track_eq(project: &mut Project, track: usize) {
+    let Some(t) = project.mixer.tracks.get(track) else {
+        return;
+    };
+    if !track_eq_needs_sync(t) {
+        return;
+    }
+    let plugin = track_eq_ref(&t.eq);
+    let old = t.effects.iter().position(is_track_eq);
+    let id = if let Some(index) = old {
+        project.mixer.tracks[track].effects.remove(index).id
+    } else {
+        project.alloc_id()
+    };
+    let t = &mut project.mixer.tracks[track];
+    let mut slot = crate::EffectSlot::new(id, EffectKind::Plugin);
+    slot.plugin = Some(plugin);
+    slot.extra.insert("lime-track-eq".into(), json!(true));
+    t.effects.push(slot);
+    t.extra.remove("lime-legacy-eq-inactive");
+}
+
+pub fn parameter_spec(plugin: &PluginRef, id: u32) -> Option<(usize, &'static ParamSpec)> {
+    let lime = LimePlugin::of(plugin)?;
+    control_specs(lime.0)
+        .iter()
+        .enumerate()
+        .find(|(i, _)| param_id(*i) == id)
+        .or_else(|| {
+            let hash = |name: &str| {
+                name.bytes()
+                    .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)))
+                    & !(1 << 31)
+            };
+            if id == hash("bypass") {
+                Some((usize::MAX, &BYPASS_CONTROL))
+            } else if lime.0 == 7 && id == hash("key") {
+                Some((usize::MAX, &KEY_CONTROL))
+            } else {
+                None
+            }
+        })
+}
+const BYPASS_CONTROL: ParamSpec = choice("Bypass", &["Off", "On"], 0.0);
+const KEY_CONTROL: ParamSpec = choice("External sidechain", &["Off", "On"], 0.0);
+pub fn parameter_value(plugin: &PluginRef, id: u32) -> Option<f32> {
+    let (index, spec) = parameter_spec(plugin, id)?;
+    if index == usize::MAX {
+        let key = if spec.name == "Bypass" { "bypass" } else { "key" };
+        let value = component_state(&plugin.state)
+            .and_then(|bytes| serde_json::from_slice::<Value>(bytes).ok())
+            .and_then(|v| v["params"][key]["bool"].as_bool())
+            .unwrap_or(false);
+        return Some(if value { 1.0 } else { 0.0 });
+    }
+    let defaults: Vec<_> = control_specs(LimePlugin::of(plugin)?.0)
+        .iter()
+        .map(|s| s.default)
+        .collect();
+    Some(plugin_normalized(spec, plain_values(plugin, &defaults)[index]))
+}
+pub fn parameter_plain(spec: &ParamSpec, normalized: f32) -> f32 {
+    spec.min + normalized.clamp(0.0, 1.0).powf(if spec.log { 4.0 } else { 1.0 }) * (spec.max - spec.min)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -727,7 +835,7 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_legacy_audio_warns_once_and_preserves_settings() {
+    fn legacy_effects_and_track_eq_convert_without_losing_settings() {
         let mut project = Project::default();
         project.mixer.tracks[0].eq[1].gain = 8.0;
         let kinds = [EffectKind::Gate, EffectKind::Drive, EffectKind::Chorus];
@@ -739,12 +847,15 @@ mod tests {
         let before = project.mixer.tracks[0].clone();
         assert!(needs_conversion(&project));
         let warnings = convert_project(&mut project, &|_| None);
-        assert_eq!(warnings.len(), 4, "{warnings:?}");
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert!(is_track_eq(project.mixer.tracks[0].effects.last().unwrap()));
         assert_eq!(project.mixer.tracks[0].eq, before.eq);
         for (after, before) in project.mixer.tracks[0].effects.iter().zip(&before.effects) {
-            assert!(!after.enabled);
-            assert_eq!(after.kind, before.kind);
-            assert_eq!(after.params, before.params);
+            assert!(after.enabled);
+            assert_eq!(after.kind, EffectKind::Plugin);
+            let plugin = after.plugin.as_ref().unwrap();
+            assert_eq!(LimePlugin::of(plugin), LimePlugin::for_effect(before.kind));
+            assert_eq!(plain_values(plugin, &before.params), before.params);
         }
         assert!(!needs_conversion(&project));
         assert!(convert_project(&mut project, &|_| None).is_empty());
@@ -756,7 +867,7 @@ mod tests {
         assert_eq!(LimePlugin::SYNTH.class_id(), "4C494D454E4154495645000000000100");
         assert_eq!(LimePlugin(8).class_id(), "4C494D454E4154495645000000000108");
         assert_eq!(LimePlugin::for_effect(EffectKind::Limiter), Some(LimePlugin(8)));
-        assert_eq!(LimePlugin::for_effect(EffectKind::Chorus), None);
+        assert_eq!(LimePlugin::for_effect(EffectKind::Chorus), Some(LimePlugin(11)));
         let r = LimePlugin(3).plugin_ref();
         assert_eq!(r.path, "lime:Lime EQ.vst3");
         assert_eq!(LimePlugin::of(&r), Some(LimePlugin(3)));
@@ -841,8 +952,7 @@ mod tests {
                 stereo: vec![0.0; 4],
             })
         });
-        assert_eq!(warnings.len(), 1, "{warnings:?}");
-        assert!(warnings[0].contains("Chorus disabled"));
+        assert!(warnings.is_empty(), "{warnings:?}");
         let Instrument::Plugin(p) = &project.channels[0].instrument else {
             panic!("not converted")
         };
@@ -862,9 +972,42 @@ mod tests {
         let v: Value = serde_json::from_slice(component_state(&fx[0].plugin.as_ref().unwrap().state).unwrap()).unwrap();
         assert_eq!(v["params"]["bypass"]["bool"], true);
         assert!(v["params"].get("value_6").is_none());
-        assert_eq!(fx[1].kind, EffectKind::Chorus);
-        assert!(!fx[1].enabled);
+        assert_eq!(fx[1].kind, EffectKind::Plugin);
+        assert!(fx[1].enabled);
         assert!(convert_project(&mut project, &|_| None).is_empty());
         assert!(!needs_conversion(&project));
+    }
+    #[test]
+    fn track_eq_keeps_ten_inserts_and_sanitizes_without_duplication() {
+        let mut doc = crate::Document::default();
+        for _ in 0..10 {
+            doc.execute(crate::Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Utility,
+            })
+            .unwrap();
+        }
+        let band = crate::EqBand {
+            freq: 20.0,
+            gain: 18.0,
+            width: 1.0,
+        };
+        doc.execute(crate::Command::SetMixerEq {
+            track: 1,
+            band: 0,
+            value: band,
+        })
+        .unwrap();
+        let mut p = doc.project().clone();
+        assert!(convert_project(&mut p, &|_| None).is_empty());
+        assert_eq!(p.mixer.tracks[1].effects.len(), 11);
+        let id = p.mixer.tracks[1].effects.last().unwrap().id;
+        p.sanitize();
+        assert_eq!(p.mixer.tracks[1].effects.len(), 11);
+        assert!(!needs_conversion(&p));
+        assert!(convert_project(&mut p, &|_| None).is_empty());
+        assert_eq!(p.mixer.tracks[1].effects.last().unwrap().id, id);
+        doc.undo();
+        assert_eq!(doc.project().mixer.tracks[1].effects.len(), 10);
     }
 }

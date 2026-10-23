@@ -16,7 +16,13 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
         .mixer
         .tracks
         .get(usize::from(track))
-        .map(|t| t.effects.clone())
+        .map(|t| {
+            t.effects
+                .iter()
+                .filter(|e| !limeshot_core::lime::is_track_eq(e))
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default();
     ui.horizontal(|ui| {
         section(ui, &format!("Inserts  {}/{}", effects.len(), MAX_EFFECTS));
@@ -142,6 +148,7 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
 pub fn strip_labels(slots: &[EffectSlot]) -> Vec<(String, bool)> {
     slots
         .iter()
+        .filter(|e| !limeshot_core::lime::is_track_eq(e))
         .map(|e| (e.name().trim_start_matches("Lime ").to_string(), e.enabled))
         .collect()
 }

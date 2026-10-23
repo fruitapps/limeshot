@@ -561,6 +561,7 @@ impl IParameterChangesTrait for ParamChanges {
 /// A block's note events, preallocated.
 pub(crate) struct EventList {
     events: UnsafeCell<Vec<Event>>,
+    telemetry: UnsafeCell<limeshot_dsp::PluginTelemetry>,
 }
 
 impl Class for EventList {
@@ -571,10 +572,19 @@ impl EventList {
     pub(crate) fn new(capacity: usize) -> Self {
         Self {
             events: UnsafeCell::new(Vec::with_capacity(capacity)),
+            telemetry: UnsafeCell::new(limeshot_dsp::PluginTelemetry::default()),
         }
     }
 
+    pub(crate) fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
+        // SAFETY: only the processor thread reads/writes this event list during processing.
+        unsafe { *self.telemetry.get() }
+    }
     pub(crate) fn clear(&self) {
+        // SAFETY: only the processor thread reads/writes this event list during processing.
+        unsafe {
+            *self.telemetry.get() = limeshot_dsp::PluginTelemetry::default();
+        }
         // SAFETY: single-threaded use during `process`; no reference escapes.
         unsafe { (*self.events.get()).clear() };
     }
@@ -615,11 +625,24 @@ impl IEventListTrait for EventList {
         if e.is_null() {
             return kInvalidArgument;
         }
-        // SAFETY: checked non-null.
-        if self.push(unsafe { *e }) {
-            kResultOk
-        } else {
-            kOutOfMemory
+        // SAFETY: checked non-null; the plugin owns a live event for this call.
+        let event = unsafe { *e };
+        if event.r#type == Event_::EventTypes_::kDataEvent as u16 {
+            // SAFETY: data is the active union member; bytes remain live during addEvent.
+            let data = unsafe { event.__field0.data };
+            if data.r#type == 0 && data.size == 22 && !data.bytes.is_null() {
+                // SAFETY: the VST3 caller supplies `size` readable bytes for this call.
+                let bytes = unsafe { std::slice::from_raw_parts(data.bytes, 22) };
+                if let Some(value) = limeshot_dsp::PluginTelemetry::decode(bytes) {
+                    // SAFETY: event lists are accessed only on the processing thread.
+                    unsafe {
+                        *self.telemetry.get() = value;
+                    }
+                }
+            }
+            // Data pointers are borrowed. Never retain them after this callback.
+            return kResultOk;
         }
+        if self.push(event) { kResultOk } else { kOutOfMemory }
     }
 }

@@ -5,7 +5,7 @@ This document describes the code as it is. Source: `crates/limeshot-engine`, `cr
 ## Native-only instruments and inserts (D39)
 
 Production `InstrumentState` is Plugin or Silent. Unconverted legacy synth/sampler values have no engine fallback.
-The document normalizer and CLI convert before playback/save. The engine contains no effect factory or track EQ;
+The document normalizer and CLI convert before playback/save. The engine contains no effect factory or in-process track EQ;
 only the host supplies insert processors. `limeshot-dsp::voice` is shared native-plugin DSP, also used for host browser
 previews/metronome. `tests/support` contains the reference adapters used by engine/equivalence tests, never linked
 into the application. Native plugins no longer depend on the DAW engine/sequencer. Unsupported legacy settings
@@ -224,3 +224,11 @@ Held piano keys and scrub notes use `Msg::NoteOn` / `NoteOff`. Drawn or moved no
 previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
 the message. That deadline runs while transport is stopped, for built-in voices and hosted instruments alike;
 UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.
+
+## Hosted parity protocol
+
+Clip windows/chase/fades and additive channel pan use bounded versioned SysEx; per-note pan uses standard VST3
+expressions. Native processors report block telemetry through output SysEx, copied during addEvent. The host supplies
+stereo auxiliary key audio to routed Comp instances. All buffers are preallocated. The optional bridge serializes
+the same data but retains its existing blocking-I/O limitations. Track EQ is a dedicated hosted Lime EQ after ten
+inserts; its saved bands drive appended hidden native controls. See D39 and the current hosted-parity handoff.

@@ -24,3 +24,12 @@ name = "Lime Comp"
 
 [lime-limiter]
 name = "Lime Limiter"
+
+[lime-gate]
+name = "Lime Gate"
+
+[lime-drive]
+name = "Lime Drive"
+
+[lime-chorus]
+name = "Lime Chorus"

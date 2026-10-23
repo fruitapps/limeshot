@@ -371,8 +371,11 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
                 .channel(id)
                 .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
                 && let Some(sample) = &s.sample
+                && std::path::Path::new(&sample.path).is_file()
             {
                 resp.dnd_set_drag_payload(DraggedSample(app.samples.resolve(&sample.path)));
+            } else if app.sampler_source(id).is_some() {
+                resp.dnd_set_drag_payload(limeshot_core::ClipSource::Audio(id));
             } else {
                 resp.dnd_set_drag_payload(id);
             }

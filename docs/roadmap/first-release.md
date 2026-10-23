@@ -2,8 +2,8 @@
 
 **2026-10-23 replacement update:** this checklist/estimate retains its 272-record historical baseline. The current
 inventory has 290 records. Active instruments/effects now require bundled Lime VST3s; the in-process implementations
-are deleted. Release gates must include PLG-017…020, PLG-022 and PLG-024…029: missing effects, key-bus routing,
-source integration, silent Playlist audio clips, note pan, host value menus/meters/statistics and inactive track EQ.
+are deleted. Hosted parity PLG-017…020, PLG-022 and PLG-024…029 is implemented; release gates now require broader native/platform
+validation of those restored paths. See [current handoff](../development/handoff-hosted-p0-parity.md).
 Prior baseline VERIFIED labels do not establish these replacement behaviors. See
 [known limitations](known-limitations.md) and the [current inventory](features.md).
 

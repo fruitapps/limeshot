@@ -17,7 +17,9 @@ pub mod sample;
 pub mod voice;
 
 pub use envelope::{Adsr, Envelope};
-pub use instrument::{Instrument, NoteEvent, NoteEventKind, Transport};
+pub use instrument::{
+    CLIP_MESSAGE_LEN, ClipMessage, ClipPlayback, Instrument, NoteEvent, NoteEventKind, PluginTelemetry, Transport,
+};
 pub use osc::Oscillator;
 pub use sample::{AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, is_audio_file, load_audio, load_wav, write_wav};
 

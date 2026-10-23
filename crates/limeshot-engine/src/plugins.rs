@@ -35,6 +35,7 @@ struct Held {
     end_tick: Tick,
     /// Started by the sequencer (released on stop), not by an audition.
     sequenced: bool,
+    clip: bool,
 }
 
 pub(crate) struct InstrumentRack {
@@ -148,6 +149,27 @@ impl InstrumentRack {
         self.slots.get(channel)?.as_ref().map(|s| s.inst.latency())
     }
 
+    pub(crate) fn channel_pan(&mut self, index: usize, offset: u32, pan: f32) -> bool {
+        if !self
+            .slots
+            .get(index)
+            .and_then(Option::as_ref)
+            .is_some_and(|s| s.inst.uses_channel_pan())
+        {
+            return false;
+        }
+        let events = &mut self.events[index];
+        if events.len() < events.capacity() {
+            events.push(NoteEvent {
+                offset,
+                kind: NoteEventKind::ChannelPan { pan },
+            });
+        }
+        true
+    }
+    pub(crate) fn active_voices(&self) -> usize {
+        self.slots.iter().flatten().map(|s| s.inst.active_voices()).sum()
+    }
     pub(crate) fn has_instruments(&self) -> bool {
         self.slots.iter().any(Option::is_some)
     }
@@ -165,20 +187,27 @@ impl InstrumentRack {
         off_at: u64,
         end_tick: Tick,
         sequenced: bool,
+        pan: f32,
+        playback: Option<limeshot_dsp::ClipPlayback>,
     ) {
         if self.slots.get(index).and_then(Option::as_ref).is_none() {
             return;
         }
         // The same key started at the same sample already sounds.
-        if self
-            .held
-            .iter()
-            .any(|h| h.channel == channel && h.key == key && h.on_at == at)
+        if playback.is_none()
+            && self
+                .held
+                .iter()
+                .any(|h| !h.clip && h.channel == channel && h.key == key && h.on_at == at)
         {
             return;
         }
         // A key that is still held ends where it is played again, as on a keyboard.
-        for h in self.held.iter_mut().filter(|h| h.channel == channel && h.key == key) {
+        for h in self
+            .held
+            .iter_mut()
+            .filter(|h| playback.is_none() && !h.clip && h.channel == channel && h.key == key)
+        {
             h.off_at = h.off_at.min(at);
         }
         if self.held.len() >= self.held.capacity() {
@@ -188,16 +217,31 @@ impl InstrumentRack {
         let id = self.next_id;
         let ev = NoteEvent {
             offset: offset as u32,
-            kind: NoteEventKind::On {
-                key,
-                velocity: velocity.clamp(0.0, 1.0),
-                id,
+            kind: if let Some(playback) = playback {
+                NoteEventKind::Clip {
+                    key,
+                    velocity: velocity.clamp(0.0, 1.0),
+                    id,
+                    playback,
+                }
+            } else {
+                NoteEventKind::On {
+                    key,
+                    velocity: velocity.clamp(0.0, 1.0),
+                    id,
+                }
             },
         };
         if let Some(events) = self.events.get_mut(index)
-            && events.len() < events.capacity()
+            && events.len() + 2 <= events.capacity()
         {
             events.push(ev);
+            if pan != 0.0 {
+                events.push(NoteEvent {
+                    offset: offset as u32,
+                    kind: NoteEventKind::Pan { id, pan },
+                });
+            }
             self.held.push(Held {
                 channel,
                 key,
@@ -206,6 +250,7 @@ impl InstrumentRack {
                 off_at,
                 end_tick,
                 sequenced,
+                clip: playback.is_some(),
             });
         }
     }
@@ -323,7 +368,17 @@ impl InstrumentRack {
 /// Sort by offset, note-offs before note-ons at the same offset (a retriggered key). Insertion
 /// sort: the lists are short and nearly sorted, and it does not allocate.
 fn sort_events(events: &mut [NoteEvent]) {
-    let rank = |e: &NoteEvent| (e.offset, matches!(e.kind, NoteEventKind::On { .. }));
+    let rank = |e: &NoteEvent| {
+        (
+            e.offset,
+            match e.kind {
+                NoteEventKind::ChannelPan { .. } => 0,
+                NoteEventKind::Off { .. } => 1,
+                NoteEventKind::On { .. } | NoteEventKind::Clip { .. } => 2,
+                NoteEventKind::Pan { .. } => 2,
+            },
+        )
+    };
     for i in 1..events.len() {
         let mut j = i;
         while j > 0 && rank(&events[j - 1]) > rank(&events[j]) {

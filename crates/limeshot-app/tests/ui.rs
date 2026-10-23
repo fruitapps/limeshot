@@ -2392,7 +2392,7 @@ fn playlist_paint_mute_delete_select_zoom_and_playback_tools() {
 }
 
 #[test]
-fn legacy_mixer_eq_is_visible_but_disabled() {
+fn mixer_eq_edits_hosted_state_and_undoes() {
     let mut h = harness(true);
     h.state_mut().ui.mixer.selected = 1;
     h.state_mut().show_window(Win::Mixer);
@@ -2401,9 +2401,17 @@ fn legacy_mixer_eq_is_visible_but_disabled() {
         h.step();
     }
     let before = h.state().project().mixer.tracks[1].eq;
-    let g = h.state().ui.mixer.eq_graph.expect("disabled EQ graph drawn");
+    let g = h.state().ui.mixer.eq_graph.expect("EQ graph drawn");
     let from = limeshot_ui::mixer::eq_handle(g, EqBand::DEFAULTS[1]);
     drag(&mut h, from, from + egui::vec2(30.0, -20.0));
+    assert_ne!(h.state().project().mixer.tracks[1].eq, before);
+    assert!(
+        h.state().project().mixer.tracks[1]
+            .effects
+            .iter()
+            .any(limeshot_core::lime::is_track_eq)
+    );
+    h.state_mut().doc.undo();
     assert_eq!(h.state().project().mixer.tracks[1].eq, before);
 }
 
@@ -2466,7 +2474,29 @@ fn mixer_sidechain_route_menu_and_compressor_input() {
         .unwrap();
     assert_eq!(slot.kind, EffectKind::Plugin);
     assert_eq!(slot.plugin.as_ref().and_then(LimePlugin::of), Some(LimePlugin(7)));
-    // PLG-020 tracks routing this silent sidechain send into the VST3 key bus.
+    h.state_mut().ui.mixer.selected = 5;
+    for _ in 0..3 {
+        h.step();
+    }
+    h.get_by_label("Sidechain: own input").click();
+    h.run_steps(4);
+    let option = h.get_by_label("Insert 1").rect();
+    click(&mut h, option.center(), PointerButton::Primary);
+    h.run_steps(3);
+    let source = |h: &Harness<'static, LimeShotApp>| {
+        h.state()
+            .project()
+            .plugin(PluginTarget::Effect { track: 5, effect: fx })
+            .unwrap()
+            .extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
+    };
+    assert_eq!(source(&h), 1);
+    h.state_mut().doc.undo();
+    h.step();
+    assert_eq!(source(&h), 0);
 }
 
 #[test]
@@ -6051,4 +6081,73 @@ fn the_tempo_field_creates_a_tempo_automation_clip() {
         (start - tempo).abs() < 0.01,
         "starts at the project tempo: {start} vs {tempo}"
     );
+}
+
+#[test]
+fn embedded_sampler_previews_without_the_source_file() {
+    let mut h = harness(false);
+    let audio = limeshot_core::EmbeddedAudio {
+        name: "Embedded.wav".into(),
+        sample_rate: 48000,
+        stereo: vec![0.3; 48000],
+    };
+    let params = SamplerParams::default();
+    let reference = limeshot_core::LimePlugin::SAMPLER.with_values(
+        &limeshot_core::lime::sampler_values(&params, 60),
+        false,
+        Some(&audio),
+    );
+    let channel = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Embedded".into(),
+                instrument: Instrument::Plugin(reference),
+            })
+            .unwrap(),
+    );
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..4 {
+        h.step();
+    }
+    let source = h.state().sampler_source(channel).expect("embedded source cached");
+    assert!(!source.exists(), "no temporary sample file required");
+    assert!(matches!(
+        h.state().samples.status_of_path(&source),
+        Some(limeshot_audio::assets::SampleStatus::Ready(_))
+    ));
+    let load = h.get_by_label("Load…").rect();
+    let wave = egui::pos2(load.left(), load.bottom() + 36.0);
+    press(&mut h, wave, PointerButton::Primary, true);
+    assert_eq!(h.state().sampler_preview.map(|p| p.0), Some(channel));
+    press(&mut h, wave, PointerButton::Primary, false);
+}
+
+#[test]
+fn hosted_parameter_menu_types_native_units_and_undoes() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    let target = PluginTarget::Channel(channel);
+    let id = lime::param_id(8);
+    h.state_mut().plugins.filter_parameters(target, "Attack");
+    for _ in 0..3 {
+        h.step();
+    }
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    click(&mut h, rect.center(), PointerButton::Secondary);
+    h.get_by_label("Type in value…").click();
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("500".into()));
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
+    assert!((params.attack_ms - 500.0).abs() < 0.01);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
+    assert_eq!(params.attack_ms, 0.0);
 }

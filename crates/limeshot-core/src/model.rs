@@ -917,7 +917,18 @@ impl Project {
             for (i, b) in t.eq.iter_mut().enumerate() {
                 *b = b.sanitized(i);
             }
-            t.effects.truncate(crate::effects::MAX_EFFECTS);
+            let mut inserts = 0;
+            let mut track_eq = false;
+            t.effects.retain(|e| {
+                if crate::lime::is_track_eq(e) {
+                    let keep = !track_eq;
+                    track_eq = true;
+                    keep
+                } else {
+                    inserts += 1;
+                    inserts <= crate::effects::MAX_EFFECTS
+                }
+            });
             for e in &mut t.effects {
                 e.sanitize();
                 max_id = max_id.max(e.id);

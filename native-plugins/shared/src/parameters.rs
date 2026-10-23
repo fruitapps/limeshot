@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::sample::SampleStore;
 
-pub const NAMES: [&str; 9] = [
+pub const NAMES: [&str; 12] = [
     "LimeSynth",
     "Lime Sampler",
     "Lime Utility",
@@ -14,8 +14,11 @@ pub const NAMES: [&str; 9] = [
     "Lime Room",
     "Lime Comp",
     "Lime Limiter",
+    "Lime Gate",
+    "Lime Drive",
+    "Lime Chorus",
 ];
-pub const TAGLINES: [&str; 9] = [
+pub const TAGLINES: [&str; 12] = [
     "A little zest. A lot of sound.",
     "Every sound starts somewhere.",
     "Make room for your sound.",
@@ -25,9 +28,12 @@ pub const TAGLINES: [&str; 9] = [
     "Give your sound some space.",
     "Keep the groove. Shape the punch.",
     "Big sound. Beautiful restraint.",
+    "Keep the silence clean.",
+    "Find your edge.",
+    "Add a little motion.",
 ];
 // Keep exported class/parameter order independent of new DAW-only effect kinds.
-pub const KINDS: [EffectKind; 7] = [
+pub const KINDS: [EffectKind; 10] = [
     EffectKind::Utility,
     EffectKind::Eq3,
     EffectKind::Filter,
@@ -35,6 +41,9 @@ pub const KINDS: [EffectKind; 7] = [
     EffectKind::Reverb,
     EffectKind::Compressor,
     EffectKind::Limiter,
+    EffectKind::Gate,
+    EffectKind::Drive,
+    EffectKind::Chorus,
 ];
 
 /// Capacity of the plain-control arrays: the largest specification (LimeSynth) has 17 controls.
@@ -98,6 +107,11 @@ impl NativeParams {
                     value = value.with_step_size(1.0);
                 } else {
                     value = value.with_smoother(SmoothingStyle::Linear(5.0));
+                }
+                // Dedicated track EQ is edited by LimeShot's inline Mixer controls. Keep
+                // its extension out of the standalone insert editor and generic host lists.
+                if id == 3 && i >= 7 {
+                    value = value.hide();
                 }
                 Control { value }
             })

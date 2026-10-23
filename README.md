@@ -80,10 +80,9 @@ with FL Studio or measured test coverage.
 | [Known limitations](docs/roadmap/known-limitations.md) | Outstanding restrictions and manual/platform checks |
 | [Live CI](https://github.com/fruitapps/limeshot/actions/workflows/ci.yml) | Build, test and lint results for the actual commit and platform |
 
-The DAW now uses the nine Lime Native VST3 bundles for its instruments and effects. Build them with
+The DAW now uses the twelve Lime Native VST3 bundles for its instruments and effects. Build them with
 `python3 native-plugins/build.py` before running from source; macOS packages include them. Legacy projects convert
-to portable `lime:` references with embedded sampler audio. Gate/Drive/Chorus, hosted Playlist audio clips,
-per-note pan and the old track EQ remain P0 gaps; see [known limitations](docs/roadmap/known-limitations.md).
+to portable `lime:` references with embedded sampler audio. Hosted Playlist clips, note pan, exact track EQ, all ten effect kinds and mixer key buses are implemented; see [known limitations](docs/roadmap/known-limitations.md).
 
 Some older continuation/limitation entries predate the recording, decoder, sampler, fade and automation additions;
 use the canonical feature record and its latest progress evidence to resolve those historical descriptions.
@@ -93,15 +92,15 @@ layout persistence, time stretching and several advanced editor actions. Hardwar
 hands-on checks; audio recording has no input monitoring or latency compensation. Native macOS VST3 embedding
 needs another live resize/tab/keyboard pass; Windows/Linux currently expose plugin parameters. The process bridge
 is opt-in and has no native editor. `.flp` import omits plugin state, mixer effects/routing and automation curves;
-unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/Drive/Chorus are unavailable until their VST3 replacements exist.
+unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/Drive/Chorus use their standalone Lime VST3 replacements.
 
 ## Lime Native Standalone VST3 Suite
 
-**Lime Native** packages two instruments and seven effects as nine independent VST3 plugins. Each has its own
+**Lime Native** packages two instruments and ten effects as twelve independent VST3 plugins. Each has its own
 resizable native editor, factory presets, host automation/state and `.limepreset` interchange, with the existing
 LimeShot DSP linked into the bundle. LimeShot does not need to be installed or running.
 
-Fresh renders of all nine standalone editors (click to enlarge):
+Previews of the original nine standalone editors (click to enlarge):
 
 | | | |
 | --- | --- | --- |
@@ -133,11 +132,11 @@ python3 native-plugins/build.py
 ```
 
 The script collects bundles and a ZIP in `native-plugins/dist/`; it does not install them. Copy the `.vst3` bundles
-to your host's plugin directory and rescan. Local validation covers macOS Apple Silicon: all nine pass exported ABI
-checks and pluginval 1.0.4 strictness 5, including editor tests. Hands-on DAW checks, Windows/Linux/Intel runtime
+to your host's plugin directory and rescan. Current macOS Apple Silicon release/debug builds pass exported ABI checks for all twelve bundles. The historical
+nine-bundle baseline passed pluginval 1.0.4 strictness 5; pluginval is unavailable for the current binaries. Hands-on DAW checks, Windows/Linux/Intel runtime
 validation and notarization remain pending. Local macOS bundles are arm64 and ad-hoc signed. Generated binaries
 are build outputs, not files included by cloning Git. VST3-compatible hosts are required; Logic Pro needs AU.
-The suite exports these nine plugins; legacy Gate, Drive and Chorus slots are preserved disabled.
+The suite exports twelve plugins, including Lime Gate, Lime Drive and Lime Chorus.
 
 ## Platforms
 

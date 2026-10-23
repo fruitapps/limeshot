@@ -977,17 +977,25 @@ fn audio_clip_fixture() -> (Document, Arc<support::Snapshot>) {
 }
 
 #[test]
-fn hosted_audio_clips_are_silent_until_offset_and_gate_support_exists() {
+fn hosted_audio_clips_play_their_source_window() {
     let (_, snap) = audio_clip_fixture();
     assert!(snap.song.events.iter().all(|e| e.clip));
     for block in [1, 64, 333, 1024] {
         let (audio, _) = render(snap.clone(), ExportRange::Song, block, SR);
-        assert!(audio.iter().all(|v| *v == 0.0), "PLG-024: no built-in fallback");
+        assert!(audio[..2 * 48_000].iter().all(|v| *v == 0.0));
+        for frame in [48_000, 54_000, 71_999] {
+            let expected = (frame - 48_000 + 12_000) as f32 / 48_000.0;
+            assert!(
+                (audio[2 * frame] - expected).abs() < 1e-5,
+                "block {block}, frame {frame}"
+            );
+        }
+        assert!(audio[2 * 72_000..].iter().all(|v| *v == 0.0));
     }
 }
 
 #[test]
-fn seeking_hosted_audio_clips_has_no_builtin_fallback() {
+fn seeking_hosted_audio_clips_chases_the_source() {
     let (_, snap) = audio_clip_fixture();
     for block in [64, 333, 1024] {
         let mut r = Renderer::new(SR, snap.clone());
@@ -996,7 +1004,7 @@ fn seeking_hosted_audio_clips_has_no_builtin_fallback() {
         r.play();
         let mut buf = vec![0.0; 2 * block];
         r.render(&mut buf);
-        assert!(buf.iter().all(|v| *v == 0.0), "PLG-024");
+        assert!((buf[0] - 0.5).abs() < 1e-5, "block {block}: {}", buf[0]);
     }
 }
 
@@ -1424,7 +1432,7 @@ fn sidechained_compressor_ducks_on_the_key_track() {
 }
 
 #[test]
-fn plugin_note_pan_is_not_forwarded_yet() {
+fn plugin_note_pan_reaches_the_voice() {
     let mut f = fixture();
     let note = NoteId(
         f.doc
@@ -1451,10 +1459,9 @@ fn plugin_note_pan_is_not_forwarded_yet() {
         })
         .unwrap();
     let (after, _) = render(snapshot(&f), ExportRange::Pattern, 256, SR);
-    assert_eq!(
-        before, after,
-        "PLG-025: the plugin protocol currently carries no note pan"
-    );
+    assert!(before.iter().step_by(2).any(|v| v.abs() > 0.01));
+    assert!(after.iter().step_by(2).all(|v| *v == 0.0));
+    assert!(after.iter().skip(1).step_by(2).any(|v| v.abs() > 0.01));
 }
 
 /// Owner's list item 10: Stop while stopped silences everything (auditions, sample previews,
@@ -1621,10 +1628,8 @@ fn exporting_a_time_selection_renders_that_span() {
     for block in [64, 333] {
         let (sel, report) = render(snap.clone(), ExportRange::Selection { from: 2000, to: 2400 }, block, SR);
         assert_eq!(report.music_frames, 10_000, "block {block}");
-        assert!(
-            sel.iter().all(|v| *v == 0.0),
-            "PLG-024: hosted clips cannot chase sample offsets yet"
-        );
+        assert!((sel[0] - (12_000.0 + 2000.0) / 48_000.0).abs() < 1e-5);
+        assert!(sel[..2 * report.music_frames].iter().all(|v| *v > 0.0));
     }
     let empty = render_offline(
         snap,

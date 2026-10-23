@@ -54,6 +54,38 @@ struct Slot {
     held: bool,
     sustained: bool,
     serial: u64,
+    clip: bool,
+    pan: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ClipSysEx {
+    Clip(limeshot_dsp::ClipMessage),
+    Telemetry(limeshot_dsp::PluginTelemetry),
+    ChannelPan(f32),
+}
+impl SysExMessage for ClipSysEx {
+    type Buffer = [u8; limeshot_dsp::CLIP_MESSAGE_LEN];
+    fn from_buffer(buffer: &[u8]) -> Option<Self> {
+        limeshot_dsp::ClipMessage::decode(buffer)
+            .map(Self::Clip)
+            .or_else(|| limeshot_dsp::instrument::decode_channel_pan(buffer).map(Self::ChannelPan))
+    }
+    fn as_buffer(&self) -> (Self::Buffer, usize) {
+        match self {
+            Self::ChannelPan(pan) => {
+                let mut bytes = [0; limeshot_dsp::CLIP_MESSAGE_LEN];
+                bytes[..14].copy_from_slice(&limeshot_dsp::instrument::channel_pan_message(*pan));
+                (bytes, 14)
+            }
+            Self::Clip(message) => (message.encode(), limeshot_dsp::CLIP_MESSAGE_LEN),
+            Self::Telemetry(value) => {
+                let mut bytes = [0; limeshot_dsp::CLIP_MESSAGE_LEN];
+                bytes[..22].copy_from_slice(&value.encode());
+                (bytes, 22)
+            }
+        }
+    }
 }
 
 pub struct LimePlugin<const ID: u8> {
@@ -74,6 +106,8 @@ pub struct LimePlugin<const ID: u8> {
     scope_offset: usize,
     preview_note: u32,
     meter_decay: f32,
+    block_reduction: f32,
+    channel_pan: f32,
 }
 
 impl<const ID: u8> Default for LimePlugin<ID> {
@@ -99,6 +133,8 @@ impl<const ID: u8> Default for LimePlugin<ID> {
             scope_offset: 0,
             preview_note: 0,
             meter_decay: 0.999,
+            block_reduction: 0.0,
+            channel_pan: 0.0,
         }
     }
 }
@@ -283,7 +319,7 @@ impl<const ID: u8> LimePlugin<ID> {
     /// Nonpositive note-on velocity releases a note. At capacity, steal the oldest unheld
     /// voice, then the oldest held voice. Pitch bend spans ±2 semitones; CC 64, 120, and 123
     /// control sustain, all-sound-off, and all-notes-off. Other events are ignored.
-    pub(crate) fn event(&mut self, e: NoteEvent<()>, p: &[f32; MAX_CONTROLS]) {
+    pub(crate) fn event(&mut self, e: NoteEvent<ClipSysEx>, p: &[f32; MAX_CONTROLS]) {
         match e {
             NoteEvent::NoteOn {
                 voice_id,
@@ -322,7 +358,59 @@ impl<const ID: u8> LimePlugin<ID> {
                     held: true,
                     sustained: false,
                     serial: self.serial,
+                    clip: false,
+                    pan: 0.0,
                 };
+            }
+            NoteEvent::MidiSysEx {
+                message: ClipSysEx::Clip(message),
+                ..
+            } if ID == 1 => {
+                self.event(
+                    NoteEvent::NoteOn {
+                        timing: 0,
+                        voice_id: VoiceID::ID(message.id),
+                        channel: Channel::Number(0),
+                        key: Key::Number(message.key),
+                        velocity: message.velocity,
+                    },
+                    p,
+                );
+                if let Some(slot) = self
+                    .voices
+                    .iter_mut()
+                    .find(|s| s.id == Some(message.id) && s.voice.is_active())
+                {
+                    let playback = message.playback;
+                    slot.clip = true;
+                    slot.voice
+                        .skip(playback.offset_secs + playback.elapsed_secs, self.sample_rate);
+                    slot.voice.fade = Some(limeshot_dsp::voice::ClipFade {
+                        in_len: playback.fade_in_secs * self.sample_rate,
+                        pos: (playback.elapsed_secs * f64::from(self.sample_rate)) as f32,
+                        out_len: playback.fade_out_secs * self.sample_rate,
+                        left: (playback.remaining_secs * f64::from(self.sample_rate)) as f32,
+                    });
+                }
+            }
+            NoteEvent::MidiSysEx {
+                message: ClipSysEx::ChannelPan(pan),
+                ..
+            } => {
+                self.channel_pan = pan;
+            }
+            NoteEvent::PolyPan {
+                voice_id,
+                channel,
+                key,
+                pan,
+                ..
+            } => {
+                for slot in &mut self.voices {
+                    if matches_note(slot, voice_id, channel, key) {
+                        slot.pan = pan;
+                    }
+                }
             }
             NoteEvent::NoteOff {
                 voice_id, channel, key, ..
@@ -387,6 +475,10 @@ impl<const ID: u8> LimePlugin<ID> {
         if let Some(i) = index {
             let s = &mut self.voices[i];
             s.held = false;
+            if s.clip {
+                s.voice.source = limeshot_dsp::voice::Source::Off;
+                return;
+            }
             // One-shot notes ignore their note-off, unless they loop (as in LimeShot's renderer).
             if ID == 1 && p[6] >= 0.5 && p[13] < 0.5 {
                 return;
@@ -418,8 +510,9 @@ impl<const ID: u8> LimePlugin<ID> {
             for s in &mut self.voices {
                 if s.voice.is_active() {
                     let (l, r) = s.voice.next_frame();
-                    sum[0] += l;
-                    sum[1] += r;
+                    let (gl, gr) = limeshot_dsp::pan_gains((s.pan + self.channel_pan).clamp(-1.0, 1.0));
+                    sum[0] += l * gl;
+                    sum[1] += r * gr;
                 }
             }
             sum
@@ -516,9 +609,10 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         }]
     };
     const MIDI_INPUT: MidiConfig = if ID < 2 { MidiConfig::MidiCCs } else { MidiConfig::None };
+    const MIDI_OUTPUT: MidiConfig = MidiConfig::Basic;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
     type Editor = EguiEditor<NativeEditor>;
-    type SysExMessage = ();
+    type SysExMessage = ClipSysEx;
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
@@ -562,6 +656,7 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let tempo = context.transport().tempo.unwrap_or(120.0);
+        self.block_reduction = 0.0;
         self.refresh_sample();
         self.sync_preview(&self.params.values());
         let mut event = context.next_event();
@@ -585,10 +680,24 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
                 frame.get_mut(1).map_or(0.0, |v| *v),
             ];
             let out = self.frame(input, key, &p, tempo);
+            self.block_reduction = self
+                .block_reduction
+                .max(self.effect.as_ref().map_or(0.0, |e| e.gain_reduction_db()));
             for (v, value) in frame.iter_mut().zip(out) {
                 *v = value;
             }
         }
+        let _ = context.try_send_event(NoteEvent::MidiSysEx {
+            timing: 0,
+            message: ClipSysEx::Telemetry(limeshot_dsp::PluginTelemetry {
+                voices: self.voices.iter().filter(|s| s.voice.is_active()).count() as u32,
+                reduction_db: if self.params.bypass.value() {
+                    0.0
+                } else {
+                    self.block_reduction.clamp(0.0, 200.0)
+                },
+            }),
+        });
         self.notifier.request_repaint();
         // Reverb/delay and releasing voices must continue to receive silent blocks.
         ProcessStatus::KeepAlive
@@ -606,7 +715,9 @@ impl<const ID: u8> Vst3Plugin for LimePlugin<ID> {
         4 => &[Vst3SubCategory::Fx, Vst3SubCategory::Filter],
         5 => &[Vst3SubCategory::Fx, Vst3SubCategory::Delay],
         6 => &[Vst3SubCategory::Fx, Vst3SubCategory::Reverb],
-        7 | 8 => &[Vst3SubCategory::Fx, Vst3SubCategory::Dynamics],
+        7..=9 => &[Vst3SubCategory::Fx, Vst3SubCategory::Dynamics],
+        10 => &[Vst3SubCategory::Fx, Vst3SubCategory::Distortion],
+        11 => &[Vst3SubCategory::Fx, Vst3SubCategory::Modulation],
         _ => &[Vst3SubCategory::Fx, Vst3SubCategory::Tools],
     };
 }
@@ -617,7 +728,7 @@ mod tests {
     use crate::sample::EmbeddedSample;
     use nice_plug::params::persist::PersistentField;
 
-    fn on(id: i32, key: u8) -> NoteEvent<()> {
+    fn on(id: i32, key: u8) -> NoteEvent<ClipSysEx> {
         NoteEvent::NoteOn {
             timing: 0,
             voice_id: VoiceID::ID(id),
@@ -626,7 +737,7 @@ mod tests {
             velocity: 0.8,
         }
     }
-    fn off(id: i32, key: u8) -> NoteEvent<()> {
+    fn off(id: i32, key: u8) -> NoteEvent<ClipSysEx> {
         NoteEvent::NoteOff {
             timing: 0,
             voice_id: VoiceID::ID(id),
@@ -635,7 +746,7 @@ mod tests {
             velocity: 0.0,
         }
     }
-    fn cc(cc: u8, value: f32) -> NoteEvent<()> {
+    fn cc(cc: u8, value: f32) -> NoteEvent<ClipSysEx> {
         NoteEvent::MidiCC {
             timing: 0,
             channel: 0,
@@ -684,6 +795,9 @@ mod tests {
         parity::<6>();
         parity::<7>();
         parity::<8>();
+        parity::<9>();
+        parity::<10>();
+        parity::<11>();
     }
 
     #[test]

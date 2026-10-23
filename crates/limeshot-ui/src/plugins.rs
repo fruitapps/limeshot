@@ -229,10 +229,18 @@ struct Live {
 }
 
 /// What a running plugin was made from: bundle, class, and whether it runs in its own process.
-type Key = (String, String, bool);
+type Key = (String, String, bool, u64);
 
 fn key_of(p: &PluginRef) -> Key {
-    (p.path.clone(), p.class_id.clone(), p.separate_process)
+    (
+        p.path.clone(),
+        p.class_id.clone(),
+        p.separate_process,
+        p.extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0),
+    )
 }
 
 /// Plugins of the open project, and the database.
@@ -310,7 +318,7 @@ fn instantiate(
     }
     let sr = f64::from(sample_rate);
     let block = limeshot_engine::MAX_BLOCK;
-    let (mut inst, proc) = match (p.separate_process, bridge) {
+    let (mut inst, mut proc) = match (p.separate_process, bridge) {
         #[cfg(unix)]
         (true, Some(exe)) => {
             let (i, pr) = limeshot_plugins::bridge::BridgedInstance::spawn(exe, &p.path, &p.class_id, sr, block)
@@ -329,6 +337,13 @@ fn instantiate(
     {
         return Err(format!("{}: could not restore plugin state: {e}", p.name));
     }
+    proc.set_sidechain_source(
+        p.extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
+            .min(127) as usize,
+    );
     Ok((inst, proc))
 }
 
@@ -703,6 +718,17 @@ impl Drop for ReturnOnDrop {
 }
 
 impl limeshot_dsp::effects::Effect for ReturnOnDrop {
+    fn sidechain_source(&self) -> usize {
+        self.inner.as_ref().map_or(0, |p| p.sidechain_source())
+    }
+    fn gain_reduction_db(&self) -> f32 {
+        self.inner.as_ref().map_or(0.0, |p| p.telemetry().reduction_db)
+    }
+    fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
+        if let Some(p) = &mut self.inner {
+            limeshot_dsp::effects::Effect::process_sidechain(p, buf, key);
+        }
+    }
     fn set_params(&mut self, _params: &[f32]) {}
     fn process(&mut self, buf: &mut [f32]) {
         if let Some(p) = &mut self.inner {
@@ -730,6 +756,12 @@ impl limeshot_dsp::effects::Effect for ReturnOnDrop {
 }
 
 impl limeshot_dsp::Instrument for ReturnOnDrop {
+    fn uses_channel_pan(&self) -> bool {
+        self.inner.as_ref().is_some_and(|p| p.uses_channel_pan())
+    }
+    fn active_voices(&self) -> usize {
+        self.inner.as_ref().map_or(0, |p| p.telemetry().voices as usize)
+    }
     fn process(&mut self, out: &mut [f32], notes: &[limeshot_dsp::NoteEvent], t: &limeshot_dsp::Transport) {
         match &mut self.inner {
             Some(p) => limeshot_dsp::Instrument::process(p, out, notes, t),
@@ -875,6 +907,41 @@ pub fn effect_card(app: &mut LimeShotApp, ui: &mut Ui, track: u16, effect: u32, 
     match p {
         Some(p) => {
             header(app, ui, target, p);
+            if limeshot_core::LimePlugin::of(p) == Some(limeshot_core::LimePlugin(7)) {
+                let current = p
+                    .extra
+                    .get("lime-sidechain-track")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0) as u16;
+                let mut selected = None;
+                ui.menu_button(
+                    if current == 0 {
+                        "Sidechain: own input".into()
+                    } else {
+                        format!("Sidechain: Insert {current}")
+                    },
+                    |ui| {
+                        if ui.selectable_label(current == 0, "Own input").clicked() {
+                            selected = Some(0);
+                            ui.close();
+                        }
+                        for (index, candidate) in app.project().mixer.tracks.iter().enumerate().skip(1) {
+                            if index != usize::from(track)
+                                && candidate.routes.iter().any(|r| r.to == track)
+                                && ui
+                                    .selectable_label(usize::from(current) == index, format!("Insert {index}"))
+                                    .clicked()
+                            {
+                                selected = Some(index as u16);
+                                ui.close();
+                            }
+                        }
+                    },
+                );
+                if let Some(source) = selected {
+                    app.exec(Command::SetPluginSidechain { plugin: target, source });
+                }
+            }
             params(app, ui, target);
         }
         None => {
@@ -972,7 +1039,7 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     let visible: Vec<(u32, String, f64, f64, String)> = inst
         .params()
         .iter()
-        .filter(|p| !p.read_only() && p.automatable())
+        .filter(|p| !p.read_only() && !p.hidden() && p.automatable())
         .filter(|p| needle.is_empty() || p.title.to_lowercase().contains(&needle))
         .take(PARAMS_SHOWN + 1)
         .map(|p| {
@@ -1019,14 +1086,22 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
             );
             app.plugins.parameter_rects.insert((target, *id), r.rect);
             changes.push((*id, crate::widgets::user_changed(&r).then_some(v), r.clone()));
-            crate::widgets::clickable(&r).context_menu(|ui| {
-                ui.label(RichText::new(title).small().color(t.text_dim));
-                ui.separator();
-                if ui.button("Create automation clip").clicked() {
-                    automate = Some(*id);
-                    ui.close();
-                }
-            });
+            let automation = limeshot_core::AutomationTarget::PluginParam {
+                plugin: target,
+                id: *id,
+            };
+            if automation.current_value(app.project()).is_some() {
+                crate::automation_ui::menu(app, &r, automation);
+            } else {
+                crate::widgets::clickable(&r).context_menu(|ui| {
+                    ui.label(RichText::new(title).small().color(t.text_dim));
+                    ui.separator();
+                    if ui.button("Create automation clip").clicked() {
+                        automate = Some(*id);
+                        ui.close();
+                    }
+                });
+            }
         });
     }
     if visible.len() > PARAMS_SHOWN {

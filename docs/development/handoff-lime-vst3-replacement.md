@@ -1,5 +1,8 @@
 # Handoff: replace LimeShot's built-in instruments and effects with the Lime VST3s
 
+**Current continuation:** hosted P0 parity is implemented in [the new session handoff](handoff-hosted-p0-parity.md).
+The replacement-session history below remains as evidence of its earlier state.
+
 Written 2026-10-22 by a Claude Code session that ran out of usage before starting the implementation.
 **Owner decision (2026-10-22): full replacement.** Delete the built-in (in-process, non-VST) LimeSynth, Sampler
 and mixer effects. LimeShot must use the Lime Native VST3 plugins (PLG-012, `native-plugins/`) by default. Old
@@ -41,7 +44,7 @@ Completed:
   context guard; Sampler rendering/tab switching and measured realtime output were checked. This final engine
   deletion does not establish broader live native/platform behavior. See [host validation](lime-vst3-host-validation.md).
 
-Next (separate P0 feature work, not unfinished built-in deletion):
+Next at replacement completion (historical; restored by the hosted-parity session linked above):
 1. Restore hosted Playlist audio clip playback/offset/chase/fades (PLG-024), note pan (PLG-025), and legacy track EQ
    through hosted processing (PLG-029). Conversion warns once about silent clips/ignored pan/inactive EQ.
 2. Gate/Drive/Chorus bundles (PLG-017…019), mixer-track key bus into Comp (PLG-020), source/rack integration

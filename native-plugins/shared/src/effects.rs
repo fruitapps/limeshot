@@ -1,5 +1,5 @@
 use limeshot_core::EffectKind;
-use limeshot_dsp::effects::{Compressor, Delay, Effect, Eq3, Filter, Limiter, Reverb, Utility};
+use limeshot_dsp::effects::{Chorus, Compressor, Delay, Drive, Effect, Eq3, Filter, Gate, Limiter, Reverb, Utility};
 /// Create a processor for `kind` at `sample_rate` with `params` applied. Allocates: call it on
 /// the control thread.
 pub fn build(kind: EffectKind, sample_rate: u32, params: &[f32]) -> Box<dyn Effect> {
@@ -13,7 +13,10 @@ pub fn build(kind: EffectKind, sample_rate: u32, params: &[f32]) -> Box<dyn Effe
         EffectKind::Compressor => Box::new(Compressor::new(sr)),
         EffectKind::Limiter => Box::new(Limiter::new(sr)),
         // The host adopts the real processor; until then the slot passes audio through.
-        EffectKind::Plugin | EffectKind::Gate | EffectKind::Drive | EffectKind::Chorus => Box::new(Passthrough),
+        EffectKind::Gate => Box::new(Gate::new(sr)),
+        EffectKind::Drive => Box::new(Drive::new(sr)),
+        EffectKind::Chorus => Box::new(Chorus::new(sr)),
+        EffectKind::Plugin => Box::new(Passthrough),
     };
     e.set_params(params);
     e

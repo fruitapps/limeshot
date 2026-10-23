@@ -98,7 +98,13 @@ fn sampler_source(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, params: &Sam
                 .sample
                 .as_ref()
                 .map(|s| crate::browser::file_label(std::path::Path::new(&s.path)))
-                .unwrap_or_else(|| "No sample".into()),
+                .unwrap_or_else(|| {
+                    if app.sampler_source(ch.id).is_some() {
+                        "Embedded sample".into()
+                    } else {
+                        "No sample".into()
+                    }
+                }),
         );
         if ui.button("Load…").clicked()
             && let Some(path) = rfd::FileDialog::new()
@@ -110,15 +116,20 @@ fn sampler_source(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, params: &Sam
     });
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::click_and_drag());
     ui.painter().rect_filled(rect, 3.0, Theme::current().sunken);
-    if let Some(sample) = &params.sample {
-        let path = app.samples.resolve(&sample.path);
+    if let Some(path) = app.sampler_source(ch.id) {
         crate::browser::paint_sample_wave(app, ui.painter(), rect, &path, Theme::current().accent);
         if response.drag_started() {
-            response.dnd_set_drag_payload(crate::browser::DraggedSample(path));
+            if let Some(sample) = &params.sample
+                && std::path::Path::new(&sample.path).is_file()
+            {
+                response.dnd_set_drag_payload(crate::browser::DraggedSample(app.samples.resolve(&sample.path)));
+            } else {
+                response.dnd_set_drag_payload(ClipSource::Audio(ch.id));
+            }
         }
         if response.is_pointer_button_down_on()
             && ui.input(|i| i.pointer.primary_pressed())
-            && let Some(limeshot_audio::assets::SampleStatus::Ready(sample)) = app.samples.status(&sample.path)
+            && let Some(limeshot_audio::assets::SampleStatus::Ready(sample)) = app.samples.status_of_path(&path)
         {
             let duration = sample.duration_secs() * f64::from((params.end - params.start).max(0.0))
                 / 2.0f64.powf(f64::from(params.pitch) / 12.0);

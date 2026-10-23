@@ -74,7 +74,10 @@ fn default_value(app: &LimeShotApp, target: AutomationTarget) -> Option<f32> {
             .params()
             .get(index)
             .map(|s| s.default),
-        PluginParam { .. } => None,
+        PluginParam { plugin, id } => {
+            let (_, spec) = limeshot_core::lime::parameter_spec(app.project().plugin(plugin)?, id)?;
+            Some(limeshot_core::lime::plugin_normalized(spec, spec.default))
+        }
         // A new project's tempo.
         Tempo => Some(140.0),
     }
@@ -99,7 +102,17 @@ pub(crate) fn set_value(app: &mut LimeShotApp, target: AutomationTarget, value: 
             index,
             value,
         },
-        PluginParam { .. } => return,
+        PluginParam { plugin, id } => {
+            let Some(state) = app
+                .project()
+                .plugin(plugin)
+                .and_then(|p| limeshot_core::lime::edited_param_state(p, id, f64::from(value)))
+            else {
+                return;
+            };
+            app.plugins.last_tweaked = Some((plugin, id));
+            Command::SetPluginState { plugin, state }
+        }
         Tempo => Command::SetTempo(limeshot_core::Tempo::from_bpm(f64::from(value))),
     };
     app.exec(command);
@@ -136,7 +149,16 @@ pub(crate) fn input_value(app: &LimeShotApp, target: AutomationTarget) -> Option
                 .get(index)?;
             Some((v.to_string(), spec.unit))
         }
-        PluginParam { .. } => None,
+        PluginParam { plugin, id } => {
+            let (_, spec) = limeshot_core::lime::parameter_spec(app.project().plugin(plugin)?, id)?;
+            let plain = limeshot_core::lime::parameter_plain(spec, v);
+            let text = spec
+                .labels
+                .get(plain.round() as usize)
+                .filter(|_| !spec.labels.is_empty())
+                .map_or_else(|| plain.to_string(), |label| (*label).to_string());
+            Some((text, spec.unit))
+        }
         Tempo => Some((format!("{v:.3}"), "BPM")),
     }
 }
@@ -152,6 +174,18 @@ pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &st
     if matches!(target, MixerVolume(_)) && text.trim() == "-inf" {
         return Some(0.0);
     }
+    if let PluginParam { plugin, id } = target
+        && let Some((_, spec)) = app
+            .project()
+            .plugin(plugin)
+            .and_then(|p| limeshot_core::lime::parameter_spec(p, id))
+        && let Some(index) = spec
+            .labels
+            .iter()
+            .position(|label| label.eq_ignore_ascii_case(text.trim()))
+    {
+        return Some(limeshot_core::lime::plugin_normalized(spec, index as f32));
+    }
     let typed: f32 = text.trim().parse().ok()?;
     if !typed.is_finite() {
         return None;
@@ -159,7 +193,12 @@ pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &st
     let value = match target {
         ChannelVolume(_) | ChannelPan(_) | MixerPan(_) => typed / 100.0,
         MixerVolume(_) => 10f32.powf(typed / 20.0),
-        PluginParam { .. } => return None,
+        PluginParam { plugin, id } => {
+            let (_, spec) = limeshot_core::lime::parameter_spec(app.project().plugin(plugin)?, id)?;
+            return (spec.min..=spec.max)
+                .contains(&typed)
+                .then(|| limeshot_core::lime::plugin_normalized(spec, typed));
+        }
         EffectParam { .. } => typed,
         // Any tempo LimeShot plays (10–522 BPM), not just the automation's 60–180 range.
         Tempo => return (10.0..=522.0).contains(&typed).then_some(typed),
@@ -275,5 +314,41 @@ mod tests {
         let deleted = AutomationTarget::ChannelVolume(ChannelId(u32::MAX));
         assert!(input_value(&app, deleted).is_none());
         assert!(parse_value(&app, deleted, "20").is_none());
+    }
+    #[test]
+    fn hosted_lime_typed_values_use_units_and_undo() {
+        let mut app = LimeShotApp::new_silent(crate::Settings::default(), None);
+        let channel = ChannelId(
+            app.exec(Command::AddChannel {
+                name: "Synth".into(),
+                instrument: Instrument::Synth(Default::default()),
+            })
+            .unwrap(),
+        );
+        let target = AutomationTarget::PluginParam {
+            plugin: limeshot_core::PluginTarget::Channel(channel),
+            id: limeshot_core::lime::param_id(8),
+        };
+        let old = target.current_value(app.project()).unwrap();
+        let value = parse_value(&app, target, "1500").unwrap();
+        assert!(value > 0.0 && value < 1.0);
+        assert_eq!(input_value(&app, target).unwrap().1, "Hz");
+        set_value(&mut app, target, value);
+        let (text, unit) = input_value(&app, target).unwrap();
+        assert_eq!(unit, "Hz");
+        assert!((text.parse::<f32>().unwrap() - 1500.0).abs() < 0.01);
+        assert!(parse_value(&app, target, "20001").is_none());
+        app.doc.undo();
+        assert_eq!(target.current_value(app.project()), Some(old));
+        let bypass = AutomationTarget::PluginParam {
+            plugin: limeshot_core::PluginTarget::Channel(channel),
+            id: b"bypass"
+                .iter()
+                .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(*b)))
+                & !(1 << 31),
+        };
+        assert_eq!(parse_value(&app, bypass, "On"), Some(1.0));
+        set_value(&mut app, bypass, 1.0);
+        assert_eq!(input_value(&app, bypass), Some(("On".into(), "")));
     }
 }
