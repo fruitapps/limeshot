@@ -15,12 +15,14 @@ limeshot-project = { path = "../../crates/limeshot-project" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 parking_lot = "0.12"
+crossbeam-queue = "0.3"
 base64 = "0.22"
 hound = "3.5"
 rfd = "0.17"
 thiserror = "2"
 
 [dev-dependencies]
+nice-assert-no-alloc = "1.0"
 egui_kittest = { version = "0.37", features = ["wgpu", "snapshot"] }
 eframe = { version = "0.37", default-features = false, features = ["glow", "x11", "wayland"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

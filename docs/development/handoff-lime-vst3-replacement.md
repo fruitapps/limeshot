@@ -122,9 +122,9 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
    changes), `known-limitations.md`, `decisions.md` (new decision: built-ins replaced by Lime VST3s), README,
    `progress.md`, and the first-release docs.
 
-## Original loss checklist (current records: PLG-014…029)
+## Historical original loss checklist (current records: PLG-014…029)
 
-Add these to `features.json` as P0 (NOT_STARTED), link them from `next-steps.md`, and verify each against the code
+The following was the pre-parity plan. Records PLG-014…029 now exist; PLG-017…020, PLG-022 and PLG-024…029 are implemented. Follow current feature records and the review handoff for remaining validation, rather than re-adding completed work. The original instruction was to verify each against the code
 before writing it down:
 
 * **Lime Sampler VST:** sampler attack/decay/sustain envelope (it is a gate today); sample loop with loop

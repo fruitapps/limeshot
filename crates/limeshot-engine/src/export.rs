@@ -90,7 +90,7 @@ pub fn render_offline_with(
     let (start, length) = match settings.range {
         ExportRange::Song => (0, snapshot.song.length),
         ExportRange::Pattern => (0, snapshot.pattern.length),
-        ExportRange::Selection { from, to } => (from, to.saturating_sub(from)),
+        ExportRange::Selection { from, to } => (from, to.min(snapshot.song.length).saturating_sub(from)),
     };
     if length == 0 {
         return Err(ExportError::EmptySong);
@@ -132,7 +132,7 @@ pub fn render_offline_with(
     // music is done, before the transport wraps round (Pattern mode loops).
     loop {
         let left = r.frames_until(end) as usize;
-        if left == 0 {
+        if left == 0 || r.finished() {
             break;
         }
         let n = block.min(left);

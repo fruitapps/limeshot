@@ -1271,3 +1271,30 @@ GitHub Actions remains billing-blocked; pluginval unavailable; broader native/pl
 Future sessions must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR based on
 the latest unmerged continuation. Leave older checkouts intact; never merge automatically. Create another session
 only when the owner asks.
+
+
+### 2026-10-23 — PR #7 rewrite review and repository reconciliation
+
+Started a new `codex/pr7-rewrite-review` branch in a new managed worktree at PR #7 head `68259aa`. The owner
+explicitly requested direct updates to PR #7, overriding the usual new-draft-PR rule for this session. PRs #8/#9
+have merged into #7; main is updated only when the owner merges #7. No automatic merge.
+
+Fixed all five Codex findings: insert transport for tempo-synced effects, mixer sidechain index/key remapping,
+converted slot bypass, lock-free sampler sample handoff/control-thread retirement, and held-note loop/filter edits.
+Also fixed bounded selection export, per-drag hosted state serialization, preset preservation of bypass/key/fields,
+and shared native sample-size acceptance with conversion warnings. Current architecture, feature records,
+instructions, release gates, menus and README now describe twelve hosted bundles and restored parity. Ten app
+screenshots and all twelve native editor screenshots were refreshed and visually inspected. Historical records
+are labelled; source comments/counts and the PR description were reconciled.
+
+Validation: 383 root tests (137 UI), 16 native tests; formatting and strict all-target Clippy in both workspaces;
+290-feature/generated inventory and repository reference checks. All twelve rebuilt release/debug bundles pass
+actual-binary verification at three rates/four buffer sizes; release signatures verify and hashes are recorded.
+Real VST3 regression checks delay timing at 90/180 BPM and automated tempo, including re-enabling a converted slot;
+non-automated DSP parity still requires exact sample bits. Details: [review handoff](handoff-pr7-rewrite-review.md).
+Remote CI remains billing-blocked; current pluginval and broader native/platform runtime validation remain open.
+
+Future sessions resume the standing policy: NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR stacked on the latest unmerged continuation. Leave older checkouts intact, carry work through validation,
+docs, commit and push, never merge automatically, and create further sessions only when the owner asks. The PR #7
+exception is limited to this explicitly requested session.

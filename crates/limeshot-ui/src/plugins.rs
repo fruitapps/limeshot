@@ -1085,7 +1085,11 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                 *default,
             );
             app.plugins.parameter_rects.insert((target, *id), r.rect);
-            changes.push((*id, crate::widgets::user_changed(&r).then_some(v), r.clone()));
+            changes.push((
+                *id,
+                (crate::widgets::user_changed(&r) || r.drag_stopped()).then_some(v),
+                r.clone(),
+            ));
             let automation = limeshot_core::AutomationTarget::PluginParam {
                 plugin: target,
                 id: *id,
@@ -1113,6 +1117,12 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     }
     for (id, value, response) in changes {
         let command = value.and_then(|value| {
+            // Audition drags directly; serialize embedded state only once at release.
+            if response.dragged() {
+                app.plugins.set_param(target, id, value);
+                app.plugins.last_tweaked = Some((target, id));
+                return None;
+            }
             if let Some(state) = app
                 .project()
                 .plugin(target)

@@ -424,6 +424,7 @@ impl Voice {
                     lo,
                     hi,
                     reverse,
+                    looping: current_loop,
                     ..
                 },
                 VoiceInstrument::Sampler {
@@ -436,6 +437,8 @@ impl Voice {
                     decay,
                     sustain,
                     release,
+                    looping,
+                    filter,
                     ..
                 },
             ) => {
@@ -444,6 +447,19 @@ impl Voice {
                 *lo = f64::from(start.min(*end)) * sample.frames() as f64;
                 *hi = f64::from(start.max(*end)) * sample.frames() as f64;
                 *reverse = *rev;
+                *current_loop = looping.and_then(|(a, b)| {
+                    let a = (f64::from(a) * sample.frames() as f64).max(*lo);
+                    let b = (f64::from(b) * sample.frames() as f64).min(*hi);
+                    (b - a >= 4.0).then_some((a, b))
+                });
+                if let Some((cutoff, resonance)) = filter {
+                    let filters = self.filter.get_or_insert_with(|| [Svf::default(); 2]);
+                    for f in filters {
+                        f.set(*cutoff, *resonance, sample_rate);
+                    }
+                } else {
+                    self.filter = None;
+                }
                 self.gain = velocity * gain;
                 self.env.set_adsr(Adsr {
                     attack: *attack,

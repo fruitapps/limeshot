@@ -1,11 +1,10 @@
 # Test coverage audit — 2026-10-22
 
-**2026-10-23 update:** the audit below is historical. Replacement tests now use real VST3s for the MVP/demo and
-bit-identical conversion comparison; engine scheduling/DSP tests use test-only processors through the real plugin
-rack. They do not establish production Gate/Drive/Chorus, sidechain keys or audio-clip playback. Gap regressions
-explicitly assert silent hosted clips, ignored note pan and inactive legacy EQ; passing those tests is not feature
-verification. All 134 UI tests remain. Current evidence is in
-[lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+**2026-10-23 update:** the audit below is historical. Current real-VST3 integration covers hosted audio clips,
+note pan, exact track EQ, Gate/Drive/Chorus, sidechain keys, reduction and voice statistics. Engine scheduling/DSP
+tests use test-only processors through the real plugin rack. The 137 headless UI tests remain; they do not establish
+live native/platform behavior. PR #7 review adds transport, sidechain remapping, bypass, sample-retirement and held-note
+regressions. Current evidence: [review handoff](handoff-pr7-rewrite-review.md).
 
 The existing tests are a useful regression suite for the implemented composition workflow, but
 they are **not comprehensive enough to establish total application functionality**. Passing the

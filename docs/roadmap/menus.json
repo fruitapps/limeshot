@@ -5129,7 +5129,7 @@
       "limeshot": "Toolbar › tempo field",
       "status": "DIFFERENT",
       "feature": "TR-002",
-      "notes": "Drag or type, as in FL. Right-click: Tempo tapper and BPM presets 80–180 (LimeShot). FL's menu also has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…); LimeShot has no tempo automation (AUT-008)."
+      "notes": "Drag or type; right-click offers Tempo tapper, BPM presets and Create automation clip (AUT-008, MENU-731). Edit events and controller linking remain unavailable."
     },
     {
       "id": "MENU-295",

@@ -122,7 +122,7 @@ impl LimePlugin {
         }
         params.insert("bypass".into(), json!({ "bool": bypass }));
         let mut fields = Map::new();
-        if let Some(s) = sample {
+        if let Some(s) = sample.filter(|s| embedded_audio_supported(s)) {
             let pcm: Vec<u8> = s.stereo.iter().flat_map(|f| f.to_le_bytes()).collect();
             let embedded = json!({ "name": s.name, "sample_rate": s.sample_rate, "pcm": base64_encode(&pcm) });
             fields.insert("sample-v1".into(), Value::String(embedded.to_string()));
@@ -132,6 +132,20 @@ impl LimePlugin {
         p.state = PluginState::new(host_state(component.as_bytes()));
         p
     }
+}
+
+/// Shared with the native sampler's state reader to prevent successful but silent conversion.
+pub const MAX_EMBEDDED_FRAMES: usize = 4_000_000;
+
+pub fn embedded_audio_supported(audio: &EmbeddedAudio) -> bool {
+    let pcm_text = audio.stereo.len().saturating_mul(4).div_ceil(3).saturating_mul(4);
+    (4..=2 * MAX_EMBEDDED_FRAMES).contains(&audio.stereo.len())
+        && audio.stereo.len().is_multiple_of(2)
+        && (8_000..=384_000).contains(&audio.sample_rate)
+        && pcm_text
+            .saturating_add(audio.name.len().saturating_mul(6))
+            .saturating_add(65_536)
+            < crate::plugin::MAX_STATE_BYTES
 }
 
 /// The plugin host's state container (`limeshot_plugins::Vst3Instance::state`): "LSV3", then the
@@ -404,7 +418,13 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
             Instrument::Synth(p) => Some(LimePlugin::SYNTH.with_values(&synth_values(p), false, None)),
             Instrument::Sampler(p) => {
                 let sample = p.sample.as_ref().and_then(|s| {
-                    let a = audio(&s.path);
+                    let a = audio(&s.path).filter(|a| {
+                        let supported = embedded_audio_supported(a);
+                        if !supported {
+                            warnings.push(format!("{}: sample exceeds Lime Sampler state limits (4 million frames, 8–384 kHz); source path retained", c.name));
+                        }
+                        supported
+                    });
                     if a.is_none() {
                         warnings.push(format!("{}: the sample {} could not be loaded", c.name, s.path));
                     }
@@ -428,7 +448,11 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
             {
                 let mut plugin = plugin.clone();
                 if let Some(p) = sampler_params(&c.instrument) {
-                    let sample = p.sample.as_ref().and_then(|s| audio(&s.path));
+                    let sample = p
+                        .sample
+                        .as_ref()
+                        .and_then(|s| audio(&s.path))
+                        .filter(embedded_audio_supported);
                     if sample.is_none() {
                         warnings.push(format!("{}: the sample could not be loaded", c.name));
                     }
@@ -463,7 +487,7 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
             if slot.kind == EffectKind::Compressor && values.len() > COMPRESSOR_SIDECHAIN {
                 values.truncate(COMPRESSOR_SIDECHAIN);
             }
-            let mut plugin = lime.with_values(&values, !slot.enabled, None);
+            let mut plugin = lime.with_values(&values, false, None);
             if slot.kind == EffectKind::Compressor {
                 let source = slot
                     .params
@@ -625,6 +649,22 @@ pub fn edited_param_state(plugin: &PluginRef, id: u32, normalized: f64) -> Optio
     Some(PluginState::new(host_state(state.to_string().as_bytes())))
 }
 
+/// Apply a legacy effect preset's plain controls while retaining bypass, key and opaque fields.
+pub fn edited_values_state(plugin: &PluginRef, values: &[f32]) -> Option<PluginState> {
+    let lime = LimePlugin::of(plugin)?;
+    let mut state: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
+    let params = state.get_mut("params")?.as_object_mut()?;
+    for (index, (value, spec)) in values.iter().zip(control_specs(lime.0)).enumerate() {
+        let value = if value.is_finite() {
+            value.clamp(spec.min, spec.max)
+        } else {
+            spec.default
+        };
+        params.insert(format!("value_{}", index + 1), json!({"f32":value}));
+    }
+    Some(PluginState::new(host_state(state.to_string().as_bytes())))
+}
+
 /// Appended EQ controls preserve every legal legacy track-EQ response without changing
 /// existing insert parameter IDs, ranges or defaults.
 pub const EQ_CONTROLS: &[ParamSpec] = &[
@@ -770,7 +810,7 @@ mod tests {
             Some(EmbeddedAudio {
                 name: path.into(),
                 sample_rate: 48_000,
-                stereo: vec![0.5, -0.5],
+                stereo: vec![0.5, -0.5, 0.0, 0.0],
             })
         };
         assert!(convert_project(&mut project, &audio).is_empty());
@@ -791,7 +831,7 @@ mod tests {
         let audio = EmbeddedAudio {
             name: "hit.wav".into(),
             sample_rate: 48_000,
-            stereo: vec![0.5, -0.5],
+            stereo: vec![0.5, -0.5, 0.0, 0.0],
         };
         let plugin =
             LimePlugin::SAMPLER.with_values(&sampler_values(&SamplerParams::default(), 60), false, Some(&audio));
@@ -894,7 +934,7 @@ mod tests {
         let audio = EmbeddedAudio {
             name: "a.wav".into(),
             sample_rate: 44_100,
-            stereo: vec![0.5, -0.5],
+            stereo: vec![0.5, -0.5, 0.0, 0.0],
         };
         let r = LimePlugin::SAMPLER.with_values(&[1.0, 2.0], true, Some(&audio));
         let v: Value = serde_json::from_slice(component_state(&r.state).unwrap()).unwrap();
@@ -903,7 +943,10 @@ mod tests {
         assert_eq!(v["params"]["bypass"]["bool"], true);
         let sample: Value = serde_json::from_str(v["fields"]["sample-v1"].as_str().unwrap()).unwrap();
         assert_eq!(sample["sample_rate"], 44_100);
-        assert_eq!(sample["pcm"], base64_encode(&[0, 0, 0, 63, 0, 0, 0, 191]));
+        assert_eq!(
+            sample["pcm"],
+            base64_encode(&[0, 0, 0, 63, 0, 0, 0, 191, 0, 0, 0, 0, 0, 0, 0, 0])
+        );
     }
 
     #[test]
@@ -970,7 +1013,8 @@ mod tests {
         let fx = &project.mixer.tracks[0].effects;
         assert_eq!(fx[0].kind, EffectKind::Plugin);
         let v: Value = serde_json::from_slice(component_state(&fx[0].plugin.as_ref().unwrap().state).unwrap()).unwrap();
-        assert_eq!(v["params"]["bypass"]["bool"], true);
+        assert_eq!(v["params"]["bypass"]["bool"], false);
+        assert!(!fx[0].enabled);
         assert!(v["params"].get("value_6").is_none());
         assert_eq!(fx[1].kind, EffectKind::Plugin);
         assert!(fx[1].enabled);

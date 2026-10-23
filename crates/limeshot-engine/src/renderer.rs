@@ -451,7 +451,7 @@ impl Renderer {
     pub fn render(&mut self, out: &mut [f32]) {
         let frames = (out.len() / 2).min(MAX_BLOCK);
         let block_start = self.now;
-        let transport = self.transport();
+        let mut transport = self.transport();
         let tracks = self.snapshot.mixer.len().clamp(1, self.buses.len());
         for b in &mut self.buses[..tracks] {
             b[..2 * frames].fill(0.0);
@@ -464,6 +464,9 @@ impl Renderer {
         let mut done = 0;
         while done < frames {
             self.apply_controls(done as u32);
+            if done == 0 {
+                transport = self.transport();
+            }
             let max = if automate {
                 (frames - done).min(AUTOMATION_INTERVAL)
             } else {
@@ -515,6 +518,7 @@ impl Renderer {
             self.pdc.voices(t, &mut self.buses[t][..2 * frames]);
         }
         self.render_instruments(block_start, frames, tracks, &transport);
+        self.fx.set_transport(&transport);
         self.mix(tracks, frames, out);
     }
 

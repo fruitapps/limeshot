@@ -28,8 +28,11 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
 * Factory/user `.limepreset` files remain supported. Host unit-value menus cover known Lime controls;
   arbitrary third-party controls retain the generic automation menu. Compressor key-track selection is discrete,
   and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
+* Embedded sampler state accepts at most four million stereo frames at 8–384 kHz. Conversion warns and retains
+  source-path metadata when audio cannot fit; reassign a supported sample to restore playback.
 * Embedded sampler audio is cached for host waveforms/auditions without writing temporary sample files.
   Native editor changes and platform/native GUI interaction still need broader hands-on validation.
+* Plugins receive tempo context at block boundaries; a tempo change inside a block reaches synced effects in the next block.
 * Automation runs in Song mode. Converted effect automation is re-expressed in plugin ranges; smoothing and curve
   differences mean automated output is close rather than bit-identical. Non-automated reference equivalence is exact.
 * Sampler supports ADSR, loop points and a low-pass filter. No delay/hold stages, extra modulation envelopes or time
@@ -42,8 +45,8 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
 
 ## Editing
 * Clipboard is app-internal (not the system clipboard). The separate value clipboard supports channel/mixer volume/pan
-  and built-in effect parameters; instrument and hosted-plugin host value menus, Edit events, Init song and controller
-  linking remain unavailable. Cross-control paste uses LimeShot's automation mappings. Quantize… has start and duration strength only (no swing templates). Swing is
+  and known hosted Lime instrument/effect parameters. Arbitrary third-party controls retain generic automation menus;
+  Edit events, Init song and controller linking remain unavailable. Cross-control paste uses LimeShot's automation mappings. Quantize… has start and duration strength only (no swing templates). Swing is
   global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
   menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.

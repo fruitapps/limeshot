@@ -564,3 +564,81 @@ fn timed_auditions_release_on_the_audio_clock_while_stopped() {
         );
     }
 }
+
+#[test]
+fn insert_effects_receive_current_and_automated_transport() {
+    struct TransportProbe {
+        current: Transport,
+        seen: Arc<Mutex<Vec<Transport>>>,
+    }
+    impl limeshot_dsp::effects::Effect for TransportProbe {
+        fn set_params(&mut self, _: &[f32]) {}
+        fn reset(&mut self) {}
+        fn set_transport(&mut self, t: &Transport) {
+            self.current = *t;
+        }
+        fn process(&mut self, _: &mut [f32]) {
+            self.seen.lock().unwrap().push(self.current);
+        }
+    }
+    for block in [1, 64, 333, 1024] {
+        let (mut doc, _) = project();
+        doc.execute(Command::SetTempo(Tempo::from_bpm(90.0))).unwrap();
+        let effect = doc
+            .execute(Command::AddPluginEffect {
+                track: 1,
+                plugin: PluginRef::vst3("/delay.vst3", "00", "Delay"),
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        let pat = doc.project().patterns[0].id;
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let mut renderer = Renderer::new(SR, Arc::new(compile(doc.project(), pat, &NoSamples)));
+        renderer.adopt_effect(
+            effect,
+            Box::new(TransportProbe {
+                current: Transport::default(),
+                seen: seen.clone(),
+            }),
+        );
+        renderer.rearrange();
+        renderer.set_mode(PlayMode::Song);
+        renderer.play();
+        let mut out = vec![0.0; block * 2];
+        renderer.render(&mut out);
+        assert_eq!(seen.lock().unwrap()[0].tempo, 90.0);
+        doc.execute(Command::AddAutomationClip {
+            target: AutomationTarget::Tempo,
+            track: 3,
+            start: 0,
+            length: 3840,
+            value: Some(1.0),
+            name: None,
+        })
+        .unwrap();
+        let automation = doc.project().automations.last().unwrap().id;
+        doc.execute(Command::SetAutomationPoints {
+            automation,
+            points: vec![AutomationPoint {
+                tick: 0,
+                value: 1.0,
+                tension: 0.0,
+                mode: PointMode::Hold,
+            }],
+        })
+        .unwrap();
+        renderer.set_snapshot(Arc::new(compile(doc.project(), pat, &NoSamples)));
+        renderer.render(&mut out);
+        let transport = *seen.lock().unwrap().last().unwrap();
+        assert_eq!(
+            transport.tempo, 180.0,
+            "block {block}: automation reaches the next effect block"
+        );
+        assert!(transport.playing);
+        assert!(transport.ppq_pos >= 0.0 && transport.ppq_pos.is_finite());
+        renderer.stop();
+        renderer.render(&mut out);
+        assert!(!seen.lock().unwrap().last().unwrap().playing);
+    }
+}

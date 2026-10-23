@@ -1622,6 +1622,7 @@ name = "lime-native"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "crossbeam-queue",
  "eframe",
  "egui",
  "egui_kittest",
@@ -1631,6 +1632,7 @@ dependencies = [
  "limeshot-dsp",
  "limeshot-plugins",
  "limeshot-project",
+ "nice-assert-no-alloc",
  "nice-plug",
  "nice-plug-egui",
  "parking_lot",

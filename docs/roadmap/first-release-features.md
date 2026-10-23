@@ -254,7 +254,7 @@ layout persistence, native Windows/Linux plugin views and full FL compatibility 
 | AUT-010 | Automation clip channels in the Channel Rack | NOT_STARTED | Later | Outside v0.1; see the inventory for dependencies and acceptance criteria. |
 | AUT-011 | Init song with this position | NOT_STARTED | Later | Outside v0.1; see the inventory for dependencies and acceptance criteria. |
 | AUT-012 | Automation point modes | IMPLEMENTED | Included | Per-segment curve types. |
-| AUT-013 | Automated controls follow their automation | VERIFIED | Bounded | Supported built-in controls follow Song playback; plugin editors reflect their own values. |
+| AUT-013 | Automated controls follow their automation | VERIFIED | Bounded | Channel/mixer controls follow Song playback; hosted plugin editors reflect their own values. |
 
 ## Recording
 
@@ -297,7 +297,7 @@ layout persistence, native Windows/Linux plugin views and full FL compatibility 
 | PLG-003 | Audio Unit hosting (macOS) | NOT_STARTED | Later | Outside v0.1; see the inventory for dependencies and acceptance criteria. |
 | PLG-004 | Plugin scanning | IMPLEMENTED | Included | Plugin scanning. |
 | PLG-005 | Plugin state persistence | VERIFIED | Included | Plugin state persistence. |
-| PLG-006 | Plugin editor windows | IMPLEMENTED | Bounded | Live-verified macOS native embedding; Windows/Linux use the generic parameter editor. |
+| PLG-006 | Plugin editor windows | IMPLEMENTED | Bounded | Implemented macOS native embedding needs broader live checks; Windows/Linux use the generic parameter editor. |
 | PLG-007 | Plugin parameter automation | VERIFIED | Bounded | VST3 parameter automation; no claim of automation for unimplemented plugin formats. |
 | PLG-008 | Plugin preset management | IMPLEMENTED | Bounded | Factory programs and .vstpreset files; no .fst compatibility or preset-load undo promise. |
 | PLG-009 | Plugin latency reporting | VERIFIED | Included | Plugin latency reporting. |
@@ -399,6 +399,7 @@ layout persistence, native Windows/Linux plugin views and full FL compatibility 
 
 ## Scope changes after this baseline
 
-The standalone Lime Native VST3 suite is not in these 272 main-branch records and is not required for the DAW
-release. Off-main work must be reviewed and merged before it changes this baseline. New requirements should get
+The 272-record baseline predates the hosted rewrite. Building, packaging and validating the twelve bundled Lime
+VST3s is now required for DAW v0.1 playback; independent standalone plugin distribution is a separate deliverable.
+Off-main work must be reviewed and merged before it changes the historical baseline. New requirements should get
 inventory records and an explicit scope/estimate decision; do not silently grow v0.1 to include every later item.

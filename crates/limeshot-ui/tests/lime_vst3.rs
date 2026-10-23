@@ -641,3 +641,122 @@ fn hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices() {
         assert_eq!(renderer.active_voices(), 0);
     }
 }
+
+#[test]
+fn converted_delay_uses_project_and_automated_tempo_after_enabling() {
+    let dir = tempfile::tempdir().unwrap();
+    let wav = dir.path().join("impulse.wav");
+    limeshot_dsp::write_wav(&wav, SR, &[1.0, 1.0, 0.0, 0.0], limeshot_dsp::BitDepth::Float32).unwrap();
+    for (bpm, automated, expected_frame) in [(90.0, false, 32000), (180.0, false, 16000), (90.0, true, 16000)] {
+        let mut doc = Document::default();
+        doc.execute(Command::SetTempo(Tempo::from_bpm(bpm))).unwrap();
+        let pat = doc.project().patterns[0].id;
+        let channel = ChannelId(
+            doc.execute(Command::AddChannel {
+                name: "Impulse".into(),
+                instrument: Instrument::Sampler(SamplerParams {
+                    sample: Some(SampleRef {
+                        path: wav.to_str().unwrap().into(),
+                    }),
+                    ..Default::default()
+                }),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        doc.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel,
+                key: 60,
+                start: 0,
+                length: 960,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+        doc.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 0,
+            length: Some(3840),
+        })
+        .unwrap();
+        let effect = doc
+            .execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Delay,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        for (index, value) in [(1, 0.0), (2, 0.0), (4, 1.0), (5, 5.0)] {
+            doc.execute(Command::SetEffectParam {
+                track: 1,
+                effect,
+                index,
+                value,
+            })
+            .unwrap();
+        }
+        doc.execute(Command::SetEffectEnabled {
+            track: 1,
+            effect,
+            enabled: false,
+        })
+        .unwrap();
+        if automated {
+            doc.execute(Command::AddAutomationClip {
+                target: AutomationTarget::Tempo,
+                track: 3,
+                start: 0,
+                length: 3840,
+                value: None,
+                name: None,
+            })
+            .unwrap();
+            let automation = doc.project().automations.last().unwrap().id;
+            doc.execute(Command::SetAutomationPoints {
+                automation,
+                points: vec![AutomationPoint {
+                    tick: 0,
+                    value: 1.0,
+                    tension: 0.0,
+                    mode: PointMode::Hold,
+                }],
+            })
+            .unwrap();
+        }
+        let mut project = doc.project().clone();
+        assert!(lime::convert_project(&mut project, &limeshot_ui::lime::embedded_audio).is_empty());
+        let mut doc = Document::new(project);
+        doc.execute(Command::SetEffectEnabled {
+            track: 1,
+            effect,
+            enabled: true,
+        })
+        .unwrap();
+        for block in [1, 64, 333, 1024] {
+            let host = PluginHost::new(None);
+            let (processors, _keep) = host.offline(doc.project(), SR).unwrap();
+            let snapshot = Arc::new(compile(doc.project(), pat, &limeshot_sequencer::NoSamples));
+            let (audio, _) = render_offline_with(
+                snapshot,
+                &RenderSettings {
+                    sample_rate: SR,
+                    range: limeshot_engine::ExportRange::Song,
+                    max_tail_secs: 0.0,
+                    block,
+                },
+                processors,
+            )
+            .unwrap();
+            let first = audio.as_chunks::<2>().0.iter().position(|f| f[0].abs() > 1e-6).unwrap();
+            assert!(
+                first.abs_diff(expected_frame) <= 1,
+                "tempo {bpm}, automated {automated}, block {block}: echo at {first}, expected {expected_frame}"
+            );
+        }
+    }
+}

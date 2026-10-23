@@ -127,8 +127,9 @@ pub fn apply(app: &mut LimeShotApp, target: Target, content: Content) {
                     app.toast_error("That preset does not fit here".to_string());
                     return;
                 }
-                let state = lime.with_values(&params, false, None).state;
-                app.exec(Command::SetPluginState { plugin: target, state });
+                if let Some(state) = limeshot_core::lime::edited_values_state(plugin, &params) {
+                    app.exec(Command::SetPluginState { plugin: target, state });
+                }
             } else {
                 app.exec(Command::SetEffectParams { track, effect, params });
             }

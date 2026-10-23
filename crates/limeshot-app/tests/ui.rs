@@ -6151,3 +6151,33 @@ fn hosted_parameter_menu_types_native_units_and_undoes() {
     let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
     assert_eq!(params.attack_ms, 0.0);
 }
+
+#[test]
+fn hosted_sampler_slider_drag_commits_state_only_on_release() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    let target = PluginTarget::Channel(channel);
+    let id = lime::param_id(8);
+    h.state_mut().plugins.filter_parameters(target, "Attack");
+    for _ in 0..3 {
+        h.step();
+    }
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    let before = h.state().project().plugin(target).unwrap().state.clone();
+    let revision = h.state().doc.revision();
+    let from = egui::pos2(rect.left() + 5.0, rect.center().y);
+    let to = egui::pos2(rect.right() - 45.0, rect.center().y);
+    press(&mut h, from, PointerButton::Primary, true);
+    for i in 1..=8 {
+        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
+        h.step();
+        assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+        assert_eq!(h.state().doc.revision(), revision);
+    }
+    press(&mut h, to, PointerButton::Primary, false);
+    assert_ne!(h.state().project().plugin(target).unwrap().state, before);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+}

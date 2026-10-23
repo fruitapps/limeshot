@@ -62,9 +62,9 @@ limits stated here are intentional release boundaries.
 | Piano Roll | Draw/paint/delete/mute/slice/select/zoom/playback tools; note move/resize, velocity, snapping, audition, playhead, clipboard, duplicate, transpose/nudge, ghost notes, quantize, glue/slice, stamps, scale highlighting and the existing simplified note-tool dialogs. MIDI file import/export and note recording are included. |
 | Playlist | Linked pattern clips and make-unique; audio and automation clips; move/trim/offset/slip/slice/duplicate/mute and clipboard; picker, snapping/zoom, markers/time selection/looping, track organization/mute locks and audio fade handles. Existing pattern merging is included. |
 | Instruments and samples | LimeSynth oscillators, ADSR, low-pass filter, envelope/LFO modulation; sampler trim, pitch/root key, reverse, release, loop points and low-pass filter; polyphony/voice stealing; bundled sounds and factory/user presets. WAV, MP3, FLAC, Ogg Vorbis and AIFF sample input. |
-| Mixer | Master/inserts, channel routing, track management, faders/pan, mute/solo/meters/clipping, insert chains, built-in track EQ, insert-to-insert routing, pre/post-fader sends, compressor sidechain and bounded plugin delay compensation. Utility provides width/polarity processing. |
-| Built-in effects | Lime EQ, Filter, Delay with tempo sync, Room reverb, Comp, Limiter, Gate, Drive, Chorus with flanger/phaser modes, and Utility; effect bypass, parameter editing and factory/user presets. |
-| Automation | Song-mode clips for supported channel/mixer controls, built-in effect parameters and VST3 parameters; point editing, tension and the implemented curve/hold/stair/pulse/wave modes; supported controls visibly follow playback. |
+| Mixer | Master/inserts, channel routing, track management, faders/pan, mute/solo/meters/clipping, insert chains, dedicated hosted track EQ, insert-to-insert routing, pre/post-fader sends, compressor sidechain and bounded plugin delay compensation. Utility provides width/polarity processing. |
+| Lime Native effects | Lime EQ, Filter, Delay with tempo sync, Room reverb, Comp, Limiter, Gate, Drive, Chorus with flanger/phaser modes, and Utility; effect bypass, parameter editing and factory/user presets. |
+| Automation | Song-mode clips for supported channel/mixer controls, converted legacy effect targets and hosted Lime parameters and VST3 parameters; point editing, tension and the implemented curve/hold/stair/pulse/wave modes; supported controls visibly follow playback. |
 | Playing and recording | Realtime output, Pattern/Song transport, tempo/time signature, metronome, looping, position/load/voice display and panic; typing keyboard and one MIDI input; MIDI notes recorded into patterns; audio input selection and WAV takes placed in the Playlist. Add basic monitoring, latency alignment and count-in before release. |
 | VST3 plugins | Instruments and inserts, scanner/database, saved state, parameter automation, factory/`.vstpreset` presets and latency compensation. Verified native editors on macOS; a documented generic parameter editor on Windows/Linux. The Unix process bridge remains experimental unless its callback behavior is repaired and validated. |
 | Browser and workspace | Bundled/user folders, search, sample preview/load/drag, current-project tree; toolbar, editor windows, Channel Settings, hints/help, scaling, detach/maximize/arrange/custom layouts, core shortcuts and shortcut remapping. |
@@ -151,11 +151,11 @@ estimate**. Re-estimate after beta; advanced DSP and platform hosting have high 
 | Production depth | Tempo map/automation, larger automation editing, track groups, consolidation, fuller recording/take management, controller mapping and additional export formats. | 6–10 engineering weeks |
 | Native plugin coverage | Native editors on Windows/Linux; repair/extend bridge transport and editor support; CLAP, then macOS AU hosting. Platform/format tasks can ship separately. | 8–14 engineering weeks |
 | Advanced composition and audio | Time stretching/crossfades, richer sampler/synth features, per-note expression, multi-arrangements, chord/Riff tools, analysers and broader accessibility. | 12–24+ engineering weeks |
-| Separate Lime Native plugins | Package shared instruments/effects as standalone plugins; independent host validation, installers/signing and compatibility releases. | 3–6 engineering weeks from this main baseline, subject to reviewing off-main work |
+| Independent Lime Native distribution | Standalone host compatibility, independent installers/signing and compatibility releases; DAW bundle building, packaging and validation are required before v0.1. | 3–6 engineering weeks from this main baseline, subject to reviewing off-main work |
 
-The standalone Lime Native suite is not present at the pinned main commit, even if work exists on another branch
-or in the current checkout. It is a separate deliverable, not a prerequisite for the DAW release. Review and
-re-estimate it after merge; do not assume unpublished work is either absent progress or validated release content.
+The pinned main baseline predates the hosted rewrite. DAW v0.1 must build, package and validate all twelve Lime
+VST3 bundles because its active instruments/effects require them. Independent standalone distribution remains a
+separate later deliverable. Review off-main work before merging and updating release estimates.
 
 Cloud services, stem separation, video export, surround and full FL Studio parity have no date commitment.
 The remaining inventory is a backlog, not a promise to implement all 272 records before release.

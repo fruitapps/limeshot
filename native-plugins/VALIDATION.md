@@ -82,7 +82,7 @@ builds no longer match; rebuild with `python build.py` and re-run the verifier/p
 ## 2026-10-23 — hosted P0 parity session
 
 The twelve current macOS arm64 release bundles and twelve allocation-checked debug bundles were rebuilt with
-`python3 build.py` / `python3 build.py --debug`. Actual-binary `verify` passes all twelve at 44.1/48/96 kHz and
+`python3 build.py` / `python3 build.py --debug` from `native-plugins/`. Actual-binary `verify` passes all twelve at 44.1/48/96 kHz and
 buffers 1/64/333/1024, covering loading/class names, editor creation, audio/MIDI offsets, state and automation.
 All twelve release signatures pass `codesign --verify --deep --strict`. The earlier nine-bundle/pluginval table
 above is historical: pluginval is unavailable on this host and was not run for these binaries.
@@ -113,3 +113,37 @@ Current release executable hashes (the previous table identifies older binaries)
 | Lime Sampler | `fa667273c35e2a962013d4dcf70e20f507a567e96f8fe22e4e701ff6a7afa610` |
 | Lime Utility | `5459e0ae7242f02a6bf81b0f1d935854679b80a6a70e185b3c6fcd66d36fee57` |
 | LimeSynth | `8fc8ab9a96025712be6a94bbc951e8487af74ec16badcf7ae9ed5d71c7368586` |
+
+
+## 2026-10-23 — PR #7 review fixes
+
+Run `python3 build.py --debug` and `python3 build.py` from `native-plugins/`. All twelve rebuilt debug/release
+bundles pass the actual-binary verifier at 44.1/48/96 kHz and buffers 1/64/333/1024. Debug processing retains
+allocation assertions. All twelve release signatures pass `codesign --verify --deep --strict`.
+
+Both workspaces pass formatting and strict all-target Clippy. Root: 383 tests including 137 UI tests; native: 16.
+New native regressions prove lock-free sample replacement with control-thread destruction, including contention
+and queue coalescing, and held-note loop/filter updates. Host regressions cover synced Delay at project/automated
+tempo, slot re-enabling, sidechain remapping, export termination and state/preset edits. Exact DSP/reference sample
+bits remain required. Refreshed app and twelve native editor screenshots were visually inspected.
+
+GitHub Actions remains billing-blocked; pluginval is unavailable. Broader native/platform runtime checks remain
+open. Current evidence and the owner-authorized PR #7 continuation are in
+`docs/development/handoff-pr7-rewrite-review.md`. Earlier tables identify historical binaries.
+
+Review-session release executable hashes:
+
+| Plugin | SHA-256 |
+| --- | --- |
+| Lime Chorus | `5588006fc093f3b3bc71fc967c83dda91247981eb957d90a0647dce788e8e0fa` |
+| Lime Comp | `55936c4bbcb8d36fe11dc13cfe03e35056cd58cd3cda69d011d5375763737d89` |
+| Lime Delay | `538aafc19f0ff521a78e07a91bcc1320ddd03b1f21f1f09afb2a80fb1cfe63c6` |
+| Lime Drive | `36ae7b0a0587ac8091f548df4d4974b2d51dcff98d75ce07578d1b1793605794` |
+| Lime EQ | `15e59df7e7ce0190173db9e12fcc6b758ca2f9020475475f813390af57543558` |
+| Lime Filter | `2b69b2518ca7a3aa5bc25f24030aec661e118de6aae5115a7aa36ad81e3dd9f3` |
+| Lime Gate | `55c08366f6dc53c92b05614574dbc76059ce6f93a0f12434aa61072654f36b13` |
+| Lime Limiter | `3b12a5d6ca2e2409adb2777d8ddc687590f1e22a7aac52515e5a82f83d86c2c2` |
+| Lime Room | `04d6f40c8f46418c7e251ccc0c95cfd3a62490dfffe8b21b2fbb9d5c2e5b76b9` |
+| Lime Sampler | `6f6d67a7931f5a50129dd9ba7d041d9ad961ad1b838e96efb30d45853dd054d2` |
+| Lime Utility | `b7a8bd4ece07196dee9a1221340fef277ea2fa1acad5368ff95b159d5ffd62cc` |
+| LimeSynth | `1a560bbfc1d1d0e2a3b108b3d9ee361b4018a5ede9d19dd024b7ffb1498db799` |

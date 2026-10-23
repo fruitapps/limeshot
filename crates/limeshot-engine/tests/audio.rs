@@ -1643,6 +1643,39 @@ fn exporting_a_time_selection_renders_that_span() {
     assert!(empty.is_err(), "an empty selection is an error");
 }
 
+#[test]
+fn exporting_a_selection_past_the_song_end_is_bounded() {
+    let (_, snap) = audio_clip_fixture();
+    for block in [1, 64, 333, 1024] {
+        let (_, full) = render(snap.clone(), ExportRange::Song, block, SR);
+        let (_, selection) = render(
+            snap.clone(),
+            ExportRange::Selection {
+                from: 0,
+                to: snap.song.length + 3840,
+            },
+            block,
+            SR,
+        );
+        assert_eq!(selection.music_frames, full.music_frames);
+        assert!(
+            render_offline(
+                snap.clone(),
+                &RenderSettings {
+                    sample_rate: SR,
+                    range: ExportRange::Selection {
+                        from: snap.song.length + 1,
+                        to: snap.song.length + 3840
+                    },
+                    max_tail_secs: 0.0,
+                    block
+                }
+            )
+            .is_err()
+        );
+    }
+}
+
 /// INS-014: the sampler's volume envelope: an attack fades the start in, a decay falls to the
 /// sustain level.
 #[test]
