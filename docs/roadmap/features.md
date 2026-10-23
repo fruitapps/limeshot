@@ -1,22 +1,22 @@
 # LimeShot feature inventory
 
 > Generated from [`features.json`](features.json) by `python3 scripts/features.py generate`. Do not edit by hand.
-> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-23.
+> Reference: FL Studio 2026 (26.1.1.5313). Updated 2026-10-23 (Piano Roll controls).
 
 **IMPLEMENTED** = the code exists and meets its implementation criteria. **VERIFIED** = it also passed the listed
 automated tests or recorded manual verification. Everything else is not done.
 
 ## Summary
 
-- Features tracked: **290**
+- Features tracked: **291**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 79, RESEARCHED 1, IN_PROGRESS 13, IMPLEMENTED 49, VERIFIED 144, DEFERRED 4
+- By status: NOT_STARTED 78, RESEARCHED 1, IN_PROGRESS 14, IMPLEMENTED 50, VERIFIED 144, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
 | Application | 33 | 17 | 3 | 3 | 10 |
 | Channel Rack | 22 | 19 | 0 | 0 | 3 |
-| Piano Roll | 29 | 19 | 3 | 0 | 7 |
+| Piano Roll | 30 | 19 | 4 | 1 | 6 |
 | Playlist | 29 | 19 | 2 | 3 | 5 |
 | Mixer | 16 | 10 | 2 | 1 | 3 |
 | Instruments | 14 | 9 | 1 | 1 | 3 |
@@ -115,7 +115,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-013 | Scale highlighting / snap to scale | P2 |  | IMPLEMENTED | ⏵ menu › View › Scale highlighting: pick a key and a scale (major, minor, harmonic minor, pentatonics, blues, dorian); rows off the scale are dark and the root's rows tinted. A view setting, not saved.<br>*Session 16. Not: snap to scale while drawing, saving the scale in the project.* | `limeshot-core note_tools::tests::stamps_and_scales`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_stamp_places_chords_and_scale_highlighting` |
 | PR-014 | Quantize | P1 |  | VERIFIED | Quantize… (Alt+Q or the Quantize button) opens FL's quantizer: start-time and duration strength to the snap, previewed live on the selection (or the channel). The ⏵ menu has Quick quantize (starts and lengths) and Quick quantize start times (Shift+Q).<br>*Session 16: the dialog replaces the old immediate Alt+Q. No swing templates or sensitivity.* | `limeshot-core document::tests::quantize_moves_starts_by_strength_and_rounds_lengths`<br>`limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_tool_dialogs_preview_accept_and_cancel` |
 | PR-015 | Chords, arpeggiator, strum, humanize, legato | P2 |  | IMPLEMENTED | The Piano Roll's ⏵ menu › Tools: Quick legato (Cmd+L), Discard lengths (Shift+D), and FL's tool dialogs with their Opt keys: Articulate… (Alt+L), Arpeggiate… (Alt+A), Strum… (Alt+S), Flam… (Alt+F), Limit… (Alt+K), Flip… (Alt+Y), Randomize… (Alt+R), Scale levels… (Alt+X), LFO… (Alt+O). They work on the selection or the channel's notes; a dialog previews on the notes while open, Accept keeps one undo step, × or Esc reverts (Command::EditNotes, core note_tools).<br>*Session 16: dialogs laid out after FL 2026.1.1's (strumizer, arpeggiator, flamer, limiter/transposer, randomizer, level scaling observed live; articulator, flip, LFO and chopper not, a system launcher caught their keys). Simplified: sliders instead of FL's knobs, the arpeggiator has no pattern presets or Sync modes, the level knobs cover velocity and pan only, no Claw machine, Riff machine or chord progressions (PR-028/029).* | `limeshot-core note_tools::tests::legato_reaches_the_next_start_and_keeps_chords_together`<br>`limeshot-core document::tests::edit_notes_keeps_ids_and_merges_a_tool_gesture`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom`<br>`limeshot-core note_tools::tests::strum_spreads_a_chord_upwards_and_alternates`<br>`limeshot-core note_tools::tests::arpeggiate_walks_the_chord_for_its_length`<br>`limeshot-core note_tools::tests::flam_limit_flip_and_levels`<br>`limeshot-core note_tools::tests::randomize_is_seeded_and_stays_on_the_scale`<br>`limeshot-core note_tools::tests::articulate_chop_and_quantize`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_tool_dialogs_preview_accept_and_cancel` |
-| PR-016 | Note properties: pan, release, mod X/Y, fine pitch | P2 |  | NOT_STARTED | Additional lane targets stored per note. | — |
+| PR-016 | Note properties: pan, release, mod X/Y, fine pitch | P2 |  | IN_PROGRESS | Piano Roll › Target control switches the lower lane between Note velocity and Note pan. Pan is bipolar with a centre line; click/drag edits a stem or the selected notes of the current channel in one undo step. Values persist through the existing note model and hosted note-pan path.<br>*Pan editing is implemented and tested; release velocity, Mod X/Y, fine pitch and a note-properties dialog remain pending. Third-party instruments must support VST3 note-pan expressions. See docs/research/piano-roll-view-controls.md.* | `crates/limeshot-app/tests/ui.rs::piano_roll_target_control_edits_note_pan` |
 | PR-017 | Slide and portamento notes | P2 |  | NOT_STARTED | Slide flag on notes interpreted by LimeSynth. | — |
 | PR-018 | Note color groups | P3 |  | NOT_STARTED | Per-note color group. | — |
 | PR-019 | Copy / cut / paste notes | P1 |  | VERIFIED | Cmd+C/X/V copy, cut and paste notes; pasting puts them at the same times into the channel being edited and selects them (FL Studio behaviour).<br>*App-internal clipboard (not the system clipboard).* | `limeshot-app tests/ui.rs::copy_paste_and_quantize_in_the_piano_roll` |
@@ -129,6 +129,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | PR-027 | Stamp tool (chords and scales) | P2 |  | IMPLEMENTED | ⏵ menu › Stamp: a chord (18 types) or a scale; while one is chosen, a Draw click places it from the clicked key with the last note length, selected and dragged as one (one undo step). The header shows "Stamp: <name> ×" to stop.<br>*Split out of PR-012 in session 7. Session 16: FL's stamp mode not observed live; the chord list is LimeShot's.* | `limeshot-core note_tools::tests::stamps_and_scales`<br>`crates/limeshot-app/tests/ui.rs::piano_roll_stamp_places_chords_and_scale_highlighting` |
 | PR-028 | Chord progression tool | P3 |  | NOT_STARTED | Not implemented. | — |
 | PR-029 | Riff machine | P3 |  | NOT_STARTED | Not implemented. | — |
+| PR-030 | Keyboard labels and visible note labels | P2 |  | IMPLEMENTED | View offers None, All notes, Root notes, Highlighted notes and White notes only. Labels follow the highlighted scale. Keep labels on screen moves note names to the visible note edge while scrolling. These view choices are session-local and do not edit the project.<br>*Manual-based subset; live FL defaults/fallbacks not verified. No scale falls back to C roots/all highlighted pitches. Key height below 11 pixels hides labels. Custom key names, presets and keyboard styles remain pending.* | `crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_label_view_options_do_not_edit_project`<br>`crates/limeshot-ui/src/piano_roll.rs::view_tests::keyboard_labels_follow_scale_root_and_white_key_filter` |
 
 ## Playlist
 

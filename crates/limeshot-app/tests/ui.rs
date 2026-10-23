@@ -1564,6 +1564,111 @@ fn piano_roll_velocity_lane_sets_velocity() {
     assert_eq!(h.state().doc.history().len(), undo + 1, "the drag is one undo step");
 }
 
+/// PR-016: Target control changes the actual lower lane; pan edits preserve velocity,
+/// channel isolation, save/reload and the one-drag/one-undo contract.
+#[test]
+fn piano_roll_target_control_edits_note_pan() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let other_channel = h.state().project().channels[4].id;
+    h.state_mut().exec(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: other_channel,
+            key: 48,
+            start: 0,
+            length: STEP_TICKS,
+            velocity: 0.6,
+        },
+    });
+    h.step();
+    let before = pattern_notes(&h, pat, lead);
+    let project = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    piano_menu(&mut h, "Target control", "Note pan");
+    assert_eq!(h.state().ui.piano.target_control, NoteProp::Pan);
+    assert_eq!(h.state().doc.revision(), revision, "target choice is only view state");
+    let g = piano_geometry(&h);
+    let undo = h.state().doc.history().len();
+    click(&mut h, g.vel_pos(before[4].start, 0.0), PointerButton::Primary);
+    assert_eq!(pattern_notes(&h, pat, lead)[4].pan, -1.0);
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &project);
+    // Include a stale selection from another channel: only the current channel may change.
+    let other = project
+        .pattern(pat)
+        .unwrap()
+        .notes
+        .iter()
+        .find(|n| n.channel != lead)
+        .unwrap()
+        .id;
+    h.state_mut().ui.piano.selection = vec![before[0].id, before[1].id, other];
+    let last_vel = h.state().ui.piano.last_vel;
+    drag(&mut h, g.vel_pos(before[0].start, 0.2), g.vel_pos(before[0].start, 1.0));
+    h.step();
+    let after = pattern_notes(&h, pat, lead);
+    assert_eq!(after[0].pan, 1.0);
+    assert_eq!(after[1].pan, 1.0);
+    assert_eq!(after[2], before[2]);
+    assert_eq!(
+        h.state()
+            .project()
+            .pattern(pat)
+            .unwrap()
+            .notes
+            .iter()
+            .find(|n| n.id == other),
+        project.pattern(pat).unwrap().notes.iter().find(|n| n.id == other)
+    );
+    assert_eq!(
+        after.iter().map(|n| n.velocity).collect::<Vec<_>>(),
+        before.iter().map(|n| n.velocity).collect::<Vec<_>>()
+    );
+    assert_eq!(h.state().ui.piano.last_vel, last_vel);
+    assert_eq!(h.state().doc.history().len(), undo + 1);
+    let saved = limeshot_project::to_json(h.state().project(), None).unwrap();
+    let loaded = limeshot_project::from_json(&saved, std::path::Path::new("pan.lime")).unwrap();
+    assert_eq!(loaded, *h.state().project());
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &project);
+    h.state_mut().doc.redo();
+    click(&mut h, g.vel_pos(before[0].start, 0.5), PointerButton::Primary);
+    assert!(pattern_notes(&h, pat, lead)[0].pan.abs() < 0.03, "middle is balanced");
+    piano_menu(&mut h, "Target control", "Note velocity");
+    click(&mut h, g.vel_pos(before[0].start, 0.3), PointerButton::Primary);
+    let n = pattern_notes(&h, pat, lead)[0];
+    assert!((n.velocity - 0.3).abs() < 0.03);
+    assert!(n.pan.abs() < 0.03, "velocity editing preserves pan");
+}
+
+#[test]
+fn piano_roll_keyboard_label_view_options_do_not_edit_project() {
+    use limeshot_ui::piano_roll::KeyboardLabels;
+    let (mut h, _, _) = melody_piano_roll();
+    let project = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(&mut h, button, "View", "Keyboard labels");
+    open_item(&mut h, "Keyboard labels", "All notes");
+    assert_eq!(h.state().ui.piano.keyboard_labels, KeyboardLabels::All);
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(&mut h, button, "View", "Keyboard labels");
+    open_item(&mut h, "Keyboard labels", "White notes only");
+    assert!(h.state().ui.piano.white_key_labels_only);
+    h.key_press(Key::Escape);
+    h.step();
+    h.key_press(Key::Escape);
+    h.step();
+    piano_menu(&mut h, "View", "Keep labels on screen");
+    assert!(h.state().ui.piano.keep_labels_on_screen);
+    h.key_press(Key::Escape);
+    h.step();
+    h.state_mut().ui.piano.scroll.x = 120.0;
+    h.step();
+    assert_eq!(h.state().project(), &project);
+    assert_eq!(h.state().doc.revision(), revision);
+}
+
 #[test]
 fn piano_roll_wheel_and_arrows_zoom_and_scroll() {
     let (mut h, _, _) = melody_piano_roll();

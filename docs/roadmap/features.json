@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-23",
+  "updated": "2026-10-23 (Piano Roll controls)",
   "features": [
     {
       "id": "APP-001",
@@ -1819,28 +1819,35 @@
       "name": "Note properties: pan, release, mod X/Y, fine pitch",
       "description": "Per-note parameters.",
       "fl_reference": "Event lane targets, Note properties dialog.",
-      "limeshot_behavior": "Additional lane targets stored per note.",
+      "limeshot_behavior": "Piano Roll › Target control switches the lower lane between Note velocity and Note pan. Pan is bipolar with a centre line; click/drag edits a stem or the selected notes of the current channel in one undo step. Values persist through the existing note model and hosted note-pan path.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "INS-001",
         "INS-002"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-ui::piano_menu",
+        "limeshot-ui::piano_roll",
+        "limeshot-core::Command::SetNoteValues"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_target_control_edits_note_pan"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/piano-roll-view-controls.md"
         ]
       },
-      "notes": ""
+      "notes": "Pan editing is implemented and tested; release velocity, Mod X/Y, fine pitch and a note-properties dialog remain pending. Third-party instruments must support VST3 note-pan expressions. See docs/research/piano-roll-view-controls.md."
     },
     {
       "id": "PR-017",
@@ -9390,6 +9397,42 @@
         ]
       },
       "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+    },
+    {
+      "id": "PR-030",
+      "category": "Piano Roll",
+      "name": "Keyboard labels and visible note labels",
+      "description": "Control keyboard pitch labels and retain note names when scrolling.",
+      "fl_reference": "Piano roll › View › Keyboard labels; Keep labels on screen.",
+      "limeshot_behavior": "View offers None, All notes, Root notes, Highlighted notes and White notes only. Labels follow the highlighted scale. Keep labels on screen moves note names to the visible note edge while scrolling. These view choices are session-local and do not edit the project.",
+      "priority": "P2",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "PR-013"
+      ],
+      "modules": [
+        "limeshot-ui::piano_roll",
+        "limeshot-ui::piano_menu"
+      ],
+      "acceptance_criteria": [
+        "Keyboard labels follow the chosen scale and white-key restriction.",
+        "View changes preserve project state and undo history.",
+        "Scrolled note labels stay clipped inside the visible note body."
+      ],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::piano_roll_keyboard_label_view_options_do_not_edit_project",
+        "crates/limeshot-ui/src/piano_roll.rs::view_tests::keyboard_labels_follow_scale_root_and_white_key_filter"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll_menu.htm",
+          "docs/research/piano-roll-view-controls.md"
+        ]
+      },
+      "notes": "Manual-based subset; live FL defaults/fallbacks not verified. No scale falls back to C roots/all highlighted pitches. Key height below 11 pixels hides labels. Custom key names, presets and keyboard styles remain pending."
     }
   ]
 }

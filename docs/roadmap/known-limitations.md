@@ -54,6 +54,11 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
   menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
   from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
+* Piano Roll Target control edits velocity and pan only. Release velocity, fine pitch, Mod X/Y and a note-properties
+  dialog remain pending (PR-016). Pan playback requires a plugin supporting note-pan expressions (Lime instruments do).
+  Coincident stems retain nearest-note targeting; select their notes to edit together.
+* Piano Roll keyboard-label modes and Keep labels on screen are session-local. No custom key names/presets/styles;
+  labels hide below 11-pixel key height. Without a scale, roots use C and highlighted labels include every pitch.
 * Piano Roll ghost notes only show other channels in the same pattern.
 * The Mixer's track menu acts on one selected track (FL selects several). Moving, inserting or deleting a track
   restarts the plugins on the tracks that move (from their state, read just before). No FL colour dialog, gradient

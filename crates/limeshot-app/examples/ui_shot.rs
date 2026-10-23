@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -362,6 +362,33 @@ fn main() {
         // The record button armed.
         harness.state_mut().ui.record.armed = true;
         harness.step();
+    }
+    if args.iter().any(|a| a == "--note-pan") {
+        harness.state_mut().ui.piano.target_control = limeshot_core::NoteProp::Pan;
+        harness.state_mut().ui.piano.keyboard_labels = limeshot_ui::piano_roll::KeyboardLabels::All;
+        harness.state_mut().ui.piano.keep_labels_on_screen = true;
+        harness.state_mut().ui.piano.scroll.x = 32.0;
+        let pid = harness.state().current_pattern();
+        let cid = harness.state().ui.selected_channel;
+        let values = harness
+            .state()
+            .project()
+            .pattern(pid)
+            .map(|p| {
+                p.notes
+                    .iter()
+                    .filter(|n| Some(n.channel) == cid)
+                    .enumerate()
+                    .map(|(i, n)| (n.id, [-0.8, 0.0, 0.8][i % 3]))
+                    .collect()
+            })
+            .unwrap_or_default();
+        harness.state_mut().exec(limeshot_core::Command::SetNoteValues {
+            pattern: pid,
+            prop: limeshot_core::NoteProp::Pan,
+            values,
+        });
+        harness.state_mut().ui.workspace.state_mut(Win::PianoRoll).maximized = true;
     }
     if args.iter().any(|a| a == "--scale") {
         // Piano Roll scale highlighting: A minor.
