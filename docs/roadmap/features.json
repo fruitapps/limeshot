@@ -2537,7 +2537,7 @@
       "name": "Audio clips",
       "description": "Place audio on the timeline.",
       "fl_reference": "Audio clips with fades, gain, stretch.",
-      "limeshot_behavior": "Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
+      "limeshot_behavior": "Audio clips reference an audio-clip channel (a Lime Sampler channel; FL Studio uses a distinct Audio Clip generator), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -3860,7 +3860,7 @@
       "fl_reference": "Fruity Parametric EQ 2",
       "limeshot_behavior": "Lime EQ: low shelf, peaking mid (Q), high shelf (RBJ biquads).",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -3883,7 +3883,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Three bands with a draggable response curve in the Lime EQ native editor. D39: active processing uses hosted Lime EQ; shared DSP tests alone do not establish native GUI behavior."
+      "notes": "Hosted Lime EQ processing and response-curve rendering are implemented. DSP response tests and offscreen native screenshots exist; hands-on response-node dragging across native/platform hosts remains unverified."
     },
     {
       "id": "FX-003",
@@ -4292,7 +4292,8 @@
         "limeshot-project preset::tests::factory_presets_are_valid_for_their_slot",
         "limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back",
         "crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save",
-        "crates/limeshot-core/tests/plugins.rs::effect_presets_preserve_hosted_bypass_key_and_fields"
+        "crates/limeshot-core/tests/plugins.rs::effect_presets_preserve_hosted_bypass_key_and_fields",
+        "crates/limeshot-app/tests/ui.rs::effect_presets_preserve_live_bypass_and_undo_to_the_live_state"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4588,7 +4589,8 @@
       ],
       "tests": [
         "limeshot-engine tests/audio.rs::tempo_automation_changes_the_song_length",
-        "crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip"
+        "crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip",
+        "crates/limeshot-engine/tests/plugins.rs::tempo_ramps_preserve_each_tick_once_and_the_integrated_song_length"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5344,7 +5346,8 @@
         "crates/limeshot-plugins/tests/host.rs::state_round_trips_into_a_new_instance",
         "crates/limeshot-core/tests/plugins.rs::plugin_channels_and_effects_survive_json_and_sanitize",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_ref_round_trips_through_json",
-        "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens"
+        "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens",
+        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7511,7 +7514,8 @@
       "tests": [
         "limeshot-dsp filter::tests::high_and_band_pass_outputs",
         "limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking",
-        "native-plugins/shared/src/processor.rs::tests::synth_filter_type_and_key_tracking_reach_the_voice"
+        "native-plugins/shared/src/processor.rs::tests::synth_filter_type_and_key_tracking_reach_the_voice",
+        "native-plugins/shared/src/processor.rs::tests::key_tracking_alone_activates_the_open_synth_filter"
       ],
       "reference": {
         "application": "FL Studio",
@@ -8821,7 +8825,12 @@
         "crates/limeshot-core/tests/plugins.rs::a_converted_disabled_effect_can_be_enabled",
         "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport",
         "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
-        "crates/limeshot-core/tests/plugins.rs::conversion_rejects_audio_outside_the_native_sampler_limits_with_a_warning"
+        "crates/limeshot-core/tests/plugins.rs::conversion_rejects_audio_outside_the_native_sampler_limits_with_a_warning",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::project_open_requires_explicit_selection_before_embedding_external_audio",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::missing_sample_conversion_keeps_a_retry_route_across_save_and_reopen",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::project_sample_symlinks_cannot_embed_files_outside_the_project",
+        "crates/limeshot-app/tests/cli.rs::external_sample_embedding_requires_explicit_cli_opt_in",
+        "crates/limeshot-app/tests/ui.rs::missing_sample_error_can_reload_after_its_in_project_source_is_restored"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8830,7 +8839,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Replacement complete locally. P0 losses PLG-017…020, PLG-022 and PLG-024…029 remain separate work. Local suites, strict lints, release bundles and exact equivalence pass; remote CI blocked by account billing, broader native/platform verification remains pending. P0 losses PLG-017…020, PLG-022 and PLG-024…029 are restored in the following hosted-parity session."
+      "notes": "The runtime replacement and hosted parity PLG-017…020, PLG-022 and PLG-024…029 are implemented. Local suites, strict lints, twelve release/debug bundles and exact native equivalence pass. Remote CI is blocked by account billing; broader native/platform verification remains pending. CodeRabbit follow-up preserves incomplete sample conversions for retry, prevents automatic embedding outside loaded project folders, and bounds serialized state size."
     },
     {
       "id": "PLG-014",
@@ -9061,7 +9070,8 @@
         "crates/limeshot-ui/tests/lime_vst3.rs::hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices",
         "crates/limeshot-plugins/tests/bridge.rs::native_bridge_preserves_pan_key_audio_and_telemetry",
         "crates/limeshot-app/tests/ui.rs::mixer_sidechain_route_menu_and_compressor_input",
-        "crates/limeshot-core/tests/plugins.rs::hosted_sidechains_follow_mixer_edits_and_undo"
+        "crates/limeshot-core/tests/plugins.rs::hosted_sidechains_follow_mixer_edits_and_undo",
+        "crates/limeshot-plugins/src/instance.rs::key_input_tests::mono_and_stereo_keys_downmix_and_pad_at_any_block_size"
       ],
       "reference": {
         "application": "Owner requirement",

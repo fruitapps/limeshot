@@ -241,3 +241,10 @@ boundaries; changes inside a block reach the next block. Native sample changes u
 retirement queues. The processor clears voices while retaining the old sample, then returns that reference for
 control-thread destruction. A full retirement queue defers adoption; incoming state changes coalesce old pending
 updates on the control thread. Neither persistence locks nor allocation-checker exemptions occur in this handoff.
+
+
+Tempo retiming retains fractional tick phase as an integer numerator over 60,000 × sample rate, plus the first
+unprocessed event tick at the new origin. This preserves rounded onsets due at the origin without replaying passed
+ticks. A 3,840-note ramp regression checks note order/count and integrated duration at 1/64/333/1024 frames. Native
+sample persistence ignores unchanged name/rate/PCM before decoding or handoff, so control-only state recall does
+not interrupt held sampler notes. Mono auxiliary keys receive the average of stereo input, with absent frames zeroed.

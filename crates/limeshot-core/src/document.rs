@@ -85,6 +85,7 @@ impl Document {
         std::mem::take(&mut self.warnings)
     }
 
+    /// Apply the model normalizer and retain warnings for presentation to the user.
     fn normalize(&mut self, project: &mut Project) {
         if let Some(f) = &self.normalizer {
             let warnings = f(project);

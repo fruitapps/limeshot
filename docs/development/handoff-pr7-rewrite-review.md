@@ -51,11 +51,17 @@ python3 scripts/check_repository.py
 Release/debug actual-binary verification uses `native-plugins/shared/examples/verify.rs`, three sample rates and
 four buffer sizes. Release signatures and executable hashes are recorded in `native-plugins/VALIDATION.md`.
 
+## CodeRabbit follow-up
+
+The owner requested all inline, dropdown and outside-diff findings addressed on PR #7. See the
+[complete disposition](coderabbit-pr7-followup.md), including migration boundaries, fractional timing, unchanged
+sample state, live presets, mono keys, bundle gates, CI cache and documentation checks.
+
 ## Remaining limits and next-session policy
 
 The rewrite and restored hosted capabilities are implemented; broader native editor/platform runtime validation
 remains open. GitHub Actions is billing-blocked and pluginval is unavailable; no current remote CI/pluginval pass is
-claimed. Plugin tempo context updates at block boundaries. Audio is not time stretched. Arbitrary third-party
+claimed. Plugin tempo context updates at block boundaries. Audio is not time-stretched. Arbitrary third-party
 controls retain generic automation menus; legacy compressor key-track automation is not converted into bus routing.
 
 Future sessions follow AGENTS.md: NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR,

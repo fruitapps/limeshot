@@ -75,6 +75,7 @@ pub trait Instrument: Send {
     fn uses_channel_pan(&self) -> bool {
         false
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     fn active_voices(&self) -> usize {
         0
     }
@@ -106,6 +107,7 @@ pub struct ClipMessage {
     pub playback: ClipPlayback,
 }
 impl ClipMessage {
+    /// Encode clip timing, fades and offsets as fixed-size seven-bit-clean noncommercial SysEx.
     pub fn encode(self) -> [u8; CLIP_MESSAGE_LEN] {
         let mut raw = [0u8; 45];
         raw[0] = self.key;
@@ -125,6 +127,7 @@ impl ClipMessage {
         out[95] = 0xf7;
         out
     }
+    /// Validate framing, version, finite values and bounds before accepting a protocol message.
     pub fn decode(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != CLIP_MESSAGE_LEN
             || bytes[..5] != [0xf0, 0x7d, b'L', b'C', 1]
@@ -178,6 +181,7 @@ pub struct PluginTelemetry {
     pub reduction_db: f32,
 }
 impl PluginTelemetry {
+    /// Encode end-of-block voice count and maximum dynamics reduction into bounded SysEx.
     pub fn encode(self) -> [u8; 22] {
         let mut out = [0; 22];
         out[..5].copy_from_slice(&[0xf0, 0x7d, b'L', b'T', 1]);
@@ -191,6 +195,7 @@ impl PluginTelemetry {
         out[21] = 0xf7;
         out
     }
+    /// Validate framing, version, finite values and bounds before accepting a protocol message.
     pub fn decode(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != 22
             || bytes[..5] != [0xf0, 0x7d, b'L', b'T', 1]
@@ -212,6 +217,7 @@ impl PluginTelemetry {
     }
 }
 
+/// Encode additive channel balance using a fixed stack buffer.
 pub fn channel_pan_message(pan: f32) -> [u8; 14] {
     let mut out = [0; 14];
     out[..5].copy_from_slice(&[0xf0, 0x7d, b'L', b'P', 1]);
@@ -227,6 +233,7 @@ pub fn channel_pan_message(pan: f32) -> [u8; 14] {
     out[13] = 0xf7;
     out
 }
+/// Validate native channel balance without retaining the input buffer.
 pub fn decode_channel_pan(bytes: &[u8]) -> Option<f32> {
     if bytes.len() != 14
         || bytes[..5] != [0xf0, 0x7d, b'L', b'P', 1]

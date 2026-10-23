@@ -30,7 +30,8 @@ cargo run -p limeshot-app --example ui_shot -- docs/screenshots/current/synth.pn
 cargo run -p limeshot-app --example ui_shot -- docs/screenshots/current/export.png --audio --dialog=export
 ```
 
-Additional DAW review scenarios include `--empty`, `--plugin`, `--plugin-window` and `--tapper`.
+Additional DAW review scenarios include `--empty`, `--plugin`, `--plugin-window`, `--missing-sample` and `--tapper`.
+The missing-sample scenario exercises the actionable source-conversion error and Reload control.
 Dialog choices are `export`, `quit`, `marker` and `control`, for example:
 
 ```sh

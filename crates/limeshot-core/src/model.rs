@@ -144,6 +144,7 @@ pub enum FilterMode {
 impl FilterMode {
     pub const ALL: [FilterMode; 3] = [FilterMode::LowPass, FilterMode::BandPass, FilterMode::HighPass];
 
+    /// Stable filter-mode label shared by legacy presets and native control descriptions.
     pub fn label(self) -> &'static str {
         match self {
             FilterMode::LowPass => "Low-pass",

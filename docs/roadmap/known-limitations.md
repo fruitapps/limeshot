@@ -29,7 +29,10 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   arbitrary third-party controls retain the generic automation menu. Compressor key-track selection is discrete,
   and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
 * Embedded sampler state accepts at most four million stereo frames at 8–384 kHz. Conversion warns and retains
-  source-path metadata when audio cannot fit; reassign a supported sample to restore playback.
+  source-path metadata and pending state when audio cannot fit; reassign a supported sample or reopen/reload after fixing the source.
+  Incomplete conversions fail export explicitly. Loading a .lime file or recovery does not automatically embed
+  outside-project audio (including symlink escapes): choose that source in the GUI, or explicitly use the CLI
+  `--allow-external-samples` option when including outside recordings is intended.
 * Embedded sampler audio is cached for host waveforms/auditions without writing temporary sample files.
   Native editor changes and platform/native GUI interaction still need broader hands-on validation.
 * Plugins receive tempo context at block boundaries; a tempo change inside a block reaches synced effects in the next block.
@@ -98,12 +101,12 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
   their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
   characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
-  view directly. Plugin parameter changes are not undo steps; delay compensation covers up to about 340 ms per path and 64
+  view directly. Native-editor and arbitrary third-party parameter changes are not undo steps; known Lime host controls use undoable state edits. delay compensation covers up to about 340 ms per path and 64
   delayed paths, and its trimming in exports cannot be switched off,
   no custom plugin folders, and a plugin that crashes takes LimeShot down unless it was set to run in a separate
   process (macOS and Linux; such a plugin's own editor is not shown).
-  Plugin channels apply channel volume and pan automation once per block rather than every 64 frames. Plugin
-  channels do not play audio clips. No CLAP or Audio Units. Processing tests and prior native OS-window checks were on macOS; the replacement embedded view is not yet verified.
+  Hosted channel volume/pan uses per-frame gains captured every 64-frame automation interval. Lime Sampler
+  handles audio clips; arbitrary third-party samplers do not implement the clip protocol. No CLAP or Audio Units. Processing tests and prior native OS-window checks were on macOS; the replacement embedded view is not yet verified.
 * Window positions, sizes and detached/maximised states are not remembered between sessions unless saved as the
   custom layout (View › Arrange windows › Save custom layout, applied with Custom).
 * Accessibility: custom-painted editors expose no accessibility labels.
@@ -142,7 +145,7 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   Validator and actual VST3 ABI tests are recorded in `native-plugins/VALIDATION.md`.
 * Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV and embeds at most
   4 million stereo frames in host state. Loading a sample resets sounding notes. Sampler .limepreset files
-  preserve the sample/root key; host state saves both. No sample loops/time stretching/multisampling.
+  preserve the sample/root key; host state saves both. Loop points are supported; no time stretching or multisampling.
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
 

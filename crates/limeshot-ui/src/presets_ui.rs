@@ -1,4 +1,4 @@
-//! Presets menus for the built-in effects (on each effect card) and instruments (in Channel
+//! Preset interchange for hosted Lime effects (on each effect card) and instruments (in Channel
 //! Settings): LimeShot's factory presets, then the user's own, and Save preset as…. Files and
 //! factory presets are in `limeshot_project::preset`.
 
@@ -15,8 +15,7 @@ pub enum Target {
     Channel(ChannelId),
 }
 
-/// The preset slot and current settings of `target`, if it has presets (built-in effects and
-/// the sampler and synth do; plugins have their own).
+/// Reconstruct factory/.limepreset settings for a known Lime target; third-party plugins use host presets.
 fn current(app: &LimeShotApp, target: Target) -> Option<(Slot, Content)> {
     match target {
         Target::Effect { track, effect } => {
@@ -127,7 +126,12 @@ pub fn apply(app: &mut LimeShotApp, target: Target, content: Content) {
                     app.toast_error("That preset does not fit here".to_string());
                     return;
                 }
-                if let Some(state) = limeshot_core::lime::edited_values_state(plugin, &params) {
+                let mut plugin = plugin.clone();
+                if let Some(Ok(state)) = app.plugins.instance(target).map(|i| i.state()) {
+                    plugin.state = limeshot_core::PluginState::new(state);
+                    app.doc.store_plugin_state(target, plugin.state.clone());
+                }
+                if let Some(state) = limeshot_core::lime::edited_values_state(&plugin, &params) {
                     app.exec(Command::SetPluginState { plugin: target, state });
                 }
             } else {

@@ -1,5 +1,5 @@
 //! FL Studio's settings window (observed in session 14, `fl-studio-analysis.md` §19): one window
-//! titled "Settings – <page title>" with a row of tabs in groups (MIDI, Audio, General, File,
+//! titled `Settings – <page title>` with a row of tabs in groups (MIDI, Audio, General, File,
 //! Theme | Project, Info | About), each page split into titled sections. Changes apply at once;
 //! there is no OK or Cancel. Options › Audio / General / File settings, Project general settings
 //! and Project info open it on their page.

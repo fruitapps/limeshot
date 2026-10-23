@@ -67,7 +67,7 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
   lacked the sampler envelope fields.
 * Cleanup is done: the merged worktrees and the local and remote branches are deleted, and the build outputs
   (`target/`, `native-plugins/{target,dist}`) are removed.
-* The owner's main checkout (`~/Developer/limeshot`) is on `main`. Its earlier uncommitted state, an older draft
+* The owner's primary checkout is on `main`. Its earlier uncommitted state, an older draft
   of the native suite superseded by #6 plus three docs, is kept in `git stash` as "Backup before cleanup
   2026-10-22". The three docs were moved into PR #7: `docs/development/test-coverage-audit.md`,
   `docs/roadmap/first-release.md` and `docs/roadmap/first-release-features.md`. Their baseline is pinned to

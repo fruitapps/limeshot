@@ -66,11 +66,13 @@ pub enum ClipSysEx {
 }
 impl SysExMessage for ClipSysEx {
     type Buffer = [u8; limeshot_dsp::CLIP_MESSAGE_LEN];
+    /// Validate supported Lime protocol messages and ignore unrelated SysEx.
     fn from_buffer(buffer: &[u8]) -> Option<Self> {
         limeshot_dsp::ClipMessage::decode(buffer)
             .map(Self::Clip)
             .or_else(|| limeshot_dsp::instrument::decode_channel_pan(buffer).map(Self::ChannelPan))
     }
+    /// Encode bounded native protocol messages into stack-owned host event storage.
     fn as_buffer(&self) -> (Self::Buffer, usize) {
         match self {
             Self::ChannelPan(pan) => {
@@ -960,14 +962,52 @@ mod tests {
         plugin.params.sample.set(EmbeddedSample::default());
         assert!(old.upgrade().is_none());
         // Queue saturation coalesces obsolete updates and keeps the most recent one.
-        for _ in 0..20 {
-            plugin.params.sample.set(EmbeddedSample::default());
+        for index in 0..20 {
+            plugin.params.sample.set(EmbeddedSample {
+                name: format!("pending-{index}"),
+                ..Default::default()
+            });
         }
         plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
         for _ in 0..8 {
             nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
         }
         assert!(plugin.sample.is_some());
+    }
+
+    #[test]
+    fn unchanged_sample_state_keeps_held_voices_and_decoded_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("held.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        let sample = EmbeddedSample::load(&path).unwrap();
+        plugin.params.sample.set(sample.clone());
+        plugin.prepare(48000.0);
+        let before = plugin.sample.clone().unwrap();
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        plugin.params.sample.set(sample);
+        nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
+        assert!(Arc::ptr_eq(&before, plugin.sample.as_ref().unwrap()));
+        assert!(plugin.voices.iter().any(|v| v.voice.is_active()));
+    }
+
+    #[test]
+    fn key_tracking_alone_activates_the_open_synth_filter() {
+        let plugin = LimePlugin::<0>::default();
+        let mut values = plugin.params.values();
+        values[8] = 20_000.0;
+        values[9] = 0.0;
+        values[10] = 0.0;
+        values[14] = 0.0;
+        values[16] = 1.0;
+        let state = plugin.instrument(&values);
+        let voice = Voice::for_instrument(&state, 60, 36, 1.0, 48000.0).unwrap();
+        assert!(matches!(
+            voice.source,
+            limeshot_dsp::voice::Source::Synth { mods: Some(_), .. }
+        ));
     }
 
     #[test]

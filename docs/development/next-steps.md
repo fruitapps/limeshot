@@ -16,7 +16,8 @@ The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mi
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
 Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
 Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 have merged into PR #7, which targets main. Review PR #7 and repeat hands-on native/platform checks;
-current review fixes and evidence are in [the review handoff](handoff-pr7-rewrite-review.md).
+current review fixes and evidence are in [the review handoff](handoff-pr7-rewrite-review.md) and
+[CodeRabbit disposition](coderabbit-pr7-followup.md).
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 

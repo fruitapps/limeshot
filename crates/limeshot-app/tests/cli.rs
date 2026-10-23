@@ -80,3 +80,48 @@ fn missing_plugin_fails_export_without_creating_output() {
     );
     assert!(!wav.exists());
 }
+
+#[test]
+fn external_sample_embedding_requires_explicit_cli_opt_in() {
+    let dir = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let sample = outside.path().join("private.wav");
+    limeshot_dsp::write_wav(&sample, 48000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+    let mut doc = limeshot_core::Document::default();
+    doc.execute(Command::AddChannel {
+        name: "External".into(),
+        instrument: Instrument::Sampler(limeshot_core::SamplerParams {
+            sample: Some(limeshot_core::SampleRef {
+                path: sample.to_string_lossy().into_owned(),
+            }),
+            ..Default::default()
+        }),
+    })
+    .unwrap();
+    let source = dir.path().join("legacy.lime");
+    limeshot_project::save(doc.project(), &source).unwrap();
+    let script = dir.path().join("noop.json");
+    std::fs::write(&script, "[]").unwrap();
+    for allow in [false, true] {
+        let saved = dir.path().join(if allow { "allowed.lime" } else { "blocked.lime" });
+        let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_limeshot-cli"));
+        cmd.arg("run")
+            .arg(&script)
+            .arg("--project")
+            .arg(&source)
+            .arg("--save")
+            .arg(&saved);
+        if allow {
+            cmd.arg("--allow-external-samples");
+        }
+        let out = cmd.output().unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        let project = limeshot_project::load(&saved).unwrap();
+        let Instrument::Plugin(plugin) = &project.channels[0].instrument else {
+            panic!("not hosted")
+        };
+        let state: serde_json::Value = serde_json::from_slice(lime::component_state(&plugin.state).unwrap()).unwrap();
+        assert_eq!(state["fields"].get("sample-v1").is_some(), allow);
+        assert_eq!(plugin.extra.get("lime-sample-pending").is_some(), !allow);
+    }
+}

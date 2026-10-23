@@ -178,12 +178,7 @@ impl Renderer {
     /// note ends move with it.
     fn retime(&mut self, tempo: limeshot_core::Tempo) {
         let tick = self.timeline.tick_at_sample(self.now);
-        self.timeline = Timeline {
-            origin_tick: tick,
-            origin_sample: self.now,
-            tempo,
-            sample_rate: self.sample_rate,
-        };
+        self.timeline = self.timeline.retimed(self.now, tempo);
         for v in self
             .voices
             .iter_mut()
@@ -304,6 +299,8 @@ impl Renderer {
         self.timeline = Timeline {
             origin_tick: tick,
             origin_sample: self.now,
+            sub_tick: 0,
+            origin_first_tick: tick,
             tempo: self.snapshot.tempo,
             sample_rate: self.sample_rate,
         };
@@ -725,6 +722,8 @@ impl Renderer {
             self.timeline = Timeline {
                 origin_tick: 0,
                 origin_sample: self.now,
+                sub_tick: 0,
+                origin_first_tick: 0,
                 tempo: self.snapshot.tempo,
                 sample_rate: self.sample_rate,
             };
@@ -744,6 +743,8 @@ impl Renderer {
         self.timeline = Timeline {
             origin_tick: restart,
             origin_sample: pass_end,
+            sub_tick: 0,
+            origin_first_tick: restart,
             tempo: self.snapshot.tempo,
             sample_rate: self.sample_rate,
         };

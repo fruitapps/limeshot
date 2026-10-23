@@ -65,7 +65,7 @@ from the source commits recorded in
 [the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
 plugin embedding and device audio require separate checks.
 
-The inventory currently tracks **290 features: 145 VERIFIED, 48 IMPLEMENTED, 79 NOT_STARTED, 13 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
+The inventory currently tracks **290 features: 144 VERIFIED, 49 IMPLEMENTED, 79 NOT_STARTED, 13 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
 requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
 with FL Studio or measured test coverage.
 
@@ -191,7 +191,10 @@ cargo run --release -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out
 ```
 
 `limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device), `import-midi` and `run`. `run`
-applies a JSON list of the same typed commands the UI uses:
+applies a JSON list of the same typed commands the UI uses. Opening a legacy project does not automatically embed
+audio outside its folder. Select the source explicitly in the GUI, or use `--allow-external-samples` in the CLI
+when you intend to include those recordings in portable state:
+
 
 ```json
 [{"SetTempo": 128000}, {"AddPattern": {"name": "Verse"}}]

@@ -1298,3 +1298,33 @@ Future sessions resume the standing policy: NEW `codex/` branch, NEW separate ma
 draft PR stacked on the latest unmerged continuation. Leave older checkouts intact, carry work through validation,
 docs, commit and push, never merge automatically, and create further sessions only when the owner asks. The PR #7
 exception is limited to this explicitly requested session.
+
+
+### 2026-10-23 — all CodeRabbit PR #7 findings, including dropdowns
+
+Continued the owner-authorized PR #7 review on `codex/pr7-rewrite-review` in the same isolated managed worktree.
+Audited both CodeRabbit reviews, covering all 36 inline/minor/nitpick/outside-diff findings and the summary
+migration/documentation/scope checks. [Itemized disposition](coderabbit-pr7-followup.md) distinguishes prior fixes
+from this follow-up. No new session/PR or merge.
+
+Completed mono key downmix, uniform hosted-test bundle gating, shared native-pan identity, nested CI caching and
+remaining limitations/path cleanup. Preserved fractional timeline phase plus the first unprocessed event tick:
+3,840-note ramp regression checks exact onset count/order and integrated duration at four block sizes. Key tracking
+alone now activates the synth filter. Unchanged sampler state keeps decoded audio and held notes; effect presets
+merge fresh live state and preserve that baseline on undo. Conversion emits one accurate reason per failure,
+checks serialized state size, retains pending settings/source data and blocks incomplete exports. Loaded .lime and
+recovery sources outside the project folder, including symlinks, require explicit selection; CLI users can opt in
+with --allow-external-samples. Portable Lime resolution accepts known bundle names only.
+
+Corrected feature evidence (FX-002 is IMPLEMENTED pending native interaction verification), FL Audio Clip comparison,
+PLG-013 status and regenerated counts. Added more than 80 API contract comments and fixed rustdoc HTML. Local checks:
+394 root tests including 139 UI tests, 18 native tests; both workspace formatting/strict all-target Clippy; strict
+rustdoc; 290-feature and repository references pass. Rebuilt twelve release/debug plugins pass three-rate/four-buffer
+actual-binary verification; release signatures and hashes are recorded in native-plugins/VALIDATION.md. Hosted
+Settings was rendered and inspected. Exact native/reference sample-bit assertions remain unchanged and pass.
+
+GitHub Actions remains blocked by owner billing; no remote CI or current pluginval pass is claimed. Broader native
+and platform runtime checks remain open. Future sessions retain NEW codex/ branch, separate NEW managed worktree,
+NEW attached draft PR based on latest unmerged work, leave older checkouts intact, validate/document/commit/push,
+never merge automatically, and create further sessions only when the owner asks. This direct-PR exception is limited
+to the explicitly requested PR #7 review follow-up.

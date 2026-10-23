@@ -113,6 +113,11 @@ pub enum Command {
         channel: ChannelId,
         key: u8,
     },
+    /// Explicit source-file selection permits embedding that channel's pending external audio.
+    /// Preset and parameter changes do not carry this permission.
+    ApproveSamplerSource {
+        channel: ChannelId,
+    },
     SetInstrument {
         channel: ChannelId,
         instrument: Instrument,
@@ -694,6 +699,7 @@ impl Command {
             SetChannelSolo { .. } => "Solo channel",
             SetChannelMixerTrack { .. } => "Route channel",
             SetChannelRootKey { .. } => "Set root key",
+            ApproveSamplerSource { .. } => "Choose sample source",
             SetInstrument { .. } => "Edit instrument",
             SetStep { .. } => "Toggle step",
             AddNote { .. } | AddNotes { .. } => "Add note",
@@ -955,10 +961,16 @@ impl Command {
                     plugin.state = state;
                 }
             }
+            ApproveSamplerSource { channel: id } => {
+                channel(p, id)?.extra.remove("lime-external-source");
+            }
             SetInstrument {
                 channel: id,
                 instrument,
-            } => channel(p, id)?.instrument = instrument,
+            } => {
+                let c = channel(p, id)?;
+                c.instrument = instrument;
+            }
 
             SetStep {
                 pattern: pid,

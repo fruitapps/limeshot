@@ -332,6 +332,12 @@ fn instantiate(
             (PluginInstance::Local(i), PluginProcessor::Local(pr))
         }
     };
+    if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true) {
+        return Err(format!(
+            "{}: sample conversion is incomplete; choose a supported source file and reload",
+            p.name
+        ));
+    }
     if !p.state.is_empty()
         && let Err(e) = inst.set_state(p.state.bytes())
     {
@@ -718,12 +724,15 @@ impl Drop for ReturnOnDrop {
 }
 
 impl limeshot_dsp::effects::Effect for ReturnOnDrop {
+    /// Selected mixer key source; zero means the processor main input.
     fn sidechain_source(&self) -> usize {
         self.inner.as_ref().map_or(0, |p| p.sidechain_source())
     }
+    /// Maximum dynamics reduction from the preceding block, in dB.
     fn gain_reduction_db(&self) -> f32 {
         self.inner.as_ref().map_or(0.0, |p| p.telemetry().reduction_db)
     }
+    /// Use separate detector audio without mixing the key into the audible output.
     fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
         if let Some(p) = &mut self.inner {
             limeshot_dsp::effects::Effect::process_sidechain(p, buf, key);
@@ -756,9 +765,11 @@ impl limeshot_dsp::effects::Effect for ReturnOnDrop {
 }
 
 impl limeshot_dsp::Instrument for ReturnOnDrop {
+    /// Whether the instrument implements the native additive balance protocol.
     fn uses_channel_pan(&self) -> bool {
         self.inner.as_ref().is_some_and(|p| p.uses_channel_pan())
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     fn active_voices(&self) -> usize {
         self.inner.as_ref().map_or(0, |p| p.telemetry().voices as usize)
     }
@@ -982,7 +993,7 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
                     .hint("Start the plugin again with the state last saved in the project")
                     .clicked()
                 {
-                    app.plugins.reload(target);
+                    reload(app, target);
                 }
             });
         }
@@ -999,6 +1010,13 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
         }
         (None, Some(e)) => {
             ui.label(RichText::new(format!("Could not load the plugin: {e}")).color(t.warning));
+            if ui
+                .button("Reload")
+                .hint("Retry loading after fixing the plugin or sample source")
+                .clicked()
+            {
+                reload(app, target);
+            }
         }
         (None, None) => {
             ui.label(RichText::new("Loading…").color(t.text_faint));
@@ -1016,6 +1034,37 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             set_separate_process(app, target, on);
         }
     }
+}
+
+/// Retry pending sources through Document normalization before restarting a failed/crashed plugin.
+/// Reload never approves outside-project audio; explicit source selection is required for that.
+pub fn reload(app: &mut LimeShotApp, target: Target) {
+    if let Target::Channel(channel) = target {
+        let mut candidate = app.project().clone();
+        let dir = app.path.as_deref().and_then(std::path::Path::parent);
+        crate::lime::restrict_loaded_sources(&mut candidate, dir);
+        if let Some(c) = candidate.channel(channel)
+            && app
+                .project()
+                .channel(channel)
+                .is_some_and(|c| c.extra.get("lime-external-source").and_then(serde_json::Value::as_bool) == Some(true))
+            && c.extra.get("lime-external-source").and_then(serde_json::Value::as_bool) != Some(true)
+            && let Some(params) = limeshot_core::lime::sampler_params(&c.instrument)
+        {
+            app.exec(Command::Batch(vec![
+                Command::ApproveSamplerSource { channel },
+                Command::SetInstrument {
+                    channel,
+                    instrument: Instrument::Sampler(params),
+                },
+            ]));
+        }
+    }
+    if let Some(plugin) = app.project().plugin(target) {
+        let state = plugin.state.clone();
+        app.exec(Command::SetPluginState { plugin: target, state });
+    }
+    app.plugins.reload(target);
 }
 
 /// Move a plugin into a process of its own or back, keeping its sound: its state goes into the

@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--record] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -257,6 +257,21 @@ fn main() {
     }
     if args.iter().any(|a| a == "--tapper") {
         app.ui.toolbar.tapper = Some(limeshot_ui::toolbar::Tapper::default());
+    }
+    if args.iter().any(|a| a == "--missing-sample")
+        && let Ok(created) = app.doc.execute(limeshot_core::Command::AddChannel {
+            name: "Missing sample".into(),
+            instrument: limeshot_core::Instrument::Sampler(limeshot_core::SamplerParams {
+                sample: Some(limeshot_core::SampleRef {
+                    path: "/__limeshot_missing_source__/unavailable.wav".into(),
+                }),
+                ..Default::default()
+            }),
+        })
+        && let Some(id) = created.0
+    {
+        app.select_channel(limeshot_core::ChannelId(id));
+        app.show_window(limeshot_ui::workspace::Win::ChannelSettings);
     }
     let mut harness = Harness::builder()
         .with_size(egui::vec2(1440.0, 900.0))

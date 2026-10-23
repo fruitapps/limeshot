@@ -61,6 +61,7 @@ impl LimePlugin {
         Self::EFFECTS.iter().position(|k| *k == kind).map(|i| Self(i as u8 + 2))
     }
 
+    /// Stable first-party display name used by bundles and project references.
     pub fn name(self) -> &'static str {
         [
             "LimeSynth",
@@ -78,6 +79,7 @@ impl LimePlugin {
         ][self.0 as usize % 12]
     }
 
+    /// Whether this stable plugin number represents a channel instrument.
     pub fn is_instrument(self) -> bool {
         self.0 < 2
     }
@@ -94,6 +96,7 @@ impl LimePlugin {
         id.iter().map(|b| format!("{b:02X}")).collect()
     }
 
+    /// Portable reference resolved against the installed first-party bundle directories.
     pub fn path(self) -> String {
         format!("{PATH_PREFIX}{}", self.bundle())
     }
@@ -127,7 +130,16 @@ impl LimePlugin {
             let embedded = json!({ "name": s.name, "sample_rate": s.sample_rate, "pcm": base64_encode(&pcm) });
             fields.insert("sample-v1".into(), Value::String(embedded.to_string()));
         }
-        let component = json!({ "version": "0.1.0", "params": params, "fields": fields }).to_string();
+        let mut component = json!({ "version": "0.1.0", "params": params, "fields": fields });
+        // Check the actual escaped JSON and host envelope, including hostile metadata.
+        let mut bytes = component.to_string();
+        if bytes.len().saturating_add(12) > crate::plugin::MAX_STATE_BYTES {
+            if let Some(fields) = component["fields"].as_object_mut() {
+                fields.remove("sample-v1");
+            }
+            bytes = component.to_string();
+        }
+        let component = bytes;
         let mut p = self.plugin_ref();
         p.state = PluginState::new(host_state(component.as_bytes()));
         p
@@ -137,13 +149,14 @@ impl LimePlugin {
 /// Shared with the native sampler's state reader to prevent successful but silent conversion.
 pub const MAX_EMBEDDED_FRAMES: usize = 4_000_000;
 
+/// Validate native sample limits and conservatively bound escaped state metadata.
 pub fn embedded_audio_supported(audio: &EmbeddedAudio) -> bool {
     let pcm_text = audio.stereo.len().saturating_mul(4).div_ceil(3).saturating_mul(4);
     (4..=2 * MAX_EMBEDDED_FRAMES).contains(&audio.stereo.len())
         && audio.stereo.len().is_multiple_of(2)
         && (8_000..=384_000).contains(&audio.sample_rate)
         && pcm_text
-            .saturating_add(audio.name.len().saturating_mul(6))
+            .saturating_add(audio.name.len().saturating_mul(7))
             .saturating_add(65_536)
             < crate::plugin::MAX_STATE_BYTES
 }
@@ -364,7 +377,7 @@ pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
 
 /// Replace the former built-in instruments and exported effects of `project` with Lime plugins,
 /// keeping their settings. `audio` decodes a sampler's stored sample path (`None`: missing or
-/// unreadable, and the sampler is converted without audio). Returns one warning per setting that
+/// unreadable, leaving a pending hosted sampler with settings/source retained for retry). Returns warnings for settings that
 /// could not be carried over; an empty list means nothing was lost.
 pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<EmbeddedAudio>) -> Vec<String> {
     let mut warnings = Vec::new();
@@ -418,17 +431,21 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
             Instrument::Synth(p) => Some(LimePlugin::SYNTH.with_values(&synth_values(p), false, None)),
             Instrument::Sampler(p) => {
                 let sample = p.sample.as_ref().and_then(|s| {
-                    let a = audio(&s.path).filter(|a| {
-                        let supported = embedded_audio_supported(a);
-                        if !supported {
-                            warnings.push(format!("{}: sample exceeds Lime Sampler state limits (4 million frames, 8–384 kHz); source path retained", c.name));
-                        }
-                        supported
-                    });
-                    if a.is_none() {
-                        warnings.push(format!("{}: the sample {} could not be loaded", c.name, s.path));
+                    if c.extra.get("lime-external-source").and_then(Value::as_bool) == Some(true) {
+                        warnings.push(format!("{}: outside-project sample was not embedded; choose its source file to include it", c.name));
+                        return None;
                     }
-                    a
+                    match audio(&s.path) {
+                        None => {
+                            warnings.push(format!("{}: the sample {} could not be loaded", c.name, s.path));
+                            None
+                        }
+                        Some(a) if !embedded_audio_supported(&a) => {
+                            warnings.push(format!("{}: sample exceeds Lime Sampler state limits (4 million frames, 8–384 kHz); source path retained", c.name));
+                            None
+                        }
+                        Some(a) => Some(a),
+                    }
                 });
                 for lost in sampler_losses(p) {
                     warnings.push(format!("{}: Lime Sampler does not have {lost} yet", c.name));
@@ -438,6 +455,9 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                         LimePlugin::SAMPLER.with_values(&sampler_values(p, c.root_key), false, sample.as_ref());
                     if let Some(source) = &p.sample {
                         plugin.extra.insert("lime-sample-path".into(), json!(source.path));
+                        if sample.is_none() {
+                            plugin.extra.insert("lime-sample-pending".into(), json!(true));
+                        }
                     }
                     Some(plugin)
                 }
@@ -451,18 +471,24 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                     let sample = p
                         .sample
                         .as_ref()
-                        .and_then(|s| audio(&s.path))
+                        .and_then(|s| {
+                            (c.extra.get("lime-external-source").and_then(Value::as_bool) != Some(true))
+                                .then(|| audio(&s.path))
+                                .flatten()
+                        })
                         .filter(embedded_audio_supported);
                     if sample.is_none() {
-                        warnings.push(format!("{}: the sample could not be loaded", c.name));
+                        warnings.push(format!("{}: the sample could not be embedded; check its source, approval and native sampler limits", c.name));
                     }
                     let root = plain_values(&plugin, &sampler_values(&p, c.root_key))[7]
                         .round()
                         .clamp(0.0, 127.0) as u8;
-                    let state = LimePlugin::SAMPLER.with_values(&sampler_values(&p, root), false, sample.as_ref());
-                    plugin.state = state.state;
+                    if sample.is_some() {
+                        let state = LimePlugin::SAMPLER.with_values(&sampler_values(&p, root), false, sample.as_ref());
+                        plugin.state = state.state;
+                        plugin.extra.remove("lime-sample-pending");
+                    }
                 }
-                plugin.extra.remove("lime-sample-pending");
                 Some(plugin)
             }
             _ => None,
@@ -693,6 +719,7 @@ pub fn is_track_eq(slot: &crate::EffectSlot) -> bool {
         && slot.extra.get("lime-track-eq").and_then(Value::as_bool) == Some(true)
         && slot.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(3))
 }
+/// Encode canonical track bands using the dedicated EQ extension controls.
 fn track_eq_ref(eq: &[crate::EqBand; 3]) -> PluginRef {
     let mut values: Vec<_> = EQ_CONTROLS.iter().map(|p| p.default).collect();
     values[7] = 1.0;
@@ -701,6 +728,7 @@ fn track_eq_ref(eq: &[crate::EqBand; 3]) -> PluginRef {
     }
     LimePlugin(3).with_values(&values, false, None)
 }
+/// Detect missing or outdated dedicated track-EQ state before normalization.
 fn track_eq_needs_sync(track: &crate::MixerTrack) -> bool {
     let slot = track.effects.iter().find(|e| is_track_eq(e));
     if track.eq == crate::EqBand::DEFAULTS && slot.is_none() {
@@ -715,6 +743,7 @@ fn track_eq_needs_sync(track: &crate::MixerTrack) -> bool {
             })
     }) || track.effects.last().is_none_or(|e| !is_track_eq(e))
 }
+/// Keep a single marked EQ after ordinary inserts while preserving its effect ID.
 pub(crate) fn sync_track_eq(project: &mut Project, track: usize) {
     let Some(t) = project.mixer.tracks.get(track) else {
         return;
@@ -737,6 +766,7 @@ pub(crate) fn sync_track_eq(project: &mut Project, track: usize) {
     t.extra.remove("lime-legacy-eq-inactive");
 }
 
+/// Resolve a known native numeric or boolean control; unknown IDs return None.
 pub fn parameter_spec(plugin: &PluginRef, id: u32) -> Option<(usize, &'static ParamSpec)> {
     let lime = LimePlugin::of(plugin)?;
     control_specs(lime.0)
@@ -760,6 +790,7 @@ pub fn parameter_spec(plugin: &PluginRef, id: u32) -> Option<(usize, &'static Pa
 }
 const BYPASS_CONTROL: ParamSpec = choice("Bypass", &["Off", "On"], 0.0);
 const KEY_CONTROL: ParamSpec = choice("External sidechain", &["Off", "On"], 0.0);
+/// Read normalized saved-state controls, falling back to native defaults.
 pub fn parameter_value(plugin: &PluginRef, id: u32) -> Option<f32> {
     let (index, spec) = parameter_spec(plugin, id)?;
     if index == usize::MAX {
@@ -776,6 +807,7 @@ pub fn parameter_value(plugin: &PluginRef, id: u32) -> Option<f32> {
         .collect();
     Some(plugin_normalized(spec, plain_values(plugin, &defaults)[index]))
 }
+/// Resolve normalized travel to native units, including logarithmic skew.
 pub fn parameter_plain(spec: &ParamSpec, normalized: f32) -> f32 {
     spec.min + normalized.clamp(0.0, 1.0).powf(if spec.log { 4.0 } else { 1.0 }) * (spec.max - spec.min)
 }

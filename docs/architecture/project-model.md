@@ -128,3 +128,17 @@ save/reload equality. `limeshot-app/tests/mvp_workflow.rs` saves, reopens and co
 Format 2 accepts version-1 envelopes and preserves legacy instrument/effect fields and unknown data. The host
 resolves relative sample paths before normalization embeds audio and replaces legacy sources with Lime VST3 state.
 All ten legacy effect kinds have hosted replacements, including Gate/Drive/Chorus. Slot enabled state is authoritative for converted bypass. Legacy track-EQ bands drive a dedicated marked Lime EQ after the ten ordinary insert slots. Hosted compressor sidechain indices and key-enable state follow mixer track edits. See PLG-013…029.
+
+
+## Sample migration boundaries
+
+Decoded audio must meet the native sampler's shared rate/frame limits and the actual serialized state-size bound.
+Missing, rejected or unapproved sources retain a pending plugin reference with settings/path metadata. Pending
+state is not cleared by a failed retry, survives save/reopen, and blocks export with an actionable error. A successful
+conversion removes the marker. Reload runs normalization again; explicit source selection is undoable.
+
+Opening a .lime file and recovery canonicalize unresolved source paths against the loaded project folder; outside
+paths and symlink escapes are not automatically copied into portable state. Explicit GUI source selection clears
+that restriction through ApproveSamplerSource in the source-assignment batch; CLI users can opt in with --allow-external-samples. Already embedded audio
+and normalizer commands for explicitly selected/new sources keep their existing workflow. First-party lime:
+references resolve only known bundle filenames; arbitrary VST3 paths remain the host's explicit plugin-loading boundary.

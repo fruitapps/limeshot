@@ -187,6 +187,7 @@ fn conversion_rejects_audio_outside_the_native_sampler_limits_with_a_warning() {
     };
     assert!(!lime::embedded_audio_supported(&audio));
     let warnings = lime::convert_project(&mut project, &|_| Some(audio.clone()));
+    assert_eq!(warnings.len(), 1, "one precise warning per rejected sample");
     assert!(warnings.iter().any(|w| w.contains("state limits")));
     let Instrument::Plugin(plugin) = &project.channels[0].instrument else {
         panic!("not converted")

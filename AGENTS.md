@@ -86,7 +86,7 @@ features as records.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
   native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
-* The workspace has 137 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* The workspace has 139 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
 * Active instruments and effects use twelve Lime Native VST3 bundles; runtime built-in factories are deleted.
   Hosted clips, note pan, track EQ, Gate/Drive/Chorus, sidechains, source previews, value menus and telemetry are implemented.
   Native sample replacement uses bounded handoff/retirement queues; decoded audio is never freed in processing.

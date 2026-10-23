@@ -642,3 +642,106 @@ fn insert_effects_receive_current_and_automated_transport() {
         assert!(!seen.lock().unwrap().last().unwrap().playing);
     }
 }
+
+#[test]
+fn tempo_ramps_preserve_each_tick_once_and_the_integrated_song_length() {
+    let mut doc = Document::default();
+    let pat = doc.project().patterns[0].id;
+    let channel = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "Tick probe".into(),
+            instrument: Instrument::Plugin(PluginRef::vst3("/probe.vst3", "00", "Probe")),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    doc.execute(Command::AddNotes {
+        pattern: pat,
+        notes: (0..3840)
+            .map(|tick| NewNote {
+                channel,
+                key: (tick % 128) as u8,
+                start: tick,
+                length: 1,
+                velocity: 1.0,
+            })
+            .collect(),
+    })
+    .unwrap();
+    doc.execute(Command::AddClip {
+        pattern: pat,
+        track: 0,
+        start: 0,
+        length: Some(3840),
+    })
+    .unwrap();
+    doc.execute(Command::AddAutomationClip {
+        target: AutomationTarget::Tempo,
+        track: 3,
+        start: 0,
+        length: 3840,
+        value: None,
+        name: None,
+    })
+    .unwrap();
+    let automation = doc.project().automations[0].id;
+    doc.execute(Command::SetAutomationPoints {
+        automation,
+        points: vec![
+            AutomationPoint {
+                tick: 0,
+                value: 0.0,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+            AutomationPoint {
+                tick: 3840,
+                value: 1.0,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+        ],
+    })
+    .unwrap();
+    let snapshot = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let integrated = SR as f64 * 2.0 * 3.0_f64.ln();
+    for block in [1, 64, 333, 1024] {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let processors = Processors {
+            effects: vec![],
+            instruments: vec![(
+                channel.0,
+                Box::new(Gate {
+                    held: 0,
+                    frame: 0,
+                    log: log.clone(),
+                }),
+            )],
+        };
+        let (_, report) = render_offline_with(
+            snapshot.clone(),
+            &RenderSettings {
+                sample_rate: SR,
+                range: ExportRange::Song,
+                max_tail_secs: 0.0,
+                block,
+            },
+            processors,
+        )
+        .unwrap();
+        let events = log.lock().unwrap();
+        let keys: Vec<_> = events.iter().filter(|e| e.1).map(|e| e.2).collect();
+        assert_eq!(keys.len(), 3840, "block {block}: exactly one onset per tick");
+        assert_eq!(
+            keys,
+            (0..3840).map(|tick| (tick % 128) as u8).collect::<Vec<_>>(),
+            "block {block}: no duplicated or lost tick notes"
+        );
+        assert!(
+            (report.music_frames as f64 - integrated).abs() < 160.0,
+            "block {block}: {} frames, integral {integrated}",
+            report.music_frames
+        );
+    }
+}

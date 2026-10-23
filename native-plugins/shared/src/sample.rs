@@ -92,6 +92,7 @@ pub struct SampleStore {
     retired: Arc<ArrayQueue<Arc<SampleData>>>,
 }
 impl Default for SampleStore {
+    /// Preallocate bounded handoff queues before the processor can enter its realtime callback.
     fn default() -> Self {
         Self {
             state: Arc::new(RwLock::new(Default::default())),
@@ -109,6 +110,7 @@ impl SampleStore {
     pub(crate) fn take_audio(&self) -> Option<Option<Arc<SampleData>>> {
         self.pending.pop()
     }
+    /// Whether adopting more audio must wait for control-thread sample collection.
     pub(crate) fn retirement_full(&self) -> bool {
         self.retired.is_full()
     }
@@ -127,12 +129,15 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
     /// Decode errors clear both to their defaults rather than reaching the caller.
     fn set(&self, sample: EmbeddedSample) {
         while self.retired.pop().is_some() {}
+        let mut state = self.state.write();
+        if state.0.name == sample.name && state.0.sample_rate == sample.sample_rate && state.0.pcm == sample.pcm {
+            return;
+        }
         let (sample, audio) = match sample.decode() {
             Ok(audio) => (sample, audio),
             Err(_) => Default::default(),
         };
         // Serialize producers with the persistence lock, which the processor never takes.
-        let mut state = self.state.write();
         *state = (sample, audio.clone());
         let mut update = audio;
         loop {

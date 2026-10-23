@@ -40,6 +40,7 @@ impl ParamInfo {
         self.flags & ParameterInfo_::ParameterFlags_::kCanAutomate != 0
     }
 
+    /// Whether the controller excludes this parameter from generic host controls.
     pub fn hidden(&self) -> bool {
         self.flags & ParameterInfo_::ParameterFlags_::kIsHidden != 0
     }
@@ -173,6 +174,21 @@ impl Bus {
                 channelBuffers32: self.ptrs.as_mut_ptr(),
             },
         }
+    }
+}
+
+/// Supply a mono downmix or one stereo channel, padding absent/short external key audio with silence.
+fn fill_key_channel(out: &mut [f32], key: Option<&[f32]>, channels: usize, channel: usize) {
+    for (i, sample) in out.iter_mut().enumerate() {
+        let left = key.and_then(|k| k.get(2 * i)).copied().unwrap_or(0.0);
+        let right = key.and_then(|k| k.get(2 * i + 1)).copied().unwrap_or(0.0);
+        *sample = if channels == 1 {
+            0.5 * (left + right)
+        } else if channel == 0 {
+            left
+        } else {
+            right
+        };
     }
 }
 
@@ -312,8 +328,7 @@ impl Vst3Instance {
                 events_out: ComWrapper::new(EventList::new(MAX_EVENTS)),
                 telemetry: limeshot_dsp::PluginTelemetry::default(),
                 sidechain_source: 0,
-                native_pan: class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000100")
-                    || class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000101"),
+                native_pan: crate::lime::is_native_pan_class(class_id),
                 params_in: ComWrapper::new(ParamChanges::new(PARAM_QUEUES)),
                 params_out: ComWrapper::new(ParamChanges::new(PARAM_QUEUES)),
                 context: std::mem::zeroed(),
@@ -678,18 +693,23 @@ impl Vst3Processor {
     pub fn process(&mut self, buf: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
         self.process_with_sidechain(buf, notes, transport, None);
     }
+    /// Select a routed mixer key; zero selects the main input.
     pub fn set_sidechain_source(&mut self, source: usize) {
         self.sidechain_source = source;
     }
+    /// Selected mixer key source; zero means the processor main input.
     pub fn sidechain_source(&self) -> usize {
         self.sidechain_source
     }
+    /// Whether the instrument implements the native additive balance protocol.
     pub fn uses_channel_pan(&self) -> bool {
         self.native_pan
     }
+    /// Copy completed block statistics without retaining borrowed event pointers.
     pub fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
         self.telemetry
     }
+    /// Process stereo audio with timestamped events, transport and optional detector input.
     pub fn process_with_sidechain(
         &mut self,
         buf: &mut [f32],
@@ -743,6 +763,7 @@ impl Vst3Processor {
         }
     }
 
+    /// Prepare bounded VST3 buses/events, with caller-owned key audio valid for this block.
     fn process_chunk(&mut self, buf: &mut [f32], first: u32, notes: &[NoteEvent], key: Option<&[f32]>) {
         let n = buf.len() / 2;
         let mb = self.max_block;
@@ -790,11 +811,7 @@ impl Vst3Processor {
                             *s = buf[2 * i + c];
                         }
                     }
-                    (1, 2) => {
-                        for (i, s) in ch.iter_mut().enumerate() {
-                            *s = key.and_then(|k| k.get(2 * i + c)).copied().unwrap_or(0.0);
-                        }
-                    }
+                    (1, 1 | 2) => fill_key_channel(ch, key, channels, c),
                     _ => ch.fill(0.0),
                 }
             }
@@ -905,12 +922,15 @@ impl Drop for Vst3Processor {
 }
 
 impl limeshot_dsp::effects::Effect for Vst3Processor {
+    /// Selected mixer key source; zero means the processor main input.
     fn sidechain_source(&self) -> usize {
         self.sidechain_source
     }
+    /// Maximum dynamics reduction from the preceding block, in dB.
     fn gain_reduction_db(&self) -> f32 {
         self.telemetry.reduction_db
     }
+    /// Use separate detector audio without mixing the key into the audible output.
     fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
         let transport = self.transport;
         self.process_with_sidechain(buf, &[], &transport, Some(key));
@@ -942,9 +962,11 @@ impl limeshot_dsp::effects::Effect for Vst3Processor {
 }
 
 impl limeshot_dsp::Instrument for Vst3Processor {
+    /// Whether the instrument implements the native additive balance protocol.
     fn uses_channel_pan(&self) -> bool {
         self.native_pan
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     fn active_voices(&self) -> usize {
         self.telemetry.voices as usize
     }
@@ -970,6 +992,7 @@ fn com_ptr<C: vst3::Class, I: vst3::Interface>(w: &ComWrapper<C>) -> *mut I {
     w.as_com_ref::<I>().map(|r| r.as_ptr()).unwrap_or(std::ptr::null_mut())
 }
 
+/// Translate an event using SysEx storage that remains alive through the process call.
 fn to_event(e: &NoteEvent, offset: u32, message: &mut [u8; limeshot_dsp::CLIP_MESSAGE_LEN]) -> Event {
     // SAFETY: `Event` is plain old data; zero is a valid value for every field.
     let mut ev: Event = unsafe { std::mem::zeroed() };
@@ -1052,5 +1075,30 @@ mod tests {
         assert_eq!(split_state(&blob), Some((&b"abc"[..], &b"z"[..])));
         assert_eq!(split_state(b"LSV3\xff\xff\xff\xff"), None);
         assert_eq!(split_state(b"nope"), None);
+    }
+}
+
+#[cfg(test)]
+mod key_input_tests {
+    use super::fill_key_channel;
+
+    #[test]
+    fn mono_and_stereo_keys_downmix_and_pad_at_any_block_size() {
+        for frames in [1, 64, 333, 1024] {
+            let mut key = vec![0.0; 2 * frames];
+            for f in key.as_chunks_mut::<2>().0 {
+                *f = [0.75, -0.25];
+            }
+            let mut out = vec![99.0; frames];
+            for (channels, channel, expected) in [(1, 0, 0.25), (2, 0, 0.75), (2, 1, -0.25)] {
+                fill_key_channel(&mut out, Some(&key), channels, channel);
+                assert!(out.iter().all(|v| *v == expected));
+            }
+            fill_key_channel(&mut out, None, 1, 0);
+            assert!(out.iter().all(|v| *v == 0.0));
+            fill_key_channel(&mut out, Some(&[1.0]), 1, 0);
+            assert_eq!(out[0], 0.5);
+            assert!(out[1..].iter().all(|v| *v == 0.0));
+        }
     }
 }

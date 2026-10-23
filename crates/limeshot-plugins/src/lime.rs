@@ -13,6 +13,12 @@ use crate::scan;
 /// The prefix of a Lime plugin's path in a project.
 pub const PATH_PREFIX: &str = "lime:";
 
+/// Native instruments accept the channel-pan protocol; use the same identity in local and bridged hosts.
+pub(crate) fn is_native_pan_class(class_id: &str) -> bool {
+    class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000100")
+        || class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000101")
+}
+
 /// The folders searched for Lime bundles, in order.
 pub fn search_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
@@ -31,12 +37,52 @@ pub fn search_dirs() -> Vec<PathBuf> {
 /// The installed bundle for a `lime:` path, or `None` for other paths or when it is not found.
 pub fn bundle_path(path: &str) -> Option<PathBuf> {
     let bundle = path.strip_prefix(PATH_PREFIX)?;
+    if ![
+        "LimeSynth.vst3",
+        "Lime Sampler.vst3",
+        "Lime Utility.vst3",
+        "Lime EQ.vst3",
+        "Lime Filter.vst3",
+        "Lime Delay.vst3",
+        "Lime Room.vst3",
+        "Lime Comp.vst3",
+        "Lime Limiter.vst3",
+        "Lime Gate.vst3",
+        "Lime Drive.vst3",
+        "Lime Chorus.vst3",
+    ]
+    .contains(&bundle)
+    {
+        return None;
+    }
     search_dirs().into_iter().map(|d| d.join(bundle)).find(|p| p.exists())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn portable_lime_names_cannot_escape_bundle_directories() {
+        for path in [
+            "lime:../secret.vst3",
+            "lime:/tmp/secret.vst3",
+            "lime:plugins/LimeSynth.vst3",
+            "lime:Unknown.vst3",
+        ] {
+            assert_eq!(bundle_path(path), None);
+        }
+    }
+
+    #[test]
+    fn native_pan_identity_accepts_only_the_two_instruments() {
+        for id in ["4C494D454E4154495645000000000100", "4c494d454e4154495645000000000101"] {
+            assert!(is_native_pan_class(id));
+        }
+        for id in ["4C494D454E4154495645000000000102", "", "not a class"] {
+            assert!(!is_native_pan_class(id));
+        }
+    }
 
     #[test]
     fn the_override_folder_comes_first() {

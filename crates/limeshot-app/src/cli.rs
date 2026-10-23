@@ -22,12 +22,14 @@ fn usage() -> ExitCode {
     eprintln!(
         "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
     );
+    eprintln!("  --allow-external-samples: explicitly allow embedding audio outside the loaded project folder");
     ExitCode::from(2)
 }
 
 struct Opts {
     positional: Vec<String>,
     pattern: bool,
+    allow_external_samples: bool,
     rate: u32,
     depth: BitDepth,
     project: Option<PathBuf>,
@@ -40,6 +42,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
     let mut o = Opts {
         positional: Vec::new(),
         pattern: false,
+        allow_external_samples: false,
         rate: 44_100,
         depth: BitDepth::Int24,
         project: None,
@@ -52,6 +55,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
         let mut val = || it.next().cloned().ok_or_else(|| format!("{a} needs a value"));
         match a.as_str() {
             "--pattern" => o.pattern = true,
+            "--allow-external-samples" => o.allow_external_samples = true,
             "--rate" => o.rate = val()?.parse().map_err(|_| "bad --rate".to_string())?,
             "--bits" => {
                 o.depth = match val()?.as_str() {
@@ -73,7 +77,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
 }
 
 /// Load a project with absolute sample paths (as the app keeps them in memory).
-fn load(path: &Path) -> Result<Project, String> {
+fn load(path: &Path, allow_external_samples: bool) -> Result<Project, String> {
     let mut p = limeshot_project::load(path).map_err(|e| e.to_string())?;
     let dir = path.parent();
     for c in &mut p.channels {
@@ -85,15 +89,24 @@ fn load(path: &Path) -> Result<Project, String> {
                 .into_owned();
         }
     }
+    if allow_external_samples {
+        for channel in &mut p.channels {
+            channel.extra.remove("lime-external-source");
+        }
+    } else {
+        limeshot_ui::lime::restrict_loaded_sources(&mut p, dir);
+    }
     Ok(p)
 }
 
+/// Normalize CLI playback sources and report conversion warnings before saving or rendering.
 fn convert(project: &mut Project) {
     for warning in limeshot_core::lime::convert_project(project, &limeshot_ui::lime::embedded_audio) {
         eprintln!("warning: {warning}");
     }
 }
 
+/// Save a normalized copy without changing the caller project.
 fn save_converted(project: &Project, path: &Path) -> Result<(), String> {
     let mut project = project.clone();
     convert(&mut project);
@@ -251,15 +264,17 @@ fn main() -> ExitCode {
     };
     let result = match cmd.as_str() {
         "info" => match o.positional.first() {
-            Some(p) => load(Path::new(p)).map(|p| info(&p)),
+            Some(p) => load(Path::new(p), o.allow_external_samples).map(|p| info(&p)),
             None => return usage(),
         },
         "render" => match (o.positional.first(), o.positional.get(1)) {
-            (Some(p), Some(out)) => load(Path::new(p)).and_then(|proj| render(&proj, Path::new(out), &o)),
+            (Some(p), Some(out)) => {
+                load(Path::new(p), o.allow_external_samples).and_then(|proj| render(&proj, Path::new(out), &o))
+            }
             _ => return usage(),
         },
         "play" => match o.positional.first() {
-            Some(p) => load(Path::new(p)).and_then(|proj| play(&proj, &o)),
+            Some(p) => load(Path::new(p), o.allow_external_samples).and_then(|proj| play(&proj, &o)),
             None => return usage(),
         },
         "run" => {
@@ -270,7 +285,7 @@ fn main() -> ExitCode {
                 let text = std::fs::read_to_string(script).map_err(|e| format!("{script}: {e}"))?;
                 let cmds: Vec<Command> = serde_json::from_str(&text).map_err(|e| format!("{script}: {e}"))?;
                 let mut doc = Document::new(match &o.project {
-                    Some(p) => load(p)?,
+                    Some(p) => load(p, o.allow_external_samples)?,
                     None => Project::new(),
                 });
                 for (i, c) in cmds.into_iter().enumerate() {
@@ -293,7 +308,7 @@ fn main() -> ExitCode {
             })()
         }
         "midi" => match (o.positional.first(), o.positional.get(1)) {
-            (Some(p), Some(out)) => load(Path::new(p)).and_then(|proj| {
+            (Some(p), Some(out)) => load(Path::new(p), o.allow_external_samples).and_then(|proj| {
                 // The song, or with --pattern the first pattern (as `render` does).
                 let pattern = proj.patterns.first().map(|p| p.id).ok_or("project has no pattern")?;
                 let snap = limeshot_sequencer::compile(&proj, pattern, &limeshot_sequencer::NoSamples);

@@ -51,6 +51,7 @@ impl HostGraphicsContext {
 }
 
 impl HostGraphicsGuard {
+    /// Restore the host OpenGL context after a plugin editor callback changes it.
     fn restore(&self) {
         #[cfg(target_os = "macos")]
         if let Some(context) = &self.context {
@@ -60,6 +61,7 @@ impl HostGraphicsGuard {
 }
 
 impl Drop for HostGraphicsGuard {
+    /// Restore the host context even when the editor callback exits early.
     fn drop(&mut self) {
         self.restore();
     }
