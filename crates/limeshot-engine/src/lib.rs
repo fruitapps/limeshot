@@ -15,7 +15,6 @@ pub mod fx;
 mod pdc;
 mod plugins;
 pub mod renderer;
-pub mod voice;
 
 pub use export::{
     ExportError, ExportRange, Processors, RenderReport, RenderSettings, export_wav, export_wav_with, render_offline,

@@ -191,7 +191,9 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
 
 fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
-    let mut bpm = app.project().tempo.bpm();
+    // While the song plays, a tempo automation shows its value here (FL Studio).
+    let automated = app.automated(limeshot_core::AutomationTarget::Tempo);
+    let mut bpm = automated.map_or(app.project().tempo.bpm(), f64::from);
     let r = ui
         .add_sized(
             vec2(78.0, B),
@@ -207,6 +209,10 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     crate::widgets::clickable(&r).context_menu(|ui| {
         if ui.button("Tempo tapper").clicked() {
             app.ui.toolbar.tapper = Some(Tapper::default());
+            ui.close();
+        }
+        if ui.button("Create automation clip").clicked() {
+            crate::automation_ui::create(app, limeshot_core::AutomationTarget::Tempo);
             ui.close();
         }
         ui.separator();
@@ -237,7 +243,8 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let pos = app.player.status().position();
     let sig = app.project().time_signature;
     let bbt = BarBeatTick::from_ticks(pos, sig);
-    let secs = Timeline::new(app.project().tempo, 48_000).seconds(pos);
+    let tempo = automated.map_or(app.project().tempo, |b| Tempo::from_bpm(f64::from(b)));
+    let secs = Timeline::new(tempo, 48_000).seconds(pos);
     let mss = format!("{}:{:05.2}", (secs / 60.0) as u32, secs % 60.0);
     let (main, caption) = if app.ui.toolbar.time_in_seconds {
         (mss, format!("M:S:CS   {bbt}"))

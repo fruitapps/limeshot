@@ -290,5 +290,6 @@ pub fn build(samples: &Path) -> Result<Document, String> {
             name: "Bass".into(),
         },
     )?;
+    d.set_normalizer(limeshot_ui::lime::normalizer());
     Ok(d)
 }

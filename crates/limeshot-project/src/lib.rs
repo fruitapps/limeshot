@@ -3,7 +3,7 @@
 //! A `.lime` file is UTF-8 JSON with a versioned envelope:
 //!
 //! ```json
-//! { "format": "limeshot-project", "version": 1, "generator": "LimeShot 0.1.0", "project": { … } }
+//! { "format": "limeshot-project", "version": 2, "generator": "LimeShot 0.1.0", "project": { … } }
 //! ```
 //!
 //! * Files from older versions are migrated step by step ([`migrate`]).
@@ -33,7 +33,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub const FORMAT: &str = "limeshot-project";
-pub const CURRENT_VERSION: u64 = 1;
+pub const CURRENT_VERSION: u64 = 2;
 pub const EXTENSION: &str = "lime";
 /// Larger files are refused (a project is notes and settings, not audio).
 pub const MAX_FILE_BYTES: u64 = 256 * 1024 * 1024;
@@ -70,6 +70,13 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
                 && let Some(r) = &mut s.sample
             {
                 r.path = relative_path(Path::new(&r.path), dir);
+            }
+            if let Instrument::Plugin(plugin) = &mut c.instrument
+                && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
+                && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(Value::as_str)
+            {
+                let stored = relative_path(Path::new(stored), dir);
+                plugin.extra.insert("lime-sample-path".into(), json!(stored));
             }
         }
     }
@@ -114,11 +121,12 @@ pub fn from_json(text: &str, path_for_errors: &Path) -> Result<Project, ProjectE
 }
 
 /// Bring project JSON from `version` up to [`CURRENT_VERSION`]. Each future format change adds a
-/// step here; version 1 is the first format.
+/// step here; version 1 is the legacy built-in format. Version 2 uses hosted Lime defaults.
+/// Both retain the legacy fields so the host can convert after resolving external sample paths.
 pub fn migrate(version: u64, project: Value) -> Result<Value, String> {
     match version {
         0 => Err("format version 0 does not exist".into()),
-        CURRENT_VERSION => Ok(project),
+        1 | CURRENT_VERSION => Ok(project),
         v => Err(format!("no migration from format version {v}")),
     }
 }
@@ -371,6 +379,19 @@ mod tests {
             .map(|e| e.unwrap().file_name())
             .collect();
         assert_eq!(names.len(), 1, "{names:?}");
+    }
+
+    #[test]
+    fn version_one_loads_and_saves_as_two_without_losing_legacy_or_unknown_data() {
+        let mut project = sample_project("kick.wav");
+        project.extra.insert("future-feature".into(), json!({"enabled": true}));
+        let mut envelope: Value = serde_json::from_str(&to_json(&project, None).unwrap()).unwrap();
+        envelope["version"] = json!(1);
+        let back = from_json(&envelope.to_string(), Path::new("legacy.lime")).unwrap();
+        assert_eq!(back, project);
+        let saved: Value = serde_json::from_str(&to_json(&back, None).unwrap()).unwrap();
+        assert_eq!(saved["version"], 2);
+        assert_eq!(saved["project"]["future-feature"]["enabled"], true);
     }
 
     #[test]

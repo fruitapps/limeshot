@@ -150,6 +150,7 @@ pub struct LimeShotApp {
     pub path: Option<PathBuf>,
     pub player: Player,
     pub samples: SampleCache,
+    sampler_sources: std::collections::HashMap<ChannelId, (limeshot_core::PluginState, PathBuf)>,
     /// The plugin database and the project's running plugins.
     pub plugins: crate::plugins::PluginHost,
     pub settings: Settings,
@@ -166,7 +167,6 @@ pub struct LimeShotApp {
     /// The Song loop range last sent to the engine (`None`: nothing sent yet).
     loop_sent: Option<Option<(Tick, Tick)>>,
     /// Effect processors already handed to the audio thread, and for which document generation.
-    sent_effects: std::collections::HashSet<u32>,
     effects_generation: u64,
     snapshot: Arc<Snapshot>,
     pub allow_close: bool,
@@ -275,7 +275,8 @@ impl LimeShotApp {
         bundled_samples: Option<PathBuf>,
         player: impl FnOnce(Arc<Snapshot>) -> Player,
     ) -> Self {
-        let doc = Document::default();
+        let mut doc = Document::default();
+        doc.set_normalizer(crate::lime::normalizer());
         let snapshot = Arc::new(compile(
             doc.project(),
             doc.project().patterns[0].id,
@@ -287,6 +288,7 @@ impl LimeShotApp {
             doc,
             path: None,
             samples: SampleCache::new(),
+            sampler_sources: Default::default(),
             plugins: crate::plugins::PluginHost::new(None),
             settings,
             ui,
@@ -298,7 +300,6 @@ impl LimeShotApp {
             export_job: None,
             compiled: None,
             loop_sent: None,
-            sent_effects: Default::default(),
             effects_generation: 0,
             snapshot,
             allow_close: false,
@@ -622,6 +623,16 @@ impl LimeShotApp {
 
     /// Rebuild and send the playback snapshot when the project, the current pattern or the loaded
     /// samples changed.
+    /// Runtime source for waveform/audition, using the same embedded PCM as hosted playback.
+    pub fn sampler_source(&self, channel: ChannelId) -> Option<PathBuf> {
+        self.sampler_sources
+            .get(&channel)
+            .map(|(_, path)| path.clone())
+            .or_else(|| {
+                let sampler = limeshot_core::lime::sampler_params(&self.project().channel(channel)?.instrument)?;
+                Some(self.samples.resolve(&sampler.sample?.path))
+            })
+    }
     pub fn sync_engine(&mut self) {
         let loaded = self.samples.poll();
         let key = (self.doc.revision(), self.current_pattern());
@@ -630,9 +641,37 @@ impl LimeShotApp {
             return;
         }
         if self.compiled.map(|k| k.0) != Some(key.0) {
-            let refs: Vec<String> = self.project().sample_refs().map(|r| r.path.clone()).collect();
+            let mut refs: Vec<String> = self.project().sample_refs().map(|r| r.path.clone()).collect();
+            refs.extend(self.project().channels.iter().filter_map(|c| {
+                limeshot_core::lime::sampler_params(&c.instrument)?
+                    .sample
+                    .map(|s| s.path)
+            }));
             for r in refs {
                 self.samples.request(&r);
+            }
+        }
+        let sources: Vec<_> = self
+            .project()
+            .channels
+            .iter()
+            .filter_map(|c| {
+                let limeshot_core::Instrument::Plugin(plugin) = &c.instrument else {
+                    return None;
+                };
+                (limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER))
+                    .then(|| (c.id, plugin.state.clone()))
+            })
+            .collect();
+        self.sampler_sources
+            .retain(|id, _| sources.iter().any(|(c, _)| c == id));
+        for (id, state) in sources {
+            if self.sampler_sources.get(&id).is_some_and(|(old, _)| *old == state) {
+                continue;
+            }
+            self.sampler_sources.remove(&id);
+            if let Some(path) = crate::lime::cache_embedded_sample(&state, &mut self.samples) {
+                self.sampler_sources.insert(id, (state, path));
             }
         }
         self.send_effect_processors();
@@ -647,34 +686,21 @@ impl LimeShotApp {
     fn send_effect_processors(&mut self) {
         if self.effects_generation != self.doc.generation() {
             self.effects_generation = self.doc.generation();
-            self.sent_effects.clear();
             self.send(Msg::ClearEffects);
         }
         let sr = self.player.sample_rate();
-        // Plugin slots get their processors from the plugin host below.
-        let present: Vec<(u32, limeshot_core::EffectKind, Vec<f32>)> = self
-            .project()
-            .mixer
-            .tracks
-            .iter()
-            .flat_map(|t| t.effects.iter())
-            .filter(|e| e.kind != limeshot_core::EffectKind::Plugin)
-            .map(|e| (e.id, e.kind, e.params.clone()))
-            .collect();
-        self.sent_effects.retain(|id| present.iter().any(|p| p.0 == *id));
-        for (id, kind, params) in present {
-            if self.sent_effects.insert(id) {
-                self.send(Msg::Effect(id, limeshot_engine::fx::build(kind, sr, &params)));
-            }
-        }
         let player = &mut self.player;
         let mut send = |m: Msg| {
             if !player.send(m) {
                 log::warn!("audio queue full; plugin processor dropped");
             }
         };
-        self.plugins
+        let warnings = self
+            .plugins
             .sync(self.doc.project(), self.doc.generation(), sr, &mut send);
+        for warning in warnings {
+            self.toast_error(warning);
+        }
     }
 
     pub fn snapshot(&self) -> &Arc<Snapshot> {
@@ -701,6 +727,7 @@ impl LimeShotApp {
                 index,
             },
             A::PluginParam { .. } => return None,
+            A::Tempo => L::Tempo,
         };
         let pos = self.player.status().position();
         self.snapshot
@@ -770,7 +797,8 @@ impl LimeShotApp {
             Ok(project) => {
                 self.send(Msg::Stop);
                 // In memory, sample paths are absolute; they are made relative again on save.
-                let project = absolutize_samples(&project, path.parent());
+                let mut project = absolutize_samples(&project, path.parent());
+                crate::lime::restrict_loaded_sources(&mut project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
@@ -876,7 +904,8 @@ impl LimeShotApp {
         match self.autosave.load() {
             Ok(project) => {
                 self.send(Msg::Stop);
-                let project = absolutize_samples(&project, self.autosave.dir.as_deref());
+                let mut project = absolutize_samples(&project, self.autosave.dir.as_deref());
+                crate::lime::restrict_loaded_sources(&mut project, info.original.as_deref().and_then(Path::parent));
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = info.original.clone();
@@ -1006,7 +1035,6 @@ impl LimeShotApp {
         let snap = self.snapshot.clone();
         self.player = Player::start(&self.settings.audio, snap);
         // The new stream has a new renderer (possibly at a new rate): rebuild every processor.
-        self.sent_effects.clear();
         let (mode, lp, met) = (self.ui.mode, self.ui.song_loop, self.ui.metronome);
         self.send(Msg::Mode(mode));
         self.send(Msg::SongLoop(lp));
@@ -1025,6 +1053,9 @@ impl LimeShotApp {
             ctx.request_repaint();
         }
         ctx.set_zoom_factor(self.settings.ui_scale);
+        for w in self.doc.take_warnings() {
+            self.toast_error(w);
+        }
         self.player.collect_garbage();
         // A safety net: auditions end with their mouse button, whichever editor started them.
         if !self.auditions.is_empty() && !ctx.input(|i| i.pointer.any_down()) {
@@ -1101,6 +1132,7 @@ impl LimeShotApp {
 
     /// Draw the whole window.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        let _graphics = self.plugins.host_graphics.guard();
         let ctx = ui.ctx().clone();
         ui.set_style(ctx.global_style());
         let t = crate::theme::Theme::current();
@@ -1204,6 +1236,17 @@ fn absolutize_samples(project: &Project, dir: Option<&Path>) -> Project {
             r.path = limeshot_project::resolve_sample_path(&r.path, dir)
                 .to_string_lossy()
                 .into_owned();
+        }
+        if let limeshot_core::Instrument::Plugin(plugin) = &mut c.instrument
+            && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
+            && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(serde_json::Value::as_str)
+        {
+            let stored = limeshot_project::resolve_sample_path(stored, dir)
+                .to_string_lossy()
+                .into_owned();
+            plugin
+                .extra
+                .insert("lime-sample-path".into(), serde_json::json!(stored));
         }
     }
     p

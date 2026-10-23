@@ -40,6 +40,10 @@ impl ParamInfo {
         self.flags & ParameterInfo_::ParameterFlags_::kCanAutomate != 0
     }
 
+    /// Whether the controller excludes this parameter from generic host controls.
+    pub fn hidden(&self) -> bool {
+        self.flags & ParameterInfo_::ParameterFlags_::kIsHidden != 0
+    }
     pub fn read_only(&self) -> bool {
         self.flags & ParameterInfo_::ParameterFlags_::kIsReadOnly != 0
     }
@@ -119,6 +123,11 @@ pub struct Vst3Processor {
     out_bufs: Vec<AudioBusBuffers>,
     has_event_input: bool,
     events: ComWrapper<EventList>,
+    clip_messages: Vec<[u8; limeshot_dsp::CLIP_MESSAGE_LEN]>,
+    events_out: ComWrapper<EventList>,
+    telemetry: limeshot_dsp::PluginTelemetry,
+    sidechain_source: usize,
+    native_pan: bool,
     params_in: ComWrapper<ParamChanges>,
     params_out: ComWrapper<ParamChanges>,
     context: ProcessContext,
@@ -165,6 +174,21 @@ impl Bus {
                 channelBuffers32: self.ptrs.as_mut_ptr(),
             },
         }
+    }
+}
+
+/// Supply a mono downmix or one stereo channel, padding absent/short external key audio with silence.
+fn fill_key_channel(out: &mut [f32], key: Option<&[f32]>, channels: usize, channel: usize) {
+    for (i, sample) in out.iter_mut().enumerate() {
+        let left = key.and_then(|k| k.get(2 * i)).copied().unwrap_or(0.0);
+        let right = key.and_then(|k| k.get(2 * i + 1)).copied().unwrap_or(0.0);
+        *sample = if channels == 1 {
+            0.5 * (left + right)
+        } else if channel == 0 {
+            left
+        } else {
+            right
+        };
     }
 }
 
@@ -262,6 +286,14 @@ impl Vst3Instance {
                 core.component
                     .activateBus(MediaTypes_::kEvent as i32, BusDirections_::kInput as i32, 0, 1);
             }
+            if core
+                .component
+                .getBusCount(MediaTypes_::kEvent as i32, BusDirections_::kOutput as i32)
+                > 0
+            {
+                core.component
+                    .activateBus(MediaTypes_::kEvent as i32, BusDirections_::kOutput as i32, 0, 1);
+            }
             let mut setup = ProcessSetup {
                 processMode: ProcessModes_::kRealtime as i32,
                 symbolicSampleSize: SymbolicSampleSizes_::kSample32 as i32,
@@ -292,6 +324,11 @@ impl Vst3Instance {
                 out_bufs,
                 has_event_input,
                 events: ComWrapper::new(EventList::new(MAX_EVENTS)),
+                clip_messages: vec![[0; limeshot_dsp::CLIP_MESSAGE_LEN]; MAX_EVENTS],
+                events_out: ComWrapper::new(EventList::new(MAX_EVENTS)),
+                telemetry: limeshot_dsp::PluginTelemetry::default(),
+                sidechain_source: 0,
+                native_pan: crate::lime::is_native_pan_class(class_id),
                 params_in: ComWrapper::new(ParamChanges::new(PARAM_QUEUES)),
                 params_out: ComWrapper::new(ParamChanges::new(PARAM_QUEUES)),
                 context: std::mem::zeroed(),
@@ -352,7 +389,12 @@ impl Vst3Instance {
             let buses = |dir: i32, n: usize| -> Vec<Bus> {
                 (0..n)
                     .map(|i| {
-                        core.component.activateBus(audio, dir, i as i32, (i == 0) as u8);
+                        core.component.activateBus(
+                            audio,
+                            dir,
+                            i as i32,
+                            (i == 0 || (dir == BusDirections_::kInput as i32 && i == 1)) as u8,
+                        );
                         let mut a: SpeakerArrangement = SpeakerArr::kStereo;
                         core.processor.getBusArrangement(dir, i as i32, &mut a);
                         Bus::new(channel_count(a), max_block)
@@ -649,6 +691,33 @@ impl Vst3Processor {
     /// an audio input) and the output written over it. `notes` offsets are frames into `buf`.
     /// Does not allocate or lock.
     pub fn process(&mut self, buf: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
+        self.process_with_sidechain(buf, notes, transport, None);
+    }
+    /// Select a routed mixer key; zero selects the main input.
+    pub fn set_sidechain_source(&mut self, source: usize) {
+        self.sidechain_source = source;
+    }
+    /// Selected mixer key source; zero means the processor main input.
+    pub fn sidechain_source(&self) -> usize {
+        self.sidechain_source
+    }
+    /// Whether the instrument implements the native additive balance protocol.
+    pub fn uses_channel_pan(&self) -> bool {
+        self.native_pan
+    }
+    /// Copy completed block statistics without retaining borrowed event pointers.
+    pub fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
+        self.telemetry
+    }
+    /// Process stereo audio with timestamped events, transport and optional detector input.
+    pub fn process_with_sidechain(
+        &mut self,
+        buf: &mut [f32],
+        notes: &[NoteEvent],
+        transport: &Transport,
+        key: Option<&[f32]>,
+    ) {
+        self.telemetry = limeshot_dsp::PluginTelemetry::default();
         self.transport = *transport;
         let frames = buf.len() / 2;
         let last = frames.saturating_sub(1) as u32;
@@ -658,7 +727,12 @@ impl Vst3Processor {
         let mut start = 0;
         while start < frames {
             let n = (frames - start).min(self.max_block);
-            self.process_chunk(&mut buf[2 * start..2 * (start + n)], start as u32, notes);
+            self.process_chunk(
+                &mut buf[2 * start..2 * (start + n)],
+                start as u32,
+                notes,
+                key.and_then(|k| k.get(2 * start..2 * (start + n))),
+            );
             start += n;
             self.transport.sample_pos += n as i64;
             self.transport.ppq_pos += n as f64 * self.transport.tempo / (60.0 * self.sample_rate);
@@ -689,7 +763,8 @@ impl Vst3Processor {
         }
     }
 
-    fn process_chunk(&mut self, buf: &mut [f32], first: u32, notes: &[NoteEvent]) {
+    /// Prepare bounded VST3 buses/events, with caller-owned key audio valid for this block.
+    fn process_chunk(&mut self, buf: &mut [f32], first: u32, notes: &[NoteEvent], key: Option<&[f32]>) {
         let n = buf.len() / 2;
         let mb = self.max_block;
         if !self.processing {
@@ -711,11 +786,12 @@ impl Vst3Processor {
         }
         self.events.clear();
         if self.has_event_input {
-            for e in notes {
+            for (index, e) in notes.iter().take(MAX_EVENTS).enumerate() {
                 if e.offset < first || e.offset >= first + n as u32 {
                     continue;
                 }
-                self.events.push(to_event(e, e.offset - first));
+                self.events
+                    .push(to_event(e, e.offset - first, &mut self.clip_messages[index]));
             }
         }
 
@@ -735,6 +811,7 @@ impl Vst3Processor {
                             *s = buf[2 * i + c];
                         }
                     }
+                    (1, 1 | 2) => fill_key_channel(ch, key, channels, c),
                     _ => ch.fill(0.0),
                 }
             }
@@ -751,6 +828,7 @@ impl Vst3Processor {
             self.out_bufs.push(bus.buffers(mb));
         }
 
+        self.events_out.clear();
         self.fill_context();
         let ptr_or_null = |v: &mut Vec<AudioBusBuffers>| {
             if v.is_empty() {
@@ -774,12 +852,15 @@ impl Vst3Processor {
             } else {
                 std::ptr::null_mut()
             },
-            outputEvents: std::ptr::null_mut(),
+            outputEvents: com_ptr(&self.events_out),
             processContext: &mut self.context,
         };
         // SAFETY: every pointer in `data` is into buffers this struct owns, sized for
         // `max_block` frames, and stays valid for the call.
         unsafe { self.core.processor.process(&mut data) };
+        let telemetry = self.events_out.telemetry();
+        self.telemetry.voices = telemetry.voices;
+        self.telemetry.reduction_db = self.telemetry.reduction_db.max(telemetry.reduction_db);
 
         match self.outputs.first_mut() {
             Some(bus) if bus.channels > 0 => {
@@ -820,6 +901,7 @@ impl Vst3Processor {
 
     /// Restart processing (clears tails), from the audio thread.
     pub fn restart(&mut self) {
+        self.telemetry = limeshot_dsp::PluginTelemetry::default();
         if self.processing {
             // SAFETY: audio-thread processing calls on the live processor.
             unsafe {
@@ -840,6 +922,19 @@ impl Drop for Vst3Processor {
 }
 
 impl limeshot_dsp::effects::Effect for Vst3Processor {
+    /// Selected mixer key source; zero means the processor main input.
+    fn sidechain_source(&self) -> usize {
+        self.sidechain_source
+    }
+    /// Maximum dynamics reduction from the preceding block, in dB.
+    fn gain_reduction_db(&self) -> f32 {
+        self.telemetry.reduction_db
+    }
+    /// Use separate detector audio without mixing the key into the audible output.
+    fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
+        let transport = self.transport;
+        self.process_with_sidechain(buf, &[], &transport, Some(key));
+    }
     /// Plugin parameters are not LimeShot effect parameters; they reach the processor through
     /// [`Vst3Instance::set_param`].
     fn set_params(&mut self, _params: &[f32]) {}
@@ -867,6 +962,14 @@ impl limeshot_dsp::effects::Effect for Vst3Processor {
 }
 
 impl limeshot_dsp::Instrument for Vst3Processor {
+    /// Whether the instrument implements the native additive balance protocol.
+    fn uses_channel_pan(&self) -> bool {
+        self.native_pan
+    }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
+    fn active_voices(&self) -> usize {
+        self.telemetry.voices as usize
+    }
     fn process(&mut self, out: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
         out.fill(0.0);
         Vst3Processor::process(self, out, notes, transport);
@@ -889,7 +992,8 @@ fn com_ptr<C: vst3::Class, I: vst3::Interface>(w: &ComWrapper<C>) -> *mut I {
     w.as_com_ref::<I>().map(|r| r.as_ptr()).unwrap_or(std::ptr::null_mut())
 }
 
-fn to_event(e: &NoteEvent, offset: u32) -> Event {
+/// Translate an event using SysEx storage that remains alive through the process call.
+fn to_event(e: &NoteEvent, offset: u32, message: &mut [u8; limeshot_dsp::CLIP_MESSAGE_LEN]) -> Event {
     // SAFETY: `Event` is plain old data; zero is a valid value for every field.
     let mut ev: Event = unsafe { std::mem::zeroed() };
     ev.sampleOffset = offset as i32;
@@ -904,6 +1008,43 @@ fn to_event(e: &NoteEvent, offset: u32) -> Event {
                 velocity: velocity.clamp(0.0, 1.0),
                 length: 0,
                 noteId: id,
+            };
+        }
+        NoteEventKind::ChannelPan { pan } => {
+            message[..14].copy_from_slice(&limeshot_dsp::instrument::channel_pan_message(pan));
+            ev.r#type = Event_::EventTypes_::kDataEvent as u16;
+            ev.__field0.data = DataEvent {
+                size: 14,
+                r#type: 0,
+                bytes: message.as_ptr(),
+            };
+        }
+        NoteEventKind::Pan { id, pan } => {
+            ev.r#type = Event_::EventTypes_::kNoteExpressionValueEvent as u16;
+            ev.__field0.noteExpressionValue = NoteExpressionValueEvent {
+                typeId: NoteExpressionTypeIDs_::kPanTypeID as u32,
+                noteId: id,
+                value: f64::from((pan.clamp(-1.0, 1.0) + 1.0) * 0.5),
+            };
+        }
+        NoteEventKind::Clip {
+            key,
+            velocity,
+            id,
+            playback,
+        } => {
+            *message = limeshot_dsp::ClipMessage {
+                key,
+                velocity,
+                id,
+                playback,
+            }
+            .encode();
+            ev.r#type = Event_::EventTypes_::kDataEvent as u16;
+            ev.__field0.data = DataEvent {
+                size: message.len() as u32,
+                r#type: 0,
+                bytes: message.as_ptr(),
             };
         }
         NoteEventKind::Off { key, id } => {
@@ -934,5 +1075,30 @@ mod tests {
         assert_eq!(split_state(&blob), Some((&b"abc"[..], &b"z"[..])));
         assert_eq!(split_state(b"LSV3\xff\xff\xff\xff"), None);
         assert_eq!(split_state(b"nope"), None);
+    }
+}
+
+#[cfg(test)]
+mod key_input_tests {
+    use super::fill_key_channel;
+
+    #[test]
+    fn mono_and_stereo_keys_downmix_and_pad_at_any_block_size() {
+        for frames in [1, 64, 333, 1024] {
+            let mut key = vec![0.0; 2 * frames];
+            for f in key.as_chunks_mut::<2>().0 {
+                *f = [0.75, -0.25];
+            }
+            let mut out = vec![99.0; frames];
+            for (channels, channel, expected) in [(1, 0, 0.25), (2, 0, 0.75), (2, 1, -0.25)] {
+                fill_key_channel(&mut out, Some(&key), channels, channel);
+                assert!(out.iter().all(|v| *v == expected));
+            }
+            fill_key_channel(&mut out, None, 1, 0);
+            assert!(out.iter().all(|v| *v == 0.0));
+            fill_key_channel(&mut out, Some(&[1.0]), 1, 0);
+            assert_eq!(out[0], 0.5);
+            assert!(out[1..].iter().all(|v| *v == 0.0));
+        }
     }
 }

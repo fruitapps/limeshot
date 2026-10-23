@@ -1,6 +1,6 @@
-use limeshot_dsp::{Adsr, SampleData, db_to_gain, effects::Effect, osc::Shape};
-use limeshot_engine::voice::Voice;
-use limeshot_sequencer::{InstrumentState, SynthMods};
+use crate::effects::build;
+use limeshot_dsp::voice::{SynthMods, Voice, VoiceInstrument as InstrumentState};
+use limeshot_dsp::{Adsr, SampleData, db_to_gain, effects::Effect, filter::Mode, osc::Shape};
 use nice_plug::editor::dpi::LogicalSize;
 use nice_plug::midi::{Channel, Key, VoiceID};
 use nice_plug::prelude::*;
@@ -12,7 +12,7 @@ use std::sync::{
 
 use crate::{
     editor::NativeEditor,
-    parameters::{self, NativeParams},
+    parameters::{self, MAX_CONTROLS, NativeParams},
 };
 
 pub struct Meters {
@@ -54,6 +54,40 @@ struct Slot {
     held: bool,
     sustained: bool,
     serial: u64,
+    clip: bool,
+    pan: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ClipSysEx {
+    Clip(limeshot_dsp::ClipMessage),
+    Telemetry(limeshot_dsp::PluginTelemetry),
+    ChannelPan(f32),
+}
+impl SysExMessage for ClipSysEx {
+    type Buffer = [u8; limeshot_dsp::CLIP_MESSAGE_LEN];
+    /// Validate supported Lime protocol messages and ignore unrelated SysEx.
+    fn from_buffer(buffer: &[u8]) -> Option<Self> {
+        limeshot_dsp::ClipMessage::decode(buffer)
+            .map(Self::Clip)
+            .or_else(|| limeshot_dsp::instrument::decode_channel_pan(buffer).map(Self::ChannelPan))
+    }
+    /// Encode bounded native protocol messages into stack-owned host event storage.
+    fn as_buffer(&self) -> (Self::Buffer, usize) {
+        match self {
+            Self::ChannelPan(pan) => {
+                let mut bytes = [0; limeshot_dsp::CLIP_MESSAGE_LEN];
+                bytes[..14].copy_from_slice(&limeshot_dsp::instrument::channel_pan_message(*pan));
+                (bytes, 14)
+            }
+            Self::Clip(message) => (message.encode(), limeshot_dsp::CLIP_MESSAGE_LEN),
+            Self::Telemetry(value) => {
+                let mut bytes = [0; limeshot_dsp::CLIP_MESSAGE_LEN];
+                bytes[..22].copy_from_slice(&value.encode());
+                (bytes, 22)
+            }
+        }
+    }
 }
 
 pub struct LimePlugin<const ID: u8> {
@@ -63,15 +97,19 @@ pub struct LimePlugin<const ID: u8> {
     notifier: RepaintNotifier,
     effect: Option<Box<dyn Effect>>,
     sample: Option<Arc<SampleData>>,
-    voices: [Slot; 64],
+    /// Defensive overflow retention: never release the last sample reference in process().
+    retired_sample: Option<Arc<SampleData>>,
+    voices: [Slot; 128],
     bend: [f32; 16],
     pedal: [bool; 16],
     serial: u64,
     sample_rate: f32,
-    last_values: [f32; 16],
+    last_values: [f32; MAX_CONTROLS],
     scope_offset: usize,
     preview_note: u32,
     meter_decay: f32,
+    block_reduction: f32,
+    channel_pan: f32,
 }
 
 impl<const ID: u8> Default for LimePlugin<ID> {
@@ -87,15 +125,18 @@ impl<const ID: u8> Default for LimePlugin<ID> {
             notifier: RepaintNotifier::new(),
             effect: None,
             sample: None,
+            retired_sample: None,
             voices: std::array::from_fn(|_| Slot::default()),
             bend: [0.0; 16],
             pedal: [false; 16],
             serial: 0,
             sample_rate: 48000.0,
-            last_values: [f32::NAN; 16],
+            last_values: [f32::NAN; MAX_CONTROLS],
             scope_offset: 0,
             preview_note: 0,
             meter_decay: 0.999,
+            block_reduction: 0.0,
+            channel_pan: 0.0,
         }
     }
 }
@@ -108,9 +149,10 @@ impl<const ID: u8> LimePlugin<ID> {
         self.sample_rate = rate;
         Meters::store(&self.meters.sample_rate, rate);
         self.meter_decay = (-1.0 / (rate * 0.18)).exp();
+        while self.params.sample.take_audio().is_some() {}
         self.sample = self.params.sample.audio();
         self.effect = if ID >= 2 {
-            Some(limeshot_engine::fx::build(
+            Some(build(
                 parameters::KINDS[(ID - 2) as usize],
                 rate as u32,
                 &self.params.values()[..parameters::specs(ID).len()],
@@ -122,7 +164,7 @@ impl<const ID: u8> LimePlugin<ID> {
     }
     /// Apply the editor's audition request at a block boundary using current plain controls.
     /// Zero releases the previous preview; 1–128 select MIDI keys 0–127. Effects ignore requests.
-    fn sync_preview(&mut self, values: &[f32; 16]) {
+    fn sync_preview(&mut self, values: &[f32; MAX_CONTROLS]) {
         let requested = self.meters.preview_note.load(Ordering::Relaxed).min(128);
         if ID >= 2 || requested == self.preview_note {
             return;
@@ -154,13 +196,35 @@ impl<const ID: u8> LimePlugin<ID> {
         self.preview_note = requested;
     }
 
+    /// Adopt decoded audio without locks or sample destruction. Clear voices while `sample`
+    /// still owns the old audio, then transfer that ownership to the control-thread retire queue.
+    pub(crate) fn refresh_sample(&mut self) {
+        if let Some(old) = self.retired_sample.take()
+            && let Err(old) = self.params.sample.retire_audio(old)
+        {
+            self.retired_sample = Some(old);
+            return;
+        }
+        if self.params.sample.retirement_full() {
+            return;
+        }
+        if let Some(audio) = self.params.sample.take_audio() {
+            self.clear();
+            if let Some(old) = std::mem::replace(&mut self.sample, audio)
+                && let Err(old) = self.params.sample.retire_audio(old)
+            {
+                self.retired_sample = Some(old);
+            }
+        }
+    }
+
     /// Stop voices and audition, clear pedal/bend state, and reset DSP and meters.
     /// Retains the prepared sample, output rate, and parameters.
     fn clear(&mut self) {
         self.preview_note = 0;
         self.meters.preview_note.store(0, Ordering::Relaxed);
         for v in &mut self.voices {
-            v.voice.source = limeshot_engine::voice::Source::Off;
+            v.voice.source = limeshot_dsp::voice::Source::Off;
             v.held = false;
             v.sustained = false;
         }
@@ -180,7 +244,7 @@ impl<const ID: u8> LimePlugin<ID> {
 
     /// Convert plain controls in specification order into shared instrument settings.
     /// Converts dB to gain and milliseconds to seconds; sampler audio uses the prepared cache.
-    fn instrument(&self, p: &[f32; 16]) -> InstrumentState {
+    fn instrument(&self, p: &[f32; MAX_CONTROLS]) -> InstrumentState {
         if ID == 0 {
             InstrumentState::Synth {
                 shape: match p[0].round() as u8 {
@@ -206,6 +270,12 @@ impl<const ID: u8> LimePlugin<ID> {
                     lfo_rate: p[12],
                     vibrato_cents: p[13],
                     lfo_cutoff: p[14],
+                    mode: match p[15].round() as u8 {
+                        1 => Mode::BandPass,
+                        2 => Mode::HighPass,
+                        _ => Mode::LowPass,
+                    },
+                    key_track: p[16],
                 },
             }
         } else {
@@ -215,18 +285,26 @@ impl<const ID: u8> LimePlugin<ID> {
                 pitch: p[1],
                 start: p[2],
                 end: p[3],
+                attack: p[8] / 1000.0,
+                decay: p[9] / 1000.0,
+                sustain: p[10],
                 release: p[4] / 1000.0,
                 reverse: p[5] >= 0.5,
                 one_shot: p[6] >= 0.5,
-                looping: None,
-                filter: None,
+                looping: (p[13] >= 0.5).then(|| {
+                    let (a, b) = (p[14].clamp(0.0, 1.0), p[15].clamp(0.0, 1.0));
+                    (a.min(b), a.max(b))
+                }),
+                // As LimeShot compiles its sampler: no filter while it is fully open.
+                filter: (p[11] < 19_999.0 || p[12] > 0.0)
+                    .then(|| (p[11].clamp(20.0, 20_000.0), p[12].clamp(0.0, 0.95))),
             }
         }
     }
 
     /// Apply current plain controls and each channel's pitch bend to active voices without
     /// retriggering, using their original velocities.
-    fn update_voices(&mut self, p: &[f32; 16]) {
+    fn update_voices(&mut self, p: &[f32; MAX_CONTROLS]) {
         let state = self.instrument(p);
         let root = if ID == 1 { p[7].round() as u8 } else { 60 };
         for v in &mut self.voices {
@@ -247,7 +325,7 @@ impl<const ID: u8> LimePlugin<ID> {
     /// Nonpositive note-on velocity releases a note. At capacity, steal the oldest unheld
     /// voice, then the oldest held voice. Pitch bend spans ±2 semitones; CC 64, 120, and 123
     /// control sustain, all-sound-off, and all-notes-off. Other events are ignored.
-    pub(crate) fn event(&mut self, e: NoteEvent<()>, p: &[f32; 16]) {
+    pub(crate) fn event(&mut self, e: NoteEvent<ClipSysEx>, p: &[f32; MAX_CONTROLS]) {
         match e {
             NoteEvent::NoteOn {
                 voice_id,
@@ -286,7 +364,59 @@ impl<const ID: u8> LimePlugin<ID> {
                     held: true,
                     sustained: false,
                     serial: self.serial,
+                    clip: false,
+                    pan: 0.0,
                 };
+            }
+            NoteEvent::MidiSysEx {
+                message: ClipSysEx::Clip(message),
+                ..
+            } if ID == 1 => {
+                self.event(
+                    NoteEvent::NoteOn {
+                        timing: 0,
+                        voice_id: VoiceID::ID(message.id),
+                        channel: Channel::Number(0),
+                        key: Key::Number(message.key),
+                        velocity: message.velocity,
+                    },
+                    p,
+                );
+                if let Some(slot) = self
+                    .voices
+                    .iter_mut()
+                    .find(|s| s.id == Some(message.id) && s.voice.is_active())
+                {
+                    let playback = message.playback;
+                    slot.clip = true;
+                    slot.voice
+                        .skip(playback.offset_secs + playback.elapsed_secs, self.sample_rate);
+                    slot.voice.fade = Some(limeshot_dsp::voice::ClipFade {
+                        in_len: playback.fade_in_secs * self.sample_rate,
+                        pos: (playback.elapsed_secs * f64::from(self.sample_rate)) as f32,
+                        out_len: playback.fade_out_secs * self.sample_rate,
+                        left: (playback.remaining_secs * f64::from(self.sample_rate)) as f32,
+                    });
+                }
+            }
+            NoteEvent::MidiSysEx {
+                message: ClipSysEx::ChannelPan(pan),
+                ..
+            } => {
+                self.channel_pan = pan;
+            }
+            NoteEvent::PolyPan {
+                voice_id,
+                channel,
+                key,
+                pan,
+                ..
+            } => {
+                for slot in &mut self.voices {
+                    if matches_note(slot, voice_id, channel, key) {
+                        slot.pan = pan;
+                    }
+                }
             }
             NoteEvent::NoteOff {
                 voice_id, channel, key, ..
@@ -296,7 +426,7 @@ impl<const ID: u8> LimePlugin<ID> {
             } => {
                 for s in &mut self.voices {
                     if matches_note(s, voice_id, channel, key) {
-                        s.voice.source = limeshot_engine::voice::Source::Off;
+                        s.voice.source = limeshot_dsp::voice::Source::Off;
                         s.held = false;
                     }
                 }
@@ -322,7 +452,7 @@ impl<const ID: u8> LimePlugin<ID> {
                     for s in &mut self.voices {
                         if s.channel == channel {
                             if cc == 120 {
-                                s.voice.source = limeshot_engine::voice::Source::Off;
+                                s.voice.source = limeshot_dsp::voice::Source::Off;
                             } else {
                                 s.voice.release();
                             }
@@ -339,7 +469,7 @@ impl<const ID: u8> LimePlugin<ID> {
 
     /// Release the oldest held voice matching the note selectors, respecting sustain.
     /// Sampler one-shot mode only marks it unheld; unmatched selectors do nothing.
-    fn release_note(&mut self, id: VoiceID, channel: Channel, key: Key, p: &[f32; 16]) {
+    fn release_note(&mut self, id: VoiceID, channel: Channel, key: Key, p: &[f32; MAX_CONTROLS]) {
         // Hosts without note IDs pair repeated keys in start order.
         let index = self
             .voices
@@ -351,7 +481,12 @@ impl<const ID: u8> LimePlugin<ID> {
         if let Some(i) = index {
             let s = &mut self.voices[i];
             s.held = false;
-            if ID == 1 && p[6] >= 0.5 {
+            if s.clip {
+                s.voice.source = limeshot_dsp::voice::Source::Off;
+                return;
+            }
+            // One-shot notes ignore their note-off, unless they loop (as in LimeShot's renderer).
+            if ID == 1 && p[6] >= 0.5 && p[13] < 0.5 {
                 return;
             }
             s.sustained = self.pedal.get(s.channel as usize).copied().unwrap_or(false);
@@ -365,7 +500,13 @@ impl<const ID: u8> LimePlugin<ID> {
     /// `key` supplies an optional external sidechain frame; `tempo` is host BPM. Synced delay
     /// time is clamped to 10–2,000 ms; invalid tempo leaves the manual time in use.
     /// Bypass returns input for effects and silence for instruments while DSP/voices advance.
-    pub(crate) fn frame(&mut self, input: [f32; 2], key: Option<[f32; 2]>, p: &[f32; 16], tempo: f64) -> [f32; 2] {
+    pub(crate) fn frame(
+        &mut self,
+        input: [f32; 2],
+        key: Option<[f32; 2]>,
+        p: &[f32; MAX_CONTROLS],
+        tempo: f64,
+    ) -> [f32; 2] {
         let mut out = if ID < 2 {
             if *p != self.last_values {
                 self.update_voices(p);
@@ -375,8 +516,9 @@ impl<const ID: u8> LimePlugin<ID> {
             for s in &mut self.voices {
                 if s.voice.is_active() {
                     let (l, r) = s.voice.next_frame();
-                    sum[0] += l;
-                    sum[1] += r;
+                    let (gl, gr) = limeshot_dsp::pan_gains((s.pan + self.channel_pan).clamp(-1.0, 1.0));
+                    sum[0] += l * gl;
+                    sum[1] += r * gr;
                 }
             }
             sum
@@ -473,9 +615,10 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         }]
     };
     const MIDI_INPUT: MidiConfig = if ID < 2 { MidiConfig::MidiCCs } else { MidiConfig::None };
+    const MIDI_OUTPUT: MidiConfig = MidiConfig::Basic;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
     type Editor = EguiEditor<NativeEditor>;
-    type SysExMessage = ();
+    type SysExMessage = ClipSysEx;
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
@@ -519,6 +662,8 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let tempo = context.transport().tempo.unwrap_or(120.0);
+        self.block_reduction = 0.0;
+        self.refresh_sample();
         self.sync_preview(&self.params.values());
         let mut event = context.next_event();
         for (i, mut frame) in buffer.iter_samples().enumerate() {
@@ -541,10 +686,24 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
                 frame.get_mut(1).map_or(0.0, |v| *v),
             ];
             let out = self.frame(input, key, &p, tempo);
+            self.block_reduction = self
+                .block_reduction
+                .max(self.effect.as_ref().map_or(0.0, |e| e.gain_reduction_db()));
             for (v, value) in frame.iter_mut().zip(out) {
                 *v = value;
             }
         }
+        let _ = context.try_send_event(NoteEvent::MidiSysEx {
+            timing: 0,
+            message: ClipSysEx::Telemetry(limeshot_dsp::PluginTelemetry {
+                voices: self.voices.iter().filter(|s| s.voice.is_active()).count() as u32,
+                reduction_db: if self.params.bypass.value() {
+                    0.0
+                } else {
+                    self.block_reduction.clamp(0.0, 200.0)
+                },
+            }),
+        });
         self.notifier.request_repaint();
         // Reverb/delay and releasing voices must continue to receive silent blocks.
         ProcessStatus::KeepAlive
@@ -562,7 +721,9 @@ impl<const ID: u8> Vst3Plugin for LimePlugin<ID> {
         4 => &[Vst3SubCategory::Fx, Vst3SubCategory::Filter],
         5 => &[Vst3SubCategory::Fx, Vst3SubCategory::Delay],
         6 => &[Vst3SubCategory::Fx, Vst3SubCategory::Reverb],
-        7 | 8 => &[Vst3SubCategory::Fx, Vst3SubCategory::Dynamics],
+        7..=9 => &[Vst3SubCategory::Fx, Vst3SubCategory::Dynamics],
+        10 => &[Vst3SubCategory::Fx, Vst3SubCategory::Distortion],
+        11 => &[Vst3SubCategory::Fx, Vst3SubCategory::Modulation],
         _ => &[Vst3SubCategory::Fx, Vst3SubCategory::Tools],
     };
 }
@@ -573,7 +734,7 @@ mod tests {
     use crate::sample::EmbeddedSample;
     use nice_plug::params::persist::PersistentField;
 
-    fn on(id: i32, key: u8) -> NoteEvent<()> {
+    fn on(id: i32, key: u8) -> NoteEvent<ClipSysEx> {
         NoteEvent::NoteOn {
             timing: 0,
             voice_id: VoiceID::ID(id),
@@ -582,7 +743,7 @@ mod tests {
             velocity: 0.8,
         }
     }
-    fn off(id: i32, key: u8) -> NoteEvent<()> {
+    fn off(id: i32, key: u8) -> NoteEvent<ClipSysEx> {
         NoteEvent::NoteOff {
             timing: 0,
             voice_id: VoiceID::ID(id),
@@ -591,7 +752,7 @@ mod tests {
             velocity: 0.0,
         }
     }
-    fn cc(cc: u8, value: f32) -> NoteEvent<()> {
+    fn cc(cc: u8, value: f32) -> NoteEvent<ClipSysEx> {
         NoteEvent::MidiCC {
             timing: 0,
             channel: 0,
@@ -606,7 +767,7 @@ mod tests {
                 let mut plugin = LimePlugin::<ID>::default();
                 plugin.prepare(sr as f32);
                 let p = plugin.params.values();
-                let mut reference = limeshot_engine::fx::build(
+                let mut reference = build(
                     parameters::KINDS[(ID - 2) as usize],
                     sr,
                     &p[..parameters::specs(ID).len()],
@@ -640,6 +801,9 @@ mod tests {
         parity::<6>();
         parity::<7>();
         parity::<8>();
+        parity::<9>();
+        parity::<10>();
+        parity::<11>();
     }
 
     #[test]
@@ -656,6 +820,19 @@ mod tests {
         p.clear();
         assert_eq!(Meters::read(&p.meters.output), 0.0);
     }
+    #[test]
+    fn instruments_keep_128_voices_and_steal_the_oldest() {
+        let mut plugin = LimePlugin::<0>::default();
+        plugin.prepare(48_000.0);
+        let values = plugin.params.values();
+        for id in 0..140 {
+            plugin.event(on(id, 60), &values);
+        }
+        assert_eq!(plugin.voices.iter().filter(|v| v.voice.is_active()).count(), 128);
+        assert!(plugin.voices.iter().all(|v| v.id.is_some_and(|id| id >= 12)));
+        assert!(plugin.voices.iter().any(|v| v.id == Some(139)));
+    }
+
     #[test]
     fn synth_release_sustain_repeated_keys_and_wildcard_choke() {
         let mut p = LimePlugin::<0>::default();
@@ -680,7 +857,7 @@ mod tests {
         for i in 0..100 {
             p.event(on(i, 40 + (i % 40) as u8), &values);
         }
-        assert_eq!(p.voices.iter().filter(|v| v.voice.is_active()).count(), 64);
+        assert_eq!(p.voices.iter().filter(|v| v.voice.is_active()).count(), 100);
         p.event(
             NoteEvent::Choke {
                 timing: 0,
@@ -741,6 +918,135 @@ mod tests {
         assert!(last[0] < 0.02, "{last:?}");
         assert!(Meters::read(&plugin.meters.reduction) > 10.0);
     }
+    #[test]
+    fn sampler_takes_up_a_sample_loaded_while_active() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("late.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.prepare(48000.0);
+        assert!(plugin.sample.is_none());
+        // A host loading state (or a preset) after activation, as LimeShot does.
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.refresh_sample();
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        assert!(plugin.frame([0.0; 2], None, &values, 120.0)[0] > 0.1);
+    }
+    #[test]
+    fn sampler_replacement_retires_audio_without_locks_or_destruction() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("replace.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.prepare(48000.0);
+        let old = Arc::downgrade(plugin.sample.as_ref().unwrap());
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        plugin.params.sample.set(EmbeddedSample::default());
+        // Holding the persistence lock must not prevent a realtime handoff.
+        let store = plugin.params.sample.clone();
+        {
+            let plugin = std::cell::RefCell::new(&mut plugin);
+            store.map(|_| {
+                nice_assert_no_alloc::assert_no_alloc(|| plugin.borrow_mut().refresh_sample());
+            });
+        }
+        assert!(plugin.sample.is_none());
+        assert!(!plugin.voices.iter().any(|s| s.voice.is_active()));
+        assert!(
+            old.upgrade().is_some(),
+            "old audio is retained for control-thread destruction"
+        );
+        plugin.params.sample.set(EmbeddedSample::default());
+        assert!(old.upgrade().is_none());
+        // Queue saturation coalesces obsolete updates and keeps the most recent one.
+        for index in 0..20 {
+            plugin.params.sample.set(EmbeddedSample {
+                name: format!("pending-{index}"),
+                ..Default::default()
+            });
+        }
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        for _ in 0..8 {
+            nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
+        }
+        assert!(plugin.sample.is_some());
+    }
+
+    #[test]
+    fn unchanged_sample_state_keeps_held_voices_and_decoded_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("held.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        let sample = EmbeddedSample::load(&path).unwrap();
+        plugin.params.sample.set(sample.clone());
+        plugin.prepare(48000.0);
+        let before = plugin.sample.clone().unwrap();
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        plugin.params.sample.set(sample);
+        nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
+        assert!(Arc::ptr_eq(&before, plugin.sample.as_ref().unwrap()));
+        assert!(plugin.voices.iter().any(|v| v.voice.is_active()));
+    }
+
+    #[test]
+    fn key_tracking_alone_activates_the_open_synth_filter() {
+        let plugin = LimePlugin::<0>::default();
+        let mut values = plugin.params.values();
+        values[8] = 20_000.0;
+        values[9] = 0.0;
+        values[10] = 0.0;
+        values[14] = 0.0;
+        values[16] = 1.0;
+        let state = plugin.instrument(&values);
+        let voice = Voice::for_instrument(&state, 60, 36, 1.0, 48000.0).unwrap();
+        assert!(matches!(
+            voice.source,
+            limeshot_dsp::voice::Source::Synth { mods: Some(_), .. }
+        ));
+    }
+
+    #[test]
+    fn held_sampler_notes_follow_loop_and_filter_edits() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("held.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.prepare(48000.0);
+        let mut values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        values[13] = 1.0;
+        values[14] = 0.2;
+        values[15] = 0.8;
+        values[11] = 500.0;
+        values[12] = 0.5;
+        plugin.update_voices(&values);
+        let voice = &mut plugin.voices.iter_mut().find(|s| s.voice.is_active()).unwrap().voice;
+        assert!(voice.filter.is_some());
+        assert!(
+            matches!(voice.source, limeshot_dsp::voice::Source::Sampler { looping: Some((a,b)), .. } if (a-200.0).abs()<0.01 && (b-800.0).abs()<0.01)
+        );
+        for _ in 0..3000 {
+            voice.next_frame();
+        }
+        assert!(voice.is_active(), "a held note keeps looping past the source end");
+        values[13] = 0.0;
+        values[11] = 20_000.0;
+        values[12] = 0.0;
+        plugin.update_voices(&values);
+        let voice = &plugin.voices.iter().find(|s| s.voice.is_active()).unwrap().voice;
+        assert!(voice.filter.is_none());
+        assert!(matches!(
+            voice.source,
+            limeshot_dsp::voice::Source::Sampler { looping: None, .. }
+        ));
+    }
+
     #[test]
     fn tempo_sync_moves_delay_echo_and_bypass_passes_exact_audio() {
         let mut slow = LimePlugin::<5>::default();
@@ -803,6 +1109,38 @@ mod tests {
             &values,
         );
         assert_eq!(p.bend[0], 2.0);
+    }
+    #[test]
+    fn synth_filter_type_and_key_tracking_reach_the_voice() {
+        // Peak of a sine note after its attack, with `set` applied to the default controls.
+        let peak = |key: u8, set: &dyn Fn(&mut [f32; MAX_CONTROLS])| {
+            let mut p = LimePlugin::<0>::default();
+            p.prepare(48000.0);
+            let mut values = p.params.values();
+            values[0] = 0.0;
+            set(&mut values);
+            p.event(on(1, key), &values);
+            for _ in 0..4800 {
+                p.frame([0.0; 2], None, &values, 120.0);
+            }
+            (0..4800)
+                .map(|_| p.frame([0.0; 2], None, &values, 120.0)[0].abs())
+                .fold(0.0_f32, f32::max)
+        };
+        // High-pass at 2 kHz removes a 110 Hz note that the open filter passes.
+        let open = peak(45, &|_| {});
+        let high = peak(45, &|v| {
+            v[8] = 2000.0;
+            v[15] = 2.0;
+        });
+        assert!(high < 0.1 * open, "{high} vs {open}");
+        // A low-pass at 200 Hz silences C7 unless the cutoff follows the key.
+        let fixed = peak(96, &|v| v[8] = 200.0);
+        let tracked = peak(96, &|v| {
+            v[8] = 200.0;
+            v[16] = 1.0;
+        });
+        assert!(tracked > 10.0 * fixed, "{tracked} vs {fixed}");
     }
     #[test]
     fn editor_audition_starts_and_releases_at_block_boundaries() {

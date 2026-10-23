@@ -1091,6 +1091,22 @@ were still in progress when checked; no CI failure was observed. Live/native che
 is locked, and PLG-006 remains IMPLEMENTED, not VERIFIED. Continue current priorities in next-steps.md using a new
 branch and NEW draft PR for each future development session.
 
+### Session 16 continuation: tempo automation (AUT-008)
+
+Branch `claude/s16-synth-tempo` (PR #7, first stacked on `s16-automation`, now targeting `main`). `AutomationTarget::Tempo` (60–180 BPM) and
+`LaneTarget::Tempo`; the renderer's `retime()` (shared with project tempo changes) runs whenever the tempo lane's
+value differs from the transport's, every automation interval in Song mode, so the position and scheduled note ends
+carry over; `current_tempo()` and `frames_until()`. Offline export renders until the end tick is reached at the
+playing tempo (re-read every block, stopping before Pattern mode wraps). The tempo field's right-click has Create
+automation clip and shows the automated tempo while playing. Engine and UI tests added.
+
+### Session 16 continuation: LimeSynth filter modes and key tracking (INS-013)
+
+`limeshot_dsp::filter::Mode` and `Svf::process` (low-, band- and high-pass outputs of the TPT state-variable
+filter); `SynthParams::filter_mode` / `key_track` (saved with defaults that keep old projects unchanged) feed
+`SynthMods`; the voice adds `key_track × log2(f / C5)` octaves to the cutoff. Channel Settings: Type and Key track
+rows in the Filter section.
+
 ## 2026-10-22 — Lime Native standalone VST3 suite (PLG-012)
 
 The owner requested native Lime instruments/effects as separate VST plugins usable in other DAWs. Added the
@@ -1155,3 +1171,210 @@ documentation append conflicts and renumbered the plugin-workspace decision D38.
 audit remains outside this PR. Fresh integration checks: all 11 native tests, 71 shared DSP/engine tests, native
 all-target Clippy with warnings denied, both workspaces' formatting and feature inventories pass. Earlier
 exported-binary results/hashes remain a pre-integration artifact baseline; platform CI builds/checks the PR.
+
+### Session 16 continuation: PR #7 rebased onto main with the Lime Native suite
+
+Merged `main` (PR #3 and the Lime Native VST3 suite, PR #6) into `claude/s16-synth-tempo`; documentation conflicts
+kept both sides and the inventories were regenerated. The standalone LimeSynth VST3 now has the INS-013 controls:
+Filter type and Key track are appended as controls 16–17 (the plain-control arrays grow to `MAX_CONTROLS` = 17), so
+existing parameter IDs, host automation and saved states are unchanged and old states load with Low-pass and no key
+tracking. They feed the shared `SynthMods`, round-trip through `.limepreset`, and the editor's Filter panel gains a
+type selector and a Key track knob. Main's native build was broken by PR #3's sampler envelope fields; Lime Sampler
+now passes a gate (attack 0, decay 0, sustain 1), and `Voice::update_instrument` applies the sampler's full ADSR.
+Checks: DAW workspace fmt/clippy (warnings denied)/tests; native workspace fmt/clippy/12 tests including
+`synth_filter_type_and_key_tracking_reach_the_voice` and the editor no-overlap layout test; offscreen LimeSynth
+render inspected; inventories and repository links. Not re-run: exported-binary verifier, pluginval, hands-on DAW.
+
+## 2026-10-23 — Lime VST3s replace the built-ins (PLG-013, in progress)
+
+Owner decision: LimeShot hosts the Lime Native VST3s instead of its built-in instruments and effects (D39). Branch
+`claude/lime-vst3-default`, draft PR stacked on #7. Added `limeshot_core::lime` (catalog, class ids, state writer in
+the host's `LSV3` container, `convert_project`), `limeshot_plugins::lime` (`lime:` path resolution), a `Document`
+normalizer installed by the app, and warning toasts for settings that cannot be carried over. Lime Sampler now takes
+up a sample loaded with host state while active (nice-plug does not reactivate after a state load). Equivalence test:
+a project with LimeSynth (band-pass, key tracking), Sampler (WAV, pitch, trim) and EQ renders bit-identically through
+the real bundles (RMS difference 0). Added P0 records PLG-013…PLG-023. Remaining: delete the built-ins and move
+their tests, ship the bundles in the package and CI, and the P0 gaps; see
+[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md).
+
+
+### 2026-10-23 — hosted controls and headless conversion continuation
+
+Continued on `claude/lime-vst3-default` / draft PR #8 at the owner's explicit instruction (the supplied takeover
+prompt overrides the standing new-branch/new-PR session policy for this continuation only). No new chat/session
+was created; no merge is authorized. Future sessions follow the standing AGENTS policy unless the owner overrides it.
+
+Installed conversion in headless constructors, made rack/Browser add actions create Lime references, retained
+sample loading and waveform audition in hosted Channel Settings, and taught Browser/Playlist source selection,
+previews and clip reuse about Lime Sampler. Source hints save relative and reopen absolute; root-key edits update
+sampler state. Removed the old synth/sampler and insert parameter panels. Shared the native parameter schema
+with core; Lime parameter edits now write undoable state and merge per drag. Existing plugin instances follow
+changed saved state. Legacy preset menus work on hosted Lime state. Offline loading failures abort CLI/GUI export.
+
+Added P0 records PLG-024…PLG-028 for audio-clip playback, note pan, full host typed-value menus, host dynamics
+meters and plugin voice statistics. The built-in engine paths remain: PLG-013 is IN_PROGRESS. Native rendering/tab checks and measured audio-device output were subsequently exercised as recorded below.
+
+Validation: all 134 headless UI tests pass, as does the complete DAW workspace suite; 13 native tests pass.
+Non-automated legacy-vs-VST3 rendering now asserts exact sample bits and trailing silence, and passes (RMS
+error 0). Automated EQ comparison remains close, as documented. Both workspaces' formatting and Clippy pass.
+Offscreen hosted Sampler wrapper was rendered and visually inspected. Packaging and binary verification results
+are recorded in the handoff status after completion. GitHub Actions remains unavailable due account billing.
+
+Live follow-up: reproduced and fixed macOS host rendering going black after native editor attachment. A main
+viewport OpenGL context guard restores the host context around UI callbacks. Lime Sampler and its host render
+together after the fix, including a switch to Settings. The packaged demo renders at −3.7 dBFS; realtime converted
+playback produces 324 device callbacks over 2 s at 44.1 kHz, peak −5.3 dBFS. Native binary verification passes all
+nine bundles across three sample rates/four buffer sizes; app/DMG packaging and strict deep ad-hoc signature check
+pass. CLI save/import/play paths now convert too. Broader native interaction, remote CI and pluginval remain open.
+Details: [lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+
+### 2026-10-23 — native-only playback replacement finished
+
+Continued at the owner's explicit request on `claude/lime-vst3-default` / draft PR #8, stacked on unmerged #7.
+Removed synth/sampler playback states and channel voice construction, host effect factories/adoption and the
+independent track EQ. Shared voice DSP moved to `limeshot-dsp`; native plugins no longer link the host engine or
+sequencer. Test-only reference processors exercise the real plugin rack and retain exact real-binary equivalence.
+The app MVP/demo now renders through actual hosted processors. Native instruments keep 128 voices per instance;
+hosted channel automation preserves interval timing with preallocated gains. Test Gain/Tone are unchanged.
+
+Format 2 reads version 1 without losing legacy/unknown data. Gate/Drive/Chorus are preserved disabled and warn.
+The old track-EQ settings survive inactive with disabled controls; PLG-029 records exact response restoration as P0.
+Silent Playlist audio clips and ignored note pan warn too. Existing P0 gaps remain explicit; replacement completion
+does not claim those capabilities are implemented. PLG-013 is IMPLEMENTED.
+
+Validation: 365 root tests (134 UI), 14 native tests; both workspace fmt/strict Clippy; 290-feature inventory and
+repository links; all nine rebuilt release binaries pass verifier at three rates/four buffers. Non-automated
+reference-versus-VST3 audio retains exact sample bits. Mixer offscreen screenshots inspected. Current artifact checks
+are recorded in [lime-vst3-host-validation.md](lime-vst3-host-validation.md). GitHub Actions remains blocked by billing;
+pluginval unavailable, broader native/platform runtime remains open. No merge.
+
+Future sessions must use a NEW `codex/` branch, separate managed worktree and NEW draft PR stacked on the latest
+unmerged continuation, repeat this policy in handoffs, and create another session only when the owner asks. The
+owner's same-branch takeover instruction applies only to this continuation.
+
+
+### 2026-10-23 — hosted P0 parity after native-only replacement
+
+Created a NEW managed worktree and `codex/hosted-p0-parity` from verified unmerged PR #8 head `31d09f9`,
+stacked on unmerged #7. Implemented PLG-024 clips first, then note pan, exact hosted track EQ, Gate/Drive/Chorus,
+Comp key buses, embedded source waveforms/previews, Lime unit-value menus, dynamics telemetry and native voice
+statistics (PLG-017…020, PLG-022, PLG-025…029). No runtime built-in playback was restored. Test Gain/Tone remain.
+
+Real hosted acceptance tests replace silence/ignored-pan gap assertions and preserve the exact sample-bit/RMS-0
+reference comparison. Local/bridged audio and telemetry are compared. New native editors and Mixer/Playlist/rack
+renders were visually inspected. Validation details and limits: [current handoff](handoff-hosted-p0-parity.md).
+Final checks: 375 root tests (136 UI), 14 native tests; fmt and strict all-target Clippy in both workspaces;
+290-feature/repository checks; twelve rebuilt release and allocation-checked debug bundles pass the binary verifier
+at three rates/four buffers. All release signatures verify. CLI demo: 741207 frames at 44.1 kHz, peak −3.7 dBFS.
+GitHub Actions remains billing-blocked; pluginval unavailable; broader native/platform runtime remains open.
+
+Future sessions must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR based on
+the latest unmerged continuation. Leave older checkouts intact; never merge automatically. Create another session
+only when the owner asks.
+
+
+### 2026-10-23 — Piano Roll Target control and label views
+
+Started a NEW managed worktree `editor-view-options/limeshot` and NEW branch `codex/editor-view-options` from
+`68259aa` on `origin/claude/s16-synth-tempo`. PRs #8/#9 had merged into still-open #7; this session's NEW draft PR
+stacks on #7. The primary checkout, previously attached research worktree and older continuations remain intact.
+
+Read the latest handoff, feature dependencies, architectures and decisions. Researched Image-Line's public Piano
+Roll manuals and recorded evidence plus unmeasured fallback choices in
+[piano-roll-view-controls.md](../research/piano-roll-view-controls.md). No FL code, bundle artwork or disassembly
+was used. Implemented Target control › Note velocity / Note pan using existing commands and note data, a central
+pan baseline and channel-filtered selection edits. Pan changes are one undo step per drag, round-trip through
+.lime and preserve velocity. PR-016 remains IN_PROGRESS for its other properties.
+
+Added View › Keyboard labels (None, All, Root, Highlighted, White notes only) and Keep labels on screen. Scale
+changes drive labels, black-key names fit inside the short keys and zoomed-out keys hide text. Note names stay
+inside visible note bodies when scrolled. These are session-local UI choices; PR-030 tracks the implemented subset.
+Fixed the previously clipped lower-lane caption during offscreen inspection. Updated architecture, canonical
+features/menus, generated inventories and known limitations together.
+
+Validation: 378 workspace tests including 138 headless UI tests; all-target workspace build and strict Clippy,
+rustfmt, 291-feature/737-menu inventories, repository references and diff checks pass. Reused the prior hosted-parity
+build cache and its twelve existing native bundles via `LIMESHOT_LIME_PLUGINS`; this session changes no DSP/plugin
+binaries. Offscreen pan/keyboard-label menu renders were inspected. Live native/audio checks remain deferred;
+PLG-006 stays IMPLEMENTED. Current #7 CI run `39924174258` (`68259aa`) has no executed steps: GitHub annotations
+confirm failed account payments/spending limit, so no current remote CI pass is claimed.
+
+Every future development session must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR based on the latest unmerged continuation. Repeat this policy in handoffs even before these docs merge.
+Leave earlier checkouts intact; never merge automatically; create further sessions only when the owner asks.
+
+
+### 2026-10-23 — PR #7 rewrite review and repository reconciliation
+
+Started a new `codex/pr7-rewrite-review` branch in a new managed worktree at PR #7 head `68259aa`. The owner
+explicitly requested direct updates to PR #7, overriding the usual new-draft-PR rule for this session. PRs #8/#9
+have merged into #7; main is updated only when the owner merges #7. No automatic merge.
+
+Fixed all five Codex findings: insert transport for tempo-synced effects, mixer sidechain index/key remapping,
+converted slot bypass, lock-free sampler sample handoff/control-thread retirement, and held-note loop/filter edits.
+Also fixed bounded selection export, per-drag hosted state serialization, preset preservation of bypass/key/fields,
+and shared native sample-size acceptance with conversion warnings. Current architecture, feature records,
+instructions, release gates, menus and README now describe twelve hosted bundles and restored parity. Ten app
+screenshots and all twelve native editor screenshots were refreshed and visually inspected. Historical records
+are labelled; source comments/counts and the PR description were reconciled.
+
+Validation: 383 root tests (137 UI), 16 native tests; formatting and strict all-target Clippy in both workspaces;
+290-feature/generated inventory and repository reference checks. All twelve rebuilt release/debug bundles pass
+actual-binary verification at three rates/four buffer sizes; release signatures verify and hashes are recorded.
+Real VST3 regression checks delay timing at 90/180 BPM and automated tempo, including re-enabling a converted slot;
+non-automated DSP parity still requires exact sample bits. Details: [review handoff](handoff-pr7-rewrite-review.md).
+Remote CI remains billing-blocked; current pluginval and broader native/platform runtime validation remain open.
+
+Future sessions resume the standing policy: NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR stacked on the latest unmerged continuation. Leave older checkouts intact, carry work through validation,
+docs, commit and push, never merge automatically, and create further sessions only when the owner asks. The PR #7
+exception is limited to this explicitly requested session.
+
+
+### 2026-10-23 — all CodeRabbit PR #7 findings, including dropdowns
+
+Continued the owner-authorized PR #7 review on `codex/pr7-rewrite-review` in the same isolated managed worktree.
+Audited both CodeRabbit reviews, covering all 36 inline/minor/nitpick/outside-diff findings and the summary
+migration/documentation/scope checks. [Itemized disposition](coderabbit-pr7-followup.md) distinguishes prior fixes
+from this follow-up. No new session/PR or merge.
+
+Completed mono key downmix, uniform hosted-test bundle gating, shared native-pan identity, nested CI caching and
+remaining limitations/path cleanup. Preserved fractional timeline phase plus the first unprocessed event tick:
+3,840-note ramp regression checks exact onset count/order and integrated duration at four block sizes. Key tracking
+alone now activates the synth filter. Unchanged sampler state keeps decoded audio and held notes; effect presets
+merge fresh live state and preserve that baseline on undo. Conversion emits one accurate reason per failure,
+checks serialized state size, retains pending settings/source data and blocks incomplete exports. Loaded .lime and
+recovery sources outside the project folder, including symlinks, require explicit selection; CLI users can opt in
+with --allow-external-samples. Portable Lime resolution accepts known bundle names only.
+
+Corrected feature evidence (FX-002 is IMPLEMENTED pending native interaction verification), FL Audio Clip comparison,
+PLG-013 status and regenerated counts. Added more than 80 API contract comments and fixed rustdoc HTML. Local checks:
+394 root tests including 139 UI tests, 18 native tests; both workspace formatting/strict all-target Clippy; strict
+rustdoc; 290-feature and repository references pass. Rebuilt twelve release/debug plugins pass three-rate/four-buffer
+actual-binary verification; release signatures and hashes are recorded in native-plugins/VALIDATION.md. Hosted
+Settings was rendered and inspected. Exact native/reference sample-bit assertions remain unchanged and pass.
+
+GitHub Actions remains blocked by owner billing; no remote CI or current pluginval pass is claimed. Broader native
+and platform runtime checks remain open. Future sessions retain NEW codex/ branch, separate NEW managed worktree,
+NEW attached draft PR based on latest unmerged work, leave older checkouts intact, validate/document/commit/push,
+never merge automatically, and create further sessions only when the owner asks. This direct-PR exception is limited
+to the explicitly requested PR #7 review follow-up.
+
+
+### 2026-10-23 — PR #10 integration with updated PR #7
+
+At the owner's request, continued the existing PR #10 branch `codex/editor-view-options` in its managed worktree
+and merged `origin/claude/s16-synth-tempo` at `5cf0870`. Resolved the screenshot usage line with both --note-pan
+and --missing-sample, retained both branches' progress entries, kept the latest PR #7 review guidance alongside
+Piano Roll continuation notes, and regenerated features.md from the merged canonical JSON. All PR #7 review
+fixes and PR #10's note-pan/label options are preserved. No new feature session or PR was created.
+
+Validation: 399 workspace tests (141 headless UI), strict all-target Clippy/build, rustfmt, feature/menu inventories,
+repository references and diff checks pass. Used the PR #7 review worktree's updated native bundles/build cache;
+the merged Piano Roll pan/scale render was inspected offscreen. The owner requested marking #10 ready for review
+after resolving and validating the merge; no pull request merge is authorized. Existing remote CI billing and
+live native/platform verification limits remain.
+
+Future development sessions retain the standing policy: NEW codex/ branch, NEW separate managed worktree and
+NEW attached draft PR based on the latest unmerged continuation; preserve older checkouts, validate/document/
+commit/push, never merge automatically, and create further sessions only when the owner asks.

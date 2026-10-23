@@ -1,6 +1,7 @@
 # LimeShot — original product and development brief
 
 > This document preserves the project requirements and initial execution plan. It is not a current status report.
+> D39 supersedes the original built-in playback requirement: instruments/effects now use the twelve Lime Native VST3 bundles.
 > Start ongoing work with [AGENTS.md](AGENTS.md), [next steps](docs/development/next-steps.md) and the
 > [feature inventory](docs/roadmap/features.md). Completed research and milestones do not need to be restarted.
 

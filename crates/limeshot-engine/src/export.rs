@@ -90,7 +90,7 @@ pub fn render_offline_with(
     let (start, length) = match settings.range {
         ExportRange::Song => (0, snapshot.song.length),
         ExportRange::Pattern => (0, snapshot.pattern.length),
-        ExportRange::Selection { from, to } => (from, to.saturating_sub(from)),
+        ExportRange::Selection { from, to } => (from, to.min(snapshot.song.length).saturating_sub(from)),
     };
     if length == 0 {
         return Err(ExportError::EmptySong);
@@ -98,9 +98,6 @@ pub fn render_offline_with(
     let tempo = snapshot.tempo;
     let mut r = Renderer::new(settings.sample_rate, snapshot.clone());
     let sample_rate = r.sample_rate();
-    for (id, fx) in crate::fx::build_all(&snapshot, sample_rate) {
-        r.adopt_effect(id, fx);
-    }
     for (id, fx) in processors.effects {
         r.adopt_effect(id, fx);
     }
@@ -117,25 +114,38 @@ pub fn render_offline_with(
     r.locate(start);
     r.play();
     let tl = Timeline::new(tempo, sample_rate);
-    let music = (tl.sample_of_tick(start + length) - tl.sample_of_tick(start)) as usize;
+    // Without tempo automation this is the music's exact length; with it, the estimate only
+    // sizes the buffer and the loop below runs to the end at whatever tempo plays.
+    let estimate = (tl.sample_of_tick(start + length) - tl.sample_of_tick(start)) as usize;
+    let end = start + length;
     let tail_max = (settings.max_tail_secs.max(0.0) * sample_rate as f32) as usize;
     let block = settings.block.clamp(1, crate::MAX_BLOCK);
-    let mut out = Vec::with_capacity(2 * (music + tail_max.min(sample_rate as usize)));
+    let mut out = Vec::with_capacity(2 * (estimate + tail_max.min(sample_rate as usize)));
     let mut buf = vec![0.0f32; 2 * block];
     // Plugin delay compensation delays the whole mix; its first frames are silence, left out as
     // FL Studio's "Trim PDC silence" does, and the music ends that much later.
     let latency = r.latency() as usize;
     let mut skip = latency;
     let mut rendered = 0;
-    // The music itself: exactly `music` frames of transport.
-    while rendered < music {
-        let n = block.min(music - rendered);
+    // The music itself: transport until the end tick, at the tempo playing. The frames left
+    // are re-read every block (tempo automation changes them); once a block reaches the end the
+    // music is done, before the transport wraps round (Pattern mode loops).
+    loop {
+        let left = r.frames_until(end) as usize;
+        if left == 0 || r.finished() {
+            break;
+        }
+        let n = block.min(left);
         r.render(&mut buf[..2 * n]);
         let s = skip.min(n);
         skip -= s;
         out.extend_from_slice(&buf[2 * s..2 * n]);
         rendered += n;
+        if n == left {
+            break;
+        }
     }
+    let music = rendered;
     r.pause();
     // The compensation delay's last frames finish the music.
     let mut flush = latency;

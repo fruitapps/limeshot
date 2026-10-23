@@ -1,4 +1,4 @@
-//! Presets menus for the built-in effects (on each effect card) and instruments (in Channel
+//! Preset interchange for hosted Lime effects (on each effect card) and instruments (in Channel
 //! Settings): LimeShot's factory presets, then the user's own, and Save preset as…. Files and
 //! factory presets are in `limeshot_project::preset`.
 
@@ -15,8 +15,7 @@ pub enum Target {
     Channel(ChannelId),
 }
 
-/// The preset slot and current settings of `target`, if it has presets (built-in effects and
-/// the sampler and synth do; plugins have their own).
+/// Reconstruct factory/.limepreset settings for a known Lime target; third-party plugins use host presets.
 fn current(app: &LimeShotApp, target: Target) -> Option<(Slot, Content)> {
     match target {
         Target::Effect { track, effect } => {
@@ -28,6 +27,29 @@ fn current(app: &LimeShotApp, target: Target) -> Option<(Slot, Content)> {
                 .effects
                 .iter()
                 .find(|e| e.id == effect)?;
+            if let Some(plugin) = &e.plugin
+                && let Some(lime) = LimePlugin::of(plugin)
+                && let Some(kind) = LimePlugin::EFFECTS
+                    .iter()
+                    .copied()
+                    .find(|kind| LimePlugin::for_effect(*kind) == Some(lime))
+            {
+                let mut plugin = plugin.clone();
+                if let Some(Ok(state)) = app
+                    .plugins
+                    .instance(PluginTarget::Effect { track, effect })
+                    .map(|i| i.state())
+                {
+                    plugin.state = PluginState::new(state);
+                }
+                return Some((
+                    Slot::Effect(kind),
+                    Content::Effect {
+                        kind,
+                        params: lime::plain_values(&plugin, &kind.defaults()),
+                    },
+                ));
+            }
             (e.kind != EffectKind::Plugin).then(|| {
                 (
                     Slot::Effect(e.kind),
@@ -41,6 +63,17 @@ fn current(app: &LimeShotApp, target: Target) -> Option<(Slot, Content)> {
         Target::Channel(c) => match &app.project().channel(c)?.instrument {
             Instrument::Synth(s) => Some((Slot::Synth, Content::Synth(s.clone()))),
             Instrument::Sampler(s) => Some((Slot::Sampler, Content::Sampler(s.clone()))),
+            Instrument::Plugin(p) => {
+                let mut p = p.clone();
+                if let Some(Ok(state)) = app.plugins.instance(PluginTarget::Channel(c)).map(|i| i.state()) {
+                    p.state = PluginState::new(state);
+                }
+                lime::synth_params(&p)
+                    .map(|s| (Slot::Synth, Content::Synth(s)))
+                    .or_else(|| {
+                        lime::sampler_params(&Instrument::Plugin(p)).map(|s| (Slot::Sampler, Content::Sampler(s)))
+                    })
+            }
             _ => None,
         },
     }
@@ -84,8 +117,26 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
 /// Load preset settings into `target` (one undo step). A sampler keeps its own sample.
 pub fn apply(app: &mut LimeShotApp, target: Target, content: Content) {
     match (target, content) {
-        (Target::Effect { track, effect }, Content::Effect { params, .. }) => {
-            app.exec(Command::SetEffectParams { track, effect, params });
+        (Target::Effect { track, effect }, Content::Effect { kind, params }) => {
+            let target = PluginTarget::Effect { track, effect };
+            if let Some(plugin) = app.project().plugin(target)
+                && let Some(lime) = LimePlugin::of(plugin)
+            {
+                if LimePlugin::for_effect(kind) != Some(lime) {
+                    app.toast_error("That preset does not fit here".to_string());
+                    return;
+                }
+                let mut plugin = plugin.clone();
+                if let Some(Ok(state)) = app.plugins.instance(target).map(|i| i.state()) {
+                    plugin.state = limeshot_core::PluginState::new(state);
+                    app.doc.store_plugin_state(target, plugin.state.clone());
+                }
+                if let Some(state) = limeshot_core::lime::edited_values_state(&plugin, &params) {
+                    app.exec(Command::SetPluginState { plugin: target, state });
+                }
+            } else {
+                app.exec(Command::SetEffectParams { track, effect, params });
+            }
         }
         (Target::Channel(channel), Content::Synth(s)) => {
             app.exec(Command::SetInstrument {
@@ -94,8 +145,12 @@ pub fn apply(app: &mut LimeShotApp, target: Target, content: Content) {
             });
         }
         (Target::Channel(channel), Content::Sampler(mut s)) => {
-            if let Some(Instrument::Sampler(cur)) = app.project().channel(channel).map(|c| &c.instrument) {
-                s.sample = cur.sample.clone();
+            if let Some(cur) = app
+                .project()
+                .channel(channel)
+                .and_then(|c| lime::sampler_params(&c.instrument))
+            {
+                s.sample = cur.sample;
             }
             app.exec(Command::SetInstrument {
                 channel,

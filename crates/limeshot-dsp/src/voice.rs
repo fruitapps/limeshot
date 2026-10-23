@@ -1,10 +1,80 @@
 //! Voices: one sounding note of a sampler, synth, metronome click or browser preview.
 
-use limeshot_dsp::filter::Svf;
-use limeshot_dsp::osc::Shape;
-use limeshot_dsp::{Adsr, Envelope, Oscillator, SampleData, key_to_hz};
-use limeshot_sequencer::{InstrumentState, SynthMods};
+use crate::filter::Svf;
+use crate::osc::Shape;
+use crate::{Adsr, Envelope, Oscillator, SampleData, key_to_hz};
+
 use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+pub enum VoiceInstrument {
+    Sampler {
+        sample: Option<Arc<SampleData>>,
+        gain: f32,
+        /// Semitones.
+        pitch: f32,
+        start: f32,
+        end: f32,
+        reverse: bool,
+        /// Attack, decay (seconds) and sustain level of the volume envelope.
+        attack: f32,
+        decay: f32,
+        sustain: f32,
+        release: f32,
+        one_shot: bool,
+        /// Loop range as fractions of the sample, when looping.
+        looping: Option<(f32, f32)>,
+        /// Low-pass cutoff (Hz) and resonance, when the filter is not fully open.
+        filter: Option<(f32, f32)>,
+    },
+    Synth {
+        shape: Shape,
+        adsr: Adsr,
+        gain: f32,
+        octave: i8,
+        detune_cents: f32,
+        mods: SynthMods,
+    },
+    Silent,
+}
+
+/// LimeSynth's filter and LFO settings, resolved for playback.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SynthMods {
+    /// Hz.
+    pub cutoff: f32,
+    pub resonance: f32,
+    /// Filter envelope depth in octaves.
+    pub env_octaves: f32,
+    /// Seconds for the filter envelope to decay.
+    pub env_decay: f32,
+    /// Hz.
+    pub lfo_rate: f32,
+    pub vibrato_cents: f32,
+    /// LFO to cutoff in octaves.
+    pub lfo_cutoff: f32,
+    pub mode: crate::filter::Mode,
+    /// Cutoff key tracking, 0–1 (octaves of cutoff per octave of pitch, around C5).
+    pub key_track: f32,
+}
+
+impl SynthMods {
+    /// Whether the filter does anything (an open filter without modulation is bypassed, so
+    /// default settings sound exactly as before the filter existed).
+    pub fn filter_on(&self) -> bool {
+        self.cutoff < 19_999.0
+            || self.env_octaves > 0.0
+            || self.lfo_cutoff > 0.0
+            || self.resonance > 0.0
+            || self.key_track != 0.0
+            || self.mode != crate::filter::Mode::LowPass
+    }
+
+    /// Whether a synth voice needs inline modulation, including key tracking alone.
+    pub fn any(&self) -> bool {
+        self.filter_on() || self.vibrato_cents > 0.0
+    }
+}
 
 /// Voices that are not tied to a channel play straight into the master.
 pub const NO_CHANNEL: u16 = u16::MAX;
@@ -55,6 +125,7 @@ pub struct ModState {
 }
 
 impl ModState {
+    /// Start per-note modulation at phase zero; coefficients remain inline for allocation-free updates.
     fn new(cfg: SynthMods, sample_rate: f32, freq_a: f32, freq_b: f32) -> Self {
         let decay_samples = (cfg.env_decay.max(0.001) * sample_rate).max(1.0);
         Self {
@@ -72,6 +143,7 @@ impl ModState {
         }
     }
 
+    /// Recompute slow modulation at fixed intervals and preserve filter history between samples.
     #[inline]
     fn process(&mut self, x: f32, a: &mut Oscillator, b: Option<&mut Oscillator>) -> f32 {
         if self.countdown == 0 {
@@ -85,7 +157,9 @@ impl ModState {
                 }
             }
             if self.cfg.filter_on() {
-                let oct = self.cfg.env_octaves * self.env + self.cfg.lfo_cutoff * lfo;
+                // Key tracking: octaves of the note above or below C5 (261.63 Hz).
+                let keys = self.cfg.key_track * (self.freq_a.max(1.0) / 261.626).log2();
+                let oct = self.cfg.env_octaves * self.env + self.cfg.lfo_cutoff * lfo + keys;
                 self.svf
                     .set(self.cfg.cutoff * 2f32.powf(oct), self.cfg.resonance, self.sample_rate);
             }
@@ -93,7 +167,11 @@ impl ModState {
         self.countdown -= 1;
         self.lfo_phase = (self.lfo_phase + self.lfo_inc).fract();
         self.env *= self.env_coef;
-        if self.cfg.filter_on() { self.svf.lowpass(x) } else { x }
+        if self.cfg.filter_on() {
+            self.svf.process(x, self.cfg.mode)
+        } else {
+            x
+        }
     }
 }
 
@@ -152,6 +230,7 @@ impl ClipFade {
 }
 
 impl Default for Voice {
+    /// Construct an inactive slot that owns no sample or oscillator allocation.
     fn default() -> Self {
         Self {
             source: Source::Off,
@@ -171,6 +250,7 @@ impl Default for Voice {
 }
 
 impl Voice {
+    /// Whether a source still sounds; release tails remain active until finished.
     pub fn is_active(&self) -> bool {
         !matches!(self.source, Source::Off)
     }
@@ -179,7 +259,7 @@ impl Voice {
     /// Returns `None` for plugin or silent instruments, missing samples, samples shorter than
     /// two frames, or a playback window shorter than one source frame.
     pub fn for_instrument(
-        instrument: &InstrumentState,
+        instrument: &VoiceInstrument,
         root_key: u8,
         key: u8,
         velocity: f32,
@@ -187,7 +267,7 @@ impl Voice {
     ) -> Option<Self> {
         let velocity = velocity.clamp(0.0, 1.0);
         match instrument {
-            InstrumentState::Sampler {
+            VoiceInstrument::Sampler {
                 sample,
                 gain,
                 pitch,
@@ -252,7 +332,7 @@ impl Voice {
                     ..Self::default()
                 })
             }
-            InstrumentState::Synth {
+            VoiceInstrument::Synth {
                 shape,
                 adsr,
                 gain,
@@ -282,7 +362,7 @@ impl Voice {
                 })
             }
             // Plugin channels have no voices; the renderer sends them note events.
-            InstrumentState::Plugin { .. } | InstrumentState::Silent => None,
+            VoiceInstrument::Silent => None,
         }
     }
 
@@ -295,7 +375,7 @@ impl Voice {
     /// modulation start with fresh state.
     pub fn update_instrument(
         &mut self,
-        instrument: &InstrumentState,
+        instrument: &VoiceInstrument,
         root_key: u8,
         velocity: f32,
         bend_semitones: f32,
@@ -304,7 +384,7 @@ impl Voice {
         match (&mut self.source, instrument) {
             (
                 Source::Synth { a, b, mods },
-                InstrumentState::Synth {
+                VoiceInstrument::Synth {
                     shape,
                     adsr,
                     gain,
@@ -350,15 +430,21 @@ impl Voice {
                     lo,
                     hi,
                     reverse,
+                    looping: current_loop,
                     ..
                 },
-                InstrumentState::Sampler {
+                VoiceInstrument::Sampler {
                     gain,
                     pitch,
                     start,
                     end,
                     reverse: rev,
+                    attack,
+                    decay,
+                    sustain,
                     release,
+                    looping,
+                    filter,
                     ..
                 },
             ) => {
@@ -367,8 +453,26 @@ impl Voice {
                 *lo = f64::from(start.min(*end)) * sample.frames() as f64;
                 *hi = f64::from(start.max(*end)) * sample.frames() as f64;
                 *reverse = *rev;
+                *current_loop = looping.and_then(|(a, b)| {
+                    let a = (f64::from(a) * sample.frames() as f64).max(*lo);
+                    let b = (f64::from(b) * sample.frames() as f64).min(*hi);
+                    (b - a >= 4.0).then_some((a, b))
+                });
+                if let Some((cutoff, resonance)) = filter {
+                    let filters = self.filter.get_or_insert_with(|| [Svf::default(); 2]);
+                    for f in filters {
+                        f.set(*cutoff, *resonance, sample_rate);
+                    }
+                } else {
+                    self.filter = None;
+                }
                 self.gain = velocity * gain;
-                self.env.set_adsr(Adsr::gate(*release));
+                self.env.set_adsr(Adsr {
+                    attack: *attack,
+                    decay: *decay,
+                    sustain: *sustain,
+                    release: *release,
+                });
             }
             _ => {}
         }
@@ -426,6 +530,7 @@ impl Voice {
         })
     }
 
+    /// Begin release from the current envelope level without retriggering.
     pub fn release(&mut self) {
         self.env.release();
     }

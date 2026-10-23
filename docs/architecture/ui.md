@@ -40,7 +40,7 @@ interaction; the ArtCraft apps only for the broad visual style (decision D24).
   as in FL; other maximised windows keep normal stacking. Shortcuts also work inside detached windows.
 * New projects open with FL Studio's layout: Playlist maximised, Channel Rack floating on top.
 * Clicking a channel button toggles the **Channel Settings** window for that channel (FL behaviour); its content is
-  `inspector::show` (sampler/synth parameters).
+  `inspector::show` (hosted instrument controls and Lime Sampler embedded-PCM/source-file preview).
 * The **Mixer** window shows strips on the left and, like FL, the selected track's panel on the right (level, routing,
   the 10 insert slots via `effects_ui::chain`).
 * `toolbar::header`, `toolbar::show`, `toolbar::status_bar`; `browser::show` (docked left, resizable, as FL's Browser);
@@ -73,9 +73,14 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
-Right-click channel/mixer volume or pan and built-in effect parameters for Reset, Copy/Paste value,
+Right-click channel/mixer volume or pan, or known hosted Lime controls, for Reset, Copy/Paste value,
 Type in value… and Create automation clip. The value clipboard holds normalised control position independently
 of notes/clips. Type-in uses the control's units and commits once on OK; invalid input and Cancel do not edit.
+
+Piano Roll › Target control selects velocity or pan in the lower lane. Pan stems extend from a central zero line;
+selected-note edits are restricted to the current channel. Both properties use Document commands and merge one drag
+into one undo step. View › Keyboard labels follows scale highlighting with a separate white-key restriction;
+Keep labels on screen anchors clipped note names to their visible left edge. These are session-local UI state.
 
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
 
@@ -164,3 +169,12 @@ and is saved in the project. Windows and Linux show the parameter list until the
 Editor layouts can be explicitly saved/restored through View › Arrange windows; they are not automatically persisted. The Piano Roll has FL's tool strip
 (`piano_roll::Tool`, keys P B D T C E Z Y); the Playlist has nine tools; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
 custom-painted editors expose no accessibility labels.
+
+LimeSynth/Sampler control definitions are shared with the native suite through `limeshot_core::lime` (D39).
+Hosted Lime sliders write `SetPluginState` commands, merging drags and preserving embedded audio. Changed document
+state is applied to an existing plugin instance. Host factory/user `.limepreset` menus translate through Lime state.
+The macOS main viewport captures/restores its OpenGL context around UI callbacks: embedded native editors can
+clear the current context, while glutin's surface check only compares bound views. Exports fail on missing plugins
+instead of silently writing an incomplete mix. Live evidence: [host validation](../development/lime-vst3-host-validation.md).
+
+Hosted parameter drags audition through the live instance; release commits one plugin-state command. This avoids serializing embedded sampler PCM on every pointer frame.

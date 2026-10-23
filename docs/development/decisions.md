@@ -229,3 +229,62 @@ voices hold the same sample Arc that the plugin owns, so finishing/stealing a vo
 Factory and file presets share LimeShot's schema and factory definitions. The bundler targets this nested
 workspace explicitly, avoiding its upstream helper's outermost-manifest heuristic. `build.py` collects separate
 VST3 bundles in `dist/`, with no automatic installation or changes to the user's DAW.
+
+### D39. The Lime VST3s are LimeShot's instruments and effects
+
+Owner decision (2026-10-22): LimeShot drops its in-process built-in LimeSynth, Sampler and mixer effects and hosts the
+Lime Native VST3 plugins (D38) instead; capabilities the plugins lack are P0 features (PLG-014…PLG-023). Projects refer
+to them as `lime:<bundle>` so they stay portable; `limeshot-plugins::lime` resolves the bundle (override folder, beside
+the executable, `native-plugins/dist`, standard VST3 folders). Their state is written as the plugins' own nice-plug
+JSON inside the host's `LSV3` container, so the DAW configures them without instantiating them. Conversion is a
+document normalizer applied to every replaced project and every edit, so commands that still create built-ins and
+old projects both end up as Lime plugins; Lime Sampler embeds sample audio, as it does in other DAWs. The shared DSP
+crates stay: the plugins link them, which is why converted projects render bit-identically.
+
+### D39 continuation — hosted control migration (2026-10-23)
+
+GUI and headless constructors now use the same normalizer. Rack and Browser creation use Lime references;
+legacy core/import commands remain accepted during engine migration. Channel Settings and insert cards use
+hosted controls, with source-file actions and waveform audition retained for Lime Sampler. Parameter definitions
+for LimeSynth/Sampler now live in `limeshot_core::lime` and are re-exported by native plugins, so the host can write
+requested values into undoable state without reading stale pre-callback component state. `SetPluginState` is a
+mergeable command. The host applies changed document state to an existing instance, including on undo/redo.
+Legacy `.limepreset` menus reconstruct settings from Lime state; failed offline plugin loading stops export.
+The migration exposes additional losses recorded as P0 PLG-024…PLG-028. Built-in engine deletion is still pending.
+
+The live macOS pass also exposed lost host OpenGL context after a plugin renderer callback. The plugin crate now
+owns a context guard restored around the main viewport UI; its live rendering/tab checks are recorded separately.
+CLI save/import/play paths convert before use, and plugin load/state failures surface as app errors and export failures.
+
+### D39 completion — remove runtime built-ins (2026-10-23, historical pre-parity state)
+
+The sequencer emits Plugin/Silent instrument states; the renderer no longer creates synth/sampler voices. Effect
+factories and automatic offline/CLI/UI adoption are removed, as is the independent Mixer track EQ. Voice DSP moved
+to `limeshot-dsp` and the seven-effect factory moved into the native plugin workspace; those plugins no longer link
+the host engine/sequencer. A test-only DSP adapter feeds the real plugin rack for regression/reference comparisons.
+The non-automated native comparison retains exact sample-bit assertions. Hosted channel automation now captures
+per-frame gains at each automation interval. Native instruments keep 128 voices per instance.
+
+Format 2 reads version 1; legacy enum/schema data remains for import, presets and conversion. Audio-clip creation
+and the returned demo document use native references. Gate/Drive/Chorus are preserved disabled with warnings.
+Legacy track EQ has no exact native mapping, so its settings survive inactive, its panel is disabled, and PLG-029
+records restoration as P0. PLG-024/025 warnings disclose silent clips and ignored note pan. All outstanding losses
+are recorded independently of the completed factory replacement. Test Gain/Tone fixtures remain unchanged.
+
+
+### D39 hosted parity — native protocol and dedicated track EQ (2026-10-23)
+
+Playlist clips stay inside Lime Sampler. Fixed-size, 7-bit-clean, versioned noncommercial SysEx carries source
+window/chase/fades without allocating in processing. Ordinary notes retain standard VST3 note IDs and pan expressions;
+a channel-pan message preserves the legacy additive balance law before mixing. Output SysEx reports actual native
+voice counts and maximum dynamics reduction per block; the host copies telemetry during the event callback so no
+borrowed pointer survives it. The process bridge serializes the same bounded data plus stereo key audio.
+
+Gate/Drive/Chorus append bundle IDs 9–11. Existing IDs and parameter order remain unchanged. Exact legacy track EQ
+uses appended hidden controls on Lime EQ and a marked hosted slot after the ten inserts, before the fader. Saved
+bands remain canonical; SetMixerEq updates state through Document undo. Sanitization keeps ten inserts plus one
+validated track-EQ slot. No runtime built-in instrument/effect factory returns.
+
+Channel Rack/Settings/Playlist previews cache the embedded sampler PCM under a content key and require no source
+file or temporary file. Known Lime numeric parameters use the existing unit-value menu and named automation.
+Native/platform GUI validation, pluginval and billing-blocked remote CI remain separate from local test evidence.

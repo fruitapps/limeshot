@@ -1,6 +1,6 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-22, session 17. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-23, Piano Roll controls integrated with the PR #7 review updates. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -9,6 +9,17 @@ Every new development session must use a new isolated branch and create a NEW dr
 feature work to an earlier session’s PR. Inspect merge state and stack on the latest unmerged continuation.
 Finish implementation, validation, documentation, commit and push, attach the new PR, and do not merge automatically.
 Repeat this policy in every future session handoff before these docs merge. Do not create further sessions unless asked.
+
+## Hosted rewrite: implemented; native/platform verification remains
+
+The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
+VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
+Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
+Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 have merged into PR #7, which targets main. Review PR #7 and repeat hands-on native/platform checks;
+current review fixes and evidence are in [the review handoff](handoff-pr7-rewrite-review.md) and
+[CodeRabbit disposition](coderabbit-pr7-followup.md).
+The plan, the current architecture and the list of lost capabilities are in
+[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
 ## Immediate verification
 
@@ -21,7 +32,9 @@ Repeat this policy in every future session handoff before these docs merge. Do n
 2. **Platform CI (PF-002…PF-005).** Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64
    cross-build and Apple Silicon checks pass at the commits recorded in [platform-validation.md](platform-validation.md).
    The `macos-15-intel` replacement has now passed too (full run `39826217710`, commit `38d9a7b`). Check
-   the latest PR commit and fix actual failures. Native GUI/audio-device validation stays separate from headless CI.
+   the latest PR commit and fix actual failures. Current run `39924174258` at `68259aa` never started its jobs:
+   GitHub annotations report account billing/spending limits. No current platform CI pass is claimed.
+   Native GUI/audio-device validation stays separate from headless CI.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
    compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
    embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.
@@ -35,21 +48,23 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
 ## Next implementation work
 
 1. **Finish editor/context menus from the FL inventories.** Main menus, settings pages, toolbar menus and the core
-   editor menus are in. Remaining work includes editor View options, Piano Roll Time markers / Target control /
+   editor menus are in. Piano Roll now has velocity/pan Target control and keyboard-label/visible-note-label View options
+   ([research and limits](../research/piano-roll-view-controls.md)). Remaining work includes other editor View options,
+   Piano Roll Time markers / further Target control properties /
    Group, Riff machine and chord progressions, Claw machine, Playlist picker options and performance mode, Mixer
    groups/docking/multiselection, and Channel Rack display options (manual Zip / Unzip and Auto zip empty channels are complete). Playlist track modes, grouping,
    icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
    Continue documenting FL's Browser top bar, clip/note/control context menus and floating View windows before
    implementing them; preserve clean-room evidence in `docs/research/`.
-2. **Audio and automation.** Tempo automation (AUT-008), crossfades/time stretching (PL-023), and a larger
-   automation editing surface. Compressed decoders, clip fades, visible automated controls and point modes are implemented.
+2. **Audio and automation.** Crossfades/time stretching (PL-023) and a larger
+   automation editing surface. Tempo automation (AUT-008), compressed decoders, clip fades, visible automated controls and point modes are implemented.
 3. **MIDI devices and recording.** MIDI input and MIDI/audio recording exist; verify with real devices, then add monitoring,
    latency compensation and count-in according to dependencies. Open an exported MIDI file in another application.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining inferred FL bindings, and automatic layout
    persistence. Detachable panels and explicitly saved custom layouts already exist.
 5. **Packaging (PF-006)** (macOS app/DMG exists; signing and Windows/Linux packages remain) and `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
    further arrangements and value-checked fixtures from older FL versions.
-6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's nine standalone VST3 bundles now live in `native-plugins/` (PLG-012).
+6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's twelve standalone VST3 bundles now live in `native-plugins/` (PLG-012).
    Complete hands-on DAW/editor checks and validate Windows/Linux/Intel builds; see `native-plugins/VALIDATION.md`.
 
 ## Research and verification rules
@@ -59,3 +74,16 @@ before synthetic live input. Outstanding observations include Alt+wheel vertical
 interaction, FL's STEP/SLIDE automation options, and bindings marked INFERRED. Maintain `menus.json`,
 `keybindings.json` and `settings.json` with code, then regenerate their Markdown views. Historical session notes
 remain evidence of what was tested at that time, not a promise that later changes were manually reverified.
+
+
+## Latest continuation: Piano Roll controls
+
+`codex/editor-view-options` started at `68259aa` after #8/#9 merged; PR #10 now integrates updated #7 at `5cf0870`.
+Pan editing and the implemented View subset have headless interaction coverage and offscreen review. PR-016 stays
+IN_PROGRESS for release/Mod X/Y/fine pitch; PR-030 records the label subset. Latest integration checks: 399 workspace tests
+(141 headless UI), strict all-target Clippy/build, rustfmt and inventories/reference checks. Use the current research
+notes for fallback choices and unverified FL details; PLG-006's live verification is still pending.
+
+Every future session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR,
+stacked on the latest unmerged continuation after checking merge state. Leave older checkouts intact, never merge
+automatically, and create further sessions only when the owner asks.

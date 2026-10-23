@@ -38,7 +38,15 @@ pub struct Document {
     /// A compound gesture (`Some`): every command joins one undo step, whatever its merge key.
     /// `true` once that step exists.
     compound: Option<bool>,
+    /// Applied to every new project content (edits and replacements): LimeShot uses it to turn
+    /// former built-in instruments and effects into Lime plugins. Returns warnings for the user.
+    normalizer: Option<Normalizer>,
+    /// Warnings from the normalizer not yet shown.
+    warnings: Vec<String>,
 }
+
+/// See [`Document::set_normalizer`].
+pub type Normalizer = Box<dyn Fn(&mut Project) -> Vec<String> + Send>;
 
 impl Default for Document {
     fn default() -> Self {
@@ -59,6 +67,29 @@ impl Document {
             saved_state: 0,
             gesture_open: false,
             compound: None,
+            normalizer: None,
+            warnings: Vec::new(),
+        }
+    }
+
+    /// Pass every edit's result and every replaced project through `f` (see the field). Applies it
+    /// to the current project now, without an undo step.
+    pub fn set_normalizer(&mut self, f: Normalizer) {
+        let warnings = f(&mut self.project);
+        self.warnings.extend(warnings);
+        self.normalizer = Some(f);
+    }
+
+    /// Warnings from the normalizer since the last call.
+    pub fn take_warnings(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.warnings)
+    }
+
+    /// Apply the model normalizer and retain warnings for presentation to the user.
+    fn normalize(&mut self, project: &mut Project) {
+        if let Some(f) = &self.normalizer {
+            let warnings = f(project);
+            self.warnings.extend(warnings);
         }
     }
 
@@ -94,7 +125,8 @@ impl Document {
     }
 
     /// Replace the whole project (new/open). Clears the history.
-    pub fn replace(&mut self, project: Project) {
+    pub fn replace(&mut self, mut project: Project) {
+        self.normalize(&mut project);
         self.project = project;
         self.generation += 1;
         self.undo.clear();
@@ -151,6 +183,7 @@ impl Document {
         let merge = cmd.merge_key();
         let mut next = self.project.clone();
         let out = cmd.apply(&mut next)?;
+        self.normalize(&mut next);
         if next == self.project {
             return Ok(out);
         }
@@ -1211,10 +1244,10 @@ mod tests {
         );
         let ch = d.project().clip(a).unwrap().audio_channel().unwrap();
         assert_eq!(d.project().clip(b).unwrap().audio_channel(), Some(ch));
-        match &d.project().channel(ch).unwrap().instrument {
-            Instrument::Sampler(s) => assert!(!s.one_shot && s.sample.as_ref() == Some(&wav)),
-            other => panic!("{other:?}"),
-        }
+        let instrument = &d.project().channel(ch).unwrap().instrument;
+        assert!(matches!(instrument, Instrument::Plugin(_)));
+        let sampler = crate::lime::sampler_params(instrument).unwrap();
+        assert!(!sampler.one_shot && sampler.sample.as_ref() == Some(&wav));
         assert!(d.execute(Command::MakeClipUnique(a)).is_err());
         // Paste places a copy of any clip kind.
         let c = d.project().clip(a).unwrap().clone();

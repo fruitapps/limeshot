@@ -224,19 +224,30 @@ impl Scan {
 struct Live {
     /// The plugin this instance runs; a different one (or a change of process) replaces it.
     key: Key,
+    state: PluginState,
     instance: PluginInstance,
 }
 
 /// What a running plugin was made from: bundle, class, and whether it runs in its own process.
-type Key = (String, String, bool);
+type Key = (String, String, bool, u64);
 
 fn key_of(p: &PluginRef) -> Key {
-    (p.path.clone(), p.class_id.clone(), p.separate_process)
+    (
+        p.path.clone(),
+        p.class_id.clone(),
+        p.separate_process,
+        p.extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0),
+    )
 }
 
 /// Plugins of the open project, and the database.
 #[derive(Default)]
 pub struct PluginHost {
+    pub(crate) host_graphics: limeshot_plugins::HostGraphicsContext,
+    parameter_rects: HashMap<(Target, u32), egui::Rect>,
     pub db: Database,
     db_path: Option<PathBuf>,
     pub scan: Option<Scan>,
@@ -307,7 +318,7 @@ fn instantiate(
     }
     let sr = f64::from(sample_rate);
     let block = limeshot_engine::MAX_BLOCK;
-    let (mut inst, proc) = match (p.separate_process, bridge) {
+    let (mut inst, mut proc) = match (p.separate_process, bridge) {
         #[cfg(unix)]
         (true, Some(exe)) => {
             let (i, pr) = limeshot_plugins::bridge::BridgedInstance::spawn(exe, &p.path, &p.class_id, sr, block)
@@ -321,11 +332,24 @@ fn instantiate(
             (PluginInstance::Local(i), PluginProcessor::Local(pr))
         }
     };
+    if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true) {
+        return Err(format!(
+            "{}: sample conversion is incomplete; choose a supported source file and reload",
+            p.name
+        ));
+    }
     if !p.state.is_empty()
         && let Err(e) = inst.set_state(p.state.bytes())
     {
-        log::warn!("{}: {e}", p.name);
+        return Err(format!("{}: could not restore plugin state: {e}", p.name));
     }
+    proc.set_sidechain_source(
+        p.extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
+            .min(127) as usize,
+    );
     Ok((inst, proc))
 }
 
@@ -401,7 +425,14 @@ impl PluginHost {
 
     /// Bring the running plugins in line with `project`: create missing ones (sending their audio
     /// halves to the audio thread with `send`, ahead of the snapshot) and drop removed ones.
-    pub fn sync(&mut self, project: &Project, generation: u64, sample_rate: u32, send: &mut dyn FnMut(Msg)) {
+    pub fn sync(
+        &mut self,
+        project: &Project,
+        generation: u64,
+        sample_rate: u32,
+        send: &mut dyn FnMut(Msg),
+    ) -> Vec<String> {
+        let mut warnings = Vec::new();
         let opened = self.generation != Some(generation);
         if opened {
             // A different project: the audio thread retires every processor (ClearEffects).
@@ -421,7 +452,23 @@ impl PluginHost {
         self.errors
             .retain(|t, (k, _)| wanted.iter().any(|(w, p)| w == t && *k == key_of(p)));
         for (target, p) in wanted {
-            if self.live.contains_key(&target) || self.errors.contains_key(&target) {
+            if let Some(live) = self.live.get_mut(&target) {
+                if live.state != p.state {
+                    match live.instance.set_state(p.state.bytes()) {
+                        Ok(()) => {
+                            self.errors.remove(&target);
+                        }
+                        Err(error) => {
+                            let error = format!("{}: could not restore plugin state: {error}", p.name);
+                            warnings.push(error.clone());
+                            self.errors.insert(target, (key_of(p), error));
+                        }
+                    }
+                    live.state = p.state.clone();
+                }
+                continue;
+            }
+            if self.errors.contains_key(&target) {
                 continue;
             }
             let key = key_of(p);
@@ -431,10 +478,17 @@ impl PluginHost {
                         Target::Channel(c) => send(Msg::Instrument(c.0, Box::new(proc))),
                         Target::Effect { effect, .. } => send(Msg::Effect(effect, Box::new(proc))),
                     }
-                    self.live.insert(target, Live { key, instance });
+                    self.live.insert(
+                        target,
+                        Live {
+                            key,
+                            state: p.state.clone(),
+                            instance,
+                        },
+                    );
                 }
                 Err(e) => {
-                    log::warn!("{}: {e}", p.name);
+                    warnings.push(format!("Could not load {}: {e}", p.name));
                     self.errors.insert(target, (key, e));
                 }
             }
@@ -452,11 +506,22 @@ impl PluginHost {
         }
         let errors = &self.errors;
         self.reopen.retain(|t, _| !errors.contains_key(t));
+        warnings
     }
 
     /// Every running plugin.
     pub fn live_targets(&self) -> Vec<Target> {
         self.live.keys().copied().collect()
+    }
+
+    /// Last drawn slider geometry, for interaction tests and accessibility tools.
+    pub fn parameter_rect(&self, target: Target, id: u32) -> Option<egui::Rect> {
+        self.parameter_rects.get(&(target, id)).copied()
+    }
+
+    /// Restrict the host's parameter list to matching parameter names.
+    pub fn filter_parameters(&mut self, target: Target, text: impl Into<String>) {
+        self.filters.insert(target, text.into());
     }
 
     pub fn is_loaded(&self, target: Target) -> bool {
@@ -606,13 +671,20 @@ impl PluginHost {
     /// Fresh plugin instances for an offline render of `project`, with the running plugins'
     /// current state. The control halves are returned for the caller to keep (and drop on this
     /// thread) until the render is done; the processors hand themselves back here when dropped.
-    pub fn offline(&self, project: &Project, sample_rate: u32) -> (limeshot_engine::Processors, Vec<PluginInstance>) {
+    pub fn offline(
+        &self,
+        project: &Project,
+        sample_rate: u32,
+    ) -> Result<(limeshot_engine::Processors, Vec<PluginInstance>), String> {
         let mut processors = limeshot_engine::Processors::default();
         let mut keep = Vec::new();
         let Some((tx, _)) = &self.returned else {
-            return (processors, keep);
+            return Err("The plugin host is not initialized".into());
         };
         for (target, p) in wanted(project) {
+            if let Some(error) = self.error(target) {
+                return Err(format!("Could not load {} for export: {error}", p.name));
+            }
             let mut p = p.clone();
             if let Some(Ok(s)) = self.live.get(&target).map(|l| l.instance.state()) {
                 p.state = PluginState::new(s);
@@ -629,10 +701,10 @@ impl PluginHost {
                     }
                     keep.push(inst);
                 }
-                Err(e) => log::warn!("{}: {e}", p.name),
+                Err(e) => return Err(format!("Could not load {} for export: {e}", p.name)),
             }
         }
-        (processors, keep)
+        Ok((processors, keep))
     }
 }
 
@@ -652,6 +724,20 @@ impl Drop for ReturnOnDrop {
 }
 
 impl limeshot_dsp::effects::Effect for ReturnOnDrop {
+    /// Selected mixer key source; zero means the processor main input.
+    fn sidechain_source(&self) -> usize {
+        self.inner.as_ref().map_or(0, |p| p.sidechain_source())
+    }
+    /// Maximum dynamics reduction from the preceding block, in dB.
+    fn gain_reduction_db(&self) -> f32 {
+        self.inner.as_ref().map_or(0.0, |p| p.telemetry().reduction_db)
+    }
+    /// Use separate detector audio without mixing the key into the audible output.
+    fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
+        if let Some(p) = &mut self.inner {
+            limeshot_dsp::effects::Effect::process_sidechain(p, buf, key);
+        }
+    }
     fn set_params(&mut self, _params: &[f32]) {}
     fn process(&mut self, buf: &mut [f32]) {
         if let Some(p) = &mut self.inner {
@@ -679,6 +765,14 @@ impl limeshot_dsp::effects::Effect for ReturnOnDrop {
 }
 
 impl limeshot_dsp::Instrument for ReturnOnDrop {
+    /// Whether the instrument implements the native additive balance protocol.
+    fn uses_channel_pan(&self) -> bool {
+        self.inner.as_ref().is_some_and(|p| p.uses_channel_pan())
+    }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
+    fn active_voices(&self) -> usize {
+        self.inner.as_ref().map_or(0, |p| p.telemetry().voices as usize)
+    }
     fn process(&mut self, out: &mut [f32], notes: &[limeshot_dsp::NoteEvent], t: &limeshot_dsp::Transport) {
         match &mut self.inner {
             Some(p) => limeshot_dsp::Instrument::process(p, out, notes, t),
@@ -824,6 +918,41 @@ pub fn effect_card(app: &mut LimeShotApp, ui: &mut Ui, track: u16, effect: u32, 
     match p {
         Some(p) => {
             header(app, ui, target, p);
+            if limeshot_core::LimePlugin::of(p) == Some(limeshot_core::LimePlugin(7)) {
+                let current = p
+                    .extra
+                    .get("lime-sidechain-track")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0) as u16;
+                let mut selected = None;
+                ui.menu_button(
+                    if current == 0 {
+                        "Sidechain: own input".into()
+                    } else {
+                        format!("Sidechain: Insert {current}")
+                    },
+                    |ui| {
+                        if ui.selectable_label(current == 0, "Own input").clicked() {
+                            selected = Some(0);
+                            ui.close();
+                        }
+                        for (index, candidate) in app.project().mixer.tracks.iter().enumerate().skip(1) {
+                            if index != usize::from(track)
+                                && candidate.routes.iter().any(|r| r.to == track)
+                                && ui
+                                    .selectable_label(usize::from(current) == index, format!("Insert {index}"))
+                                    .clicked()
+                            {
+                                selected = Some(index as u16);
+                                ui.close();
+                            }
+                        }
+                    },
+                );
+                if let Some(source) = selected {
+                    app.exec(Command::SetPluginSidechain { plugin: target, source });
+                }
+            }
             params(app, ui, target);
         }
         None => {
@@ -849,6 +978,11 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             }
         });
     });
+    if app.plugins.is_loaded(target)
+        && let Some(error) = app.plugins.error(target)
+    {
+        ui.label(RichText::new(error).color(t.warning));
+    }
     let crashed = app.plugins.has_crashed(target);
     match (app.plugins.instance(target), app.plugins.error(target)) {
         (Some(_), _) if crashed => {
@@ -859,7 +993,7 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
                     .hint("Start the plugin again with the state last saved in the project")
                     .clicked()
                 {
-                    app.plugins.reload(target);
+                    reload(app, target);
                 }
             });
         }
@@ -876,6 +1010,13 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
         }
         (None, Some(e)) => {
             ui.label(RichText::new(format!("Could not load the plugin: {e}")).color(t.warning));
+            if ui
+                .button("Reload")
+                .hint("Retry loading after fixing the plugin or sample source")
+                .clicked()
+            {
+                reload(app, target);
+            }
         }
         (None, None) => {
             ui.label(RichText::new("Loading…").color(t.text_faint));
@@ -893,6 +1034,37 @@ fn header(app: &mut LimeShotApp, ui: &mut Ui, target: Target, p: &PluginRef) {
             set_separate_process(app, target, on);
         }
     }
+}
+
+/// Retry pending sources through Document normalization before restarting a failed/crashed plugin.
+/// Reload never approves outside-project audio; explicit source selection is required for that.
+pub fn reload(app: &mut LimeShotApp, target: Target) {
+    if let Target::Channel(channel) = target {
+        let mut candidate = app.project().clone();
+        let dir = app.path.as_deref().and_then(std::path::Path::parent);
+        crate::lime::restrict_loaded_sources(&mut candidate, dir);
+        if let Some(c) = candidate.channel(channel)
+            && app
+                .project()
+                .channel(channel)
+                .is_some_and(|c| c.extra.get("lime-external-source").and_then(serde_json::Value::as_bool) == Some(true))
+            && c.extra.get("lime-external-source").and_then(serde_json::Value::as_bool) != Some(true)
+            && let Some(params) = limeshot_core::lime::sampler_params(&c.instrument)
+        {
+            app.exec(Command::Batch(vec![
+                Command::ApproveSamplerSource { channel },
+                Command::SetInstrument {
+                    channel,
+                    instrument: Instrument::Sampler(params),
+                },
+            ]));
+        }
+    }
+    if let Some(plugin) = app.project().plugin(target) {
+        let state = plugin.state.clone();
+        app.exec(Command::SetPluginState { plugin: target, state });
+    }
+    app.plugins.reload(target);
 }
 
 /// Move a plugin into a process of its own or back, keeping its sound: its state goes into the
@@ -916,7 +1088,7 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     let visible: Vec<(u32, String, f64, f64, String)> = inst
         .params()
         .iter()
-        .filter(|p| !p.read_only() && p.automatable())
+        .filter(|p| !p.read_only() && !p.hidden() && p.automatable())
         .filter(|p| needle.is_empty() || p.title.to_lowercase().contains(&needle))
         .take(PARAMS_SHOWN + 1)
         .map(|p| {
@@ -937,6 +1109,7 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
         });
     });
     app.plugins.filters.insert(target, filter);
+    app.plugins.parameter_rects.retain(|(t, _), _| *t != target);
     let mut changes = Vec::new();
     let mut automate = None;
     for (id, title, value, default, text) in visible.iter().take(PARAMS_SHOWN) {
@@ -960,17 +1133,28 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                 &mut v,
                 *default,
             );
-            if crate::widgets::user_changed(&r) {
-                changes.push((*id, v));
+            app.plugins.parameter_rects.insert((target, *id), r.rect);
+            changes.push((
+                *id,
+                (crate::widgets::user_changed(&r) || r.drag_stopped()).then_some(v),
+                r.clone(),
+            ));
+            let automation = limeshot_core::AutomationTarget::PluginParam {
+                plugin: target,
+                id: *id,
+            };
+            if automation.current_value(app.project()).is_some() {
+                crate::automation_ui::menu(app, &r, automation);
+            } else {
+                crate::widgets::clickable(&r).context_menu(|ui| {
+                    ui.label(RichText::new(title).small().color(t.text_dim));
+                    ui.separator();
+                    if ui.button("Create automation clip").clicked() {
+                        automate = Some(*id);
+                        ui.close();
+                    }
+                });
             }
-            crate::widgets::clickable(&r).context_menu(|ui| {
-                ui.label(RichText::new(title).small().color(t.text_dim));
-                ui.separator();
-                if ui.button("Create automation clip").clicked() {
-                    automate = Some(*id);
-                    ui.close();
-                }
-            });
         });
     }
     if visible.len() > PARAMS_SHOWN {
@@ -980,12 +1164,28 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                 .small(),
         );
     }
-    if !changes.is_empty() {
-        for (id, v) in changes {
-            app.plugins.set_param(target, id, v);
+    for (id, value, response) in changes {
+        let command = value.and_then(|value| {
+            // Audition drags directly; serialize embedded state only once at release.
+            if response.dragged() {
+                app.plugins.set_param(target, id, value);
+                app.plugins.last_tweaked = Some((target, id));
+                return None;
+            }
+            if let Some(state) = app
+                .project()
+                .plugin(target)
+                .and_then(|plugin| limeshot_core::lime::edited_param_state(plugin, id, value))
+            {
+                app.plugins.last_tweaked = Some((target, id));
+                return Some(Command::SetPluginState { plugin: target, state });
+            }
+            app.plugins.set_param(target, id, value);
             app.plugins.last_tweaked = Some((target, id));
-        }
-        app.doc.mark_unsaved();
+            app.doc.mark_unsaved();
+            None
+        });
+        app.exec_gesture(&response, command);
     }
     if let Some(id) = automate {
         create_automation(app, target, id);
@@ -1003,6 +1203,23 @@ pub fn create_automation(app: &mut LimeShotApp, target: Target, id: u32) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_offline_export_requires_every_plugin_to_load() {
+        let mut doc = Document::default();
+        doc.execute(limeshot_core::Command::AddChannel {
+            name: "Missing".into(),
+            instrument: Instrument::Plugin(PluginRef::vst3("/nonexistent/Missing.vst3", "00", "Missing instrument")),
+        })
+        .unwrap();
+        let host = PluginHost::new(None);
+        let error = host
+            .offline(doc.project(), 48_000)
+            .err()
+            .expect("missing plugin must fail export");
+        assert!(error.contains("Missing instrument"), "{error}");
+        assert!(error.contains("export"), "{error}");
+    }
 
     #[test]
     fn the_database_round_trips_and_splits_by_kind() {

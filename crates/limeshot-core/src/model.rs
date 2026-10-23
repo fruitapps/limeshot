@@ -132,6 +132,28 @@ impl Default for SamplerParams {
     }
 }
 
+/// LimeSynth's filter type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum FilterMode {
+    #[default]
+    LowPass,
+    BandPass,
+    HighPass,
+}
+
+impl FilterMode {
+    pub const ALL: [FilterMode; 3] = [FilterMode::LowPass, FilterMode::BandPass, FilterMode::HighPass];
+
+    /// Stable filter-mode label shared by legacy presets and native control descriptions.
+    pub fn label(self) -> &'static str {
+        match self {
+            FilterMode::LowPass => "Low-pass",
+            FilterMode::BandPass => "Band-pass",
+            FilterMode::HighPass => "High-pass",
+        }
+    }
+}
+
 /// Settings of the built-in synthesizer.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -161,6 +183,11 @@ pub struct SynthParams {
     pub vibrato_cents: f32,
     /// LFO to cutoff, in octaves.
     pub lfo_cutoff: f32,
+    /// Which part of the spectrum the filter keeps (FL Studio's synths: low-, band- or
+    /// high-pass).
+    pub filter_mode: FilterMode,
+    /// How much the cutoff follows the played key (0: fixed, 1: an octave per octave, around C5).
+    pub key_track: f32,
 }
 
 impl Default for SynthParams {
@@ -181,6 +208,8 @@ impl Default for SynthParams {
             lfo_rate_hz: 5.0,
             vibrato_cents: 0.0,
             lfo_cutoff: 0.0,
+            filter_mode: FilterMode::LowPass,
+            key_track: 0.0,
         }
     }
 }
@@ -889,7 +918,18 @@ impl Project {
             for (i, b) in t.eq.iter_mut().enumerate() {
                 *b = b.sanitized(i);
             }
-            t.effects.truncate(crate::effects::MAX_EFFECTS);
+            let mut inserts = 0;
+            let mut track_eq = false;
+            t.effects.retain(|e| {
+                if crate::lime::is_track_eq(e) {
+                    let keep = !track_eq;
+                    track_eq = true;
+                    keep
+                } else {
+                    inserts += 1;
+                    inserts <= crate::effects::MAX_EFFECTS
+                }
+            });
             for e in &mut t.effects {
                 e.sanitize();
                 max_id = max_id.max(e.id);

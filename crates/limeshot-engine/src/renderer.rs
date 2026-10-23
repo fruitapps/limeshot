@@ -10,8 +10,8 @@
 //! `timeline.sample_of_tick(t)`; a block is split at every event so onsets are sample-accurate and
 //! independent of the block size.
 
-use crate::voice::{NO_CHANNEL, Voice};
 use limeshot_core::{Tick, Timeline};
+use limeshot_dsp::voice::{NO_CHANNEL, Voice};
 use limeshot_dsp::{SampleData, pan_gains};
 use limeshot_sequencer::{LaneTarget, Program, Snapshot};
 use std::sync::Arc;
@@ -47,12 +47,9 @@ enum Action {
         channel: u16,
         key: u8,
         velocity: f32,
-        pan: f32,
         end_tick: Tick,
-        offset_secs: f64,
-        clip: bool,
-        /// Audio clip fades (seconds) and how far into the clip playback starts.
-        fade: (f32, f32, f32),
+        pan: f32,
+        playback: Option<limeshot_dsp::ClipPlayback>,
     },
     Click {
         downbeat: bool,
@@ -87,8 +84,6 @@ pub struct Renderer {
     fx: crate::fx::FxRack,
     /// Plugin instruments, by channel.
     instruments: crate::plugins::InstrumentRack,
-    /// Each mixer track's built-in EQ, after its insert effects.
-    eqs: Vec<limeshot_dsp::effects::Eq3>,
     /// Each mixer track's gain reduction in dB in the last block (its compressors).
     reductions: Vec<f32>,
     /// Peak of the last block's output (for detecting when effect tails have died away).
@@ -101,6 +96,8 @@ pub struct Renderer {
     /// Channel (volume, pan) and mixer track (gain, pan) in effect: the snapshot's values,
     /// overridden by automation in Song mode.
     chan_mix: Vec<(f32, f32)>,
+    /// Per-frame hosted channel gains, captured at each automation interval.
+    chan_gains: Vec<(f32, f32)>,
     track_mix: Vec<(f32, f32)>,
     /// Plugin delay compensation.
     pdc: crate::pdc::Pdc,
@@ -112,7 +109,7 @@ impl Renderer {
     pub fn new(sample_rate: u32, snapshot: Arc<Snapshot>) -> Self {
         let sample_rate = sample_rate.clamp(8_000, 768_000);
         let tempo = snapshot.tempo;
-        let mut r = Self {
+        Self {
             sample_rate,
             snapshot,
             voices: vec![Voice::default(); MAX_VOICES],
@@ -134,20 +131,16 @@ impl Renderer {
             finished: false,
             fx: crate::fx::FxRack::new(),
             instruments: crate::plugins::InstrumentRack::new(MAX_BLOCK),
-            eqs: (0..limeshot_core::Mixer::MAX_TRACKS)
-                .map(|_| limeshot_dsp::effects::Eq3::new(sample_rate as f32))
-                .collect(),
             reductions: vec![0.0; limeshot_core::Mixer::MAX_TRACKS],
             last_peak: 0.0,
             fx_reset_at: None,
             chase: true,
             chan_mix: vec![(0.0, 0.0); MAX_AUTOMATED_CHANNELS],
+            chan_gains: vec![(1.0, 1.0); crate::MAX_PLUGIN_CHANNELS * MAX_BLOCK],
             track_mix: vec![(1.0, 0.0); limeshot_core::Mixer::MAX_TRACKS],
             pdc: crate::pdc::Pdc::new(),
             pdc_check: 0,
-        };
-        r.design_eqs();
-        r
+        }
     }
 
     pub fn sample_rate(&self) -> u32 {
@@ -166,25 +159,8 @@ impl Renderer {
         self.fx.arrange(&self.snapshot);
         self.instruments.arrange(&self.snapshot);
         self.plan_pdc(true);
-        self.design_eqs();
         if tempo_changed {
-            // Keep the musical position; continue at the new tempo from here.
-            let tick = self.timeline.tick_at_sample(self.now);
-            self.timeline = Timeline {
-                origin_tick: tick,
-                origin_sample: self.now,
-                tempo: self.snapshot.tempo,
-                sample_rate: self.sample_rate,
-            };
-            for v in self
-                .voices
-                .iter_mut()
-                .filter(|v| v.sequenced && v.release_at != u64::MAX)
-            {
-                v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
-            }
-            let tl = self.timeline;
-            self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+            self.retime(self.snapshot.tempo);
         }
         for v in &mut self.voices {
             if v.channel != NO_CHANNEL && usize::from(v.channel) >= channels {
@@ -196,6 +172,32 @@ impl Renderer {
 
     pub fn is_playing(&self) -> bool {
         self.playing
+    }
+
+    /// Continue at `tempo` from the current sample, keeping the musical position: scheduled
+    /// note ends move with it.
+    fn retime(&mut self, tempo: limeshot_core::Tempo) {
+        let tick = self.timeline.tick_at_sample(self.now);
+        self.timeline = self.timeline.retimed(self.now, tempo);
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| v.sequenced && v.release_at != u64::MAX)
+        {
+            v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
+        }
+        let tl = self.timeline;
+        self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+    }
+
+    /// The tempo the transport runs at now (tempo automation included).
+    pub fn current_tempo(&self) -> limeshot_core::Tempo {
+        self.timeline.tempo
+    }
+
+    /// Frames from now until tick `t` at the current tempo (0 when it has passed).
+    pub fn frames_until(&self, t: Tick) -> u64 {
+        self.timeline.sample_of_tick(t).saturating_sub(self.now)
     }
 
     pub fn mode(&self) -> PlayMode {
@@ -297,6 +299,8 @@ impl Renderer {
         self.timeline = Timeline {
             origin_tick: tick,
             origin_sample: self.now,
+            sub_tick: 0,
+            origin_first_tick: tick,
             tempo: self.snapshot.tempo,
             sample_rate: self.sample_rate,
         };
@@ -330,9 +334,6 @@ impl Renderer {
         self.fx_reset_at = None;
         self.fx.reset();
         self.pdc.clear();
-        for eq in &mut self.eqs {
-            limeshot_dsp::effects::Effect::reset(eq);
-        }
     }
 
     /// Stop every voice immediately (panic button).
@@ -387,14 +388,7 @@ impl Renderer {
         if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
             let at = (0, self.now);
             self.instruments
-                .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false);
-            return;
-        }
-        if let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, self.sample_rate as f32)
-        {
-            v.channel = channel;
-            v.release_at = off_at;
-            self.alloc_voice(v);
+                .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false, 0.0, None);
         }
     }
 
@@ -432,7 +426,7 @@ impl Renderer {
     }
 
     pub fn active_voices(&self) -> usize {
-        self.voices.iter().filter(|v| v.is_active()).count()
+        self.voices.iter().filter(|v| v.is_active()).count() + self.instruments.active_voices()
     }
 
     /// Peak levels of the last block, per mixer track (index 0 = master).
@@ -454,7 +448,7 @@ impl Renderer {
     pub fn render(&mut self, out: &mut [f32]) {
         let frames = (out.len() / 2).min(MAX_BLOCK);
         let block_start = self.now;
-        let transport = self.transport();
+        let mut transport = self.transport();
         let tracks = self.snapshot.mixer.len().clamp(1, self.buses.len());
         for b in &mut self.buses[..tracks] {
             b[..2 * frames].fill(0.0);
@@ -467,6 +461,9 @@ impl Renderer {
         let mut done = 0;
         while done < frames {
             self.apply_controls(done as u32);
+            if done == 0 {
+                transport = self.transport();
+            }
             let max = if automate {
                 (frames - done).min(AUTOMATION_INTERVAL)
             } else {
@@ -486,6 +483,18 @@ impl Renderer {
             self.render_voices(done + cursor, chunk - cursor, self.now + cursor as u64);
             self.actions = actions;
             self.actions.clear();
+            for (i, ch) in self
+                .snapshot
+                .channels
+                .iter()
+                .enumerate()
+                .take(crate::MAX_PLUGIN_CHANNELS)
+            {
+                let (volume, pan) = self.chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
+                let native_pan = self.instruments.channel_pan(i, done as u32, pan);
+                let (pl, pr) = pan_gains(if native_pan { 0.0 } else { pan });
+                self.chan_gains[i * MAX_BLOCK + done..i * MAX_BLOCK + done + chunk].fill((volume * pl, volume * pr));
+            }
             done += chunk;
             self.now += chunk as u64;
             if self.playing {
@@ -506,13 +515,14 @@ impl Renderer {
             self.pdc.voices(t, &mut self.buses[t][..2 * frames]);
         }
         self.render_instruments(block_start, frames, tracks, &transport);
+        self.fx.set_transport(&transport);
         self.mix(tracks, frames, out);
     }
 
     /// The transport as plugins see it, at the current position.
     fn transport(&self) -> limeshot_dsp::Transport {
         let tick = self.position();
-        let bpm = f64::from(self.snapshot.tempo.milli_bpm()) / 1000.0;
+        let bpm = f64::from(self.timeline.tempo.milli_bpm()) / 1000.0;
         let quarters = tick as f64 / limeshot_core::PPQ as f64;
         let sig = self.snapshot.time_signature;
         limeshot_dsp::Transport {
@@ -525,20 +535,19 @@ impl Renderer {
     }
 
     /// Render the plugin channels for the whole block into their mixer buses. Their notes were
-    /// queued at exact frame offsets; volume and pan apply as they stand at the block's end.
+    /// queued at exact frame offsets; volume and pan follow the captured automation intervals.
     fn render_instruments(&mut self, start: u64, frames: usize, tracks: usize, transport: &limeshot_dsp::Transport) {
         let snapshot = &self.snapshot;
-        let chan_mix = &self.chan_mix;
+        let chan_gains = &self.chan_gains;
         let pdc = &mut self.pdc;
         self.instruments
-            .render(start, frames, transport, &mut self.buses, pdc, |i| {
+            .render(start, frames, transport, &mut self.buses, pdc, |i, frame| {
                 let ch = snapshot.channels.get(i)?;
                 if !ch.audible {
                     return None;
                 }
-                let (volume, pan) = chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
-                let (pl, pr) = pan_gains(pan.clamp(-1.0, 1.0));
-                Some((ch.mixer_track.min(tracks - 1), volume * pl, volume * pr))
+                let (gl, gr) = chan_gains[i * MAX_BLOCK + frame];
+                Some((ch.mixer_track.min(tracks - 1), gl, gr))
             });
     }
 
@@ -552,13 +561,25 @@ impl Renderer {
         for (m, t) in self.track_mix.iter_mut().zip(&snapshot.mixer) {
             *m = (t.gain, t.pan);
         }
+        // Tempo automation re-times the transport (Song mode only, like all automation).
+        let tick = self.position();
+        let tempo = snapshot
+            .automation
+            .iter()
+            .filter(|_| self.mode == PlayMode::Song)
+            .find(|l| l.target == LaneTarget::Tempo)
+            .and_then(|l| l.value_at(tick))
+            .map_or(snapshot.tempo, |bpm| limeshot_core::Tempo::from_bpm(f64::from(bpm)));
+        if tempo != self.timeline.tempo {
+            self.retime(tempo);
+        }
         if self.mode != PlayMode::Song {
             return;
         }
-        let tick = self.position();
         for lane in &snapshot.automation {
             let Some(v) = lane.value_at(tick) else { continue };
             match lane.target {
+                LaneTarget::Tempo => {}
                 LaneTarget::ChannelVolume(i) => {
                     if let Some(m) = self.chan_mix.get_mut(i) {
                         m.0 = v;
@@ -625,11 +646,19 @@ impl Renderer {
                             channel: e.channel,
                             key: e.key,
                             velocity: e.velocity,
-                            pan: e.pan,
                             end_tick: e.end(),
-                            offset_secs: e.offset_secs + tl.seconds(t_lo - e.tick),
-                            clip: true,
-                            fade: (e.fade_in_secs, e.fade_out_secs, tl.seconds(t_lo - e.tick) as f32),
+                            pan: e.pan,
+                            playback: Some(limeshot_dsp::ClipPlayback {
+                                offset_secs: e.offset_secs,
+                                elapsed_secs: Timeline::new(tl.tempo, self.sample_rate)
+                                    .sample_of_tick(t_lo.saturating_sub(e.tick))
+                                    as f64
+                                    / f64::from(self.sample_rate),
+                                remaining_secs: tl.sample_of_tick(e.end()).saturating_sub(s0) as f64
+                                    / f64::from(self.sample_rate),
+                                fade_in_secs: e.fade_in_secs,
+                                fade_out_secs: e.fade_out_secs,
+                            }),
                         },
                     ));
                 }
@@ -646,11 +675,16 @@ impl Renderer {
                     channel: e.channel,
                     key: e.key,
                     velocity: e.velocity,
-                    pan: e.pan,
                     end_tick: e.tick + e.length,
-                    offset_secs: e.offset_secs,
-                    clip: e.clip,
-                    fade: (e.fade_in_secs, e.fade_out_secs, 0.0),
+                    pan: e.pan,
+                    playback: e.clip.then_some(limeshot_dsp::ClipPlayback {
+                        offset_secs: e.offset_secs,
+                        elapsed_secs: 0.0,
+                        remaining_secs: tl.sample_of_tick(e.end()).saturating_sub(tl.sample_of_tick(e.tick)) as f64
+                            / f64::from(self.sample_rate),
+                        fade_in_secs: e.fade_in_secs,
+                        fade_out_secs: e.fade_out_secs,
+                    }),
                 },
             ));
         }
@@ -688,6 +722,8 @@ impl Renderer {
             self.timeline = Timeline {
                 origin_tick: 0,
                 origin_sample: self.now,
+                sub_tick: 0,
+                origin_first_tick: 0,
                 tempo: self.snapshot.tempo,
                 sample_rate: self.sample_rate,
             };
@@ -707,6 +743,8 @@ impl Renderer {
         self.timeline = Timeline {
             origin_tick: restart,
             origin_sample: pass_end,
+            sub_tick: 0,
+            origin_first_tick: restart,
             tempo: self.snapshot.tempo,
             sample_rate: self.sample_rate,
         };
@@ -722,60 +760,28 @@ impl Renderer {
                 channel,
                 key,
                 velocity,
-                pan,
                 end_tick,
-                offset_secs,
-                clip,
-                fade,
+                pan,
+                playback,
             } => {
                 let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
                     return;
                 };
                 if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
-                    if !clip {
-                        let off_at = self.timeline.sample_of_tick(end_tick);
-                        self.instruments
-                            .note_on(usize::from(channel), id, key, velocity, at, off_at, end_tick, true);
-                    }
-                    return;
-                }
-                let one_shot = !clip
-                    && matches!(
-                        ch.instrument,
-                        limeshot_sequencer::InstrumentState::Sampler {
-                            one_shot: true,
-                            looping: None,
-                            ..
-                        }
+                    let off_at = self.timeline.sample_of_tick(end_tick);
+                    self.instruments.note_on(
+                        usize::from(channel),
+                        id,
+                        key,
+                        velocity,
+                        at,
+                        off_at,
+                        end_tick,
+                        true,
+                        pan,
+                        playback,
                     );
-                let Some(mut v) = Voice::for_instrument(&ch.instrument, ch.root_key, key, velocity, sr) else {
-                    return;
-                };
-                if offset_secs > 0.0 {
-                    v.skip(offset_secs, sr);
-                    if !v.is_active() {
-                        return;
-                    }
                 }
-                v.channel = channel;
-                v.pan = pan;
-                v.sequenced = true;
-                v.end_tick = end_tick;
-                v.release_at = if one_shot {
-                    u64::MAX
-                } else {
-                    self.timeline.sample_of_tick(end_tick)
-                };
-                if clip && (fade.0 > 0.0 || fade.1 > 0.0) {
-                    let left = self.timeline.sample_of_tick(end_tick).saturating_sub(at.1) as f32;
-                    v.fade = Some(crate::voice::ClipFade {
-                        in_len: fade.0 * sr,
-                        pos: fade.2 * sr,
-                        out_len: fade.1 * sr,
-                        left,
-                    });
-                }
-                self.alloc_voice(v);
             }
             Action::Click { downbeat } => self.alloc_voice(Voice::click(downbeat, sr)),
         }
@@ -820,13 +826,6 @@ impl Renderer {
                     break;
                 }
             }
-        }
-    }
-
-    /// Design every track's EQ from the snapshot (no allocation).
-    fn design_eqs(&mut self) {
-        for (eq, t) in self.eqs.iter_mut().zip(&self.snapshot.mixer) {
-            eq.set_bands(&t.eq);
         }
     }
 
@@ -898,7 +897,7 @@ impl Renderer {
         (self.fx.has_effects() || self.instruments.has_instruments()) && self.last_peak > 1e-4
     }
 
-    /// Track `i`'s insert effects, then its EQ, over its bus. A sidechained effect reads the
+    /// Track `i`'s hosted insert effects over its bus. A sidechained effect reads the
     /// (post-fader) output of a track that routes to `i`; such a track was processed earlier.
     fn track_fx(&mut self, i: usize, frames: usize, mixer: &[limeshot_sequencer::MixerTrackState]) {
         // Taking the bus out (and putting it back) moves pointers only: no allocation.
@@ -917,9 +916,7 @@ impl Renderer {
         if let Some(r) = self.reductions.get_mut(i) {
             *r = reduction;
         }
-        if let Some(eq) = self.eqs.get_mut(i) {
-            limeshot_dsp::effects::Effect::process(eq, &mut bus[..n]);
-        }
+
         self.buses[i] = bus;
     }
 

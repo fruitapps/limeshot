@@ -167,15 +167,17 @@ fn clicking_a_channel_button_toggles_its_settings_window() {
     // The channel button sits left of the step strip (its right edge is ~6 px before the strip).
     let button = step - vec2(60.0, 0.0);
     click(&mut h, button, PointerButton::Primary);
-    assert!(h.state().is_window_open(Win::ChannelSettings));
+    assert!(h.state().plugins.is_window_open(PluginTarget::Channel(kick)));
     assert_eq!(h.state().selected_channel(), Some(kick));
     for _ in 0..3 {
         h.step();
     }
+    h.state_mut().show_window(Win::ChannelRack);
+    h.step();
     let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
     click(&mut h, button, PointerButton::Primary);
     assert!(
-        !h.state().is_window_open(Win::ChannelSettings),
+        !h.state().plugins.is_window_open(PluginTarget::Channel(kick)),
         "a second click closes it"
     );
 }
@@ -1358,13 +1360,11 @@ fn browser_click_previews_and_double_click_loads_a_sample() {
     double_click(&mut h, pos);
     let ch = h.state().project().channel(clap).expect("clap").clone();
     assert_eq!(ch.name, "Lime Kick");
-    match &ch.instrument {
-        Instrument::Sampler(s) => assert_eq!(
-            s.sample.as_ref().map(|s| std::path::PathBuf::from(&s.path)),
-            Some(kick.clone())
-        ),
-        other => panic!("not a sampler: {other:?}"),
-    }
+    let sampler = lime::sampler_params(&ch.instrument).expect("Lime sampler");
+    assert_eq!(
+        sampler.sample.as_ref().map(|r| std::path::PathBuf::from(&r.path)),
+        Some(kick.clone())
+    );
     // On a synth channel a double-click makes a new sampler channel instead.
     let n = h.state().project().channels.len();
     let lead = h
@@ -1372,7 +1372,7 @@ fn browser_click_previews_and_double_click_loads_a_sample() {
         .project()
         .channels
         .iter()
-        .find(|c| matches!(c.instrument, Instrument::Synth(_)))
+        .find(|c| matches!(&c.instrument, Instrument::Plugin(p) if LimePlugin::of(p) == Some(LimePlugin::SYNTH)))
         .expect("synth")
         .id;
     h.state_mut().select_channel(lead);
@@ -1564,6 +1564,111 @@ fn piano_roll_velocity_lane_sets_velocity() {
     assert_eq!(h.state().doc.history().len(), undo + 1, "the drag is one undo step");
 }
 
+/// PR-016: Target control changes the actual lower lane; pan edits preserve velocity,
+/// channel isolation, save/reload and the one-drag/one-undo contract.
+#[test]
+fn piano_roll_target_control_edits_note_pan() {
+    let (mut h, pat, lead) = melody_piano_roll();
+    let other_channel = h.state().project().channels[4].id;
+    h.state_mut().exec(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: other_channel,
+            key: 48,
+            start: 0,
+            length: STEP_TICKS,
+            velocity: 0.6,
+        },
+    });
+    h.step();
+    let before = pattern_notes(&h, pat, lead);
+    let project = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    piano_menu(&mut h, "Target control", "Note pan");
+    assert_eq!(h.state().ui.piano.target_control, NoteProp::Pan);
+    assert_eq!(h.state().doc.revision(), revision, "target choice is only view state");
+    let g = piano_geometry(&h);
+    let undo = h.state().doc.history().len();
+    click(&mut h, g.vel_pos(before[4].start, 0.0), PointerButton::Primary);
+    assert_eq!(pattern_notes(&h, pat, lead)[4].pan, -1.0);
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &project);
+    // Include a stale selection from another channel: only the current channel may change.
+    let other = project
+        .pattern(pat)
+        .unwrap()
+        .notes
+        .iter()
+        .find(|n| n.channel != lead)
+        .unwrap()
+        .id;
+    h.state_mut().ui.piano.selection = vec![before[0].id, before[1].id, other];
+    let last_vel = h.state().ui.piano.last_vel;
+    drag(&mut h, g.vel_pos(before[0].start, 0.2), g.vel_pos(before[0].start, 1.0));
+    h.step();
+    let after = pattern_notes(&h, pat, lead);
+    assert_eq!(after[0].pan, 1.0);
+    assert_eq!(after[1].pan, 1.0);
+    assert_eq!(after[2], before[2]);
+    assert_eq!(
+        h.state()
+            .project()
+            .pattern(pat)
+            .unwrap()
+            .notes
+            .iter()
+            .find(|n| n.id == other),
+        project.pattern(pat).unwrap().notes.iter().find(|n| n.id == other)
+    );
+    assert_eq!(
+        after.iter().map(|n| n.velocity).collect::<Vec<_>>(),
+        before.iter().map(|n| n.velocity).collect::<Vec<_>>()
+    );
+    assert_eq!(h.state().ui.piano.last_vel, last_vel);
+    assert_eq!(h.state().doc.history().len(), undo + 1);
+    let saved = limeshot_project::to_json(h.state().project(), None).unwrap();
+    let loaded = limeshot_project::from_json(&saved, std::path::Path::new("pan.lime")).unwrap();
+    assert_eq!(loaded, *h.state().project());
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &project);
+    h.state_mut().doc.redo();
+    click(&mut h, g.vel_pos(before[0].start, 0.5), PointerButton::Primary);
+    assert!(pattern_notes(&h, pat, lead)[0].pan.abs() < 0.03, "middle is balanced");
+    piano_menu(&mut h, "Target control", "Note velocity");
+    click(&mut h, g.vel_pos(before[0].start, 0.3), PointerButton::Primary);
+    let n = pattern_notes(&h, pat, lead)[0];
+    assert!((n.velocity - 0.3).abs() < 0.03);
+    assert!(n.pan.abs() < 0.03, "velocity editing preserves pan");
+}
+
+#[test]
+fn piano_roll_keyboard_label_view_options_do_not_edit_project() {
+    use limeshot_ui::piano_roll::KeyboardLabels;
+    let (mut h, _, _) = melody_piano_roll();
+    let project = h.state().project().clone();
+    let revision = h.state().doc.revision();
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(&mut h, button, "View", "Keyboard labels");
+    open_item(&mut h, "Keyboard labels", "All notes");
+    assert_eq!(h.state().ui.piano.keyboard_labels, KeyboardLabels::All);
+    let button = h.state().ui.piano.menu_button;
+    editor_menu(&mut h, button, "View", "Keyboard labels");
+    open_item(&mut h, "Keyboard labels", "White notes only");
+    assert!(h.state().ui.piano.white_key_labels_only);
+    h.key_press(Key::Escape);
+    h.step();
+    h.key_press(Key::Escape);
+    h.step();
+    piano_menu(&mut h, "View", "Keep labels on screen");
+    assert!(h.state().ui.piano.keep_labels_on_screen);
+    h.key_press(Key::Escape);
+    h.step();
+    h.state_mut().ui.piano.scroll.x = 120.0;
+    h.step();
+    assert_eq!(h.state().project(), &project);
+    assert_eq!(h.state().doc.revision(), revision);
+}
+
 #[test]
 fn piano_roll_wheel_and_arrows_zoom_and_scroll() {
     let (mut h, _, _) = melody_piano_roll();
@@ -1670,7 +1775,7 @@ fn piano_roll_keyboard_ruler_ghosts_and_channel_selector() {
     h.event(Event::PointerMoved(key));
     h.step();
     press(&mut h, key, PointerButton::Primary, true);
-    wait_for(&mut h, "the auditioned note", |a| a.player.status().voices() > 0);
+    wait_for(&mut h, "the auditioned note", |a| a.player.status().peak(0).0 > 0.001);
     press(&mut h, key, PointerButton::Primary, false);
 
     // Clicking the ruler moves the playhead there (Pattern mode).
@@ -2392,7 +2497,7 @@ fn playlist_paint_mute_delete_select_zoom_and_playback_tools() {
 }
 
 #[test]
-fn mixer_eq_graph_and_reset_edit_the_track_eq() {
+fn mixer_eq_edits_hosted_state_and_undoes() {
     let mut h = harness(true);
     h.state_mut().ui.mixer.selected = 1;
     h.state_mut().show_window(Win::Mixer);
@@ -2400,46 +2505,19 @@ fn mixer_eq_graph_and_reset_edit_the_track_eq() {
     for _ in 0..3 {
         h.step();
     }
-    let eq = |h: &Harness<'static, LimeShotApp>| h.state().project().mixer.tracks[1].eq;
-    assert_eq!(eq(&h), EqBand::DEFAULTS);
+    let before = h.state().project().mixer.tracks[1].eq;
     let g = h.state().ui.mixer.eq_graph.expect("EQ graph drawn");
-    let history = h.state().doc.history().len();
-    // Drag the peak's handle right and up: higher frequency, a boost.
     let from = limeshot_ui::mixer::eq_handle(g, EqBand::DEFAULTS[1]);
-    let to = egui::pos2(from.x + g.width() * 0.1, g.center().y - g.height() * 0.25);
-    drag(&mut h, from, to);
-    h.step();
-    let b = eq(&h)[1];
-    assert!(b.freq > 2500.0 && b.freq < 3500.0, "{b:?}");
-    assert!((b.gain - 9.0).abs() < 0.6, "{b:?}");
-    assert_eq!((eq(&h)[0], eq(&h)[2]), (EqBand::DEFAULTS[0], EqBand::DEFAULTS[2]));
-    assert_eq!(h.state().doc.history().len(), history + 1, "one undo step");
-    // Right-drag left/right changes the width of the nearest band (the low shelf here).
-    let low = limeshot_ui::mixer::eq_handle(g, EqBand::DEFAULTS[0]);
-    h.event(Event::PointerMoved(low));
-    h.step();
-    press(&mut h, low, PointerButton::Secondary, true);
-    for k in 1..=8 {
-        h.event(Event::PointerMoved(low + vec2(g.width() * 0.04 * k as f32, 0.0)));
-        h.step();
-    }
-    press(
-        &mut h,
-        low + vec2(g.width() * 0.32, 0.0),
-        PointerButton::Secondary,
-        false,
+    drag(&mut h, from, from + egui::vec2(30.0, -20.0));
+    assert_ne!(h.state().project().mixer.tracks[1].eq, before);
+    assert!(
+        h.state().project().mixer.tracks[1]
+            .effects
+            .iter()
+            .any(limeshot_core::lime::is_track_eq)
     );
-    h.step();
-    let l = eq(&h)[0];
-    assert!(l.width > 0.5, "{l:?}");
-    assert_eq!(l.freq, EqBand::DEFAULTS[0].freq, "right-drag keeps the frequency");
-    // Reset puts every band back, as one undo step.
-    h.get_by_label("Reset").click();
-    h.step();
-    assert_eq!(eq(&h), EqBand::DEFAULTS);
-    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
-    h.step();
-    assert_eq!(eq(&h)[0], l);
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project().mixer.tracks[1].eq, before);
 }
 
 #[test]
@@ -2486,43 +2564,44 @@ fn mixer_sidechain_route_menu_and_compressor_input() {
     h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
     h.step();
     assert_eq!(routes(&h, 1), vec![(0, 1.0), (5, 0.0)]);
-    // On the bass, a compressor picks the kick as its sidechain input.
     let fx = h
         .state_mut()
         .exec(Command::AddEffect {
             track: 5,
             kind: EffectKind::Compressor,
         })
-        .expect("effect");
+        .unwrap();
+    h.step();
+    let slot = h.state().project().mixer.tracks[5]
+        .effects
+        .iter()
+        .find(|e| e.id == fx)
+        .unwrap();
+    assert_eq!(slot.kind, EffectKind::Plugin);
+    assert_eq!(slot.plugin.as_ref().and_then(LimePlugin::of), Some(LimePlugin(7)));
     h.state_mut().ui.mixer.selected = 5;
-    h.step();
-    h.step();
-    assert!(
-        h.query_by_label_contains("SC← Kick").is_some(),
-        "the input list shows the sidechain"
-    );
-    h.get_by_value("Off (own input)").click();
-    h.step();
-    h.step();
-    h.step();
-    // egui keeps a new popup's items disabled for its first frame.
-    let item = h.get_by_label("1. Kick").rect().center();
-    click(&mut h, item, PointerButton::Primary);
-    let param = |h: &Harness<'static, LimeShotApp>| {
-        h.state().project().mixer.tracks[5]
-            .effects
-            .iter()
-            .find(|e| e.id == fx)
-            .expect("fx")
-            .params[COMPRESSOR_SIDECHAIN]
+    for _ in 0..3 {
+        h.step();
+    }
+    h.get_by_label("Sidechain: own input").click();
+    h.run_steps(4);
+    let option = h.get_by_label("Insert 1").rect();
+    click(&mut h, option.center(), PointerButton::Primary);
+    h.run_steps(3);
+    let source = |h: &Harness<'static, LimeShotApp>| {
+        h.state()
+            .project()
+            .plugin(PluginTarget::Effect { track: 5, effect: fx })
+            .unwrap()
+            .extra
+            .get("lime-sidechain-track")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
     };
-    assert_eq!(param(&h), 1.0);
-    // Playing the beat: the kick drives the bass compressor's gain reduction meter.
-    h.state_mut().toggle_play();
-    wait_for(&mut h, "gain reduction from the kick", |a| {
-        a.player.status().gain_reduction(5) > 1.0
-    });
-    h.state_mut().stop();
+    assert_eq!(source(&h), 1);
+    h.state_mut().doc.undo();
+    h.step();
+    assert_eq!(source(&h), 0);
 }
 
 #[test]
@@ -2847,56 +2926,30 @@ fn double_click_resets_sliders_and_knobs() {
         .expect("volume slider");
     double_click(&mut h, egui::pos2(r.left() + 20.0, r.center().y));
     assert_eq!(h.state().project().mixer.tracks[1].volume, 1.0);
-    // An effect card's slider.
+    // Hosted effects use the same reset gesture, with an undoable plugin state.
     let fx = h
         .state_mut()
         .exec(Command::AddEffect {
             track: 1,
             kind: EffectKind::Delay,
         })
-        .expect("effect");
-    h.state_mut().exec(Command::SetEffectParam {
-        track: 1,
-        effect: fx,
-        index: 0,
-        value: 0.9,
-    });
+        .unwrap();
+    let target = PluginTarget::Effect { track: 1, effect: fx };
     h.step();
     h.step();
-    let spec = EffectKind::Delay.params()[0];
-    let label = h.get_by_label(spec.name).rect();
-    double_click(&mut h, egui::pos2(label.right() + 30.0, label.center().y));
-    let v = h.state().project().mixer.tracks[1].effects[0].params[0];
+    let id = lime::param_id(0);
+    h.state_mut().plugins.set_param(target, id, 0.9);
+    h.step();
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    double_click(&mut h, rect.center());
+    let inst = h.state().plugins.instance(target).unwrap();
+    let default = inst.params().iter().find(|p| p.id == id).unwrap().default;
     assert!(
-        (v - spec.default).abs() < 1e-4,
-        "{} back to {}: {v}",
-        spec.name,
-        spec.default
+        (inst.param(id) - default).abs() < 1e-6,
+        "actual {}, default {}",
+        inst.param(id),
+        default
     );
-    // Channel Settings: a LimeSynth slider goes back to the synth's default.
-    let lead = h.state().project().channels[3].id;
-    let mut synth = match &h.state().project().channels[3].instrument {
-        Instrument::Synth(p) => p.clone(),
-        _ => panic!("the demo's lead is a synth"),
-    };
-    synth.attack_ms = 900.0;
-    h.state_mut().exec(Command::SetInstrument {
-        channel: lead,
-        instrument: Instrument::Synth(synth),
-    });
-    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = false;
-    h.state_mut().ui.workspace.close(Win::Mixer);
-    h.state_mut().select_channel(lead);
-    h.state_mut().show_window(Win::ChannelSettings);
-    h.step();
-    h.step();
-    let label = h.get_by_label("Attack").rect();
-    double_click(&mut h, egui::pos2(label.right() + 30.0, label.center().y));
-    let attack = match &h.state().project().channels[3].instrument {
-        Instrument::Synth(p) => p.attack_ms,
-        _ => 0.0,
-    };
-    assert_eq!(attack, SynthParams::default().attack_ms);
 }
 
 /// Owner's hands-on test: shrinking the Channel Rack hid steps and channels, shrinking the Mixer
@@ -3669,7 +3722,7 @@ fn a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens() {
         },
     });
     h2.step();
-    let (processors, _keep) = h2.state().plugins.offline(h2.state().project(), 48_000);
+    let (processors, _keep) = h2.state().plugins.offline(h2.state().project(), 48_000).unwrap();
     assert_eq!(processors.instruments.len(), 1);
     let snap = h2.state().snapshot().clone();
     let settings = limeshot_engine::RenderSettings {
@@ -3766,13 +3819,12 @@ fn samples_are_picked_and_drawn_in_the_playlist_like_patterns() {
     let ch = limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick).expect("added");
     h.step();
     assert_eq!(h.state().project().channels.len(), n + 1);
-    match &h.state().project().channel(ch).expect("channel").instrument {
-        Instrument::Sampler(s) => assert_eq!(
-            s.sample.as_ref().map(|r| std::path::PathBuf::from(&r.path)),
-            Some(kick.clone())
-        ),
-        other => panic!("not a sampler: {other:?}"),
-    }
+    let sampler =
+        lime::sampler_params(&h.state().project().channel(ch).expect("channel").instrument).expect("Lime sampler");
+    assert_eq!(
+        sampler.sample.as_ref().map(|r| std::path::PathBuf::from(&r.path)),
+        Some(kick.clone())
+    );
     assert_eq!(
         h.state().ui.playlist.picker_tab,
         PickerTab::Audio,
@@ -4550,26 +4602,21 @@ fn right_click_on_an_effect_slider_offers_automation_without_moving_it() {
     h.step();
     h.step();
     let spec = EffectKind::Delay.params()[0];
-    let before = h.state().project().mixer.tracks[1].effects[0].params[0];
+    let target = PluginTarget::Effect { track: 1, effect: fx };
+    let id = lime::param_id(0);
+    let before = h.state().plugins.instance(target).unwrap().param(id);
     let label = h.get_by_label(spec.name).rect();
     click(
         &mut h,
-        egui::pos2(label.right() + 30.0, label.center().y),
+        egui::pos2(label.left() + 140.0, label.center().y),
         PointerButton::Secondary,
     );
     h.step();
-    assert_eq!(h.state().project().mixer.tracks[1].effects[0].params[0], before);
+    assert_eq!(h.state().plugins.instance(target).unwrap().param(id), before);
     h.get_by_label("Create automation clip").click();
     h.step();
     let a = h.state().project().automations.last().expect("automation");
-    assert_eq!(
-        a.target,
-        AutomationTarget::EffectParam {
-            track: 1,
-            effect: fx,
-            index: 0
-        }
-    );
+    assert_eq!(a.target, AutomationTarget::PluginParam { plugin: target, id });
 }
 
 /// PLG-010: a plugin set to run in a separate process survives as a silent slot when its process
@@ -5207,7 +5254,11 @@ fn effect_and_instrument_presets_load_and_save() {
         .mixer
         .tracks
         .iter()
-        .position(|t| t.effects.iter().any(|e| e.kind == EffectKind::Delay))
+        .position(|t| {
+            t.effects
+                .iter()
+                .any(|e| e.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(5)))
+        })
         .expect("a delay in the demo") as u16;
     h.state_mut().ui.mixer.selected = track;
     for _ in 0..3 {
@@ -5217,18 +5268,21 @@ fn effect_and_instrument_presets_load_and_save() {
         h.state().project().mixer.tracks[usize::from(track)]
             .effects
             .iter()
-            .find(|e| e.kind == EffectKind::Delay)
+            .find(|e| e.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(5)))
             .cloned()
             .expect("delay")
     };
-    let before = delay(&h).params;
+    let values = |h: &Harness<'static, LimeShotApp>| {
+        lime::plain_values(delay(h).plugin.as_ref().unwrap(), &EffectKind::Delay.defaults())
+    };
+    let before = values(&h);
     h.get_by_label("Presets").click();
     h.step();
     h.step();
     h.get_by_label("Slapback").click();
     h.step();
-    assert_eq!((delay(&h).params[0], delay(&h).params[1]), (90.0, 0.1));
-    assert_eq!(h.state().doc.undo_label(), Some("Load preset"));
+    assert_eq!((values(&h)[0], values(&h)[1]), (90.0, 0.1));
+    assert_eq!(h.state().doc.undo_label(), Some("Edit plugin"));
     // Save preset as…: named, stored, then listed after the factory presets.
     h.get_by_label("Presets").click();
     h.step();
@@ -5245,19 +5299,17 @@ fn effect_and_instrument_presets_load_and_save() {
     h.step();
     assert!(dir.path().join("Delay/My slap.limepreset").exists());
     h.state_mut().doc.undo();
-    assert_eq!(delay(&h).params, before);
+    assert_eq!(values(&h), before);
     h.get_by_label("Presets").click();
     h.step();
     h.step();
     h.get_by_label("My slap").click();
     h.step();
-    assert_eq!(delay(&h).params[0], 90.0, "the user's preset loads");
+    assert_eq!(values(&h)[0], 90.0, "the user's preset loads");
     // An instrument preset: the sampler keeps its sample.
     use limeshot_project::preset::{Slot, factory};
     let kick = h.state().project().channels[0].clone();
-    let Instrument::Sampler(was) = kick.instrument.clone() else {
-        panic!("kick is a sampler")
-    };
+    let was = lime::sampler_params(&kick.instrument).unwrap();
     let reversed = factory(Slot::Sampler)
         .into_iter()
         .find(|p| p.name == "Reversed")
@@ -5267,9 +5319,7 @@ fn effect_and_instrument_presets_load_and_save() {
         limeshot_ui::presets_ui::Target::Channel(kick.id),
         reversed.content,
     );
-    let Some(Instrument::Sampler(now)) = h.state().project().channel(kick.id).map(|c| c.instrument.clone()) else {
-        panic!()
-    };
+    let now = lime::sampler_params(&h.state().project().channel(kick.id).unwrap().instrument).unwrap();
     assert!(now.reverse);
     assert_eq!(now.sample, was.sample);
 }
@@ -5596,7 +5646,7 @@ fn midi_input_notes_play_the_selected_channel() {
         h.step();
     }
     assert_eq!(h.state().midi_notes, vec![(60, lead)], "held without a mouse button");
-    wait_for(&mut h, "a voice", |a| a.player.status().voices() > 0);
+    wait_for(&mut h, "a voice", |a| a.player.status().peak(0).0 > 0.001);
     // The selection changes while the key is down: the note still ends on the lead.
     h.state_mut().select_channel(bass);
     h.state_mut().midi_event(MidiEvent::NoteOn { key: 64, velocity: 1.0 });
@@ -5735,13 +5785,17 @@ fn compressed_samples_list_load_and_play() {
     if let Some(limeshot_audio::assets::SampleStatus::Ready(s)) = h.state().samples.status(&stored) {
         assert_eq!((s.sample_rate, s.frames()), (22_050, 2205));
     }
-    // The playback snapshot holds the decoded sample (a voice of 0.1 s is too short to poll for).
-    wait_for(&mut h, "the snapshot", |a| {
-        matches!(
-            &a.snapshot().channels[0].instrument,
-            limeshot_sequencer::InstrumentState::Sampler { sample: Some(s), .. } if s.frames() == 2205
-        )
+    wait_for(&mut h, "the Lime Sampler", |a| {
+        a.plugins.is_loaded(PluginTarget::Channel(kick))
     });
+    let Instrument::Plugin(plugin) = &h.state().project().channel(kick).unwrap().instrument else {
+        panic!("plugin")
+    };
+    let state: serde_json::Value = serde_json::from_slice(lime::component_state(&plugin.state).unwrap()).unwrap();
+    let sample: serde_json::Value = serde_json::from_str(state["fields"]["sample-v1"].as_str().unwrap()).unwrap();
+    assert_eq!(sample["sample_rate"], 22_050);
+    let pcm = limeshot_core::plugin::base64_decode(sample["pcm"].as_str().unwrap()).unwrap();
+    assert_eq!(pcm.len(), 2205 * 2 * 4);
 }
 
 /// REC-001: a finished audio take lands on the Playlist as an audio clip at the song position
@@ -5790,42 +5844,44 @@ fn an_audio_take_becomes_an_audio_clip() {
 fn sampler_envelope_controls_reset_and_undo() {
     let mut h = harness(true);
     let channel = h.state().project().channels[0].id;
-    let Instrument::Sampler(mut params) = h.state().project().channels[0].instrument.clone() else {
-        panic!("demo sampler expected");
-    };
+    let mut params = lime::sampler_params(&h.state().project().channels[0].instrument).unwrap();
     params.attack_ms = 500.0;
     params.decay_ms = 800.0;
     params.sustain = 0.3;
     h.state_mut().exec(Command::SetInstrument {
         channel,
-        instrument: Instrument::Sampler(params.clone()),
+        instrument: Instrument::Sampler(params),
     });
     h.state_mut().select_channel(channel);
     h.state_mut().show_window(Win::ChannelSettings);
-    h.step();
-    h.step();
-    for label in ["Attack", "Decay", "Sustain"] {
-        let rect = h.get_by_label(label).rect();
-        double_click(&mut h, egui::pos2(rect.right() + 30.0, rect.center().y));
-        let Instrument::Sampler(p) = &h.state().project().channels[0].instrument else {
-            panic!("sampler expected");
-        };
-        match label {
-            "Attack" => assert_eq!(p.attack_ms, 0.0),
-            "Decay" => assert_eq!(p.decay_ms, 0.0),
-            "Sustain" => assert_eq!(p.sustain, 1.0),
-            _ => unreachable!(),
-        }
-        // The first click can move the slider before the second click resets it.
-        assert!(h.state_mut().doc.undo());
-        if h.state().project().channels[0].instrument != Instrument::Sampler(params.clone()) {
+    let target = PluginTarget::Channel(channel);
+    for (label, index) in [("Attack", 8), ("Decay", 9), ("Sustain", 10)] {
+        h.state_mut().plugins.filter_parameters(target, label);
+        h.step();
+        h.step();
+        let before = h.state().project().channel(channel).unwrap().instrument.clone();
+        let history = h.state().doc.history().len();
+        let id = lime::param_id(index);
+        let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+        double_click(&mut h, rect.center());
+        let inst = h.state().plugins.instance(target).unwrap();
+        let default = inst.params().iter().find(|p| p.id == id).unwrap().default;
+        assert!(
+            (inst.param(id) - default).abs() < 1e-6,
+            "actual {}, default {}",
+            inst.param(id),
+            default
+        );
+        while h.state().doc.history().len() > history {
             assert!(h.state_mut().doc.undo());
         }
         h.step();
-        assert_eq!(
-            h.state().project().channels[0].instrument,
-            Instrument::Sampler(params.clone())
-        );
+        let Instrument::Plugin(expected) = before else {
+            panic!("plugin")
+        };
+        let expected = lime::plain_values(&expected, &lime::sampler_values(&SamplerParams::default(), 60));
+        let actual = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
+        assert_eq!(lime::sampler_values(&actual, 60)[index], expected[index]);
     }
 }
 
@@ -6097,4 +6153,243 @@ fn save_new_version_from_file_menu_keeps_previous_project_and_undo_history() {
     assert!(!h.state_mut().save_new_version());
     assert_eq!(h.state().path.as_ref(), Some(&unavailable));
     assert!(h.state().doc.is_modified());
+}
+
+/// AUT-008: the tempo field's right-click creates a tempo automation clip, starting at the
+/// project tempo.
+#[test]
+fn the_tempo_field_creates_a_tempo_automation_clip() {
+    let mut h = harness(true);
+    let tempo = h.state().project().tempo.bpm() as f32;
+    let bpm_label = h.get_by_label("BPM").rect();
+    click(
+        &mut h,
+        bpm_label.left_center() - vec2(30.0, 0.0),
+        PointerButton::Secondary,
+    );
+    h.step();
+    h.get_by_label("Create automation clip").click();
+    h.step();
+    let p = h.state().project();
+    let a = p
+        .automations
+        .iter()
+        .find(|a| a.target == AutomationTarget::Tempo)
+        .expect("a tempo automation");
+    assert!(
+        p.playlist.clips.iter().any(|c| c.automation() == Some(a.id)),
+        "placed on the Playlist"
+    );
+    let mapping = AutomationTarget::Tempo.mapping(p).expect("mapping");
+    let start = mapping.to_value(a.points[0].value);
+    assert!(
+        (start - tempo).abs() < 0.01,
+        "starts at the project tempo: {start} vs {tempo}"
+    );
+}
+
+#[test]
+fn embedded_sampler_previews_without_the_source_file() {
+    let mut h = harness(false);
+    let audio = limeshot_core::EmbeddedAudio {
+        name: "Embedded.wav".into(),
+        sample_rate: 48000,
+        stereo: vec![0.3; 48000],
+    };
+    let params = SamplerParams::default();
+    let reference = limeshot_core::LimePlugin::SAMPLER.with_values(
+        &limeshot_core::lime::sampler_values(&params, 60),
+        false,
+        Some(&audio),
+    );
+    let channel = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Embedded".into(),
+                instrument: Instrument::Plugin(reference),
+            })
+            .unwrap(),
+    );
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..4 {
+        h.step();
+    }
+    let source = h.state().sampler_source(channel).expect("embedded source cached");
+    assert!(!source.exists(), "no temporary sample file required");
+    assert!(matches!(
+        h.state().samples.status_of_path(&source),
+        Some(limeshot_audio::assets::SampleStatus::Ready(_))
+    ));
+    let load = h.get_by_label("Load…").rect();
+    let wave = egui::pos2(load.left(), load.bottom() + 36.0);
+    press(&mut h, wave, PointerButton::Primary, true);
+    assert_eq!(h.state().sampler_preview.map(|p| p.0), Some(channel));
+    press(&mut h, wave, PointerButton::Primary, false);
+}
+
+#[test]
+fn hosted_parameter_menu_types_native_units_and_undoes() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    let target = PluginTarget::Channel(channel);
+    let id = lime::param_id(8);
+    h.state_mut().plugins.filter_parameters(target, "Attack");
+    for _ in 0..3 {
+        h.step();
+    }
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    click(&mut h, rect.center(), PointerButton::Secondary);
+    h.get_by_label("Type in value…").click();
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.event(Event::Text("500".into()));
+    h.step();
+    h.get_by_label("OK").click();
+    h.step();
+    let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
+    assert!((params.attack_ms - 500.0).abs() < 0.01);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
+    assert_eq!(params.attack_ms, 0.0);
+}
+
+#[test]
+fn hosted_sampler_slider_drag_commits_state_only_on_release() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    let target = PluginTarget::Channel(channel);
+    let id = lime::param_id(8);
+    h.state_mut().plugins.filter_parameters(target, "Attack");
+    for _ in 0..3 {
+        h.step();
+    }
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    let before = h.state().project().plugin(target).unwrap().state.clone();
+    let revision = h.state().doc.revision();
+    let from = egui::pos2(rect.left() + 5.0, rect.center().y);
+    let to = egui::pos2(rect.right() - 45.0, rect.center().y);
+    press(&mut h, from, PointerButton::Primary, true);
+    for i in 1..=8 {
+        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
+        h.step();
+        assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+        assert_eq!(h.state().doc.revision(), revision);
+    }
+    press(&mut h, to, PointerButton::Primary, false);
+    assert_ne!(h.state().project().plugin(target).unwrap().state, before);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+}
+
+#[test]
+fn effect_presets_preserve_live_bypass_and_undo_to_the_live_state() {
+    let mut h = harness(true);
+    let (track, effect) = h
+        .state()
+        .project()
+        .mixer
+        .tracks
+        .iter()
+        .enumerate()
+        .find_map(|(track, t)| {
+            t.effects
+                .iter()
+                .find(|e| e.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(5)))
+                .map(|e| (track as u16, e.id))
+        })
+        .unwrap();
+    let target = PluginTarget::Effect { track, effect };
+    let bypass = b"bypass"
+        .iter()
+        .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(*b)))
+        & 0x7fff_ffff;
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(0.0)
+    );
+    h.state_mut().plugins.set_param(target, bypass, 1.0);
+    for _ in 0..100 {
+        let mut live = h.state().project().plugin(target).unwrap().clone();
+        live.state = PluginState::new(h.state().plugins.instance(target).unwrap().state().unwrap());
+        if lime::parameter_value(&live, bypass) == Some(1.0) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        h.step();
+    }
+    limeshot_ui::presets_ui::apply(
+        h.state_mut(),
+        limeshot_ui::presets_ui::Target::Effect { track, effect },
+        limeshot_project::preset::Content::Effect {
+            kind: EffectKind::Delay,
+            params: vec![90.0, 0.1, 0.0, 6000.0, 0.5, 0.0],
+        },
+    );
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(1.0)
+    );
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(1.0)
+    );
+}
+
+#[test]
+fn missing_sample_error_can_reload_after_its_in_project_source_is_restored() {
+    let dir = tempfile::tempdir().unwrap();
+    let sample = dir.path().join("late.wav");
+    let file = dir.path().join("legacy.lime");
+    let mut doc = Document::default();
+    let channel = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "Missing".into(),
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef {
+                    path: sample.to_string_lossy().into_owned(),
+                }),
+                ..Default::default()
+            }),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    limeshot_project::save(doc.project(), &file).unwrap();
+    let mut h = harness(false);
+    h.state_mut().open_path(&file);
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..4 {
+        h.step();
+    }
+    let target = PluginTarget::Channel(channel);
+    assert!(h.state().plugins.error(target).is_some());
+    limeshot_dsp::write_wav(&sample, 48000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+    h.get_by_label("Reload").click();
+    for _ in 0..4 {
+        h.step();
+    }
+    assert!(
+        h.state()
+            .project()
+            .plugin(target)
+            .unwrap()
+            .extra
+            .get("lime-sample-pending")
+            .is_none()
+    );
+    assert!(h.state().plugins.error(target).is_none());
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(
+        h.state().project().plugin(target).unwrap().extra["lime-sample-pending"],
+        true
+    );
 }

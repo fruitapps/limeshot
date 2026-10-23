@@ -41,12 +41,19 @@ jobs:
           # macos-13 is retired; keep this job on an explicitly Intel runner.
           - { name: macOS Intel, os: macos-15-intel }
           - { name: Windows x86-64, os: windows-latest }
+    env:
+      # Where the Lime VST3 bundles built below are found (tests and the headless demo render).
+      LIMESHOT_LIME_PLUGINS: ${{ github.workspace }}/native-plugins/target/debug-bundled
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            native-plugins -> target
       - name: Linux system packages (ALSA, X11/Wayland, GTK for file dialogs)
         if: runner.os == 'Linux'
         run: |
@@ -60,6 +67,14 @@ jobs:
       # CI runners have no sound card: the audio tests use the offline renderer and the silent
       # clock; the UI tests render without a window. The offscreen-screenshot example (wgpu) is
       # only built, not run, because hosted runners may lack a GPU adapter.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      # LimeShot's instruments and effects are the Lime VST3s (D39); the equivalence test in
+      # limeshot-ui/tests/lime_vst3.rs loads these bundles and fails on CI without them.
+      - name: Build the Lime VST3 bundles
+        working-directory: native-plugins
+        run: python build.py --debug
       - name: Test
         run: cargo test --workspace
       - name: Headless demo render
@@ -67,8 +82,10 @@ jobs:
         run: |
           mkdir -p out
           cargo run -q -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
-          cargo run -q -p limeshot-app --bin limeshot-cli -- render out/demo.lime out/demo2.wav
+          cargo run -q -p limeshot-app --bin limeshot-cli -- render out/demo.lime out/demo2.wav | tee out/render.txt
           cmp out/demo.wav out/demo2.wav
+          # The demo plays through the Lime VST3s; without the bundles it would render silence.
+          if grep -q 'peak -inf' out/render.txt; then echo "silent render: Lime VST3s not found"; exit 1; fi
       - name: Validate feature inventory
         shell: bash
         run: |

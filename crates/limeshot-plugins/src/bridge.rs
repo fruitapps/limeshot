@@ -320,23 +320,28 @@ fn handle(inst: &mut Vst3Instance, req: &[u8]) -> Result<Option<Out>, PluginErro
 }
 
 fn serve_audio(mut s: UnixStream, mut proc: crate::Vst3Processor, max_block: usize) {
-    let mut req = Vec::with_capacity(64 + MAX_EVENTS * 16 + MAX_PARAMS * 16 + 8 * max_block);
+    let mut req = Vec::with_capacity(64 + MAX_EVENTS * 112 + MAX_PARAMS * 16 + 16 * max_block);
     let mut audio = vec![0.0f32; 2 * max_block];
+    let mut key = vec![0.0f32; 2 * max_block];
     let mut events: Vec<NoteEvent> = Vec::with_capacity(MAX_EVENTS);
-    let mut reply = Out(Vec::with_capacity(16 + 8 * max_block));
+    let mut reply = Out(Vec::with_capacity(16 + 16 * max_block));
     loop {
         if recv(&mut s, &mut req).is_err() {
             return;
         }
-        let Ok((frames, transport, reset)) = decode_block(&req, &mut events, &mut proc, &mut audio) else {
+        let Ok((frames, transport, reset)) = decode_block(&req, &mut events, &mut proc, &mut audio, &mut key) else {
             return;
         };
         if reset {
             proc.restart();
         }
-        proc.process(&mut audio[..2 * frames], &events, &transport);
+        proc.process_with_sidechain(&mut audio[..2 * frames], &events, &transport, Some(&key[..2 * frames]));
         reply.0.clear();
-        reply.u32(proc.latency()).u32(frames as u32);
+        reply
+            .u32(proc.latency())
+            .u32(frames as u32)
+            .u32(proc.telemetry().voices)
+            .f32(proc.telemetry().reduction_db);
         for v in &audio[..2 * frames] {
             reply.f32(*v);
         }
@@ -351,6 +356,7 @@ fn decode_block(
     events: &mut Vec<NoteEvent>,
     proc: &mut crate::Vst3Processor,
     audio: &mut [f32],
+    key: &mut [f32],
 ) -> Result<(usize, Transport, bool), PluginError> {
     let mut i = In::new(req);
     let reset = i.u8()? != 0;
@@ -371,11 +377,27 @@ fn decode_block(
                 velocity: i.f32()?,
                 id: i.i32()?,
             },
-            _ => {
+            4 => NoteEventKind::ChannelPan { pan: i.f32()? },
+            2 => NoteEventKind::Pan {
+                id: i.i32()?,
+                pan: i.f32()?,
+            },
+            3 => {
+                let m =
+                    limeshot_dsp::ClipMessage::decode(i.bytes()?).ok_or(PluginError::Bridge("invalid clip event"))?;
+                NoteEventKind::Clip {
+                    key: m.key,
+                    velocity: m.velocity,
+                    id: m.id,
+                    playback: m.playback,
+                }
+            }
+            1 => {
                 let key = i.u8()?;
                 let _ = i.f32()?;
                 NoteEventKind::Off { key, id: i.i32()? }
             }
+            _ => return Err(PluginError::Bridge("unknown note event")),
         };
         if events.len() < events.capacity() {
             events.push(NoteEvent { offset, kind });
@@ -386,6 +408,10 @@ fn decode_block(
     }
     for v in &mut audio[..2 * frames] {
         *v = i.f32()?;
+    }
+    let has_key = i.u8()? != 0;
+    for v in &mut key[..2 * frames] {
+        *v = if has_key { i.f32()? } else { 0.0 };
     }
     Ok((frames, transport, reset))
 }
@@ -427,6 +453,9 @@ pub struct BridgedProcessor {
     reset: bool,
     /// The transport for effects, which get it separately (`Effect::set_transport`).
     transport: Transport,
+    sidechain_source: usize,
+    native_pan: bool,
+    telemetry: limeshot_dsp::PluginTelemetry,
 }
 
 impl Control {
@@ -562,12 +591,15 @@ impl BridgedInstance {
             shared,
             max_block,
             req: Out(Vec::with_capacity(
-                64 + MAX_EVENTS * 16 + MAX_PARAMS * 16 + 8 * max_block,
+                64 + MAX_EVENTS * 112 + MAX_PARAMS * 16 + 16 * max_block,
             )),
-            reply: Vec::with_capacity(16 + 8 * max_block),
+            reply: Vec::with_capacity(16 + 16 * max_block),
             pending: Vec::with_capacity(MAX_PARAMS),
             reset: false,
             transport: Transport::default(),
+            sidechain_source: 0,
+            native_pan: crate::lime::is_native_pan_class(class_id),
+            telemetry: limeshot_dsp::PluginTelemetry::default(),
         };
         Ok((inst, proc))
     }
@@ -810,12 +842,40 @@ impl BridgedProcessor {
 
     /// Clear the plugin's tails at the next block.
     pub fn restart(&mut self) {
+        self.telemetry = limeshot_dsp::PluginTelemetry::default();
         self.reset = true;
     }
 
     /// Process `buf` (interleaved stereo) in place in the child. After a crash, or when the
     /// child does not answer in time, the output is silence.
     pub fn process(&mut self, buf: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
+        self.process_with_sidechain(buf, notes, transport, None);
+    }
+    /// Select a routed mixer key; zero selects the main input.
+    pub fn set_sidechain_source(&mut self, source: usize) {
+        self.sidechain_source = source;
+    }
+    /// Selected mixer key source; zero means the processor main input.
+    pub fn sidechain_source(&self) -> usize {
+        self.sidechain_source
+    }
+    /// Whether the instrument implements the native additive balance protocol.
+    pub fn uses_channel_pan(&self) -> bool {
+        self.native_pan
+    }
+    /// Copy completed block statistics without retaining borrowed event pointers.
+    pub fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
+        self.telemetry
+    }
+    /// Process stereo audio with timestamped events, transport and optional detector input.
+    pub fn process_with_sidechain(
+        &mut self,
+        buf: &mut [f32],
+        notes: &[NoteEvent],
+        transport: &Transport,
+        key: Option<&[f32]>,
+    ) {
+        self.telemetry = limeshot_dsp::PluginTelemetry::default();
         let frames = buf.len() / 2;
         let last = frames.saturating_sub(1) as u32;
         let mut start = 0;
@@ -823,7 +883,18 @@ impl BridgedProcessor {
         while start < frames {
             let n = (frames - start).min(self.max_block);
             let chunk = &mut buf[2 * start..2 * (start + n)];
-            if self.crashed() || self.block(chunk, start as u32, notes, &t, last).is_err() {
+            if self.crashed()
+                || self
+                    .block(
+                        chunk,
+                        start as u32,
+                        notes,
+                        &t,
+                        last,
+                        key.and_then(|k| k.get(2 * start..2 * (start + n))),
+                    )
+                    .is_err()
+            {
                 self.shared.crashed.store(true, Ordering::Relaxed);
                 chunk.fill(0.0);
             }
@@ -840,6 +911,7 @@ impl BridgedProcessor {
         notes: &[NoteEvent],
         t: &Transport,
         last: u32,
+        key: Option<&[f32]>,
     ) -> std::io::Result<()> {
         let n = chunk.len() / 2;
         let end = first + n as u32;
@@ -860,6 +932,22 @@ impl BridgedProcessor {
             match e.kind {
                 NoteEventKind::On { key, velocity, id } => o.u8(0).u8(key).f32(velocity).i32(id),
                 NoteEventKind::Off { key, id } => o.u8(1).u8(key).f32(0.0).i32(id),
+                NoteEventKind::ChannelPan { pan } => o.u8(4).f32(pan),
+                NoteEventKind::Pan { id, pan } => o.u8(2).i32(id).f32(pan),
+                NoteEventKind::Clip {
+                    key,
+                    velocity,
+                    id,
+                    playback,
+                } => o.u8(3).bytes(
+                    &limeshot_dsp::ClipMessage {
+                        key,
+                        velocity,
+                        id,
+                        playback,
+                    }
+                    .encode(),
+                ),
             };
         }
         let params = self.pending.iter().filter(|p| inside(p.1.min(last)));
@@ -870,6 +958,12 @@ impl BridgedProcessor {
         for s in chunk.iter() {
             o.f32(*s);
         }
+        o.u8(u8::from(key.is_some()));
+        if let Some(key) = key {
+            for v in key {
+                o.f32(*v);
+            }
+        }
         send(&mut self.audio, &o.0)?;
         recv(&mut self.audio, &mut self.reply)?;
         let mut i = In::new(&self.reply);
@@ -877,6 +971,11 @@ impl BridgedProcessor {
         self.shared.latency.store(i.u32().map_err(bad)?, Ordering::Relaxed);
         if i.u32().map_err(bad)? as usize != n {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad reply"));
+        }
+        self.telemetry.voices = i.u32().map_err(bad)?.min(128);
+        let reduction = i.f32().map_err(bad)?;
+        if reduction.is_finite() {
+            self.telemetry.reduction_db = self.telemetry.reduction_db.max(reduction.clamp(0.0, 200.0));
         }
         for s in chunk.iter_mut() {
             *s = i.f32().map_err(bad)?;
@@ -886,6 +985,19 @@ impl BridgedProcessor {
 }
 
 impl limeshot_dsp::effects::Effect for BridgedProcessor {
+    /// Selected mixer key source; zero means the processor main input.
+    fn sidechain_source(&self) -> usize {
+        self.sidechain_source
+    }
+    /// Maximum dynamics reduction from the preceding block, in dB.
+    fn gain_reduction_db(&self) -> f32 {
+        self.telemetry.reduction_db
+    }
+    /// Use separate detector audio without mixing the key into the audible output.
+    fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
+        let t = self.transport;
+        self.process_with_sidechain(buf, &[], &t, Some(key));
+    }
     fn set_params(&mut self, _params: &[f32]) {}
     fn process(&mut self, buf: &mut [f32]) {
         let t = self.transport;
@@ -906,6 +1018,14 @@ impl limeshot_dsp::effects::Effect for BridgedProcessor {
 }
 
 impl limeshot_dsp::Instrument for BridgedProcessor {
+    /// Whether the instrument implements the native additive balance protocol.
+    fn uses_channel_pan(&self) -> bool {
+        self.native_pan
+    }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
+    fn active_voices(&self) -> usize {
+        self.telemetry.voices as usize
+    }
     fn process(&mut self, out: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
         out.fill(0.0);
         BridgedProcessor::process(self, out, notes, transport);

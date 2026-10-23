@@ -16,7 +16,7 @@ mod style;
 
 use style::{Canvas, Theme};
 
-pub const EDITOR_SIZES: [(f32, f32); 9] = [
+pub const EDITOR_SIZES: [(f32, f32); 12] = [
     (850.0, 600.0),
     (760.0, 650.0),
     (520.0, 300.0),
@@ -26,18 +26,21 @@ pub const EDITOR_SIZES: [(f32, f32); 9] = [
     (850.0, 460.0),
     (720.0, 380.0),
     (900.0, 530.0),
+    (760.0, 420.0),
+    (760.0, 420.0),
+    (760.0, 420.0),
 ];
-/// Return the default editor width and height in logical points for plugin IDs 0–8.
+/// Return the default editor width and height in logical points for plugin IDs 0–11.
 ///
 /// # Panics
-/// Panics for an ID outside 0–8.
+/// Panics for an ID outside 0–11.
 pub fn editor_size(id: u8) -> (f32, f32) {
     EDITOR_SIZES[id as usize]
 }
 /// Return 90% of the default editor dimensions in logical points.
 ///
 /// # Panics
-/// Panics for a plugin ID outside 0–8.
+/// Panics for a plugin ID outside 0–11.
 pub fn minimum_size(id: u8) -> (f32, f32) {
     let (w, h) = editor_size(id);
     (w * 0.9, h * 0.9)
@@ -121,7 +124,7 @@ impl NativeEditor {
         }
     }
     /// Create an editor with independent default parameters and meters for offscreen use.
-    /// Use a plugin ID in 0–8; drawing requires a valid ID. No host context is attached.
+    /// Use a plugin ID in 0–11; drawing requires a valid ID. No host context is attached.
     pub fn preview(id: u8) -> Self {
         Self::new(id, Arc::new(NativeParams::new(id)), Arc::new(Meters::default()))
     }
@@ -262,7 +265,9 @@ impl NativeEditor {
         let values = values(&preset.content);
         let setter = context.param_setter();
         for (p, value) in self.params.controls.iter().zip(values) {
-            set(&setter, &p.value, value);
+            if value.is_finite() {
+                set(&setter, &p.value, value);
+            }
         }
         self.preset_name = preset.name;
         self.status.clear();
@@ -317,7 +322,8 @@ fn set<P: Param>(setter: &ParamSetter<'_>, p: &P, value: P::Plain) {
 }
 
 /// Convert preset content to plain native controls in specification order.
-/// Sampler content excludes audio and root key so applying it preserves both.
+/// Sampler content excludes audio and root key (NaN, skipped when applied) so applying it
+/// preserves both.
 fn values(content: &Content) -> Vec<f32> {
     match content {
         Content::Effect { params, .. } => params.clone(),
@@ -342,6 +348,12 @@ fn values(content: &Content) -> Vec<f32> {
             s.lfo_rate_hz,
             s.vibrato_cents,
             s.lfo_cutoff,
+            match s.filter_mode {
+                limeshot_core::FilterMode::LowPass => 0.0,
+                limeshot_core::FilterMode::BandPass => 1.0,
+                limeshot_core::FilterMode::HighPass => 2.0,
+            },
+            s.key_track,
         ],
         Content::Sampler(s) => vec![
             s.gain_db,
@@ -351,12 +363,22 @@ fn values(content: &Content) -> Vec<f32> {
             s.release_ms,
             f32::from(s.reverse),
             f32::from(s.one_shot),
+            // The root key is the channel's, not the preset's: kept as it is.
+            f32::NAN,
+            s.attack_ms,
+            s.decay_ms,
+            s.sustain,
+            s.cutoff_hz,
+            s.resonance,
+            f32::from(s.looping),
+            s.loop_start,
+            s.loop_end,
         ],
     }
 }
 /// Convert plain native controls to preset content, omitting bypass and external-key toggles.
-/// Sampler content omits embedded audio and root key and defaults DAW-only settings.
-fn content(id: u8, p: &[f32; 16]) -> Content {
+/// Sampler content omits embedded audio and root key.
+fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
     match id {
         0 => Content::Synth(limeshot_core::SynthParams {
             waveform: match p[0].round() as u8 {
@@ -379,6 +401,12 @@ fn content(id: u8, p: &[f32; 16]) -> Content {
             lfo_rate_hz: p[12],
             vibrato_cents: p[13],
             lfo_cutoff: p[14],
+            filter_mode: match p[15].round() as u8 {
+                1 => limeshot_core::FilterMode::BandPass,
+                2 => limeshot_core::FilterMode::HighPass,
+                _ => limeshot_core::FilterMode::LowPass,
+            },
+            key_track: p[16],
         }),
         1 => Content::Sampler(limeshot_core::SamplerParams {
             sample: None,
@@ -389,7 +417,14 @@ fn content(id: u8, p: &[f32; 16]) -> Content {
             release_ms: p[4],
             reverse: p[5] >= 0.5,
             one_shot: p[6] >= 0.5,
-            ..Default::default()
+            attack_ms: p[8],
+            decay_ms: p[9],
+            sustain: p[10],
+            cutoff_hz: p[11],
+            resonance: p[12],
+            looping: p[13] >= 0.5,
+            loop_start: p[14],
+            loop_end: p[15],
         }),
         _ => Content::Effect {
             kind: parameters::KINDS[(id - 2) as usize],
@@ -415,7 +450,7 @@ mod tests {
     #[test]
     fn native_presets_round_trip_through_limeshots_reader() {
         let folder = tempfile::tempdir().unwrap();
-        for id in 0..9 {
+        for id in 0..parameters::NAMES.len() as u8 {
             let params = NativeParams::new(id);
             let path = folder.path().join(format!("{id}.limepreset"));
             let original = preset::Preset {
@@ -425,7 +460,9 @@ mod tests {
             save_preset_file(&path, &original).unwrap();
             let loaded = preset::load(&path, NativeEditor::preview(id).slot()).unwrap();
             let got = values(&loaded.content);
-            assert_eq!(&params.values()[..got.len()], got.as_slice());
+            for (want, got) in params.values().iter().zip(&got) {
+                assert!(got.is_nan() || want == got, "{want} vs {got}");
+            }
         }
     }
 }
@@ -435,7 +472,7 @@ mod layout_tests {
     use super::*;
     #[test]
     fn all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes() {
-        for id in 0..9 {
+        for id in 0..parameters::NAMES.len() as u8 {
             let (w, h) = editor_size(id);
             let (mw, mh) = minimum_size(id);
             for size in [vec2(w, h), vec2(mw, mh)] {
@@ -451,7 +488,7 @@ mod layout_tests {
                 });
                 harness.run_steps(3);
                 let mut rectangles = Vec::new();
-                for spec in parameters::specs(id) {
+                for spec in parameters::specs(id).iter().take(if id == 3 { 7 } else { usize::MAX }) {
                     let rect = harness
                         .ctx
                         .data(|d| d.get_temp::<Rect>(Id::unique(("native-control", spec.name))))

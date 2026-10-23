@@ -1554,6 +1554,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-chorus"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-comp"
 version = "0.1.0"
 dependencies = [
@@ -1563,6 +1571,14 @@ dependencies = [
 
 [[package]]
 name = "lime-delay"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
+name = "lime-drive"
 version = "0.1.0"
 dependencies = [
  "lime-native",
@@ -1586,6 +1602,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-gate"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-limiter"
 version = "0.1.0"
 dependencies = [
@@ -1598,6 +1622,7 @@ name = "lime-native"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "crossbeam-queue",
  "eframe",
  "egui",
  "egui_kittest",
@@ -1605,10 +1630,9 @@ dependencies = [
  "image",
  "limeshot-core",
  "limeshot-dsp",
- "limeshot-engine",
  "limeshot-plugins",
  "limeshot-project",
- "limeshot-sequencer",
+ "nice-assert-no-alloc",
  "nice-plug",
  "nice-plug-egui",
  "parking_lot",
@@ -1670,16 +1694,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "limeshot-engine"
-version = "0.1.0"
-dependencies = [
- "limeshot-core",
- "limeshot-dsp",
- "limeshot-sequencer",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "limeshot-plugins"
 version = "0.1.0"
 dependencies = [
@@ -1703,6 +1717,7 @@ dependencies = [
  "limeshot-sequencer",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

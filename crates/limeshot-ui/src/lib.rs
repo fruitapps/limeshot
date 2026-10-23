@@ -21,6 +21,7 @@ pub mod dialogs;
 pub mod effects_ui;
 pub mod icons;
 pub mod inspector;
+pub mod lime;
 pub mod menus;
 pub mod mixer;
 pub mod mixer_menu;

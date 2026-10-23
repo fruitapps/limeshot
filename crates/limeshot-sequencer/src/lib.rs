@@ -20,10 +20,9 @@
 use limeshot_core::automation::{AutomationPoint, curve_value};
 use limeshot_core::{
     AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, PluginTarget, Project, STEP_TICKS, Tempo, Tick,
-    TimeSignature, Waveform,
+    TimeSignature,
 };
-use limeshot_dsp::osc::Shape;
-use limeshot_dsp::{Adsr, SampleData, db_to_gain};
+use limeshot_dsp::SampleData;
 use std::sync::Arc;
 
 /// A note to start at `tick`, lasting `length` ticks.
@@ -89,67 +88,11 @@ impl Program {
 /// A channel's sound source, resolved for playback.
 #[derive(Debug, Clone)]
 pub enum InstrumentState {
-    Sampler {
-        sample: Option<Arc<SampleData>>,
-        gain: f32,
-        /// Semitones.
-        pitch: f32,
-        start: f32,
-        end: f32,
-        reverse: bool,
-        /// Attack, decay (seconds) and sustain level of the volume envelope.
-        attack: f32,
-        decay: f32,
-        sustain: f32,
-        release: f32,
-        one_shot: bool,
-        /// Loop range as fractions of the sample, when looping.
-        looping: Option<(f32, f32)>,
-        /// Low-pass cutoff (Hz) and resonance, when the filter is not fully open.
-        filter: Option<(f32, f32)>,
-    },
-    Synth {
-        shape: Shape,
-        adsr: Adsr,
-        gain: f32,
-        octave: i8,
-        detune_cents: f32,
-        mods: SynthMods,
-    },
     /// A hosted plugin; the engine plays the instrument adopted for this channel id.
     Plugin {
         channel: u32,
     },
     Silent,
-}
-
-/// LimeSynth's filter and LFO settings, resolved for playback.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct SynthMods {
-    /// Hz.
-    pub cutoff: f32,
-    pub resonance: f32,
-    /// Filter envelope depth in octaves.
-    pub env_octaves: f32,
-    /// Seconds for the filter envelope to decay.
-    pub env_decay: f32,
-    /// Hz.
-    pub lfo_rate: f32,
-    pub vibrato_cents: f32,
-    /// LFO to cutoff in octaves.
-    pub lfo_cutoff: f32,
-}
-
-impl SynthMods {
-    /// Whether the filter does anything (an open filter without modulation is bypassed, so
-    /// default settings sound exactly as before the filter existed).
-    pub fn filter_on(&self) -> bool {
-        self.cutoff < 19_999.0 || self.env_octaves > 0.0 || self.lfo_cutoff > 0.0 || self.resonance > 0.0
-    }
-
-    pub fn any(&self) -> bool {
-        self.filter_on() || self.vibrato_cents > 0.0
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -172,8 +115,6 @@ pub struct MixerTrackState {
     pub effects: Vec<EffectState>,
     /// Outputs: (destination track, linear level, pre-fader). Empty for the master.
     pub routes: Vec<(usize, f32, bool)>,
-    /// The built-in EQ's bands as (frequency, gain dB, width).
-    pub eq: [(f32, f32, f32); 3],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -207,6 +148,8 @@ pub enum LaneTarget {
         effect: u32,
         id: u32,
     },
+    /// The tempo in BPM: the renderer re-times the transport as it changes.
+    Tempo,
 }
 
 /// Where one clip plays its automation: song ticks `start..end`, reading the curve from
@@ -274,7 +217,6 @@ impl Default for Snapshot {
                 audible: true,
                 effects: Vec::new(),
                 routes: Vec::new(),
-                eq: flat_eq(),
             }],
             mix_order: Vec::new(),
             pattern: Program::default(),
@@ -282,10 +224,6 @@ impl Default for Snapshot {
             automation: Vec::new(),
         }
     }
-}
-
-fn flat_eq() -> [(f32, f32, f32); 3] {
-    limeshot_core::EqBand::DEFAULTS.map(|b| (b.freq, b.gain, b.width))
 }
 
 /// Supplies decoded samples for stored sample paths. The UI's sample cache implements it; tests
@@ -309,15 +247,6 @@ impl SampleLookup for NoSamples {
     }
 }
 
-fn shape(w: Waveform) -> Shape {
-    match w {
-        Waveform::Sine => Shape::Sine,
-        Waveform::Square => Shape::Square,
-        Waveform::Saw => Shape::Saw,
-        Waveform::Triangle => Shape::Triangle,
-    }
-}
-
 /// How far swing delays a note starting at pattern tick `start`: only notes exactly on the
 /// second 16th of each pair move, by up to half a step.
 pub fn swing_offset(start: Tick, swing: f32) -> Tick {
@@ -329,7 +258,7 @@ pub fn swing_offset(start: Tick, swing: f32) -> Tick {
 
 /// Build the playback snapshot. `current_pattern` is what Pattern mode loops; an unknown id falls
 /// back to the first pattern.
-pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn SampleLookup) -> Snapshot {
+pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn SampleLookup) -> Snapshot {
     let sig = project.time_signature;
     let any_solo = project.channels.iter().any(|c| c.solo);
     let tracks = project.mixer.tracks.len().max(1);
@@ -338,46 +267,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         .iter()
         .map(|c| ChannelState {
             instrument: match &c.instrument {
-                Instrument::Sampler(p) => InstrumentState::Sampler {
-                    sample: p.sample.as_ref().and_then(|r| samples.sample(&r.path)),
-                    gain: db_to_gain(p.gain_db),
-                    pitch: p.pitch,
-                    start: p.start.clamp(0.0, 1.0),
-                    end: p.end.clamp(0.0, 1.0),
-                    reverse: p.reverse,
-                    attack: p.attack_ms.clamp(0.0, 10_000.0) / 1000.0,
-                    decay: p.decay_ms.clamp(0.0, 10_000.0) / 1000.0,
-                    sustain: p.sustain.clamp(0.0, 1.0),
-                    release: p.release_ms.max(0.0) / 1000.0,
-                    one_shot: p.one_shot,
-                    looping: p.looping.then(|| {
-                        let (a, b) = (p.loop_start.clamp(0.0, 1.0), p.loop_end.clamp(0.0, 1.0));
-                        (a.min(b), a.max(b))
-                    }),
-                    filter: (p.cutoff_hz < 19_999.0 || p.resonance > 0.0)
-                        .then(|| (p.cutoff_hz.clamp(20.0, 20_000.0), p.resonance.clamp(0.0, 0.95))),
-                },
-                Instrument::Synth(p) => InstrumentState::Synth {
-                    shape: shape(p.waveform),
-                    adsr: Adsr {
-                        attack: p.attack_ms / 1000.0,
-                        decay: p.decay_ms / 1000.0,
-                        sustain: p.sustain,
-                        release: p.release_ms / 1000.0,
-                    },
-                    gain: db_to_gain(p.gain_db),
-                    octave: p.octave,
-                    detune_cents: p.detune_cents,
-                    mods: SynthMods {
-                        cutoff: p.cutoff_hz,
-                        resonance: p.resonance,
-                        env_octaves: p.filter_env,
-                        env_decay: p.filter_decay_ms / 1000.0,
-                        lfo_rate: p.lfo_rate_hz,
-                        vibrato_cents: p.vibrato_cents,
-                        lfo_cutoff: p.lfo_cutoff,
-                    },
-                },
+                Instrument::Synth(_) | Instrument::Sampler(_) => InstrumentState::Silent,
                 Instrument::Plugin(_) => InstrumentState::Plugin { channel: c.id.0 },
                 Instrument::Unsupported(_) => InstrumentState::Silent,
             },
@@ -396,7 +286,6 @@ pub fn compile(project: &Project, current_pattern: PatternId, samples: &dyn Samp
         .iter()
         .enumerate()
         .map(|(i, t)| MixerTrackState {
-            eq: t.eq.map(|b| (b.freq, b.gain, b.width)),
             gain: t.volume,
             pan: t.pan,
             audible: !t.muted && (i == 0 || !any_insert_solo || t.solo),
@@ -526,6 +415,7 @@ fn automation_lanes(project: &Project) -> Vec<AutomationLane> {
             continue;
         };
         let target = match a.target {
+            AutomationTarget::Tempo => Some(LaneTarget::Tempo),
             AutomationTarget::ChannelVolume(c) => channel(c).map(LaneTarget::ChannelVolume),
             AutomationTarget::ChannelPan(c) => channel(c).map(LaneTarget::ChannelPan),
             AutomationTarget::MixerVolume(t) => track(t).map(LaneTarget::MixerVolume),
@@ -869,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn samples_are_resolved_through_the_lookup() {
+    fn unconverted_legacy_instruments_have_no_playback_fallback() {
         let mut d = Document::default();
         let pat = d.project().patterns[0].id;
         d.execute(Command::AddChannel {
@@ -886,7 +776,7 @@ mod tests {
         let lookup = |p: &str| (p == "kick.wav").then(|| data.clone());
         let snap = compile(d.project(), pat, &lookup);
         match &snap.channels[0].instrument {
-            InstrumentState::Sampler { sample: Some(s), .. } => assert_eq!(s.frames(), 10),
+            InstrumentState::Silent => {}
             other => panic!("{other:?}"),
         }
     }

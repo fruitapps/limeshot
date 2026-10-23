@@ -175,7 +175,13 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
         ..RenderSettings::default()
     };
     let depth = opts.depth;
-    let (processors, plugins) = app.plugins.offline(app.project(), opts.sample_rate);
+    let (processors, plugins) = match app.plugins.offline(app.project(), opts.sample_rate) {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            app.toast_error(error);
+            return;
+        }
+    };
     let (tx, rx) = channel();
     let p = path.clone();
     let spawned = std::thread::Builder::new()

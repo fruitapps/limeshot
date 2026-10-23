@@ -1,5 +1,6 @@
-//! A mono low-pass for synth voices: the topology-preserving-transform state-variable filter
-//! (V. Zavalishin, "The Art of VA Filter Design"), as in the Filter effect.
+//! A mono filter for synth voices: the topology-preserving-transform state-variable filter
+//! (V. Zavalishin, "The Art of VA Filter Design"), as in the Filter effect, with low-, band- and
+//! high-pass outputs.
 
 use std::f32::consts::PI;
 
@@ -22,6 +23,12 @@ impl Svf {
     /// Filter one sample (low-pass output).
     #[inline]
     pub fn lowpass(&mut self, x: f32) -> f32 {
+        self.process(x, Mode::LowPass)
+    }
+
+    /// Filter one sample, taking the output for `mode`.
+    #[inline]
+    pub fn process(&mut self, x: f32, mode: Mode) -> f32 {
         let a1 = 1.0 / (1.0 + self.g * (self.g + self.k));
         let a2 = self.g * a1;
         let a3 = self.g * a2;
@@ -35,8 +42,21 @@ impl Svf {
             self.ic2 = 0.0;
             return 0.0;
         }
-        v2
+        match mode {
+            Mode::LowPass => v2,
+            Mode::BandPass => v1,
+            Mode::HighPass => x - self.k * v1 - v2,
+        }
     }
+}
+
+/// Which output of the state-variable filter a voice uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Mode {
+    #[default]
+    LowPass,
+    BandPass,
+    HighPass,
 }
 
 #[cfg(test)]
@@ -44,12 +64,16 @@ mod tests {
     use super::*;
 
     fn gain_at(freq: f32, cutoff: f32) -> f32 {
+        gain_in(freq, cutoff, Mode::LowPass)
+    }
+
+    fn gain_in(freq: f32, cutoff: f32, mode: Mode) -> f32 {
         let sr = 48_000.0;
         let mut f = Svf::default();
         f.set(cutoff, 0.0, sr);
         let mut peak = 0.0f32;
         for i in 0..48_000 {
-            let y = f.lowpass((2.0 * PI * freq * i as f32 / sr).sin());
+            let y = f.process((2.0 * PI * freq * i as f32 / sr).sin(), mode);
             if i > 24_000 {
                 peak = peak.max(y.abs());
             }
@@ -62,5 +86,18 @@ mod tests {
         assert!(gain_at(100.0, 2000.0) > 0.95);
         // 12 dB per octave: three octaves up is about −36 dB.
         assert!(gain_at(16_000.0, 2000.0) < 0.03);
+    }
+
+    #[test]
+    fn high_and_band_pass_outputs() {
+        // High-pass at 1 kHz: lows cut, highs pass.
+        assert!(gain_in(100.0, 1000.0, Mode::HighPass) < 0.05);
+        assert!(gain_in(8000.0, 1000.0, Mode::HighPass) > 0.9);
+        // Band-pass at 1 kHz (Q 0.5 without resonance, 6 dB/oct each side): the centre passes,
+        // four octaves away both sides are well down.
+        let centre = gain_in(1000.0, 1000.0, Mode::BandPass);
+        assert!(centre > 0.4, "{centre}");
+        assert!(gain_in(60.0, 1000.0, Mode::BandPass) < 0.25 * centre);
+        assert!(gain_in(15_000.0, 1000.0, Mode::BandPass) < 0.25 * centre);
     }
 }

@@ -5129,7 +5129,7 @@
       "limeshot": "Toolbar › tempo field",
       "status": "DIFFERENT",
       "feature": "TR-002",
-      "notes": "Drag or type, as in FL. Right-click: Tempo tapper and BPM presets 80–180 (LimeShot). FL's menu also has the control menu (Edit events…, Create automation clip, Link to controller…, Copy/Paste value, Type in value…); LimeShot has no tempo automation (AUT-008)."
+      "notes": "Drag or type; right-click offers Tempo tapper, BPM presets and Create automation clip (AUT-008, MENU-731). Edit events and controller linking remain unavailable."
     },
     {
       "id": "MENU-295",
@@ -5166,6 +5166,24 @@
       "status": "IMPLEMENTED",
       "feature": "TR-002",
       "notes": "LimeShot: 80 to 180 BPM in steps of 10; FL's list continues past the capture."
+    },
+    {
+      "id": "MENU-731",
+      "menu": "Toolbar",
+      "path": [
+        "Toolbar",
+        "Tempo",
+        "Create automation clip"
+      ],
+      "section": "Tempo menu",
+      "kind": "action",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "INFERRED",
+      "limeshot": "Toolbar › tempo menu › Create automation clip",
+      "status": "LIMESHOT_ONLY",
+      "feature": "AUT-008",
+      "notes": "Session 16: not seen in FL's tempo menu during the toolbar pass (FL creates tempo automation from Tools › Last tweaked); LimeShot offers it here too."
     },
     {
       "id": "MENU-297",
@@ -8284,7 +8302,7 @@
       "limeshot": "Piano Roll › ⏵ › View",
       "status": "DIFFERENT",
       "feature": "",
-      "notes": "Session 16: Scale highlighting only."
+      "notes": "Scale highlighting, Keyboard labels and Keep labels on screen; other View options remain pending."
     },
     {
       "id": "MENU-469",
@@ -8376,10 +8394,10 @@
       "fl_keys": "",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › View › Keep labels on screen",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Session-local view choice; clips note labels to their visible note bodies."
     },
     {
       "id": "MENU-474",
@@ -8642,10 +8660,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
-      "feature": "",
-      "notes": ""
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels",
+      "status": "DIFFERENT",
+      "feature": "PR-030",
+      "notes": "Keyboard-label modes and white-note filter only; styles, renaming and presets remain pending."
     },
     {
       "id": "MENU-488",
@@ -9414,10 +9432,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Target control",
+      "status": "IMPLEMENTED",
       "feature": "PR-016",
-      "notes": "Which note property the lower panel edits."
+      "notes": "Session-local lane/view choice; note pan edits are saved and undoable."
     },
     {
       "id": "MENU-529",
@@ -9433,10 +9451,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Piano Roll › ⏵ › Target control › Note pan",
+      "status": "IMPLEMENTED",
       "feature": "PR-016",
-      "notes": ""
+      "notes": "Session-local lane/view choice; note pan edits are saved and undoable."
     },
     {
       "id": "MENU-530",
@@ -9452,10 +9470,10 @@
       "fl_keys": "",
       "fl_state": "selected",
       "confidence": "OBSERVED",
-      "limeshot": "Piano Roll › velocity lane",
-      "status": "DIFFERENT",
+      "limeshot": "Piano Roll › ⏵ › Target control › Note velocity",
+      "status": "IMPLEMENTED",
       "feature": "PR-004",
-      "notes": "LimeShot's lower panel edits velocity only."
+      "notes": "Session-local lane/view choice; note pan edits are saved and undoable."
     },
     {
       "id": "MENU-531",
@@ -13169,6 +13187,125 @@
       "status": "IMPLEMENTED",
       "feature": "UI-010",
       "notes": "Existing control-menu observation (session 4); channel/mixer volume/pan and built-in effect parameters. Copy/paste uses LimeShot automation mappings; type-in uses displayed units."
+    },
+    {
+      "id": "MENU-732",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels"
+      ],
+      "section": "",
+      "kind": "submenu",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
+    },
+    {
+      "id": "MENU-733",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels",
+        "None"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels › None",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
+    },
+    {
+      "id": "MENU-734",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels",
+        "All notes"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels › All notes",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
+    },
+    {
+      "id": "MENU-735",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels",
+        "Root notes"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels › Root notes",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
+    },
+    {
+      "id": "MENU-736",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels",
+        "Highlighted notes"
+      ],
+      "section": "",
+      "kind": "radio",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels › Highlighted notes",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
+    },
+    {
+      "id": "MENU-737",
+      "menu": "Piano Roll",
+      "path": [
+        "Piano Roll",
+        "Options",
+        "View",
+        "Keyboard labels",
+        "White notes only"
+      ],
+      "section": "",
+      "kind": "toggle",
+      "fl_keys": "",
+      "fl_state": "",
+      "confidence": "OBSERVED",
+      "limeshot": "Piano Roll › ⏵ › View › Keyboard labels › White notes only",
+      "status": "IMPLEMENTED",
+      "feature": "PR-030",
+      "notes": "Public manual evidence: docs/research/piano-roll-view-controls.md; not a live observation."
     }
   ],
   "lists": {
