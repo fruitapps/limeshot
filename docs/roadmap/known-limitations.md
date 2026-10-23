@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-22 (session 17). Everything here is either not implemented or not verified.
+Current as of 2026-10-23 (VST3 replacement). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -18,24 +18,24 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   audio recording was not tried with a real input yet, has no latency compensation or input monitoring, and there is
   no automation or clip recording, count-in or loop takes. A recorded note appears when it ends.
 * Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only.
-* Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter, gate, drive, chorus/flanger/phaser and utility (Lime Drive aliases at high drive: no oversampling); VST3 inserts are supported. A route is pre- or
-  post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input
-  (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
-* Presets for the built-in effects and instruments are LimeShot's own JSON files (no FL .fst import), and only
-  plugin windows step through presets with ◀ ▶.
-* Each mixer track's built-in EQ (MIX-010) cannot be automated, and its width-to-Q mapping is LimeShot's own (FL
-  Studio's exact curve shapes were not measured).
-* Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song
-  mode only; no tempo automation (one project tempo), no synth/sampler parameter automation, single-curve segments
-  only. Channel/mixer and built-in effect controls follow automation on screen; host plugin parameter sliders do not. Add › Automation for last
-  tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
-  height.
-* Audio clips are not time-stretched; there are no automatic crossfades. Manual clip-edge fades are implemented.
-* Sampler: volume ADSR, loop points and a low-pass filter are available. No envelope delay/hold stages or
-  panning, cutoff or pitch envelopes; no time stretching. Linear interpolation aliases when pitched far up.
-* LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
-  glide are not available.
-* The voice pool is fixed at 128 voices; the oldest voice is stolen abruptly (no fade).
+* Instruments and active inserts use the Lime Native VST3 bundles; missing bundles abort export and produce GUI errors.
+  Legacy Gate, Drive and Chorus slots remain saved but disabled (PLG-017…019). Mixer-track sidechain is not fed into
+  Lime Comp's key bus (PLG-020); the host has no plugin gain-reduction meters (PLG-027).
+* Playlist audio clips preserve editing, offset and fade values but are **silent** through hosted samplers (PLG-024).
+  Starting inside a clip and selection exports cannot chase its source yet. Conversion warns once per project.
+* Piano Roll per-note pan is preserved but inaudible (PLG-025); channel pan still works, including automation.
+* The old Mixer track EQ is removed. Its data survives with a warning, and its panel is disabled (PLG-029).
+  Add a Lime EQ insert for new processing; its frequency/width ranges do not cover every legacy band.
+* Factory/user `.limepreset` files remain supported for Lime controls. Host parameter lists have reset/automation/undo,
+  but unit-based type-in and full copy/paste menus are incomplete (PLG-026). Rack waveforms and previews without the
+  external source need further integration (PLG-022); embedded audio still plays through the plugin.
+* Automation runs in Song mode. Converted effect automation is re-expressed in plugin ranges; smoothing and curve
+  differences mean automated output is close rather than bit-identical. Non-automated reference equivalence is exact.
+* Sampler supports ADSR, loop points and a low-pass filter. No delay/hold stages, extra modulation envelopes or time
+  stretching. Linear interpolation aliases when pitched far up. LimeSynth has low/band/high-pass and key tracking;
+  its LFO restarts per voice and mono/glide are absent.
+* Each Lime instrument has 128 voices and steals the oldest abruptly. The host voice statistic only counts browser
+  previews/metronome, not hosted instruments (PLG-028).
 * Integer WAV export is clipped, not dithered. Export is stereo only; there are no stems.
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
@@ -142,11 +142,11 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
 
-## Lime VST3s as LimeShot's instruments and effects (PLG-013, in progress)
+## Lime VST3s as LimeShot's instruments and effects (PLG-013, replacement complete)
 
 * GUI and headless apps convert legacy instruments and the seven exported inserts to Lime VST3s. The former
   instrument/effect parameter panels have been removed; hosted controls support Lime gesture undo and preset
-  interchange. The engine's built-in playback paths remain pending removal, including Gate, Drive and Chorus.
+  interchange. Runtime built-in factories are deleted. Gate, Drive and Chorus remain saved disabled with warnings.
 * CI builds debug bundles; macOS packaging builds and copies release bundles into `Contents/PlugIns` (PLG-023).
   GitHub Actions results are blocked by account billing. Missing plugins now fail CLI/GUI export with an error;
   realtime playback retains silent missing channels and reports the load failure in their Settings.
@@ -156,8 +156,8 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   validation/completion (PLG-022).
 * Lost on conversion: compressor mixer-track sidechain input (PLG-020), **Playlist audio clip playback** (PLG-024),
   per-note pan (PLG-025), full host type-in-value control menus (PLG-026), host dynamics gain-reduction metering
-  (PLG-027), and plugin voice statistics (PLG-028). These are P0 records. Converted audio clips are currently
-  silent because the hosted-instrument event path excludes clip events; the old engine tests exercise built-ins.
+  (PLG-027), plugin voice statistics (PLG-028), and the inactive legacy track EQ (PLG-029). These are P0 records. Converted audio clips are currently
+  silent because the hosted-instrument event path excludes clip events; regressions explicitly assert that gap, while test-only reference DSP exercises scheduling.
 * Converted effect automation follows the plugin closely but not bit for bit (smoothing and interpolation).
   Non-automated equivalence is checked bit for bit, allowing only trailing silent frames to differ in length.
   Lime Sampler embeds sample audio, so projects grow with their samples.

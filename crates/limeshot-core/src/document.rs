@@ -1243,10 +1243,10 @@ mod tests {
         );
         let ch = d.project().clip(a).unwrap().audio_channel().unwrap();
         assert_eq!(d.project().clip(b).unwrap().audio_channel(), Some(ch));
-        match &d.project().channel(ch).unwrap().instrument {
-            Instrument::Sampler(s) => assert!(!s.one_shot && s.sample.as_ref() == Some(&wav)),
-            other => panic!("{other:?}"),
-        }
+        let instrument = &d.project().channel(ch).unwrap().instrument;
+        assert!(matches!(instrument, Instrument::Plugin(_)));
+        let sampler = crate::lime::sampler_params(instrument).unwrap();
+        assert!(!sampler.one_shot && sampler.sample.as_ref() == Some(&wav));
         assert!(d.execute(Command::MakeClipUnique(a)).is_err());
         // Paste places a copy of any clip kind.
         let c = d.project().clip(a).unwrap().clone();

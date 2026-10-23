@@ -4,8 +4,8 @@ Scope: macOS Apple Silicon, `claude/lime-vst3-default`, Codex takeover continuat
 
 ## Automated and artifact checks
 
-* DAW workspace fmt, all-target Clippy with warnings denied and full tests pass; 134 headless UI regressions remain.
-* Native workspace fmt, all-target Clippy and 13 tests pass.
+* DAW workspace fmt, all-target Clippy with warnings denied and 365 tests pass; all 134 UI regressions remain.
+* Native workspace fmt, all-target Clippy and 14 tests pass (including 128-voice stealing).
 * Real bundles built with `python3 build.py`; exported-binary verifier passes all nine plugins at 44.1/48/96 kHz
   and buffer sizes 1/64/333/1024, including editor creation, MIDI offsets, automation and state recall.
 * Conversion-equivalence test now checks exact float sample bits and permits only trailing silent frames to differ
@@ -36,8 +36,18 @@ Not verified: resize/occlusion/pinning stress, detached viewport graphics, keybo
 editors, native control automation/preset interaction, and Windows/Linux/Intel runtime. `pluginval` was not available
 and was not rerun. GitHub Actions cannot execute due owner account billing; no remote CI pass is claimed.
 
-## Remaining replacement work
+## Final engine deletion checks
 
-Built-in playback is still present in the sequencer/engine. PLG-013 remains IN_PROGRESS. Newly recorded P0 losses
-PLG-024…028 include hosted audio-clip playback, note pan, typed host menus, dynamics meters and voice statistics.
-See [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md) for the exact next implementation step.
+Runtime built-ins are deleted; PLG-013 is IMPLEMENTED. Shared voice DSP lives in `limeshot-dsp`; the native suite
+no longer links the engine/sequencer. A test-only reference adapter feeds the real plugin rack for legacy DSP
+regressions and the exact real-binary comparison. The app MVP and demo tests use actual hosted instances.
+Format-1 input saves as format 2 with legacy and unknown fields intact. Unsupported effects/track EQ preserve their
+settings inactive, with warnings. Silent clips and ignored note pan are gap regressions, not positive acceptance tests.
+
+Inspected `/tmp/lime-native-only-mixer.png` (demo hosted inserts) and `/tmp/lime-disabled-eq.png` (empty Mixer):
+hosted insert cards render, the old EQ panel is disabled and the visible label directs users to a Lime EQ insert.
+These are local offscreen checks. Nine final release bundles pass the binary verifier at 44.1/48/96 kHz with
+1/64/333/1024-frame buffers. Latest pluginval remains unavailable; earlier historical passes do not verify these builds.
+
+Remaining P0 restoration: PLG-017…020, PLG-022 and PLG-024…029. See the
+[handoff](handoff-lime-vst3-replacement.md). Broader live native/platform acceptance and billing-blocked CI remain open.

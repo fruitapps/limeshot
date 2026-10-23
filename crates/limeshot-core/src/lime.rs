@@ -344,9 +344,21 @@ pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
 /// keeping their settings. `audio` decodes a sampler's stored sample path (`None`: missing or
 /// unreadable, and the sampler is converted without audio). Returns one warning per setting that
 /// could not be carried over; an empty list means nothing was lost. Gate, Drive and Chorus slots
-/// stay as they are until they have Lime plugins.
+/// are preserved disabled until they have Lime plugins.
 pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<EmbeddedAudio>) -> Vec<String> {
     let mut warnings = Vec::new();
+    if project.playlist.clips.iter().any(|c| c.audio_channel().is_some())
+        && !project.extra.contains_key("lime-hosted-audio-warning")
+    {
+        warnings.push("Playlist audio clips are preserved but silent with hosted samplers (PLG-024)".into());
+        project.extra.insert("lime-hosted-audio-warning".into(), json!(true));
+    }
+    if project.patterns.iter().flat_map(|p| &p.notes).any(|n| n.pan != 0.0)
+        && !project.extra.contains_key("lime-note-pan-warning")
+    {
+        warnings.push("Per-note pan is preserved but inaudible with hosted instruments (PLG-025)".into());
+        project.extra.insert("lime-note-pan-warning".into(), json!(true));
+    }
     // Effect automation becomes automation of the Lime plugin's parameter, before the slots change.
     let mut retarget = Vec::new();
     for (i, a) in project.automations.iter().enumerate() {
@@ -441,8 +453,21 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
         }
     }
     for (t, track) in project.mixer.tracks.iter_mut().enumerate() {
+        if track.eq != crate::EqBand::DEFAULTS && !track.extra.contains_key("lime-legacy-eq-inactive") {
+            warnings.push(format!(
+                "Mixer track {t}: legacy track equalizer is inactive; use a Lime EQ insert"
+            ));
+            track.extra.insert("lime-legacy-eq-inactive".into(), json!(true));
+        }
         for slot in &mut track.effects {
             let Some(lime) = LimePlugin::for_effect(slot.kind) else {
+                if slot.kind != EffectKind::Plugin && slot.enabled {
+                    warnings.push(format!(
+                        "Mixer track {t}: {:?} disabled; no Lime VST3 replacement yet",
+                        slot.kind
+                    ));
+                    slot.enabled = false;
+                }
                 continue;
             };
             let mut values = slot.params.clone();
@@ -464,6 +489,13 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
 
 /// Whether `project` still uses a former built-in instrument or an effect that has a Lime plugin.
 pub fn needs_conversion(project: &Project) -> bool {
+    if (project.playlist.clips.iter().any(|c| c.audio_channel().is_some())
+        && !project.extra.contains_key("lime-hosted-audio-warning"))
+        || (project.patterns.iter().flat_map(|p| &p.notes).any(|n| n.pan != 0.0)
+            && !project.extra.contains_key("lime-note-pan-warning"))
+    {
+        return true;
+    }
     project.channels.iter().any(|c| {
         matches!(c.instrument, Instrument::Synth(_) | Instrument::Sampler(_))
             || matches!(&c.instrument, Instrument::Plugin(p) if LimePlugin::of(p) == Some(LimePlugin::SAMPLER)
@@ -472,8 +504,13 @@ pub fn needs_conversion(project: &Project) -> bool {
         .mixer
         .tracks
         .iter()
-        .flat_map(|t| &t.effects)
-        .any(|e| LimePlugin::for_effect(e.kind).is_some())
+        .any(|t| t.eq != crate::EqBand::DEFAULTS && !t.extra.contains_key("lime-legacy-eq-inactive"))
+        || project
+            .mixer
+            .tracks
+            .iter()
+            .flat_map(|t| &t.effects)
+            .any(|e| LimePlugin::for_effect(e.kind).is_some() || (e.kind != EffectKind::Plugin && e.enabled))
 }
 
 const fn spec(name: &'static str, min: f32, max: f32, default: f32, unit: &'static str, log: bool) -> ParamSpec {
@@ -690,6 +727,30 @@ mod tests {
     }
 
     #[test]
+    fn unsupported_legacy_audio_warns_once_and_preserves_settings() {
+        let mut project = Project::default();
+        project.mixer.tracks[0].eq[1].gain = 8.0;
+        let kinds = [EffectKind::Gate, EffectKind::Drive, EffectKind::Chorus];
+        project.mixer.tracks[0].effects = kinds
+            .into_iter()
+            .enumerate()
+            .map(|(i, kind)| crate::EffectSlot::new(i as u32 + 100, kind))
+            .collect();
+        let before = project.mixer.tracks[0].clone();
+        assert!(needs_conversion(&project));
+        let warnings = convert_project(&mut project, &|_| None);
+        assert_eq!(warnings.len(), 4, "{warnings:?}");
+        assert_eq!(project.mixer.tracks[0].eq, before.eq);
+        for (after, before) in project.mixer.tracks[0].effects.iter().zip(&before.effects) {
+            assert!(!after.enabled);
+            assert_eq!(after.kind, before.kind);
+            assert_eq!(after.params, before.params);
+        }
+        assert!(!needs_conversion(&project));
+        assert!(convert_project(&mut project, &|_| None).is_empty());
+    }
+
+    #[test]
     fn class_ids_match_the_exported_plugins() {
         // "LIMENATIVE" = 4C 49 4D 45 4E 41 54 49 56 45.
         assert_eq!(LimePlugin::SYNTH.class_id(), "4C494D454E4154495645000000000100");
@@ -780,7 +841,8 @@ mod tests {
                 stereo: vec![0.0; 4],
             })
         });
-        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("Chorus disabled"));
         let Instrument::Plugin(p) = &project.channels[0].instrument else {
             panic!("not converted")
         };
@@ -801,6 +863,8 @@ mod tests {
         assert_eq!(v["params"]["bypass"]["bool"], true);
         assert!(v["params"].get("value_6").is_none());
         assert_eq!(fx[1].kind, EffectKind::Chorus);
+        assert!(!fx[1].enabled);
+        assert!(convert_project(&mut project, &|_| None).is_empty());
         assert!(!needs_conversion(&project));
     }
 }

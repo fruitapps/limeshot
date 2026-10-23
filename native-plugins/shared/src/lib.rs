@@ -5,3 +5,5 @@ pub mod parameters;
 mod processor;
 pub mod sample;
 pub use processor::LimePlugin;
+
+mod effects;

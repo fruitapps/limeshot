@@ -2,6 +2,15 @@
 
 This document describes the code as it is. Source: `crates/limeshot-engine`, `crates/limeshot-audio`, `crates/limeshot-sequencer`.
 
+## Native-only instruments and inserts (D39)
+
+Production `InstrumentState` is Plugin or Silent. Unconverted legacy synth/sampler values have no engine fallback.
+The document normalizer and CLI convert before playback/save. The engine contains no effect factory or track EQ;
+only the host supplies insert processors. `limeshot-dsp::voice` is shared native-plugin DSP, also used for host browser
+previews/metronome. `tests/support` contains the reference adapters used by engine/equivalence tests, never linked
+into the application. Native plugins no longer depend on the DAW engine/sequencer. Unsupported legacy settings
+remain saved with warnings; see [known limitations](../roadmap/known-limitations.md).
+
 ## Data flow
 
 ```
@@ -74,7 +83,7 @@ errors, not per buffer.
 2. While frames remain: if playing, `schedule()` finds the end of the current pass (`sample_of_tick(loop_length)`),
    limits the chunk to it, and collects the note-ons whose ticks fall in `[first_tick(s0), first_tick(chunk_end))`, plus
    metronome clicks on beat ticks. Each gets a frame offset `sample_of_tick(tick) − s0`.
-3. Voices are rendered between action offsets, and each action starts its voice exactly at its frame.
+3. Preview/click voices render between action offsets; instrument actions queue MIDI events for hosted processors.
 4. At the end of a pass: Pattern mode (and Song mode with loop on) re-anchors the timeline at tick 0 and releases
    gated notes. One-shot samples keep ringing across the loop. Song mode with loop off stops and sets `finished`.
    With a loop range (`Msg::LoopRange`, the Playlist's time selection) Song mode ends each pass at the range end and
@@ -95,11 +104,11 @@ song-time points (a clip's end point holds its value until the next clip). Befor
 lanes exist — `apply_controls` loads channel volume/pan and mixer gain/pan from the snapshot into preallocated arrays,
 then overrides them with the lanes' values at the current tick; effect parameters go through `FxRack::set_param`,
 which keeps each processor's parameter array so one value can change. Hosted plugin parameter lanes send parameter changes to the instrument/effect processor; plugin channel volume/pan
-is applied once per block. Evaluation is a binary search, allocation-free.
+uses preallocated per-frame gains captured every automation interval. Evaluation is a binary search, allocation-free.
 
 ## Voices
 
-`Voice` (`voice.rs`) is a source plus an `Envelope`:
+`Voice` (`limeshot-dsp/src/voice.rs`) is shared DSP for native plugins and host previews/clicks, a source plus an `Envelope`:
 
 * **Sampler**: linear-interpolated playback of interleaved stereo `SampleData`;
   `step = src_rate / out_rate · 2^((key − root + pitch)/12)`; region `[start, end)` as fractions; reverse plays from

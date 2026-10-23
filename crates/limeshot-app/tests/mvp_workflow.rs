@@ -7,7 +7,7 @@
 use limeshot_audio::assets::SampleCache;
 use limeshot_core::*;
 use limeshot_dsp::load_wav;
-use limeshot_engine::{BitDepth, ExportRange, RenderSettings, export_wav};
+use limeshot_engine::{BitDepth, ExportRange, RenderSettings, export_wav_with};
 use std::sync::Arc;
 
 fn rms(x: &[f32]) -> f32 {
@@ -122,6 +122,9 @@ fn mvp_workflow_end_to_end() {
     .unwrap();
 
     // 17–19: save, reopen, compare.
+    let mut converted = d.project().clone();
+    assert!(lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio).is_empty());
+    d = Document::new(converted);
     let path = dir.path().join("mvp.lime");
     limeshot_project::save(d.project(), &path).unwrap();
     let reopened = limeshot_project::load(&path).unwrap();
@@ -140,7 +143,9 @@ fn mvp_workflow_end_to_end() {
         range: ExportRange::Song,
         ..RenderSettings::default()
     };
-    let rep = export_wav(snap, &settings, BitDepth::Int24, &wav).unwrap();
+    let host = limeshot_ui::plugins::PluginHost::new(None);
+    let (processors, _keep) = host.offline(&reopened, settings.sample_rate).unwrap();
+    let rep = export_wav_with(snap, &settings, BitDepth::Int24, &wav, processors).unwrap();
     assert_eq!(rep.music_frames, 2 * 96_000, "two bars at 120 BPM");
 
     // 21: open the exported file and check the musical result.
@@ -184,7 +189,10 @@ fn mvp_workflow_end_to_end() {
 fn demo_song_renders_and_reloads_identically() {
     let samples = limeshot_app::bundled_samples_dir().expect("bundled samples");
     let dir = tempfile::tempdir().unwrap();
-    let doc = limeshot_app::demo::build(&samples).unwrap();
+    let legacy = limeshot_app::demo::build(&samples).unwrap();
+    let mut converted = legacy.project().clone();
+    assert!(lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio).is_empty());
+    let doc = Document::new(converted);
     let path = dir.path().join("demo.lime");
     limeshot_project::save(doc.project(), &path).unwrap();
     let back = limeshot_project::load(&path).unwrap();
@@ -194,9 +202,12 @@ fn demo_song_renders_and_reloads_identically() {
         cache.load_blocking(&r.path).unwrap();
     }
     let pat = back.patterns[0].id;
-    let (audio, rep) = limeshot_engine::render_offline(
+    let host = limeshot_ui::plugins::PluginHost::new(None);
+    let (processors, _keep) = host.offline(&back, RenderSettings::default().sample_rate).unwrap();
+    let (audio, rep) = limeshot_engine::render_offline_with(
         Arc::new(limeshot_sequencer::compile(&back, pat, &cache)),
         &RenderSettings::default(),
+        processors,
     )
     .unwrap();
     assert!(rep.peak > 0.1 && rep.peak < 1.0, "peak {}", rep.peak);

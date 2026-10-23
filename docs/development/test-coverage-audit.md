@@ -1,5 +1,12 @@
 # Test coverage audit — 2026-10-22
 
+**2026-10-23 update:** the audit below is historical. Replacement tests now use real VST3s for the MVP/demo and
+bit-identical conversion comparison; engine scheduling/DSP tests use test-only processors through the real plugin
+rack. They do not establish production Gate/Drive/Chorus, sidechain keys or audio-clip playback. Gap regressions
+explicitly assert silent hosted clips, ignored note pan and inactive legacy EQ; passing those tests is not feature
+verification. All 134 UI tests remain. Current evidence is in
+[lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+
 The existing tests are a useful regression suite for the implemented composition workflow, but
 they are **not comprehensive enough to establish total application functionality**. Passing the
 suite does not verify native windows, audio hardware, failure recovery, or every acceptance

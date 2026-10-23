@@ -11,8 +11,6 @@ nice-plug.workspace = true
 nice-plug-egui.workspace = true
 limeshot-core = { path = "../../crates/limeshot-core" }
 limeshot-dsp = { path = "../../crates/limeshot-dsp" }
-limeshot-sequencer = { path = "../../crates/limeshot-sequencer" }
-limeshot-engine = { path = "../../crates/limeshot-engine" }
 limeshot-project = { path = "../../crates/limeshot-project" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

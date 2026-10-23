@@ -734,7 +734,10 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             }
             crate::effects_ui::chain(app, ui, i);
             ui.add_space(10.0);
-            eq_section(app, ui, i, &track.eq);
+            ui.label("Equalizer: add a Lime EQ insert");
+            ui.add_enabled_ui(false, |ui| eq_section(app, ui, i, &track.eq))
+                .response
+                .on_disabled_hover_text("Legacy track EQ is preserved but inactive (PLG-029)");
         });
     });
 }

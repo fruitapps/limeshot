@@ -1,6 +1,6 @@
+use crate::effects::build;
+use limeshot_dsp::voice::{SynthMods, Voice, VoiceInstrument as InstrumentState};
 use limeshot_dsp::{Adsr, SampleData, db_to_gain, effects::Effect, filter::Mode, osc::Shape};
-use limeshot_engine::voice::Voice;
-use limeshot_sequencer::{InstrumentState, SynthMods};
 use nice_plug::editor::dpi::LogicalSize;
 use nice_plug::midi::{Channel, Key, VoiceID};
 use nice_plug::prelude::*;
@@ -65,7 +65,7 @@ pub struct LimePlugin<const ID: u8> {
     sample: Option<Arc<SampleData>>,
     /// The sample store generation `sample` was taken from.
     sample_generation: u64,
-    voices: [Slot; 64],
+    voices: [Slot; 128],
     bend: [f32; 16],
     pedal: [bool; 16],
     serial: u64,
@@ -114,7 +114,7 @@ impl<const ID: u8> LimePlugin<ID> {
         self.sample_generation = self.params.sample.generation();
         self.sample = self.params.sample.audio();
         self.effect = if ID >= 2 {
-            Some(limeshot_engine::fx::build(
+            Some(build(
                 parameters::KINDS[(ID - 2) as usize],
                 rate as u32,
                 &self.params.values()[..parameters::specs(ID).len()],
@@ -182,7 +182,7 @@ impl<const ID: u8> LimePlugin<ID> {
         self.preview_note = 0;
         self.meters.preview_note.store(0, Ordering::Relaxed);
         for v in &mut self.voices {
-            v.voice.source = limeshot_engine::voice::Source::Off;
+            v.voice.source = limeshot_dsp::voice::Source::Off;
             v.held = false;
             v.sustained = false;
         }
@@ -332,7 +332,7 @@ impl<const ID: u8> LimePlugin<ID> {
             } => {
                 for s in &mut self.voices {
                     if matches_note(s, voice_id, channel, key) {
-                        s.voice.source = limeshot_engine::voice::Source::Off;
+                        s.voice.source = limeshot_dsp::voice::Source::Off;
                         s.held = false;
                     }
                 }
@@ -358,7 +358,7 @@ impl<const ID: u8> LimePlugin<ID> {
                     for s in &mut self.voices {
                         if s.channel == channel {
                             if cc == 120 {
-                                s.voice.source = limeshot_engine::voice::Source::Off;
+                                s.voice.source = limeshot_dsp::voice::Source::Off;
                             } else {
                                 s.voice.release();
                             }
@@ -650,7 +650,7 @@ mod tests {
                 let mut plugin = LimePlugin::<ID>::default();
                 plugin.prepare(sr as f32);
                 let p = plugin.params.values();
-                let mut reference = limeshot_engine::fx::build(
+                let mut reference = build(
                     parameters::KINDS[(ID - 2) as usize],
                     sr,
                     &p[..parameters::specs(ID).len()],
@@ -701,6 +701,19 @@ mod tests {
         assert_eq!(Meters::read(&p.meters.output), 0.0);
     }
     #[test]
+    fn instruments_keep_128_voices_and_steal_the_oldest() {
+        let mut plugin = LimePlugin::<0>::default();
+        plugin.prepare(48_000.0);
+        let values = plugin.params.values();
+        for id in 0..140 {
+            plugin.event(on(id, 60), &values);
+        }
+        assert_eq!(plugin.voices.iter().filter(|v| v.voice.is_active()).count(), 128);
+        assert!(plugin.voices.iter().all(|v| v.id.is_some_and(|id| id >= 12)));
+        assert!(plugin.voices.iter().any(|v| v.id == Some(139)));
+    }
+
+    #[test]
     fn synth_release_sustain_repeated_keys_and_wildcard_choke() {
         let mut p = LimePlugin::<0>::default();
         p.prepare(48000.0);
@@ -724,7 +737,7 @@ mod tests {
         for i in 0..100 {
             p.event(on(i, 40 + (i % 40) as u8), &values);
         }
-        assert_eq!(p.voices.iter().filter(|v| v.voice.is_active()).count(), 64);
+        assert_eq!(p.voices.iter().filter(|v| v.voice.is_active()).count(), 100);
         p.event(
             NoteEvent::Choke {
                 timing: 0,

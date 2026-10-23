@@ -1,57 +1,14 @@
 //! Insert effect chains on the audio thread.
 //!
-//! Processors are created off the audio thread ([`build`]) and handed to the renderer one by one
+//! Processors are created off the audio thread by the plugin host and handed to the renderer one by one
 //! ([`FxRack::adopt`]). When a snapshot arrives, [`FxRack::arrange`] moves processors between the
 //! per-track chains by effect id and pushes their parameters. All vectors are preallocated, so
 //! arranging never allocates. Processors no longer referenced are parked in `retired` for the
 //! control thread to free ([`FxRack::take_retired`]).
 
-use limeshot_core::{EffectKind, MAX_EFFECTS, Mixer};
-use limeshot_dsp::effects::{Chorus, Compressor, Delay, Drive, Effect, Eq3, Filter, Gate, Limiter, Reverb, Utility};
+use limeshot_core::{MAX_EFFECTS, Mixer};
+use limeshot_dsp::effects::Effect;
 use limeshot_sequencer::Snapshot;
-
-/// Create a processor for `kind` at `sample_rate` with `params` applied. Allocates: call it on
-/// the control thread.
-pub fn build(kind: EffectKind, sample_rate: u32, params: &[f32]) -> Box<dyn Effect> {
-    let sr = sample_rate as f32;
-    let mut e: Box<dyn Effect> = match kind {
-        EffectKind::Utility => Box::new(Utility::new()),
-        EffectKind::Eq3 => Box::new(Eq3::new(sr)),
-        EffectKind::Filter => Box::new(Filter::new(sr)),
-        EffectKind::Delay => Box::new(Delay::new(sr)),
-        EffectKind::Reverb => Box::new(Reverb::new(sr)),
-        EffectKind::Compressor => Box::new(Compressor::new(sr)),
-        EffectKind::Limiter => Box::new(Limiter::new(sr)),
-        EffectKind::Gate => Box::new(Gate::new(sr)),
-        EffectKind::Drive => Box::new(Drive::new(sr)),
-        EffectKind::Chorus => Box::new(Chorus::new(sr)),
-        // The host adopts the real processor; until then the slot passes audio through.
-        EffectKind::Plugin => Box::new(Passthrough),
-    };
-    e.set_params(params);
-    e
-}
-
-/// Leaves audio unchanged (a plugin slot whose plugin is not loaded).
-pub struct Passthrough;
-
-impl Effect for Passthrough {
-    fn set_params(&mut self, _params: &[f32]) {}
-    fn process(&mut self, _buf: &mut [f32]) {}
-    fn reset(&mut self) {}
-}
-
-/// Processors for every built-in effect in `snapshot` (for offline rendering). Plugin slots are
-/// left out: the host supplies those.
-pub fn build_all(snapshot: &Snapshot, sample_rate: u32) -> Vec<(u32, Box<dyn Effect>)> {
-    snapshot
-        .mixer
-        .iter()
-        .flat_map(|t| t.effects.iter())
-        .filter(|e| e.kind != EffectKind::Plugin)
-        .map(|e| (e.id, build(e.kind, sample_rate, &e.params)))
-        .collect()
-}
 
 /// Parameters kept per processor (more than any effect has), so automation can change one.
 const MAX_PARAMS: usize = 16;

@@ -70,7 +70,7 @@ pub enum Msg {
     },
     PreviewSample(Arc<SampleData>),
     /// A processor for insert effect `id`, built on the control thread
-    /// (`limeshot_engine::fx::build`). Send it before the snapshot that uses it.
+    /// (prepared by the plugin host). Send it before the snapshot that uses it.
     Effect(u32, Box<dyn limeshot_dsp::effects::Effect>),
     /// The plugin instrument of the channel with this id, built on the control thread. Send it
     /// before the snapshot that uses it.

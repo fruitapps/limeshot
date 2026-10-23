@@ -270,7 +270,7 @@ impl InstrumentRack {
     }
 
     /// Render every plugin channel for the `frames` frames starting at engine sample `start` and
-    /// add each into its mixer bus. `mix(i)` gives channel `i`'s (bus, left gain, right gain),
+    /// add each into its mixer bus. `mix(i, frame)` gives channel `i`'s (bus, left gain, right gain),
     /// or `None` when it is silent.
     pub(crate) fn render(
         &mut self,
@@ -279,7 +279,7 @@ impl InstrumentRack {
         transport: &Transport,
         buses: &mut [Vec<f32>],
         pdc: &mut crate::pdc::Pdc,
-        mix: impl Fn(usize) -> Option<(usize, f32, f32)>,
+        mix: impl Fn(usize, usize) -> Option<(usize, f32, f32)>,
     ) {
         let n = (2 * frames).min(self.buf.len());
         for i in 0..self.slots.len() {
@@ -308,10 +308,10 @@ impl InstrumentRack {
             slot.inst.process(&mut self.buf[..n], &self.events[i], transport);
             self.events[i].clear();
             pdc.channel(i, &mut self.buf[..n]);
-            if let Some((bus, gl, gr)) = mix(i)
-                && let Some(bus) = buses.get_mut(bus)
-            {
-                for (f, s) in self.buf[..n].as_chunks::<2>().0.iter().enumerate() {
+            for (f, s) in self.buf[..n].as_chunks::<2>().0.iter().enumerate() {
+                if let Some((bus, gl, gr)) = mix(i, f)
+                    && let Some(bus) = buses.get_mut(bus)
+                {
                     bus[2 * f] += s[0] * gl;
                     bus[2 * f + 1] += s[1] * gr;
                 }

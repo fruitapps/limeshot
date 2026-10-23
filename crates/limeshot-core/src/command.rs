@@ -1410,12 +1410,15 @@ impl Command {
                 let channel = match reuse {
                     Some(c) => c,
                     None => {
-                        let instrument = Instrument::Sampler(SamplerParams {
-                            sample: Some(sample),
-                            // An audio clip plays for the clip's length, not the whole sample.
-                            one_shot: false,
-                            ..SamplerParams::default()
-                        });
+                        let instrument = Instrument::Plugin(crate::lime::sampler_ref(
+                            &SamplerParams {
+                                sample: Some(sample),
+                                // An audio clip plays for the clip's length, not the whole sample.
+                                one_shot: false,
+                                ..SamplerParams::default()
+                            },
+                            60,
+                        ));
                         let id = ChannelId(Command::AddChannel { name, instrument }.apply(p)?.0.unwrap_or_default());
                         // FL Studio files the channels of audio clips under an "Audio" filter group.
                         if let Some(c) = p.channel_mut(id) {

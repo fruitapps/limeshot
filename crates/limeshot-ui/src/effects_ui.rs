@@ -59,14 +59,18 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    let on = toggle_label(
-                        ui,
-                        e.enabled,
-                        if e.enabled { "ON" } else { "OFF" },
-                        t.accent,
-                        vec2(30.0, 18.0),
-                        "Enable / bypass",
-                    );
+                    let on = ui
+                        .add_enabled_ui(e.kind == EffectKind::Plugin, |ui| {
+                            toggle_label(
+                                ui,
+                                e.enabled,
+                                if e.enabled { "ON" } else { "OFF" },
+                                t.accent,
+                                vec2(30.0, 18.0),
+                                "Enable / bypass",
+                            )
+                        })
+                        .inner;
                     if on.clicked() {
                         app.exec(Command::SetEffectEnabled {
                             track,

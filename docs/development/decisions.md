@@ -255,3 +255,18 @@ The migration exposes additional losses recorded as P0 PLG-024…PLG-028. Built-
 The live macOS pass also exposed lost host OpenGL context after a plugin renderer callback. The plugin crate now
 owns a context guard restored around the main viewport UI; its live rendering/tab checks are recorded separately.
 CLI save/import/play paths convert before use, and plugin load/state failures surface as app errors and export failures.
+
+### D39 completion — remove runtime built-ins (2026-10-23)
+
+The sequencer emits Plugin/Silent instrument states; the renderer no longer creates synth/sampler voices. Effect
+factories and automatic offline/CLI/UI adoption are removed, as is the independent Mixer track EQ. Voice DSP moved
+to `limeshot-dsp` and the seven-effect factory moved into the native plugin workspace; those plugins no longer link
+the host engine/sequencer. A test-only DSP adapter feeds the real plugin rack for regression/reference comparisons.
+The non-automated native comparison retains exact sample-bit assertions. Hosted channel automation now captures
+per-frame gains at each automation interval. Native instruments keep 128 voices per instance.
+
+Format 2 reads version 1; legacy enum/schema data remains for import, presets and conversion. Audio-clip creation
+and the returned demo document use native references. Gate/Drive/Chorus are preserved disabled with warnings.
+Legacy track EQ has no exact native mapping, so its settings survive inactive, its panel is disabled, and PLG-029
+records restoration as P0. PLG-024/025 warnings disclose silent clips and ignored note pan. All outstanding losses
+are recorded independently of the completed factory replacement. Test Gain/Tone fixtures remain unchanged.

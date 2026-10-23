@@ -1227,3 +1227,27 @@ playback produces 324 device callbacks over 2 s at 44.1 kHz, peak −5.3 dBFS. N
 nine bundles across three sample rates/four buffer sizes; app/DMG packaging and strict deep ad-hoc signature check
 pass. CLI save/import/play paths now convert too. Broader native interaction, remote CI and pluginval remain open.
 Details: [lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+
+### 2026-10-23 — native-only playback replacement finished
+
+Continued at the owner's explicit request on `claude/lime-vst3-default` / draft PR #8, stacked on unmerged #7.
+Removed synth/sampler playback states and channel voice construction, host effect factories/adoption and the
+independent track EQ. Shared voice DSP moved to `limeshot-dsp`; native plugins no longer link the host engine or
+sequencer. Test-only reference processors exercise the real plugin rack and retain exact real-binary equivalence.
+The app MVP/demo now renders through actual hosted processors. Native instruments keep 128 voices per instance;
+hosted channel automation preserves interval timing with preallocated gains. Test Gain/Tone are unchanged.
+
+Format 2 reads version 1 without losing legacy/unknown data. Gate/Drive/Chorus are preserved disabled and warn.
+The old track-EQ settings survive inactive with disabled controls; PLG-029 records exact response restoration as P0.
+Silent Playlist audio clips and ignored note pan warn too. Existing P0 gaps remain explicit; replacement completion
+does not claim those capabilities are implemented. PLG-013 is IMPLEMENTED.
+
+Validation: 365 root tests (134 UI), 14 native tests; both workspace fmt/strict Clippy; 290-feature inventory and
+repository links; all nine rebuilt release binaries pass verifier at three rates/four buffers. Non-automated
+reference-versus-VST3 audio retains exact sample bits. Mixer offscreen screenshots inspected. Current artifact checks
+are recorded in [lime-vst3-host-validation.md](lime-vst3-host-validation.md). GitHub Actions remains blocked by billing;
+pluginval unavailable, broader native/platform runtime remains open. No merge.
+
+Future sessions must use a NEW `codex/` branch, separate managed worktree and NEW draft PR stacked on the latest
+unmerged continuation, repeat this policy in handoffs, and create another session only when the owner asks. The
+owner's same-branch takeover instruction applies only to this continuation.

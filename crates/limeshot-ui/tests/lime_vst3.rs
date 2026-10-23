@@ -9,6 +9,9 @@ use limeshot_engine::{Processors, RenderSettings, render_offline_with};
 use limeshot_sequencer::compile;
 use limeshot_ui::plugins::PluginHost;
 
+#[path = "../../limeshot-engine/tests/support/mod.rs"]
+mod reference;
+
 const SR: u32 = 48_000;
 
 fn project(wav: &str) -> (Project, PatternId) {
@@ -124,7 +127,19 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
         .collect();
     limeshot_dsp::write_wav(&wav, SR, &burst, limeshot_dsp::BitDepth::Float32).unwrap();
     let (built_in, pat) = project(wav.to_str().unwrap());
-    let expected = render(&built_in, pat, Processors::default());
+    let lookup = |p: &str| limeshot_dsp::load_audio(std::path::Path::new(p)).ok().map(Arc::new);
+    let reference = Arc::new(reference::compile(&built_in, pat, &lookup));
+    let expected = reference::render_offline(
+        reference,
+        &RenderSettings {
+            sample_rate: SR,
+            range: limeshot_engine::ExportRange::Pattern,
+            max_tail_secs: 0.5,
+            block: 256,
+        },
+    )
+    .unwrap()
+    .0;
 
     let mut converted = built_in.clone();
     let warnings = lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio);
@@ -214,6 +229,10 @@ fn effect_automation_follows_the_converted_lime_plugin() {
             max_tail_secs: 0.5,
             block: 256,
         };
+        if lime::needs_conversion(p) {
+            let snap = Arc::new(reference::compile(p, pat, &limeshot_sequencer::NoSamples));
+            return reference::render_offline(snap, &settings).unwrap().0;
+        }
         let snap = Arc::new(compile(p, pat, &limeshot_sequencer::NoSamples));
         render_offline_with(snap, &settings, processors).unwrap().0
     };

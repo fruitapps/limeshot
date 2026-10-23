@@ -14,6 +14,7 @@ pub mod filter;
 pub mod instrument;
 pub mod osc;
 pub mod sample;
+pub mod voice;
 
 pub use envelope::{Adsr, Envelope};
 pub use instrument::{Instrument, NoteEvent, NoteEventKind, Transport};

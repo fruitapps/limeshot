@@ -166,7 +166,6 @@ pub struct LimeShotApp {
     /// The Song loop range last sent to the engine (`None`: nothing sent yet).
     loop_sent: Option<Option<(Tick, Tick)>>,
     /// Effect processors already handed to the audio thread, and for which document generation.
-    sent_effects: std::collections::HashSet<u32>,
     effects_generation: u64,
     snapshot: Arc<Snapshot>,
     pub allow_close: bool,
@@ -299,7 +298,6 @@ impl LimeShotApp {
             export_job: None,
             compiled: None,
             loop_sent: None,
-            sent_effects: Default::default(),
             effects_generation: 0,
             snapshot,
             allow_close: false,
@@ -653,26 +651,9 @@ impl LimeShotApp {
     fn send_effect_processors(&mut self) {
         if self.effects_generation != self.doc.generation() {
             self.effects_generation = self.doc.generation();
-            self.sent_effects.clear();
             self.send(Msg::ClearEffects);
         }
         let sr = self.player.sample_rate();
-        // Plugin slots get their processors from the plugin host below.
-        let present: Vec<(u32, limeshot_core::EffectKind, Vec<f32>)> = self
-            .project()
-            .mixer
-            .tracks
-            .iter()
-            .flat_map(|t| t.effects.iter())
-            .filter(|e| e.kind != limeshot_core::EffectKind::Plugin)
-            .map(|e| (e.id, e.kind, e.params.clone()))
-            .collect();
-        self.sent_effects.retain(|id| present.iter().any(|p| p.0 == *id));
-        for (id, kind, params) in present {
-            if self.sent_effects.insert(id) {
-                self.send(Msg::Effect(id, limeshot_engine::fx::build(kind, sr, &params)));
-            }
-        }
         let player = &mut self.player;
         let mut send = |m: Msg| {
             if !player.send(m) {
@@ -1017,7 +998,6 @@ impl LimeShotApp {
         let snap = self.snapshot.clone();
         self.player = Player::start(&self.settings.audio, snap);
         // The new stream has a new renderer (possibly at a new rate): rebuild every processor.
-        self.sent_effects.clear();
         let (mode, lp, met) = (self.ui.mode, self.ui.song_loop, self.ui.metronome);
         self.send(Msg::Mode(mode));
         self.send(Msg::SongLoop(lp));

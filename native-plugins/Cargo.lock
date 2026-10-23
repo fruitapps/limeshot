@@ -1605,10 +1605,8 @@ dependencies = [
  "image",
  "limeshot-core",
  "limeshot-dsp",
- "limeshot-engine",
  "limeshot-plugins",
  "limeshot-project",
- "limeshot-sequencer",
  "nice-plug",
  "nice-plug-egui",
  "parking_lot",
@@ -1666,16 +1664,6 @@ version = "0.1.0"
 dependencies = [
  "hound",
  "symphonia",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "limeshot-engine"
-version = "0.1.0"
-dependencies = [
- "limeshot-core",
- "limeshot-dsp",
- "limeshot-sequencer",
  "thiserror 2.0.21",
 ]
 

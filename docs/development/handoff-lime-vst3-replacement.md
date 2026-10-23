@@ -10,49 +10,45 @@ Keep **Lime Test Gain / Lime Test Tone** (`crates/limeshot-plugins/src/testing.r
 They are compiled-in VST3 test fixtures that users never see. The owner chose to keep them so CI can test hosting
 without installed plugins.
 
-## Status (2026-10-23, Codex continuation on `claude/lime-vst3-default`)
+## Status (2026-10-23, replacement finished on `claude/lime-vst3-default`)
 
-PLG-013 remains **IN_PROGRESS**. The owner explicitly authorized the supplied takeover prompt: continue the
-existing branch and draft PR #8 instead of making a new branch/PR for this continuation. Do not merge.
+**PLG-013 is IMPLEMENTED. The runtime built-ins are deleted and the local suites pass.** The owner explicitly
+instructed this continuation on the existing branch and draft PR #8, stacked on still-unmerged #7. Do not merge.
 
 Completed:
-* Portable Lime references, legacy conversion, embedded sample state and bundle resolution remain in place.
-* GUI and headless constructors now share the converter. Rack add actions and Browser loads create Lime
-  references. Browser/Playlist previews and audio-source reuse recognize Lime Sampler; source hints save relative
-  and reopen absolute. Root-key edits reach sampler state.
-* Deleted the former synth/sampler and insert parameter panels. Hosted controls retain factory/user `.limepreset`
-  interchange, source-file loading and waveform audition. Lime parameter edits write undoable state directly;
-  native and host parameter definitions have one source in `limeshot_core::lime`. `SetPluginState` merges per drag.
-* Existing instances follow changed document state, including undo/redo and sample replacement. Loading failures
-  show app error toasts; failed plugin loading/state recall aborts export. CLI play and every CLI save/import path
-  now convert to Lime references too.
-* Fixed the live macOS black-host-window regression when native editors render: restore the main viewport's
-  OpenGL context before/after its UI. The plugin renderer clears the current context, but glutin's macOS surface
-  check only compares bound views. Live Lime Sampler rendering and Plugin/Settings tab switching now retain the
-  surrounding host UI. PLG-006 is still IMPLEMENTED: broader native interaction checks remain.
-* `python3 build.py` built all nine release bundles. The real-binary verifier passed all nine at 44.1/48/96 kHz
-  and 1/64/333/1024-frame buffers. `scripts/package-macos.sh` built the app/DMG with `Contents/PlugIns`; deep
-  signature verification passed. The packaged CLI rendered the demo at peak −3.7 dBFS.
-* Realtime CLI playback through converted Lime instruments: MacBook Pro Speakers, 44.1 kHz, 324 callbacks in
-  2 seconds, peak −5.3 dBFS. This is measured output, not an independent listening assessment.
-* All 134 headless UI tests pass, plus the DAW workspace suite and 13 native tests. Non-automated equivalence now
-  asserts identical sample bits (only trailing silent frames may differ in length), and passes with RMS difference 0.
-  Both workspaces' fmt/Clippy, inventories and repository references pass.
+* Active channel instruments and insert effects are hosted VST3s. `InstrumentState` has only Plugin/Silent;
+  renderer channel synth/sampler construction, engine effect factories, UI/CLI/offline built-in adoption and the
+  independent Mixer track EQ are removed. Browser preview/metronome DSP remains.
+* Shared `Voice`, `VoiceInstrument` and `SynthMods` moved into `limeshot-dsp::voice`. Native plugins own their
+  effect factory and no longer depend on the DAW engine/sequencer. Their 128 preallocated voices preserve the
+  former per-channel capacity, with an oldest-voice stealing regression. Lime Test Gain/Tone remain unchanged.
+* Legacy model enums stay readable for import/conversion/presets. Format 2 reads version 1 and preserves unknown
+  data. Audio-clip commands create native refs; the demo API returns a normalized document. Gate/Drive/Chorus
+  slots survive disabled with warnings. Legacy track EQ survives inactive; its disabled panel directs users to
+  a Lime EQ insert. PLG-029 records the missing exact track-EQ response mapping.
+* GUI/headless/CLI conversion, portable `lime:` references, embedded audio, sampler source actions, hosted preset
+  interchange, gesture undo and instance state synchronization remain. Missing plugin/state failures abort export.
+* Engine regressions use a test-only DSP reference adapter through the real plugin rack. The adapter is never
+  linked into production. The real-VST3 equivalence comparison still asserts exact sample bits (RMS error 0),
+  allowing only trailing silence to differ. App MVP/demo rendering now uses actual hosted Lime processors.
+* Hosted channel gain/pan automation is captured in preallocated per-frame buffers at automation intervals.
+  Timing regressions cover several block sizes. Unsupported clip/seek/pan/EQ tests explicitly assert the disclosed
+  gaps rather than claiming a removed built-in path proves current playback.
+* Local checks: 365 DAW tests including all 134 UI tests, 14 native tests, both workspaces' fmt and all-target
+  Clippy with warnings denied, feature inventories and repository references. Nine release bundles rebuilt;
+  binary verifier passes all nine at three sample rates/four buffer sizes. Mixer screenshots inspected.
+* Earlier in this continuation, the native-editor black-host-window bug was reproduced/fixed using an OpenGL
+  context guard; Sampler rendering/tab switching and measured realtime output were checked. This final engine
+  deletion does not establish broader live native/platform behavior. See [host validation](lime-vst3-host-validation.md).
 
-Next, in order:
-1. **Delete the built-in playback paths.** `InstrumentState::{Synth, Sampler}` and `fx::build`/`build_all` still
-   exist in the engine/sequencer and are exercised by legacy DSP/engine tests. Keep shared Voice/DSP for native
-   plugins and preserve legacy enum deserialization. Move DSP assertions to native/shared tests and retain exact
-   conversion-equivalence evidence when replacing the reference renderer. Core legacy creation commands/importers
-   still accept old enums; the app/CLI convert before playback/save.
-2. **Preserve and address P0 losses.** PLG-017…020 and PLG-022 remain. Newly confirmed PLG-024…028 cover silent
-   hosted Playlist audio clips, note pan, full host typed-value menus, host dynamics meters and voice statistics.
-   The old audio-clip engine tests use built-ins; do not mistake them for VST3 playback coverage.
-3. Continue native embedding validation: resize, occlusion, pinning, keyboard forwarding, reopening and third-party
-   editors (Vital), with special attention to detached viewports. See [lime-vst3-host-validation.md](lime-vst3-host-validation.md).
-4. **External validation remains unavailable.** GitHub Actions is blocked by account billing. Keep relying on local
-   checks and state this in PR #8. Windows/Linux/Intel runtime checks remain open. `pluginval` was unavailable in
-   this continuation and was not rerun; older recorded passes are not evidence for the latest binaries.
+Next (separate P0 feature work, not unfinished built-in deletion):
+1. Restore hosted Playlist audio clip playback/offset/chase/fades (PLG-024), note pan (PLG-025), and legacy track EQ
+   through hosted processing (PLG-029). Conversion warns once about silent clips/ignored pan/inactive EQ.
+2. Gate/Drive/Chorus bundles (PLG-017…019), mixer-track key bus into Comp (PLG-020), source/rack integration
+   (PLG-022), complete host value menus (PLG-026), dynamics meters (PLG-027), and voice statistics (PLG-028).
+3. Continue native embedding resize/occlusion/pinning/keyboard/detached/third-party tests (PLG-006).
+4. GitHub Actions remains blocked by owner billing; no remote pass is claimed. Windows/Linux/Intel runtime and
+   pluginval remain unverified for these binaries (`pluginval` is unavailable on this host).
 
 ## Session policy
 
@@ -61,7 +57,7 @@ continue `claude/lime-vst3-default`, push to it and update draft PR #8. Never me
 session, repeat and follow AGENTS.md: a NEW `codex/` branch in a separate managed worktree, a NEW draft PR stacked
 on the latest unmerged continuation, and no new chat/session unless the owner asks.
 
-## State of the repository at handoff
+## Original repository state (historical)
 
 * `main` = `b045db8` (PRs #3 and #6 merged). PR #7 (`claude/s16-synth-tempo`) is open, targets `main`, has `main`
   merged in, and has no conflicts. It also fixes the native-plugin build that is red on `main`, where Lime Sampler
@@ -74,7 +70,7 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
   `docs/roadmap/first-release.md` and `docs/roadmap/first-release-features.md`. Their baseline is pinned to
   `dd53fb3` / 272 features. Update them after the replacement, because their scope changes.
 
-## What exists today (verified by reading the code)
+## Original architecture (historical, before replacement)
 
 * **Built-ins.** `Instrument::{Sampler, Synth, Plugin, Unsupported}` (`limeshot-core/src/model.rs`). `EffectKind`
   (`limeshot-core/src/effects.rs`) has Utility, Eq3, Filter, Delay, Reverb, Compressor, Limiter, Gate, Drive,
@@ -93,7 +89,7 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
   `PluginRef.state`, which holds the opaque component state base64-encoded. `limeshot-engine/tests/plugins.rs`
   covers hosted instruments and effects, including latency.
 
-## Proposed implementation plan
+## Original implementation plan (completed; see current status)
 
 1. **Make the bundles available to the DAW.** Build `native-plugins` as part of the app build and packaging:
    `scripts/package-macos.sh` copies them into `LimeShot.app/Contents/PlugIns/`, and CI builds them before the
@@ -123,7 +119,7 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
    changes), `known-limitations.md`, `decisions.md` (new decision: built-ins replaced by Lime VST3s), README,
    `progress.md`, and the first-release docs.
 
-## Capabilities lost by the replacement → new P0 feature records
+## Original loss checklist (current records: PLG-014…029)
 
 Add these to `features.json` as P0 (NOT_STARTED), link them from `next-steps.md`, and verify each against the code
 before writing it down:
@@ -142,7 +138,7 @@ before writing it down:
   determinism with hosted plugins, plugin latency and CPU with many sampler instances (bridge off by default),
   and Windows/Linux bundle locations.
 
-## Checks to run before opening the PR
+## Required checks before each commit
 
 `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` in
 both the repo root and `native-plugins/`; `python3 scripts/features.py check`; `python3 scripts/check_repository.py`;

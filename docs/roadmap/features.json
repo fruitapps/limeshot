@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-22 (session 17)",
+  "updated": "2026-10-23",
   "features": [
     {
       "id": "APP-001",
@@ -1068,7 +1068,7 @@
       ],
       "tests": [
         "ui.rs graph_editor_draws_step_velocity_and_pan",
-        "limeshot-engine audio.rs note_pan_adds_to_the_channel_pan",
+        "limeshot-engine audio.rs plugin_note_pan_is_not_forwarded_yet",
         "limeshot-core model::tests::note_pan_is_saved_only_when_set"
       ],
       "reference": {
@@ -2539,7 +2539,7 @@
       "fl_reference": "Audio clips with fades, gain, stretch.",
       "limeshot_behavior": "Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "INS-001"
@@ -2555,8 +2555,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::audio_clips_play_their_sample_window_sample_accurately",
-        "limeshot-engine tests/audio.rs::playback_starting_inside_an_audio_clip_starts_the_audio_part_way",
+        "limeshot-engine tests/audio.rs::hosted_audio_clips_are_silent_until_offset_and_gate_support_exists",
+        "limeshot-engine tests/audio.rs::seeking_hosted_audio_clips_has_no_builtin_fallback",
         "limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it",
         "limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel",
         "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
@@ -2568,7 +2568,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "No time-stretching: the clip offset is in ticks and plays at the sample's own speed (changing the tempo moves the audio relative to the grid, as with FL's non-stretched clips). WAV only until INS-008. Session 17: Sample drops show waveforms both in the snapped ghost and beneath the pointer; sampler waveform drags share the Browser payload."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-024. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "PL-015",
@@ -2849,7 +2849,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::audio_clip_fades_ramp_the_gain",
+        "limeshot-engine tests/audio.rs::clip_fade_model_clamps_to_the_clip",
         "crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades"
       ],
       "reference": {
@@ -2859,7 +2859,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8). Fade lengths are ticks (Clip::fade_in/fade_out), so they follow the tempo. FL's handle positions and curve options were not observed live."
+      "notes": "Fade editing and saved values remain; hosted audio clip playback/fades are unavailable until PLG-024."
     },
     {
       "id": "PL-024",
@@ -3172,7 +3172,7 @@
       "fl_reference": "Sidechain to this track.",
       "limeshot_behavior": "FL Studio's route menu on each strip's route button (right-click): Route to this track (only), Sidechain to this track (only). A sidechain is a route at level 0: no audio is mixed in, but Lime Comp on the destination can pick it as its Sidechain input and its detector then follows that track's post-fader signal. The compressor card shows a gain-reduction meter fed by the audio thread through Status atomics.",
       "priority": "P2",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "MIX-008",
@@ -3202,7 +3202,7 @@
           "docs/research/evidence/screenshots/fl-mixer-sidechain.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8). Only Lime Comp takes a sidechain (FL: Fruity Limiter, Vocodex …); the meter shows the track's largest compressor reduction; the Sidechain choice is not automatable. Session 9: the track panel's Output menu offers the same four entries per target."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-020. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "MIX-010",
@@ -3210,9 +3210,9 @@
       "name": "Built-in 3-band EQ",
       "description": "Track EQ.",
       "fl_reference": "Track properties EQ.",
-      "limeshot_behavior": "Every mixer track (master included) has FL Studio's built-in EQ after its insert effects and before the fader: a low shelf, a peak and a high shelf with FL's defaults (90 Hz, 1500 Hz, 8000 Hz, 0 dB, width 0.27), ±18 dB. The Mixer's track panel shows the response curve with a handle per band (drag: frequency and gain; right-drag: width), knobs for gain, frequency and width, and Reset. Saved in the .lime file only when changed.",
+      "limeshot_behavior": "Legacy EQ bands are saved unchanged but inactive; the inline panel is disabled. Add a Lime EQ insert for new processing. Exact legacy conversion is P0 PLG-029.",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -3230,8 +3230,8 @@
       "tests": [
         "limeshot-dsp effects::tests::track_eq_bands_shape_the_response",
         "limeshot-core model::tests::track_eq_is_saved_only_when_changed",
-        "limeshot-engine audio.rs mixer_track_eq_shapes_the_track_and_the_master",
-        "ui.rs mixer_eq_graph_and_reset_edit_the_track_eq"
+        "limeshot-engine audio.rs legacy_track_eq_is_not_an_in_process_effect",
+        "ui.rs legacy_mixer_eq_is_visible_but_disabled"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3241,7 +3241,7 @@
           "docs/research/evidence/screenshots/fl-mixer-eq.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8): band names, defaults and the ±18 dB range from the hint bar. LimeShot's mapping from width to Q is its own. Not automatable yet; the Lime EQ insert effect (FX-002) remains."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-029. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "MIX-011",
@@ -3457,7 +3457,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample."
+      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-002",
@@ -3490,7 +3490,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-003",
@@ -3523,7 +3523,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-004",
@@ -3555,7 +3555,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-005",
@@ -3563,7 +3563,7 @@
       "name": "Polyphony and voice stealing",
       "description": "Many simultaneous notes.",
       "fl_reference": "Polyphony settings per channel.",
-      "limeshot_behavior": "128-voice pool shared by all channels; oldest voice stolen; no allocation.",
+      "limeshot_behavior": "Each Lime instrument has 128 preallocated voices and steals its oldest voice. The host preview/metronome pool is separate; hosted voices are not included in the host statistic (PLG-028).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -3576,7 +3576,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::synth_polyphony_and_voice_limit"
+        "native-plugins/shared/src/processor.rs::tests::instruments_keep_128_voices_and_steal_the_oldest"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3586,7 +3586,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "The previous global host instrument pool is removed (D39)."
     },
     {
       "id": "INS-006",
@@ -3623,7 +3623,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note)."
+      "notes": "No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note). D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-007",
@@ -3657,7 +3657,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in."
+      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-008",
@@ -3692,7 +3692,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-009",
@@ -3753,7 +3753,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008)."
+      "notes": "Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008). D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-011",
@@ -3842,7 +3842,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-002",
@@ -3875,7 +3875,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Three bands only; no graphical EQ curve yet."
+      "notes": "Three bands only; no graphical EQ curve yet. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-003",
@@ -3908,7 +3908,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-004",
@@ -3941,7 +3941,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No sidechain input, no knee or lookahead, no gain-reduction meter in the UI."
+      "notes": "No sidechain input, no knee or lookahead, no gain-reduction meter in the UI. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-005",
@@ -3974,7 +3974,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No lookahead, so fast peaks are shaped hard. Standalone VST3 export (PLG-012): shared Limiter now reports gain reduction through Effect::gain_reduction_db; ceiling/reduction/reset/bypass tested in native-plugins/shared/src/processor.rs."
+      "notes": "No lookahead, so fast peaks are shaped hard. Standalone VST3 export (PLG-012): shared Limiter now reports gain reduction through Effect::gain_reduction_db; ceiling/reduction/reset/bypass tested in native-plugins/shared/src/processor.rs. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-006",
@@ -3984,7 +3984,7 @@
       "fl_reference": "Fruity Limiter gate mode",
       "limeshot_behavior": "Lime Gate: opens when the level passes the threshold, stays open for the hold time, then releases to the range floor (−80 dB shuts completely); attack and release are time constants. Factory presets Tight drums and Hiss cut.",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4001,7 +4001,7 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::gate_passes_loud_sound_and_closes_after_hold_and_release",
-        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4011,7 +4011,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Session 16. Not FL's Fruity Limiter gate section; no sidechain input or lookahead."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-017. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "FX-007",
@@ -4044,7 +4044,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-008",
@@ -4083,7 +4083,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s."
+      "notes": "No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-009",
@@ -4093,7 +4093,7 @@
       "fl_reference": "Fruity Blood Overdrive, Fast Dist, WaveShaper",
       "limeshot_behavior": "Lime Drive: drive (0–36 dB) into a soft clip (tanh), hard clip or wave folder, a tone low-pass, dry/wet mix and output level. Factory presets Warm tape, Fuzz, Folder.",
       "priority": "P2",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4110,7 +4110,7 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::drive_saturates_hard_clips_and_folds",
-        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4120,7 +4120,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Session 16. No oversampling, so high drive aliases; no bit crushing."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-018. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "FX-010",
@@ -4130,7 +4130,7 @@
       "fl_reference": "Fruity Chorus, Flanger, Phaser, Vintage Chorus",
       "limeshot_behavior": "Lime Chorus with three modes: Chorus (a delay swept around 15 ms), Flanger (around 2 ms, with feedback) and Phaser (six all-passes swept 200 Hz–4 kHz, with feedback); rate, depth, feedback, stereo spread (the right side's LFO offset) and mix. Factory presets Wide chorus, Jet flanger, Slow phaser.",
       "priority": "P2",
-      "status": "VERIFIED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4147,7 +4147,7 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::chorus_flanger_and_phaser_modulate_and_stay_bounded",
-        "limeshot-engine tests/audio.rs::every_built_in_effect_runs_and_the_gate_gates"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4157,7 +4157,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Session 16. One voice per side (FL's Fruity Chorus has several); no tempo-synced rate."
+      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-019. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
     },
     {
       "id": "FX-011",
@@ -4248,7 +4248,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": ""
+      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-014",
@@ -4285,7 +4285,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet."
+      "notes": "Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "FX-015",
@@ -7497,7 +7497,7 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": "Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type."
+      "notes": "Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "INS-014",
@@ -7534,7 +7534,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
         ]
       },
-      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024."
+      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
     },
     {
       "id": "EXP-013",
@@ -8765,9 +8765,9 @@
       "name": "Lime VST3s replace the built-in instruments and effects",
       "description": "LimeShot plays every instrument and the exported effects through the Lime Native VST3 plugins instead of in-process built-ins.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "The app and headless apps install the Lime converter. Rack add actions create portable Lime instrument references; Browser loads create Lime Sampler state with embedded audio. Channel Settings and insert cards use hosted-plugin controls instead of the former built-in panels. Engine built-in playback remains pending deletion; Gate, Drive and Chorus still use it.",
+      "limeshot_behavior": "LimeSynth, Sampler and all active insert effects run through VST3 processors. Runtime synth/sampler snapshot variants, engine voice creation, effect factories and track EQ are deleted. Shared Voice DSP lives in limeshot-dsp for native plugins. Legacy schema remains readable; app/CLI normalization converts it before playback/save. Gate/Drive/Chorus survive disabled with warnings. Project format 2 reads version 1. Test-only reference processors preserve exact native equivalence.",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PLG-012",
@@ -8789,7 +8789,10 @@
         "limeshot-core lime::tests",
         "limeshot-plugins lime::tests::the_override_folder_comes_first",
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
-        "native-plugins/shared/src/processor.rs::tests::sampler_takes_up_a_sample_loaded_while_active"
+        "native-plugins/shared/src/processor.rs::tests::sampler_takes_up_a_sample_loaded_while_active",
+        "crates/limeshot-engine/tests/audio.rs",
+        "crates/limeshot-app/tests/mvp_workflow.rs",
+        "limeshot-project tests::version_one_loads_and_saves_as_two_without_losing_legacy_or_unknown_data"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8798,7 +8801,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Host UI migrated to Lime references, sample reload/preview/picker reuse, portable source hints, root-key synchronization, native-schema parameter state edits with gesture undo, and legacy preset interchange. Built-in engine paths remain; PLG-013 stays IN_PROGRESS."
+      "notes": "Replacement complete locally. P0 losses PLG-017…020, PLG-022 and PLG-024…029 remain separate work. Local suites, strict lints, release bundles and exact equivalence pass; remote CI blocked by account billing, broader native/platform verification remains pending."
     },
     {
       "id": "PLG-014",
@@ -8908,7 +8911,7 @@
       "name": "Lime Gate VST3",
       "description": "The noise gate (FX-006) as a Lime VST3.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Gate slots stay built-in effects until this exists.",
+      "limeshot_behavior": "Legacy Gate slots are preserved disabled with a conversion warning; shared DSP exists but no active host factory or Lime VST3 replacement exists.",
       "priority": "P0",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -8938,7 +8941,7 @@
       "name": "Lime Drive VST3",
       "description": "Saturation/distortion (FX-009: soft clip, hard clip, wave folding) as a Lime VST3.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Drive slots stay built-in effects until this exists.",
+      "limeshot_behavior": "Legacy Drive slots are preserved disabled with a conversion warning; shared DSP exists but no active host factory or Lime VST3 replacement exists.",
       "priority": "P0",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -8968,7 +8971,7 @@
       "name": "Lime Chorus VST3",
       "description": "Chorus, flanger and phaser (FX-010) as a Lime VST3.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Chorus slots stay built-in effects until this exists.",
+      "limeshot_behavior": "Legacy Chorus slots are preserved disabled with a conversion warning; shared DSP exists but no active host factory or Lime VST3 replacement exists.",
       "priority": "P0",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -9136,7 +9139,7 @@
       "name": "Audio clips through Lime Sampler",
       "description": "Preserve Playlist sample windows, playback chase, overlap and fades when the channel is a hosted sampler.",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Not implemented: Renderer::start currently excludes clip events from plugin note delivery, so converted Playlist audio clips are silent. Legacy audio-clip engine tests do not cover VST3 channels.",
+      "limeshot_behavior": "Hosted Playlist audio clips remain silent. Normalization warns once per project; offset/chase/overlap/fades need a plugin protocol. Engine regressions explicitly assert the disclosed gap rather than exercising a legacy host fallback.",
       "priority": "P0",
       "status": "NOT_STARTED",
       "mvp": false,
@@ -9151,7 +9154,10 @@
         "Audio clips on Lime Sampler channels are audible, seek into their source, stop at clip end, overlap correctly and apply clip fades.",
         "Verify multiple block sizes and starting playback inside a clip."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::hosted_audio_clips_are_silent_until_offset_and_gate_support_exists",
+        "limeshot-engine tests/audio.rs::seeking_hosted_audio_clips_has_no_builtin_fallback"
+      ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
@@ -9181,7 +9187,9 @@
       "acceptance_criteria": [
         "Piano Roll per-note pan is audible through LimeSynth and Lime Sampler, including overlapping notes."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::plugin_note_pan_is_not_forwarded_yet"
+      ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
@@ -9189,7 +9197,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+      "notes": "Normalization warns once per project. A regression confirms that saved per-note pan does not alter hosted output; channel pan works at captured automation intervals."
     },
     {
       "id": "PLG-026",
@@ -9280,6 +9288,40 @@
         ]
       },
       "notes": "Discovered while migrating the headless app to Lime-only instrument references (2026-10-23)."
+    },
+    {
+      "id": "PLG-029",
+      "category": "Plugins",
+      "name": "Replace the legacy Mixer track equalizer",
+      "description": "Preserve the Mixer track EQ response and inline controls through a hosted Lime EQ.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "limeshot_behavior": "Not implemented. The in-process track EQ is removed. Its saved bands survive unchanged; conversion warns once and its UI is disabled. Lime EQ inserts currently have narrower frequency ranges and fixed shelf widths, so an exact automatic mapping is unavailable.",
+      "priority": "P0",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Convert every legal legacy track-EQ response without losing frequency, gain or width.",
+        "Keep inline EQ controls functional through undoable hosted state."
+      ],
+      "tests": [
+        "limeshot-core lime::tests::unsupported_legacy_audio_warns_once_and_preserves_settings",
+        "crates/limeshot-app/tests/ui.rs::legacy_mixer_eq_is_visible_but_disabled"
+      ],
+      "reference": {
+        "application": "Owner requirement",
+        "version": "2026-10-22",
+        "evidence": [
+          "docs/development/handoff-lime-vst3-replacement.md"
+        ]
+      },
+      "notes": "Discovered during final engine deletion on 2026-10-23."
     }
   ]
 }

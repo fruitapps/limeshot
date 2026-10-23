@@ -1,5 +1,12 @@
 # Roadmap to the first public LimeShot release
 
+**2026-10-23 replacement update:** this checklist/estimate retains its 272-record historical baseline. The current
+inventory has 290 records. Active instruments/effects now require bundled Lime VST3s; the in-process implementations
+are deleted. Release gates must include PLG-017…020, PLG-022 and PLG-024…029: missing effects, key-bus routing,
+source integration, silent Playlist audio clips, note pan, host value menus/meters/statistics and inactive track EQ.
+Prior baseline VERIFIED labels do not establish these replacement behaviors. See
+[known limitations](known-limitations.md) and the [current inventory](features.md).
+
 Planning baseline: **22 October 2026**, remote `main` at
 [`dd53fb317085b58816c9c8bafb0071b92aa94dde`](https://github.com/fruitapps/limeshot/commit/dd53fb317085b58816c9c8bafb0071b92aa94dde).
 This is a proposed release scope and effort forecast, not an announced launch date. “First release” here means

@@ -157,9 +157,7 @@ fn play(project: &Project, o: &Opts) -> Result<(), String> {
     let mut player = Player::start(&AudioConfig::default(), snap.clone());
     // Effect processors and plugins are built here (control thread) and sent before re-sending
     // the snapshot.
-    for (id, fx) in limeshot_engine::fx::build_all(&snap, player.sample_rate()) {
-        player.send(Msg::Effect(id, fx));
-    }
+
     let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
     let sr = player.sample_rate();
     let errors = plugins.sync(project, 0, sr, &mut |m| {
