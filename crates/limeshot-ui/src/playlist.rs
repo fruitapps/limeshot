@@ -507,7 +507,11 @@ fn picker_entries(app: &LimeShotApp, tab: PickerTab) -> Vec<(ClipSource, String,
 pub fn audio_channels(p: &Project) -> Vec<ChannelId> {
     p.channels
         .iter()
-        .filter(|c| matches!(&c.instrument, Instrument::Sampler(s) if s.sample.is_some()))
+        .filter(|c| {
+            limeshot_core::lime::sampler_params(&c.instrument).is_some_and(|s| {
+                s.sample.is_some() || matches!(&c.instrument,Instrument::Plugin(p) if !p.state.is_empty())
+            })
+        })
         .filter(|c| {
             c.group.as_deref() == Some("Audio") || p.playlist.clips.iter().any(|x| x.audio_channel() == Some(c.id))
         })
@@ -667,10 +671,7 @@ pub fn pick_source(app: &mut LimeShotApp, source: ClipSource) {
 
 /// Play an audio clip channel's sample, as the Browser previews files.
 fn preview_audio_source(app: &mut LimeShotApp, ch: ChannelId) {
-    if let Some(Instrument::Sampler(s)) = app.project().channel(ch).map(|c| &c.instrument)
-        && let Some(r) = &s.sample
-    {
-        let path = std::path::PathBuf::from(&r.path);
+    if let Some(path) = app.sampler_source(ch) {
         crate::browser::preview(app, &path);
     }
 }
@@ -680,8 +681,10 @@ fn preview_audio_source(app: &mut LimeShotApp, ch: ChannelId) {
 pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
     let stored = path.to_string_lossy().into_owned();
     let existing = audio_channels(app.project()).into_iter().find(|id| {
-        matches!(app.project().channel(*id).map(|c| &c.instrument),
-            Some(Instrument::Sampler(s)) if s.sample.as_ref().is_some_and(|r| r.path == stored))
+        app.project()
+            .channel(*id)
+            .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
+            .is_some_and(|s| s.sample.as_ref().is_some_and(|r| r.path == stored))
     });
     let ch = match existing {
         Some(c) => c,
@@ -999,10 +1002,8 @@ fn clip_audio(
     app: &LimeShotApp,
     ch: ChannelId,
 ) -> Option<(String, std::sync::Arc<limeshot_dsp::SampleData>, f64, f64)> {
-    let Instrument::Sampler(sp) = &app.project().channel(ch)?.instrument else {
-        return None;
-    };
-    let stored = sp.sample.as_ref()?.path.clone();
+    let sp = limeshot_core::lime::sampler_params(&app.project().channel(ch)?.instrument)?;
+    let stored = app.sampler_source(ch)?.to_string_lossy().into_owned();
     let s = limeshot_sequencer::SampleLookup::sample(&app.samples, &stored)?;
     let secs_per_tick = 60.0 / (app.project().tempo.bpm() * PPQ as f64);
     let rate = 2f64.powf(f64::from(sp.pitch) / 12.0);
@@ -2621,9 +2622,7 @@ fn full_length(app: &LimeShotApp, source: ClipSource) -> Option<Tick> {
         }
         ClipSource::Audio(ch) => {
             let (_, s, first, per_tick) = clip_audio(app, ch)?;
-            let Instrument::Sampler(sp) = &app.project().channel(ch)?.instrument else {
-                return None;
-            };
+            let sp = limeshot_core::lime::sampler_params(&app.project().channel(ch)?.instrument)?;
             let last = f64::from(sp.start.max(sp.end)) * s.frames() as f64;
             Some((((last - first) / per_tick).round() as Tick).max(1))
         }

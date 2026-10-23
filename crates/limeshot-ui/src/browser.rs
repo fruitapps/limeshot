@@ -99,10 +99,8 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     let Some(ch) = app.project().channel(channel) else {
         return;
     };
-    let mut params = match &ch.instrument {
-        Instrument::Sampler(p) => p.clone(),
-        _ => SamplerParams::default(),
-    };
+    let root_key = ch.root_key;
+    let mut params = limeshot_core::lime::sampler_params(&ch.instrument).unwrap_or_default();
     params.sample = Some(SampleRef {
         path: path.to_string_lossy().into_owned(),
     });
@@ -110,7 +108,7 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     app.exec(Command::Batch(vec![
         Command::SetInstrument {
             channel,
-            instrument: Instrument::Sampler(params),
+            instrument: Instrument::Plugin(limeshot_core::lime::sampler_ref(&params, root_key)),
         },
         Command::RenameChannel {
             channel,
@@ -130,7 +128,7 @@ pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<Channel
     };
     let id = app.exec(Command::AddChannel {
         name: file_label(path),
-        instrument: Instrument::Sampler(params),
+        instrument: Instrument::Plugin(limeshot_core::lime::sampler_ref(&params, 60)),
     })?;
     app.select_channel(ChannelId(id));
     Some(ChannelId(id))
@@ -368,10 +366,16 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     for (id, name, color, kind) in chans {
         let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click_and_drag());
         if resp.drag_started() {
-            if let Some(Instrument::Sampler(s)) = app.project().channel(id).map(|c| &c.instrument)
+            if let Some(s) = app
+                .project()
+                .channel(id)
+                .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
                 && let Some(sample) = &s.sample
+                && std::path::Path::new(&sample.path).is_file()
             {
                 resp.dnd_set_drag_payload(DraggedSample(app.samples.resolve(&sample.path)));
+            } else if app.sampler_source(id).is_some() {
+                resp.dnd_set_drag_payload(limeshot_core::ClipSource::Audio(id));
             } else {
                 resp.dnd_set_drag_payload(id);
             }
@@ -496,10 +500,11 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
 fn load_into_selected(app: &mut LimeShotApp, path: &Path) {
     match app.selected_channel() {
         Some(c)
-            if matches!(
-                app.project().channel(c).map(|c| &c.instrument),
-                Some(Instrument::Sampler(_))
-            ) =>
+            if app
+                .project()
+                .channel(c)
+                .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
+                .is_some() =>
         {
             assign_sample(app, c, path)
         }
@@ -559,9 +564,7 @@ pub(crate) fn drag_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
             let limeshot_core::ClipSource::Audio(channel) = *source else {
                 return None;
             };
-            let Instrument::Sampler(params) = &app.project().channel(channel)?.instrument else {
-                return None;
-            };
+            let params = limeshot_core::lime::sampler_params(&app.project().channel(channel)?.instrument)?;
             Some(app.samples.resolve(&params.sample.as_ref()?.path))
         });
     let Some(sample) = sample else { return };

@@ -1,5 +1,8 @@
 # Handoff: replace LimeShot's built-in instruments and effects with the Lime VST3s
 
+**Current continuation:** hosted P0 parity is implemented in [the new session handoff](handoff-hosted-p0-parity.md).
+The replacement-session history below remains as evidence of its earlier state.
+
 Written 2026-10-22 by a Claude Code session that ran out of usage before starting the implementation.
 **Owner decision (2026-10-22): full replacement.** Delete the built-in (in-process, non-VST) LimeSynth, Sampler
 and mixer effects. LimeShot must use the Lime Native VST3 plugins (PLG-012, `native-plugins/`) by default. Old
@@ -10,13 +13,54 @@ Keep **Lime Test Gain / Lime Test Tone** (`crates/limeshot-plugins/src/testing.r
 They are compiled-in VST3 test fixtures that users never see. The owner chose to keep them so CI can test hosting
 without installed plugins.
 
+## Status (2026-10-23, replacement finished on `claude/lime-vst3-default`)
+
+**PLG-013 is IMPLEMENTED. The runtime built-ins are deleted and the local suites pass.** The owner explicitly
+instructed this continuation on the existing branch and draft PR #8, stacked on still-unmerged #7. Do not merge.
+
+Completed:
+* Active channel instruments and insert effects are hosted VST3s. `InstrumentState` has only Plugin/Silent;
+  renderer channel synth/sampler construction, engine effect factories, UI/CLI/offline built-in adoption and the
+  independent Mixer track EQ are removed. Browser preview/metronome DSP remains.
+* Shared `Voice`, `VoiceInstrument` and `SynthMods` moved into `limeshot-dsp::voice`. Native plugins own their
+  effect factory and no longer depend on the DAW engine/sequencer. Their 128 preallocated voices preserve the
+  former per-channel capacity, with an oldest-voice stealing regression. Lime Test Gain/Tone remain unchanged.
+* Legacy model enums stay readable for import/conversion/presets. Format 2 reads version 1 and preserves unknown
+  data. Audio-clip commands create native refs; the demo API returns a normalized document. Gate/Drive/Chorus
+  slots survive disabled with warnings. Legacy track EQ survives inactive; its disabled panel directs users to
+  a Lime EQ insert. PLG-029 records the missing exact track-EQ response mapping.
+* GUI/headless/CLI conversion, portable `lime:` references, embedded audio, sampler source actions, hosted preset
+  interchange, gesture undo and instance state synchronization remain. Missing plugin/state failures abort export.
+* Engine regressions use a test-only DSP reference adapter through the real plugin rack. The adapter is never
+  linked into production. The real-VST3 equivalence comparison still asserts exact sample bits (RMS error 0),
+  allowing only trailing silence to differ. App MVP/demo rendering now uses actual hosted Lime processors.
+* Hosted channel gain/pan automation is captured in preallocated per-frame buffers at automation intervals.
+  Timing regressions cover several block sizes. Unsupported clip/seek/pan/EQ tests explicitly assert the disclosed
+  gaps rather than claiming a removed built-in path proves current playback.
+* Local checks: 365 DAW tests including all 134 UI tests, 14 native tests, both workspaces' fmt and all-target
+  Clippy with warnings denied, feature inventories and repository references. Nine release bundles rebuilt;
+  binary verifier passes all nine at three sample rates/four buffer sizes. Mixer screenshots inspected.
+* Earlier in this continuation, the native-editor black-host-window bug was reproduced/fixed using an OpenGL
+  context guard; Sampler rendering/tab switching and measured realtime output were checked. This final engine
+  deletion does not establish broader live native/platform behavior. See [host validation](lime-vst3-host-validation.md).
+
+Next at replacement completion (historical; restored by the hosted-parity session linked above):
+1. Restore hosted Playlist audio clip playback/offset/chase/fades (PLG-024), note pan (PLG-025), and legacy track EQ
+   through hosted processing (PLG-029). Conversion warns once about silent clips/ignored pan/inactive EQ.
+2. Gate/Drive/Chorus bundles (PLG-017…019), mixer-track key bus into Comp (PLG-020), source/rack integration
+   (PLG-022), complete host value menus (PLG-026), dynamics meters (PLG-027), and voice statistics (PLG-028).
+3. Continue native embedding resize/occlusion/pinning/keyboard/detached/third-party tests (PLG-006).
+4. GitHub Actions remains blocked by owner billing; no remote pass is claimed. Windows/Linux/Intel runtime and
+   pluginval remain unverified for these binaries (`pluginval` is unavailable on this host).
+
 ## Session policy
 
-Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a NEW draft PR. Stack it on
-`claude/s16-synth-tempo` (PR #7), or on `main` if #7 has merged. PR #7 adds LimeSynth VST3 *Filter type*
-(control 16) and *Key track* (control 17), which the replacement needs. Do not merge automatically.
+The owner's explicit takeover instruction overrides the new-session branch/PR rule **for this continuation only**:
+continue `claude/lime-vst3-default`, push to it and update draft PR #8. Never merge automatically. For every future
+session, repeat and follow AGENTS.md: a NEW `codex/` branch in a separate managed worktree, a NEW draft PR stacked
+on the latest unmerged continuation, and no new chat/session unless the owner asks.
 
-## State of the repository at handoff
+## Original repository state (historical)
 
 * `main` = `b045db8` (PRs #3 and #6 merged). PR #7 (`claude/s16-synth-tempo`) is open, targets `main`, has `main`
   merged in, and has no conflicts. It also fixes the native-plugin build that is red on `main`, where Lime Sampler
@@ -29,7 +73,7 @@ Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a 
   `docs/roadmap/first-release.md` and `docs/roadmap/first-release-features.md`. Their baseline is pinned to
   `dd53fb3` / 272 features. Update them after the replacement, because their scope changes.
 
-## What exists today (verified by reading the code)
+## Original architecture (historical, before replacement)
 
 * **Built-ins.** `Instrument::{Sampler, Synth, Plugin, Unsupported}` (`limeshot-core/src/model.rs`). `EffectKind`
   (`limeshot-core/src/effects.rs`) has Utility, Eq3, Filter, Delay, Reverb, Compressor, Limiter, Gate, Drive,
@@ -48,7 +92,7 @@ Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a 
   `PluginRef.state`, which holds the opaque component state base64-encoded. `limeshot-engine/tests/plugins.rs`
   covers hosted instruments and effects, including latency.
 
-## Proposed implementation plan
+## Original implementation plan (completed; see current status)
 
 1. **Make the bundles available to the DAW.** Build `native-plugins` as part of the app build and packaging:
    `scripts/package-macos.sh` copies them into `LimeShot.app/Contents/PlugIns/`, and CI builds them before the
@@ -78,7 +122,7 @@ Follow `AGENTS.md`: create a NEW `codex/` branch in its own worktree and open a 
    changes), `known-limitations.md`, `decisions.md` (new decision: built-ins replaced by Lime VST3s), README,
    `progress.md`, and the first-release docs.
 
-## Capabilities lost by the replacement → new P0 feature records
+## Original loss checklist (current records: PLG-014…029)
 
 Add these to `features.json` as P0 (NOT_STARTED), link them from `next-steps.md`, and verify each against the code
 before writing it down:
@@ -97,7 +141,7 @@ before writing it down:
   determinism with hosted plugins, plugin latency and CPU with many sampler instances (bridge off by default),
   and Windows/Linux bundle locations.
 
-## Checks to run before opening the PR
+## Required checks before each commit
 
 `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` in
 both the repo root and `native-plugins/`; `python3 scripts/features.py check`; `python3 scripts/check_repository.py`;

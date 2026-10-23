@@ -121,3 +121,9 @@ UTF-8 JSON:
 `limeshot-core` (document/model/time tests) and `limeshot-project` cover undo/redo, merging, modified state, linked
 clips and Make unique, step toggling, note editing, sanitising, unknown-field round trips, version refusal and
 save/reload equality. `limeshot-app/tests/mvp_workflow.rs` saves, reopens and compares a complete composition.
+
+## VST3 default format (D39)
+
+Format 2 accepts version-1 envelopes and preserves legacy instrument/effect fields and unknown data. The host
+resolves relative sample paths before normalization embeds audio and replaces legacy sources with Lime VST3 state.
+Unsupported Gate/Drive/Chorus slots survive disabled; legacy track-EQ bands survive inactive. See PLG-013…029.

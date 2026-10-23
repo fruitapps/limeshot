@@ -675,6 +675,10 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         Instrument::Plugin(_) => !app.plugins.is_loaded(crate::plugins::Target::Channel(ch.id)),
         Instrument::Synth(_) => false,
     };
+    if let Some(path) = app.sampler_source(ch.id) {
+        let waveform = Rect::from_min_max(r.min + vec2(4.0, 2.0), r.max - vec2(4.0, 2.0));
+        crate::browser::paint_sample_wave(app, ui.painter(), waveform, &path, base.gamma_multiply(0.3));
+    }
     let name = elide(&ch.name, 16);
     ui.painter().text(
         r.left_center() + vec2(10.0, 0.0),
@@ -864,7 +868,7 @@ pub(crate) fn channel_menu(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel) {
         crate::rack_menu::run(app, crate::rack_menu::Act::RandomColor);
         ui.close();
     }
-    if matches!(ch.instrument, Instrument::Sampler(_)) && ui.button("Load sample…").clicked() {
+    if limeshot_core::lime::sampler_params(&ch.instrument).is_some() && ui.button("Load sample…").clicked() {
         if let Some(p) = rfd::FileDialog::new()
             .add_filter("Audio files", &limeshot_dsp::AUDIO_EXTENSIONS)
             .pick_file()

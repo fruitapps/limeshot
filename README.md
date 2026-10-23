@@ -52,7 +52,7 @@ The core composition loop has automated coverage in
 | **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a Sampler with ADSR, trim, reverse, loop points and a low-pass filter; bundled Lime samples and factory presets |
 | **Effects** | Lime EQ, Filter, tempo-synced Delay, Room (reverb), Comp (with sidechain), Limiter, Gate, Drive, Chorus (chorus/flanger/phaser) and Utility |
 | **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
-| **Automation** | Song-mode clips for channel/mixer volume and pan, built-in effect and hosted VST3 parameters; point modes and visible automated controls |
+| **Automation** | Song-mode clips for channel/mixer volume and pan, hosted VST3 parameters; point modes and visible automated controls |
 | **Recording** | MIDI input and note recording from a device or typing keyboard; audio input recording to Playlist clips is implemented but awaits real-input verification |
 | **Files** | `.lime` projects (versioned, atomic save, autosave/recovery), WAV/MP3/FLAC/Ogg Vorbis/AIFF samples, WAV export of a song/pattern/time selection, MIDI import/export and partial FL Studio `.flp` import |
 
@@ -65,15 +65,14 @@ from the source commits recorded in
 [the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
 plugin embedding and device audio require separate checks.
 
-The inventory currently tracks **272 features: 149 VERIFIED, 24 IMPLEMENTED, 13 IN_PROGRESS,
-81 NOT_STARTED, 1 RESEARCHED and 4 DEFERRED** (2026-10-22). IMPLEMENTED means code exists; VERIFIED additionally
+The inventory currently tracks **290 features: 145 VERIFIED, 31 IMPLEMENTED, 89 NOT_STARTED, 20 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
 requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
 with FL Studio or measured test coverage.
 
 | State tracker | What it records |
 | --- | --- |
 | [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, implementation states and verification evidence |
-| [Menu inventory](docs/roadmap/menus.md) | 730 menu/toolbar/editor entries and their implementation differences |
+| [Menu inventory](docs/roadmap/menus.md) | 731 menu/toolbar/editor entries and their implementation differences |
 | [Shortcut inventory](docs/roadmap/keybindings.md) | 143 bindings, including differences and unimplemented shortcuts |
 | [Settings inventory](docs/roadmap/settings.md) | 189 controls/settings and their current states |
 | [MVP acceptance](docs/roadmap/mvp.md) / [milestones](docs/roadmap/milestones.md) | End-to-end acceptance and delivery scope |
@@ -81,23 +80,27 @@ with FL Studio or measured test coverage.
 | [Known limitations](docs/roadmap/known-limitations.md) | Outstanding restrictions and manual/platform checks |
 | [Live CI](https://github.com/fruitapps/limeshot/actions/workflows/ci.yml) | Build, test and lint results for the actual commit and platform |
 
+The DAW now uses the twelve Lime Native VST3 bundles for its instruments and effects. Build them with
+`python3 native-plugins/build.py` before running from source; macOS packages include them. Legacy projects convert
+to portable `lime:` references with embedded sampler audio. Hosted Playlist clips, note pan, exact track EQ, all ten effect kinds and mixer key buses are implemented; see [known limitations](docs/roadmap/known-limitations.md).
+
 Some older continuation/limitation entries predate the recording, decoder, sampler, fade and automation additions;
 use the canonical feature record and its latest progress evidence to resolve those historical descriptions.
 
-Still missing or limited: tempo automation, CLAP/AU, stems, templates, remappable shortcuts, automatic workspace
+Still missing or limited: CLAP/AU, stems, templates, remappable shortcuts, automatic workspace
 layout persistence, time stretching and several advanced editor actions. Hardware MIDI and audio recording need
 hands-on checks; audio recording has no input monitoring or latency compensation. Native macOS VST3 embedding
 needs another live resize/tab/keyboard pass; Windows/Linux currently expose plugin parameters. The process bridge
 is opt-in and has no native editor. `.flp` import omits plugin state, mixer effects/routing and automation curves;
-unsupported generators become LimeSynth. Integer WAV export has no dither; Drive has no oversampling.
+unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/Drive/Chorus use their standalone Lime VST3 replacements.
 
 ## Lime Native Standalone VST3 Suite
 
-**Lime Native** packages two instruments and seven effects as nine independent VST3 plugins. Each has its own
+**Lime Native** packages two instruments and ten effects as twelve independent VST3 plugins. Each has its own
 resizable native editor, factory presets, host automation/state and `.limepreset` interchange, with the existing
 LimeShot DSP linked into the bundle. LimeShot does not need to be installed or running.
 
-Fresh renders of all nine standalone editors (click to enlarge):
+Previews of the original nine standalone editors (click to enlarge):
 
 | | | |
 | --- | --- | --- |
@@ -107,7 +110,7 @@ Fresh renders of all nine standalone editors (click to enlarge):
 
 | Plugin | Purpose |
 | --- | --- |
-| **LimeSynth** | Polyphonic oscillator synth with ADSR, resonant low-pass filter and LFO |
+| **LimeSynth** | Polyphonic oscillator synth with ADSR, resonant low-/band-/high-pass filter, key tracking and LFO |
 | **Lime Sampler** | Stereo WAV sampler with trim/reverse, root key, audition keyboard and embedded sample recall |
 | **Lime Utility** | Gain, stereo width and polarity |
 | **Lime EQ** | Three-band EQ with draggable response nodes |
@@ -117,27 +120,23 @@ Fresh renders of all nine standalone editors (click to enlarge):
 | **Lime Comp** | Compressor with optional external stereo sidechain |
 | **Lime Limiter** | Sample-peak limiter with gain-reduction history; no lookahead or true-peak oversampling |
 
-The suite is currently published as source on
-[`codex/lime-native-vst3-suite`](https://github.com/fruitapps/limeshot/tree/codex/lime-native-vst3-suite/native-plugins),
-**separately from main**. Its
+The suite is included in this checkout under `native-plugins/`. Its
 [README](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/README.md),
 [validation record](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/VALIDATION.md)
 and [third-party notices](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/THIRD_PARTY.md)
-cover building, installing, presets and supported targets. To build in a separate checkout (Rust **1.95+**, Python 3
+cover building, installing, presets and supported targets. To build the suite (Rust **1.95+**, Python 3
 and platform build tools):
 
 ```bash
-git clone --branch codex/lime-native-vst3-suite https://github.com/fruitapps/limeshot.git limeshot-native
-cd limeshot-native
 python3 native-plugins/build.py
 ```
 
 The script collects bundles and a ZIP in `native-plugins/dist/`; it does not install them. Copy the `.vst3` bundles
-to your host's plugin directory and rescan. Local validation covers macOS Apple Silicon: all nine pass exported ABI
-checks and pluginval 1.0.4 strictness 5, including editor tests. Hands-on DAW checks, Windows/Linux/Intel runtime
+to your host's plugin directory and rescan. Current macOS Apple Silicon release/debug builds pass exported ABI checks for all twelve bundles. The historical
+nine-bundle baseline passed pluginval 1.0.4 strictness 5; pluginval is unavailable for the current binaries. Hands-on DAW checks, Windows/Linux/Intel runtime
 validation and notarization remain pending. Local macOS bundles are arm64 and ad-hoc signed. Generated binaries
 are build outputs, not files included by cloning Git. VST3-compatible hosts are required; Logic Pro needs AU.
-The suite exports these nine plugins; the DAW's Gate, Drive and Chorus are additional built-in effects.
+The suite exports twelve plugins, including Lime Gate, Lime Drive and Lime Chorus.
 
 ## Platforms
 

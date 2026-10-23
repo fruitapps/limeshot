@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and collect the nine VST3 bundles; never modifies the system plugin folders."""
+"""Build and collect the twelve VST3 bundles; never modifies the system plugin folders."""
 import argparse
 import json
 import platform
@@ -9,8 +9,8 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-PLUGINS = ["synth", "sampler", "utility", "eq", "filter", "delay", "room", "comp", "limiter"]
-NAMES = ["LimeSynth", "Lime Sampler", "Lime Utility", "Lime EQ", "Lime Filter", "Lime Delay", "Lime Room", "Lime Comp", "Lime Limiter"]
+PLUGINS = ["synth", "sampler", "utility", "eq", "filter", "delay", "room", "comp", "limiter", "gate", "drive", "chorus"]
+NAMES = ["LimeSynth", "Lime Sampler", "Lime Utility", "Lime EQ", "Lime Filter", "Lime Delay", "Lime Room", "Lime Comp", "Lime Limiter", "Lime Gate", "Lime Drive", "Lime Chorus"]
 
 
 def main():
@@ -84,7 +84,7 @@ def main():
                 if path.is_file() and path.suffix != ".zip":
                     output.write(path, path.relative_to(dest))
         print(archive)
-    print(f"Built all nine {profile} VST3 plugins in {dest}")
+    print(f"Built all twelve {profile} VST3 plugins in {dest}")
 
 
 if __name__ == "__main__":

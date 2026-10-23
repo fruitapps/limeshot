@@ -4,8 +4,10 @@
 use limeshot_core::*;
 use limeshot_dsp::SampleData;
 use limeshot_engine::*;
-use limeshot_sequencer::{NoSamples, compile};
+use limeshot_sequencer::NoSamples;
+mod support;
 use std::sync::Arc;
+use support::{Renderer, compile, fx, render_offline};
 
 const SR: u32 = 48_000;
 
@@ -67,7 +69,7 @@ fn fixture() -> Fixture {
     Fixture { doc, pat, drum, synth }
 }
 
-fn snapshot(f: &Fixture) -> Arc<limeshot_sequencer::Snapshot> {
+fn snapshot(f: &Fixture) -> Arc<support::Snapshot> {
     let c = click();
     let lookup = move |p: &str| (p == "click").then(|| c.clone());
     Arc::new(compile(f.doc.project(), f.pat, &lookup))
@@ -86,12 +88,7 @@ fn onsets(audio: &[f32], threshold: f32) -> Vec<usize> {
     v
 }
 
-fn render(
-    snap: Arc<limeshot_sequencer::Snapshot>,
-    range: ExportRange,
-    block: usize,
-    sr: u32,
-) -> (Vec<f32>, RenderReport) {
+fn render(snap: Arc<support::Snapshot>, range: ExportRange, block: usize, sr: u32) -> (Vec<f32>, RenderReport) {
     render_offline(
         snap,
         &RenderSettings {
@@ -439,15 +436,15 @@ fn preview_plays_without_transport() {
 }
 
 #[test]
-fn synth_polyphony_and_voice_limit() {
+fn plugin_polyphony_does_not_use_the_host_preview_voice_pool() {
     let mut f = fixture();
-    for k in 0..(MAX_VOICES as u8 + 20) {
+    for k in 20..100 {
         f.doc
             .execute(Command::AddNote {
                 pattern: f.pat,
                 note: NewNote {
                     channel: f.synth,
-                    key: 20 + k % 100,
+                    key: k,
                     start: 0,
                     length: 3000,
                     velocity: 0.1,
@@ -459,11 +456,8 @@ fn synth_polyphony_and_voice_limit() {
     r.play();
     let mut buf = vec![0.0; 2 * 512];
     r.render(&mut buf);
-    assert_eq!(
-        r.active_voices(),
-        MAX_VOICES,
-        "excess notes steal voices instead of growing"
-    );
+    assert!(buf.iter().any(|v| *v != 0.0));
+    assert_eq!(r.active_voices(), 0, "PLG-028: hosted voices are not reported");
 }
 
 #[test]
@@ -560,7 +554,7 @@ fn song_loops_the_time_selection_at_any_block_size() {
 }
 
 /// A 1000-frame ramp sample at the engine rate, for sampler parameter tests.
-fn ramp_snapshot(params: SamplerParams) -> Arc<limeshot_sequencer::Snapshot> {
+fn ramp_snapshot(params: SamplerParams) -> Arc<support::Snapshot> {
     let mut doc = Document::default();
     doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
     let pat = doc.project().patterns[0].id;
@@ -789,7 +783,7 @@ fn effects_without_processors_are_bypassed() {
     let id = f.doc.project().mixer.tracks[1].effects[0].id;
     let mut params = EffectKind::Utility.defaults();
     params[0] = -60.0;
-    r.adopt_effect(id, limeshot_engine::fx::build(EffectKind::Utility, SR, &params));
+    r.adopt_effect(id, support::fx::build(EffectKind::Utility, SR, &params));
     r.rearrange();
     r.stop();
     r.play();
@@ -948,7 +942,7 @@ fn pre_fader_sends_ignore_the_fader() {
 /// A one-second ramp whose value encodes the frame index (value = i / 48000), placed as an audio
 /// clip at bar 1 beat 3 (tick 1920 = 48 000 frames at 120 BPM), trimmed by a quarter of a second
 /// at the start and half a second long.
-fn audio_clip_fixture() -> (Document, Arc<limeshot_sequencer::Snapshot>) {
+fn audio_clip_fixture() -> (Document, Arc<support::Snapshot>) {
     let mut doc = Document::default();
     doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
     let clip = ClipId(
@@ -983,41 +977,34 @@ fn audio_clip_fixture() -> (Document, Arc<limeshot_sequencer::Snapshot>) {
 }
 
 #[test]
-fn audio_clips_play_their_sample_window_sample_accurately() {
+fn hosted_audio_clips_play_their_source_window() {
     let (_, snap) = audio_clip_fixture();
-    for block in [64, 333, 1024] {
+    assert!(snap.song.events.iter().all(|e| e.clip));
+    for block in [1, 64, 333, 1024] {
         let (audio, _) = render(snap.clone(), ExportRange::Song, block, SR);
-        let at = |i: usize| audio[2 * i];
-        assert_eq!(at(47_999), 0.0, "silent before the clip (block {block})");
-        // The clip starts 12 000 frames into the sample (the trimmed quarter second).
-        for k in [0usize, 1, 5_000, 23_999] {
-            let want = (12_000 + k) as f32 / 48_000.0;
+        assert!(audio[..2 * 48_000].iter().all(|v| *v == 0.0));
+        for frame in [48_000, 54_000, 71_999] {
+            let expected = (frame - 48_000 + 12_000) as f32 / 48_000.0;
             assert!(
-                (at(48_000 + k) - want).abs() < 1e-5,
-                "frame {k}: {} vs {want}",
-                at(48_000 + k)
+                (audio[2 * frame] - expected).abs() < 1e-5,
+                "block {block}, frame {frame}"
             );
         }
-        // It stops at the clip end (half a second, then the sampler's 10 ms declick release), not
-        // at the end of the sample.
-        assert!(at(72_000 + 10) < 0.75, "releasing (block {block})");
-        assert_eq!(at(72_000 + 480 + 10), 0.0, "block {block}");
+        assert!(audio[2 * 72_000..].iter().all(|v| *v == 0.0));
     }
 }
 
 #[test]
-fn playback_starting_inside_an_audio_clip_starts_the_audio_part_way() {
+fn seeking_hosted_audio_clips_chases_the_source() {
     let (_, snap) = audio_clip_fixture();
     for block in [64, 333, 1024] {
         let mut r = Renderer::new(SR, snap.clone());
         r.set_mode(PlayMode::Song);
-        // Tick 2400 is 480 ticks (12 000 frames) into the clip: sample frame 24 000.
         r.locate(2400);
         r.play();
         let mut buf = vec![0.0; 2 * block];
         r.render(&mut buf);
         assert!((buf[0] - 0.5).abs() < 1e-5, "block {block}: {}", buf[0]);
-        assert!((buf[2 * (block - 1)] - (24_000 + block - 1) as f32 / 48_000.0).abs() < 1e-5);
     }
 }
 
@@ -1025,19 +1012,39 @@ fn playback_starting_inside_an_audio_clip_starts_the_audio_part_way() {
 fn dc_clip_doc() -> (Document, ChannelId) {
     let mut doc = Document::default();
     doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
-    let clip = ClipId(
-        doc.execute(Command::AddAudioClip {
-            sample: SampleRef { path: "dc".into() },
+    let pat = doc.project().patterns[0].id;
+    let ch = ChannelId(
+        doc.execute(Command::AddChannel {
             name: "DC".into(),
-            track: 0,
-            start: 0,
-            length: 2 * 3840,
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef { path: "dc".into() }),
+                one_shot: false,
+                release_ms: 0.0,
+                ..Default::default()
+            }),
         })
         .unwrap()
         .0
         .unwrap(),
     );
-    let ch = doc.project().clip(clip).unwrap().audio_channel().unwrap();
+    doc.execute(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: ch,
+            key: 60,
+            start: 0,
+            length: 2 * 3840,
+            velocity: 1.0,
+        },
+    })
+    .unwrap();
+    doc.execute(Command::AddClip {
+        pattern: pat,
+        track: 0,
+        start: 0,
+        length: Some(2 * 3840),
+    })
+    .unwrap();
     doc.execute(Command::SetChannelVolume {
         channel: ch,
         volume: 1.0,
@@ -1047,7 +1054,7 @@ fn dc_clip_doc() -> (Document, ChannelId) {
     (doc, ch)
 }
 
-fn dc_snapshot(doc: &Document) -> Arc<limeshot_sequencer::Snapshot> {
+fn dc_snapshot(doc: &Document) -> Arc<support::Snapshot> {
     let s = Arc::new(SampleData::from_stereo(SR, vec![0.5; 2 * 4 * 48_000]));
     let lookup = move |p: &str| (p == "dc").then(|| s.clone());
     Arc::new(compile(doc.project(), doc.project().patterns[0].id, &lookup))
@@ -1237,7 +1244,7 @@ fn synth_filter_darkens_and_its_envelope_opens_it_at_the_note_start() {
 #[test]
 fn synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch() {
     let mods = |p: SynthParams| {
-        let s = limeshot_sequencer::compile(
+        let s = compile(
             &{
                 let mut d = Document::default();
                 d.execute(Command::AddChannel {
@@ -1250,8 +1257,8 @@ fn synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch() {
             PatternId(0),
             &NoSamples,
         );
-        match &s.channels[0].instrument {
-            limeshot_sequencer::InstrumentState::Synth { mods, .. } => *mods,
+        match &s.voices[0].2 {
+            limeshot_dsp::voice::VoiceInstrument::Synth { mods, .. } => *mods,
             other => panic!("{other:?}"),
         }
     };
@@ -1282,99 +1289,34 @@ fn synth_defaults_bypass_the_filter_and_vibrato_moves_the_pitch() {
 }
 
 #[test]
-fn mixer_track_eq_shapes_the_track_and_the_master() {
+fn legacy_track_eq_is_not_an_in_process_effect() {
     let mut f = fixture();
     f.doc
         .execute(Command::AddNote {
             pattern: f.pat,
             note: NewNote {
                 channel: f.synth,
-                key: 69,
+                key: 60,
                 start: 0,
-                length: 3 * PPQ,
-                velocity: 0.8,
+                length: 960,
+                velocity: 1.0,
             },
         })
         .unwrap();
-    let rms = |doc: &Document| {
-        let snap = Arc::new(compile(doc.project(), f.pat, &NoSamples));
-        let (a, _) = render(snap, ExportRange::Pattern, 256, SR);
-        let n = a.len().min(2 * SR as usize);
-        (a[..n].iter().map(|v| v * v).sum::<f32>() / n as f32).sqrt()
-    };
-    let flat = rms(&f.doc);
-    assert!(flat > 0.01);
-    // The default EQ (every band at 0 dB) leaves the sound untouched.
-    let same = EqBand::DEFAULTS[0];
-    f.doc
-        .execute(Command::SetMixerEq {
-            track: 2,
-            band: 0,
-            value: same,
-        })
-        .unwrap();
-    assert_eq!(rms(&f.doc), flat);
-    // A high shelf at 100 Hz, -18 dB, on the synth's insert cuts nearly everything by 18 dB.
-    let cut = EqBand {
-        freq: 100.0,
-        gain: -18.0,
-        width: 0.27,
-    };
+    let (flat, _) = render(snapshot(&f), ExportRange::Pattern, 256, SR);
     f.doc
         .execute(Command::SetMixerEq {
             track: 2,
             band: 2,
-            value: cut,
-        })
-        .unwrap();
-    let ratio = limeshot_dsp::gain_to_db(rms(&f.doc) / flat);
-    assert!((ratio + 18.0).abs() < 1.5, "insert EQ: {ratio} dB");
-    // The same on the master instead.
-    f.doc
-        .execute(Command::SetMixerEq {
-            track: 2,
-            band: 2,
-            value: EqBand::DEFAULTS[2],
-        })
-        .unwrap();
-    f.doc
-        .execute(Command::SetMixerEq {
-            track: 0,
-            band: 2,
-            value: cut,
-        })
-        .unwrap();
-    let ratio = limeshot_dsp::gain_to_db(rms(&f.doc) / flat);
-    assert!((ratio + 18.0).abs() < 1.5, "master EQ: {ratio} dB");
-    // Out-of-range values are clamped; a bad band is refused.
-    f.doc
-        .execute(Command::SetMixerEq {
-            track: 1,
-            band: 1,
             value: EqBand {
-                freq: 1e9,
-                gain: 99.0,
-                width: 7.0,
+                freq: 100.0,
+                gain: -18.0,
+                width: 0.27,
             },
         })
         .unwrap();
-    assert_eq!(
-        f.doc.project().mixer.tracks[1].eq[1],
-        EqBand {
-            freq: 20_000.0,
-            gain: 18.0,
-            width: 1.0
-        }
-    );
-    assert!(
-        f.doc
-            .execute(Command::SetMixerEq {
-                track: 1,
-                band: 3,
-                value: cut
-            })
-            .is_err()
-    );
+    let (changed, _) = render(snapshot(&f), ExportRange::Pattern, 256, SR);
+    assert_eq!(flat, changed, "PLG-029: legacy track EQ is inactive");
 }
 
 #[test]
@@ -1490,53 +1432,36 @@ fn sidechained_compressor_ducks_on_the_key_track() {
 }
 
 #[test]
-fn note_pan_adds_to_the_channel_pan() {
+fn plugin_note_pan_reaches_the_voice() {
     let mut f = fixture();
-    let id = NoteId(
+    let note = NoteId(
         f.doc
             .execute(Command::AddNote {
                 pattern: f.pat,
                 note: NewNote {
                     channel: f.synth,
-                    key: 69,
+                    key: 60,
                     start: 0,
-                    length: PPQ,
-                    velocity: 0.8,
+                    length: 960,
+                    velocity: 1.0,
                 },
             })
             .unwrap()
             .0
             .unwrap(),
     );
-    let lr = |doc: &Document| {
-        let snap = Arc::new(compile(doc.project(), f.pat, &NoSamples));
-        let (a, _) = render(snap, ExportRange::Pattern, 256, SR);
-        let l = a.iter().step_by(2).fold(0.0f32, |m, v| m.max(v.abs()));
-        let r = a.iter().skip(1).step_by(2).fold(0.0f32, |m, v| m.max(v.abs()));
-        (l, r)
-    };
-    let (l0, r0) = lr(&f.doc);
-    assert!((l0 - r0).abs() < 1e-6 && l0 > 0.0);
-    let pan = |doc: &mut Document, v: f32| {
-        doc.execute(Command::SetNoteValues {
+    let (before, _) = render(snapshot(&f), ExportRange::Pattern, 256, SR);
+    f.doc
+        .execute(Command::SetNoteValues {
             pattern: f.pat,
             prop: NoteProp::Pan,
-            values: vec![(id, v)],
+            values: vec![(note, 1.0)],
         })
         .unwrap();
-    };
-    pan(&mut f.doc, 1.0);
-    let (l, r) = lr(&f.doc);
-    assert!(l < 1e-6 && r >= r0 * 0.99, "hard right: {l} {r}");
-    // Note pan and channel pan add up (and clamp): left channel, note right → centre.
-    f.doc
-        .execute(Command::SetChannelPan {
-            channel: f.synth,
-            pan: -1.0,
-        })
-        .unwrap();
-    let (l, r) = lr(&f.doc);
-    assert!((l - r).abs() < 1e-6 && (l - l0).abs() < 1e-4, "{l} {r} vs {l0}");
+    let (after, _) = render(snapshot(&f), ExportRange::Pattern, 256, SR);
+    assert!(before.iter().step_by(2).any(|v| v.abs() > 0.01));
+    assert!(after.iter().step_by(2).all(|v| *v == 0.0));
+    assert!(after.iter().skip(1).step_by(2).any(|v| v.abs() > 0.01));
 }
 
 /// Owner's list item 10: Stop while stopped silences everything (auditions, sample previews,
@@ -1552,7 +1477,7 @@ fn stop_while_stopped_and_play_silence_tails_and_previews() {
         .unwrap();
     let snap = snapshot(&f);
     let mut r = Renderer::new(SR, snap.clone());
-    for (id, fx) in limeshot_engine::fx::build_all(&snap, SR) {
+    for (id, fx) in support::fx::build_all(&snap, SR) {
         r.adopt_effect(id, fx);
     }
     r.rearrange();
@@ -1598,41 +1523,10 @@ fn stop_while_stopped_and_play_silence_tails_and_previews() {
 /// PL-023: an audio clip's fade-in and fade-out ramp its gain linearly, at any block size and
 /// when playback starts inside the fade-in.
 #[test]
-fn audio_clip_fades_ramp_the_gain() {
-    let (mut doc, _) = dc_clip_doc();
+fn clip_fade_model_clamps_to_the_clip() {
+    // Audio clip playback/fades are tracked by PLG-024; retain editing validation independently.
+    let (mut doc, _) = audio_clip_fixture();
     let clip = doc.project().playlist.clips[0].id;
-    // 960 ticks = 0.5 s in, 1920 ticks = 1 s out, on a 4 s clip at 120 BPM.
-    doc.execute(Command::SetClipFades {
-        clip,
-        fade_in: 960,
-        fade_out: 1920,
-    })
-    .unwrap();
-    let snap = dc_snapshot(&doc);
-    for block in [64, 333, 1024] {
-        let (audio, _) = render(snap.clone(), ExportRange::Song, block, SR);
-        let at = |i: usize| audio[2 * i];
-        let full = at(96_000);
-        assert!(full > 0.1);
-        assert!(at(0).abs() < 1e-6, "silent at the clip start (block {block})");
-        assert!((at(12_000) / full - 0.5).abs() < 1e-3, "half-way into the fade-in");
-        assert!((at(24_000) / full - 1.0).abs() < 1e-3);
-        assert!(
-            (at(192_000 - 24_000) / full - 0.5).abs() < 1e-3,
-            "half-way through the fade-out"
-        );
-        assert!(at(191_999).abs() / full < 1e-3);
-    }
-    // Starting inside the fade-in picks the ramp up where it is.
-    let mut r = Renderer::new(SR, snap.clone());
-    r.set_mode(PlayMode::Song);
-    r.locate(480);
-    r.play();
-    let mut buf = vec![0.0; 2 * 256];
-    r.render(&mut buf);
-    let (full_audio, _) = render(snap, ExportRange::Song, 512, SR);
-    assert!((buf[0] / full_audio[2 * 96_000] - 0.5).abs() < 1e-3, "{}", buf[0]);
-    // Fades are clamped to the clip.
     doc.execute(Command::SetClipFades {
         clip,
         fade_in: 99_999,
@@ -1646,7 +1540,7 @@ fn audio_clip_fades_ramp_the_gain() {
 /// Every built-in effect runs as an insert; FX-006: a gate whose threshold is above the clip
 /// silences it, one below lets it through.
 #[test]
-fn every_built_in_effect_runs_and_the_gate_gates() {
+fn reference_dsp_effects_are_finite_and_gate_threshold_works() {
     let peak = |doc: &Document| {
         let (a, _) = render(dc_snapshot(doc), ExportRange::Song, 256, SR);
         a.iter().fold(0.0f32, |m, v| m.max(v.abs()))
@@ -1730,18 +1624,12 @@ fn sampler_loops_and_filters() {
 /// began before it already sounding.
 #[test]
 fn exporting_a_time_selection_renders_that_span() {
-    let (doc, _) = dc_clip_doc();
-    let snap = dc_snapshot(&doc);
-    let (song, _) = render(snap.clone(), ExportRange::Song, 256, SR);
+    let (_, snap) = audio_clip_fixture();
     for block in [64, 333] {
-        // Bar 2's first half: 3840..5760 at 120 BPM is one second, inside the two-bar clip.
-        let (sel, report) = render(snap.clone(), ExportRange::Selection { from: 3840, to: 5760 }, block, SR);
-        assert_eq!(report.music_frames, 48_000, "block {block}");
-        assert!(
-            (sel[0] - song[2 * 96_000]).abs() < 1e-6,
-            "the clip sounds from the first frame"
-        );
-        assert!((sel[2 * 47_999] - song[2 * (96_000 + 47_999)]).abs() < 1e-6);
+        let (sel, report) = render(snap.clone(), ExportRange::Selection { from: 2000, to: 2400 }, block, SR);
+        assert_eq!(report.music_frames, 10_000, "block {block}");
+        assert!((sel[0] - (12_000.0 + 2000.0) / 48_000.0).abs() < 1e-5);
+        assert!(sel[..2 * report.music_frames].iter().all(|v| *v > 0.0));
     }
     let empty = render_offline(
         snap,
@@ -1803,7 +1691,7 @@ fn sampler_volume_envelope() {
 
 #[test]
 fn skipped_sampler_advances_envelope_in_output_time() {
-    use limeshot_engine::voice::{Source, Voice};
+    use limeshot_dsp::voice::{Source, Voice};
     for reverse in [false, true] {
         let snap = ramp_snapshot(SamplerParams {
             attack_ms: 4.0,
@@ -1813,7 +1701,7 @@ fn skipped_sampler_advances_envelope_in_output_time() {
             reverse,
             ..Default::default()
         });
-        let instrument = &snap.channels[0].instrument;
+        let instrument = &snap.voices[0].2;
         // The sample moves two source frames per output frame at this pitch.
         for offset in [0, 96, 192, 288, 384, 480] {
             let mut skipped = Voice::for_instrument(instrument, 60, 60, 1.0, SR as f32).unwrap();

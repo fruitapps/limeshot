@@ -734,6 +734,11 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             }
             crate::effects_ui::chain(app, ui, i);
             ui.add_space(10.0);
+            let reduction = app.player.status().gain_reduction(usize::from(i));
+            ui.add(
+                egui::ProgressBar::new((reduction / 36.0).clamp(0.0, 1.0))
+                    .text(format!("Gain reduction  {reduction:.1} dB")),
+            );
             eq_section(app, ui, i, &track.eq);
         });
     });

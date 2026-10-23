@@ -88,7 +88,23 @@ fn load(path: &Path) -> Result<Project, String> {
     Ok(p)
 }
 
+fn convert(project: &mut Project) {
+    for warning in limeshot_core::lime::convert_project(project, &limeshot_ui::lime::embedded_audio) {
+        eprintln!("warning: {warning}");
+    }
+}
+
+fn save_converted(project: &Project, path: &Path) -> Result<(), String> {
+    let mut project = project.clone();
+    convert(&mut project);
+    limeshot_project::save(&project, path).map_err(|e| e.to_string())
+}
+
 fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
+    // Instruments and effects are the Lime VST3s (D39), as in the app.
+    let mut converted = project.clone();
+    convert(&mut converted);
+    let project = &converted;
     let mut cache = SampleCache::new();
     for r in project.sample_refs() {
         if let Err(e) = cache.load_blocking(&r.path) {
@@ -109,7 +125,7 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     };
     // Plugin channels and inserts get instances of their own, restored from the saved state.
     let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
-    let (processors, instances) = plugins.offline(project, o.rate);
+    let (processors, instances) = plugins.offline(project, o.rate)?;
     let rep = limeshot_engine::export_wav_with(snap, &settings, o.depth, out, processors).map_err(|e| e.to_string())?;
     drop(instances);
     plugins.poll();
@@ -127,6 +143,9 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
 /// Play through the system audio device and report what the realtime callback produced.
 fn play(project: &Project, o: &Opts) -> Result<(), String> {
     use limeshot_audio::{AudioConfig, Msg, Player};
+    let mut converted = project.clone();
+    convert(&mut converted);
+    let project = &converted;
     let mut cache = SampleCache::new();
     for r in project.sample_refs() {
         if let Err(e) = cache.load_blocking(&r.path) {
@@ -138,14 +157,15 @@ fn play(project: &Project, o: &Opts) -> Result<(), String> {
     let mut player = Player::start(&AudioConfig::default(), snap.clone());
     // Effect processors and plugins are built here (control thread) and sent before re-sending
     // the snapshot.
-    for (id, fx) in limeshot_engine::fx::build_all(&snap, player.sample_rate()) {
-        player.send(Msg::Effect(id, fx));
-    }
+
     let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
     let sr = player.sample_rate();
-    plugins.sync(project, 0, sr, &mut |m| {
+    let errors = plugins.sync(project, 0, sr, &mut |m| {
         player.send(m);
     });
+    if !errors.is_empty() {
+        return Err(errors.join("\n"));
+    }
     player.send(Msg::Snapshot(snap));
     match player.output_description() {
         Ok(name) => println!("output: {name} at {} Hz", player.sample_rate()),
@@ -263,7 +283,7 @@ fn main() -> ExitCode {
                     }
                 }
                 if let Some(s) = &o.save {
-                    limeshot_project::save(doc.project(), s).map_err(|e| e.to_string())?;
+                    save_converted(doc.project(), s)?;
                     println!("saved {}", s.display());
                 }
                 if let Some(r) = &o.render {
@@ -300,7 +320,7 @@ fn main() -> ExitCode {
                     r.summary()
                 );
                 if let Some(out) = o.positional.get(1) {
-                    limeshot_project::save(&p, Path::new(out)).map_err(|e| e.to_string())?;
+                    save_converted(&p, Path::new(out))?;
                     println!("saved {out}");
                 }
                 Ok(())
@@ -317,7 +337,7 @@ fn main() -> ExitCode {
                 let mut doc = Document::new(Project::new());
                 let cmd = limeshot_project::midi::import_command(&file, &name, true).map_err(|e| e.to_string())?;
                 doc.execute(cmd).map_err(|e| e.to_string())?;
-                limeshot_project::save(doc.project(), Path::new(out)).map_err(|e| e.to_string())?;
+                save_converted(doc.project(), Path::new(out))?;
                 println!("saved {out}: {} channels", doc.project().channels.len());
                 Ok(())
             })(),
@@ -330,7 +350,7 @@ fn main() -> ExitCode {
             (|| {
                 let samples = limeshot_app::bundled_samples_dir().ok_or("bundled samples not found")?;
                 let doc = limeshot_app::demo::build(&samples)?;
-                limeshot_project::save(doc.project(), Path::new(out)).map_err(|e| e.to_string())?;
+                save_converted(doc.project(), Path::new(out))?;
                 println!("saved {out}");
                 if let Some(r) = &o.render {
                     render(doc.project(), r, &o)?;

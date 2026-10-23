@@ -15,8 +15,11 @@ impl PluginInstrument for Gate {
         for (i, f) in out.as_chunks_mut::<2>().0.iter_mut().enumerate() {
             while let Some(e) = notes.get(next).filter(|e| e.offset as usize == i) {
                 match e.kind {
+                    limeshot_dsp::NoteEventKind::ChannelPan { .. } => {}
                     NoteEventKind::On { .. } => self.0 += 1,
                     NoteEventKind::Off { .. } => self.0 = self.0.saturating_sub(1),
+                    NoteEventKind::Clip { .. } => self.0 += 1,
+                    NoteEventKind::Pan { .. } => {}
                 }
                 next += 1;
             }

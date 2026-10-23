@@ -15,6 +15,7 @@ pub mod automation;
 pub mod command;
 pub mod document;
 pub mod effects;
+pub mod lime;
 pub mod model;
 pub mod note_tools;
 pub mod plugin;
@@ -24,6 +25,7 @@ pub use automation::{Automation, AutomationId, AutomationPoint, AutomationTarget
 pub use command::{Command, CommandError, Created, ImportedChannel, NewNote, NoteProp};
 pub use document::{Document, PluginTarget};
 pub use effects::{COMPRESSOR_SIDECHAIN, DELAY_SYNC, EffectKind, EffectSlot, MAX_EFFECTS, ParamSpec};
+pub use lime::{EmbeddedAudio, LimePlugin};
 pub use model::*;
 pub use note_tools::NoteTool;
 pub use plugin::{PluginRef, PluginState, PluginWindow};

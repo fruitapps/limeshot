@@ -95,11 +95,9 @@ fn main() {
             track: 5,
             kind: limeshot_core::EffectKind::Compressor,
         }) {
-            app.exec(limeshot_core::Command::SetEffectParam {
-                track: 5,
-                effect: fx,
-                index: limeshot_core::COMPRESSOR_SIDECHAIN,
-                value: 1.0,
+            app.exec(limeshot_core::Command::SetPluginSidechain {
+                plugin: limeshot_core::PluginTarget::Effect { track: 5, effect: fx },
+                source: 1,
             });
         }
         app.doc.mark_saved();

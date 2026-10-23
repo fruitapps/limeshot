@@ -98,9 +98,6 @@ pub fn render_offline_with(
     let tempo = snapshot.tempo;
     let mut r = Renderer::new(settings.sample_rate, snapshot.clone());
     let sample_rate = r.sample_rate();
-    for (id, fx) in crate::fx::build_all(&snapshot, sample_rate) {
-        r.adopt_effect(id, fx);
-    }
     for (id, fx) in processors.effects {
         r.adopt_effect(id, fx);
     }

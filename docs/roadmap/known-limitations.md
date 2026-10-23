@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-22 (session 17). Everything here is either not implemented or not verified.
+Current as of 2026-10-23 (VST3 replacement). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -18,24 +18,25 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   audio recording was not tried with a real input yet, has no latency compensation or input monitoring, and there is
   no automation or clip recording, count-in or loop takes. A recorded note appears when it ends.
 * Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only.
-* Built-in insert effects include EQ, filter, delay, reverb, compressor, limiter, gate, drive, chorus/flanger/phaser and utility (Lime Drive aliases at high drive: no oversampling); VST3 inserts are supported. A route is pre- or
-  post-fader per route (no per-track default); Lime Delay syncs to the tempo but not to tempo automation. Only Lime Comp takes a sidechain input
-  (one per compressor), and the gain-reduction meter shows the track's largest compressor reduction.
-* Presets for the built-in effects and instruments are LimeShot's own JSON files (no FL .fst import), and only
-  plugin windows step through presets with ◀ ▶.
-* Each mixer track's built-in EQ (MIX-010) cannot be automated, and its width-to-Q mapping is LimeShot's own (FL
-  Studio's exact curve shapes were not measured).
-* Automation covers channel volume/pan, mixer volume/pan, effect parameters and hosted plugins' parameters in Song
-  mode only; no tempo automation (one project tempo), no synth/sampler parameter automation, single-curve segments
-  only. Channel/mixer and built-in effect controls follow automation on screen; host plugin parameter sliders do not. Add › Automation for last
-  tweaked parameter knows plugin parameters only (other controls offer it on right-click). Automation clips are edited in their Playlist clip, whose curve area is small at the default track
-  height.
-* Audio clips are not time-stretched; there are no automatic crossfades. Manual clip-edge fades are implemented.
-* Sampler: volume ADSR, loop points and a low-pass filter are available. No envelope delay/hold stages or
-  panning, cutoff or pitch envelopes; no time stretching. Linear interpolation aliases when pitched far up.
-* LimeSynth: low-pass only (no high/band-pass, no key tracking); the LFO restarts with each note; mono/legato and
-  glide are not available.
-* The voice pool is fixed at 128 voices; the oldest voice is stolen abruptly (no fade).
+* Instruments and active inserts use the twelve Lime Native VST3 bundles; missing bundles abort export and produce GUI errors.
+  Playlist audio windows/chase/overlap/fades, per-note pan, exact track EQ, Gate/Drive/Chorus, key-bus routing,
+  host Lime value menus, dynamics reduction and native voice statistics are restored (PLG-017…029).
+* Clip playback is a Lime Sampler extension; arbitrary third-party samplers do not understand its clip SysEx.
+  Clip fades/offsets use output time without time stretching. Changing tempo does not stretch source audio.
+* Track EQ uses a dedicated hosted processor after all ten inserts. Its hidden extension controls are driven by
+  the undoable inline Mixer bands; ordinary Lime EQ inserts retain their original parameter IDs and ranges.
+* Factory/user `.limepreset` files remain supported. Host unit-value menus cover known Lime controls;
+  arbitrary third-party controls retain the generic automation menu. Compressor key-track selection is discrete,
+  and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
+* Embedded sampler audio is cached for host waveforms/auditions without writing temporary sample files.
+  Native editor changes and platform/native GUI interaction still need broader hands-on validation.
+* Automation runs in Song mode. Converted effect automation is re-expressed in plugin ranges; smoothing and curve
+  differences mean automated output is close rather than bit-identical. Non-automated reference equivalence is exact.
+* Sampler supports ADSR, loop points and a low-pass filter. No delay/hold stages, extra modulation envelopes or time
+  stretching. Linear interpolation aliases when pitched far up. LimeSynth has low/band/high-pass and key tracking;
+  its LFO restarts per voice and mono/glide are absent.
+* Each Lime instrument has 128 voices and steals the oldest abruptly. The host counts actual native voices plus browser
+  previews/metronome; third-party plugins without Lime telemetry contribute zero (PLG-028).
 * Integer WAV export is clipped, not dithered. Export is stereo only; there are no stems.
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
@@ -141,3 +142,19 @@ Current as of 2026-10-22 (session 17). Everything here is either not implemented
   preserve the sample/root key; host state saves both. No sample loops/time stretching/multisampling.
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
+
+## Lime VST3s as LimeShot's instruments and effects (PLG-013, replacement complete)
+
+* GUI and headless apps convert legacy instruments and all ten effect kinds to Lime VST3s. Runtime built-in
+  factories remain deleted. Hosted Playlist clips, note pan and exact track EQ have positive acceptance coverage.
+* CI builds debug bundles; macOS packaging builds and copies release bundles into `Contents/PlugIns` (PLG-023).
+  GitHub Actions remains blocked by owner account billing. Missing plugins fail CLI/GUI export; realtime missing
+  channels remain silent and report load errors. No remote CI pass is claimed.
+* Native clip/channel-pan events and processor telemetry use bounded, versioned, allocation-free SysEx messages.
+  Stereo key audio, pan and telemetry also traverse the optional process bridge. Its existing synchronous I/O
+  and timeout limitations remain; this work does not make bridged processing real-time safe.
+* Broader native resizing/occlusion/keyboard/detached/third-party interaction, pluginval and Windows/Linux/Intel
+  runtime are still open. See [current handoff](../development/handoff-hosted-p0-parity.md).
+* Converted effect automation follows the plugin closely but not bit for bit (smoothing and interpolation).
+  Non-automated equivalence is checked bit for bit, allowing only trailing silent frames to differ in length.
+  Lime Sampler embeds sample audio, so projects grow with their samples.

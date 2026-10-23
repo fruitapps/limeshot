@@ -1,19 +1,22 @@
 # Lime Native — standalone VST3 suite
 
-Nine independent VST3 plugins for **any VST3-compatible DAW**. LimeShot does not need to be installed or running.
+Twelve independent VST3 plugins for **any VST3-compatible DAW**. LimeShot does not need to be installed or running.
 Each bundle contains its own native editor and statically linked DSP. No server, account, internet connection,
 LimeShot project or companion application is needed.
 
 | Plugin | What it does |
 | --- | --- |
-| **LimeSynth** | 64 voices; sine, square, saw and triangle; detune/octave, ADSR, resonant low-/band-/high-pass with key tracking, filter envelope, LFO/vibrato |
-| **Lime Sampler** | Stereo WAV playback, embedded sample recall, transpose/root key, trim, reverse, gated/one-shot, release |
+| **LimeSynth** | 128 voices; sine, square, saw and triangle; detune/octave, ADSR, resonant low-/band-/high-pass with key tracking, filter envelope, LFO/vibrato |
+| **Lime Sampler** | Stereo WAV playback, embedded sample recall, transpose/root key, trim, reverse, gated/one-shot, attack/decay/sustain/release, low-pass filter, loop |
 | **Lime Utility** | Gain, stereo width and polarity |
 | **Lime EQ** | Low shelf, parametric mid and high shelf |
 | **Lime Filter** | Resonant low-, band- and high-pass, wet/dry mix |
 | **Lime Delay** | Stereo feedback delay, tone/spread, wet/dry, host-tempo sync |
 | **Lime Room** | Algorithmic stereo reverb, pre-delay, size/damping/width and wet/dry |
 | **Lime Comp** | Threshold/ratio, attack/release, makeup, optional stereo external sidechain |
+| **Lime Gate** | Threshold, attack, hold, release and range |
+| **Lime Drive** | Soft clip, hard clip and wave folding; tone, mix and output |
+| **Lime Chorus** | Chorus, flanger and phaser; rate, depth, feedback, stereo spread and mix |
 | **Lime Limiter** | Stereo-linked, zero-lookahead sample-peak limiter with ceiling/release and gain-reduction metering |
 
 Editors use LimeShot's Lime Dark colors, flat controls, original painter artwork and the existing
@@ -51,7 +54,7 @@ Requires **Rust 1.95+**, Python 3, and your platform's native build tools. This 
 its dependencies and `Cargo.lock` do not change the DAW's workspace. Always invoke its manifest or run from here.
 
 ```sh
-# From the repository root: builds all nine, bundles and collects them in native-plugins/dist/.
+# From the repository root: builds all twelve, bundles and collects them in native-plugins/dist/.
 python3 native-plugins/build.py
 
 # From native-plugins/: bundle selected plugins, or build a different installed Rust target.
@@ -106,7 +109,7 @@ change playback settings, preserving the loaded sample and root key; host projec
 and embedded sample data. Hosts may also save their own `.vstpreset` files from plugin state.
 
 Synth envelope/oscillator/filter/LFO controls and sampler controls update held voices. Pitch bend is ±2 semitones;
-sustain pedal, all-notes-off, all-sound-off and note choke are supported. Instruments have 64 voices and a stereo
+sustain pedal, all-notes-off, all-sound-off and note choke are supported. Instruments have 128 voices and a stereo
 output. Effects have stereo input/output; Lime Comp additionally exposes an optional stereo key input. The limiter
 limits sample peaks; it does not provide true-peak oversampling or lookahead.
 
@@ -118,3 +121,7 @@ adapter to `../crates/limeshot-{dsp,engine,sequencer,core,project}`. `xtask/` bu
 parameter array order and class IDs stable: hosts identify existing automation and sessions with them.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for dependencies and licenses.
+
+LimeShot clip playback, additive channel/note pan and native metering use versioned noncommercial SysEx extensions.
+Other VST3 hosts continue to use ordinary MIDI, note expressions and the standard stereo key bus.
+Lime EQ appends hidden track-mode controls for the host inline EQ; existing insert parameter IDs/ranges stay stable.

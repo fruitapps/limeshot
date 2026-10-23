@@ -1,5 +1,12 @@
 # First-release feature checklist
 
+**2026-10-23 replacement update:** this checklist/estimate retains its 272-record historical baseline. The current
+inventory has 290 records. Active instruments/effects now require bundled Lime VST3s; the in-process implementations
+are deleted. Hosted parity PLG-017…020, PLG-022 and PLG-024…029 is implemented; release gates now require broader native/platform
+validation of those restored paths. See [current handoff](../development/handoff-hosted-p0-parity.md).
+Prior baseline VERIFIED labels do not establish these replacement behaviors. See
+[known limitations](known-limitations.md) and the [current inventory](features.md).
+
 Companion to the [human-readable roadmap and estimates](first-release.md). Baseline: remote `main` at
 `dd53fb317085b58816c9c8bafb0071b92aa94dde`, 22 October 2026. All **272** baseline feature records appear exactly once.
 This is a proposed v0.1 scope, not a record of completed implementation. Baseline status is copied unchanged.

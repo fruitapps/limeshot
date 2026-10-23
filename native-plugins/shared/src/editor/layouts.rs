@@ -16,7 +16,24 @@ impl NativeEditor {
             5 => self.delay(ui, c, t),
             6 => self.room(ui, c, t),
             7 => self.comp(ui, c, t),
-            _ => self.limiter(ui, c, t),
+            8 => self.limiter(ui, c, t),
+            _ => self.additional_effect(ui, c, t),
+        }
+    }
+    fn additional_effect(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
+        panel(ui.painter(), c.r(12.0, 55.0, 736.0, 330.0), "SOUND / CHARACTER", t, c.s);
+        for (index, spec) in crate::parameters::specs(self.id).iter().enumerate() {
+            let col = index % 3;
+            let row = index / 3;
+            self.knob(
+                ui,
+                c,
+                c.r(30.0 + col as f32 * 242.0, 88.0 + row as f32 * 145.0, 212.0, 124.0),
+                index,
+                spec.name,
+                t.accent,
+                t,
+            );
         }
     }
     fn synth(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
@@ -155,7 +172,15 @@ impl NativeEditor {
         self.slider(ui, c, c.r(391.0, 135.0, 347.0, 34.0), 2, "Start offset", t);
         self.slider(ui, c, c.r(391.0, 174.0, 347.0, 34.0), 3, "End offset", t);
         self.slider(ui, c, c.r(391.0, 212.0, 347.0, 34.0), 4, "Release", t);
-        self.sample_waveform(ui, c, c.r(12.0, 270.0, 736.0, 226.0), t);
+        self.sample_waveform(ui, c, c.r(12.0, 270.0, 736.0, 128.0), t);
+        self.slider(ui, c, c.r(12.0, 404.0, 367.0, 34.0), 11, "Cutoff", t);
+        self.slider(ui, c, c.r(381.0, 404.0, 367.0, 34.0), 12, "Resonance", t);
+        for (index, x, label) in [(8, 12.0, "Attack"), (9, 258.0, "Decay"), (10, 504.0, "Sustain")] {
+            self.slider(ui, c, c.r(x, 442.0, 244.0, 34.0), index, label, t);
+        }
+        self.lamp(ui, c, c.r(12.0, 484.0, 96.0, 25.0), 13, "Loop", t);
+        self.slider(ui, c, c.r(112.0, 480.0, 316.0, 34.0), 14, "Loop start", t);
+        self.slider(ui, c, c.r(432.0, 480.0, 316.0, 34.0), 15, "Loop end", t);
         let info = if let Some(sample) = &self.sample {
             format!(
                 "{:.2} seconds  ·  {} Hz  ·  Stereo",
@@ -166,7 +191,7 @@ impl NativeEditor {
             "WAV sample player  ·  Drag a file onto the waveform".into()
         };
         ui.painter().text(
-            c.p(24.0, 514.0),
+            c.p(24.0, 523.0),
             Align2::LEFT_CENTER,
             info,
             FontId::monospace(10.0 * c.s),

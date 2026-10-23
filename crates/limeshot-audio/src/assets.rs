@@ -122,6 +122,10 @@ impl SampleCache {
         changed
     }
 
+    /// Retain a decoded embedded source on the control thread, just like a file load.
+    pub fn insert_embedded(&mut self, path: PathBuf, sample: Arc<SampleData>) {
+        self.entries.entry(path).or_insert(SampleStatus::Ready(sample));
+    }
     pub fn status(&self, stored: &str) -> Option<&SampleStatus> {
         self.entries.get(&self.resolve(stored))
     }

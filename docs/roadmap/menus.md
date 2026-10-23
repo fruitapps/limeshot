@@ -40,7 +40,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
 | EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
-| PL-014 | P1 | VERIFIED | Audio clips | MENU-572 Playlist › Options › Edit › Reverse selected audio clips |
+| PL-014 | P1 | IN_PROGRESS | Audio clips | MENU-572 Playlist › Options › Edit › Reverse selected audio clips |
 | PL-015 | P1 | VERIFIED | Automation clips | MENU-568 Playlist › Options › Edit › Merge automation clips |
 | PL-016 | P1 | VERIFIED | Markers and loop region / time selection | MENU-635 Playlist › Options › Time markers › Add two...<br>MENU-636 Playlist › Options › Time markers › Add one every<br>MENU-637 Playlist › Options › Time markers › Add jump to next bar<br>MENU-639 Playlist › Options › Time markers › Add key marker<br>MENU-640 Playlist › Options › Time markers › Place loop<br>MENU-642 Playlist › Options › Time markers › Change to marker loop |
 | REC-001 | P1 | IMPLEMENTED | Audio recording from inputs | MENU-180 Tools › One-click audio recording<br>MENU-182 Tools › One-click audio recording › Into playlist as an audio clip<br>MENU-241 Tools › Cancel recording<br>MENU-319 Toolbar › One-click audio recording<br>MENU-683 Mixer › Options › Disk recording<br>MENU-709 Mixer › Options › Arm selected track(s)<br>MENU-710 Mixer › Options › Disarm selected track(s) |

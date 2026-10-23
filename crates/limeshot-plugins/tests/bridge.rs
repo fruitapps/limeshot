@@ -109,3 +109,72 @@ fn a_hung_bridge_times_out() {
     assert!(t.elapsed() < Duration::from_millis(50));
     drop(inst);
 }
+
+#[test]
+fn native_bridge_preserves_pan_key_audio_and_telemetry() {
+    use limeshot_plugins::{Vst3Instance, Vst3Module};
+    for (name, instrument) in [("LimeSynth", true), ("Lime Comp", false)] {
+        let Some(path) = limeshot_plugins::lime::bundle_path(&format!("lime:{name}.vst3")) else {
+            assert!(std::env::var_os("CI").is_none());
+            return;
+        };
+        let module = Vst3Module::load(&path).unwrap();
+        let class = &module.classes()[0].class_id;
+        let (mut local, mut lp) = Vst3Instance::new(&module, class, 48000.0, 1024).unwrap();
+        let (remote, mut rp) =
+            BridgedInstance::spawn(Path::new(EXE), path.to_str().unwrap(), class, 48000.0, 1024).unwrap();
+        if !instrument {
+            let key = local
+                .params()
+                .iter()
+                .find(|p| p.title == "External sidechain")
+                .unwrap()
+                .id;
+            local.set_param(key, 1.0);
+            remote.set_param(key, 1.0);
+        }
+        for size in [1, 64, 333, 1024] {
+            lp.restart();
+            rp.restart();
+            for block in 0..(4096 / size).max(20) {
+                let mut expected = vec![if instrument { 0.0 } else { 0.01 }; 2 * size];
+                let mut actual = expected.clone();
+                let key = vec![1.0; 2 * size];
+                let notes = [
+                    NoteEvent {
+                        offset: 0,
+                        kind: NoteEventKind::ChannelPan { pan: 0.5 },
+                    },
+                    NoteEvent {
+                        offset: 0,
+                        kind: NoteEventKind::On {
+                            key: 60,
+                            velocity: 0.8,
+                            id: 42,
+                        },
+                    },
+                    NoteEvent {
+                        offset: 0,
+                        kind: NoteEventKind::Pan { id: 42, pan: -0.5 },
+                    },
+                ];
+                let events = if instrument && block == 0 { &notes[..] } else { &[] };
+                lp.process_with_sidechain(&mut expected, events, &Transport::default(), Some(&key));
+                rp.process_with_sidechain(&mut actual, events, &Transport::default(), Some(&key));
+                assert_eq!(actual, expected, "{name}, size {size}, block {block}");
+                if instrument {
+                    assert!(
+                        actual.as_chunks::<2>().0.iter().all(|f| f[0] == f[1]),
+                        "note and channel pan cancel before the balance law"
+                    );
+                }
+                assert_eq!(rp.telemetry(), lp.telemetry());
+            }
+            if instrument {
+                assert_eq!(rp.telemetry().voices, 1);
+            } else {
+                assert!(rp.telemetry().reduction_db > 10.0);
+            }
+        }
+    }
+}

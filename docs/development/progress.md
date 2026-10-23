@@ -1184,3 +1184,90 @@ now passes a gate (attack 0, decay 0, sustain 1), and `Voice::update_instrument`
 Checks: DAW workspace fmt/clippy (warnings denied)/tests; native workspace fmt/clippy/12 tests including
 `synth_filter_type_and_key_tracking_reach_the_voice` and the editor no-overlap layout test; offscreen LimeSynth
 render inspected; inventories and repository links. Not re-run: exported-binary verifier, pluginval, hands-on DAW.
+
+## 2026-10-23 — Lime VST3s replace the built-ins (PLG-013, in progress)
+
+Owner decision: LimeShot hosts the Lime Native VST3s instead of its built-in instruments and effects (D39). Branch
+`claude/lime-vst3-default`, draft PR stacked on #7. Added `limeshot_core::lime` (catalog, class ids, state writer in
+the host's `LSV3` container, `convert_project`), `limeshot_plugins::lime` (`lime:` path resolution), a `Document`
+normalizer installed by the app, and warning toasts for settings that cannot be carried over. Lime Sampler now takes
+up a sample loaded with host state while active (nice-plug does not reactivate after a state load). Equivalence test:
+a project with LimeSynth (band-pass, key tracking), Sampler (WAV, pitch, trim) and EQ renders bit-identically through
+the real bundles (RMS difference 0). Added P0 records PLG-013…PLG-023. Remaining: delete the built-ins and move
+their tests, ship the bundles in the package and CI, and the P0 gaps; see
+[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md).
+
+
+### 2026-10-23 — hosted controls and headless conversion continuation
+
+Continued on `claude/lime-vst3-default` / draft PR #8 at the owner's explicit instruction (the supplied takeover
+prompt overrides the standing new-branch/new-PR session policy for this continuation only). No new chat/session
+was created; no merge is authorized. Future sessions follow the standing AGENTS policy unless the owner overrides it.
+
+Installed conversion in headless constructors, made rack/Browser add actions create Lime references, retained
+sample loading and waveform audition in hosted Channel Settings, and taught Browser/Playlist source selection,
+previews and clip reuse about Lime Sampler. Source hints save relative and reopen absolute; root-key edits update
+sampler state. Removed the old synth/sampler and insert parameter panels. Shared the native parameter schema
+with core; Lime parameter edits now write undoable state and merge per drag. Existing plugin instances follow
+changed saved state. Legacy preset menus work on hosted Lime state. Offline loading failures abort CLI/GUI export.
+
+Added P0 records PLG-024…PLG-028 for audio-clip playback, note pan, full host typed-value menus, host dynamics
+meters and plugin voice statistics. The built-in engine paths remain: PLG-013 is IN_PROGRESS. Native rendering/tab checks and measured audio-device output were subsequently exercised as recorded below.
+
+Validation: all 134 headless UI tests pass, as does the complete DAW workspace suite; 13 native tests pass.
+Non-automated legacy-vs-VST3 rendering now asserts exact sample bits and trailing silence, and passes (RMS
+error 0). Automated EQ comparison remains close, as documented. Both workspaces' formatting and Clippy pass.
+Offscreen hosted Sampler wrapper was rendered and visually inspected. Packaging and binary verification results
+are recorded in the handoff status after completion. GitHub Actions remains unavailable due account billing.
+
+Live follow-up: reproduced and fixed macOS host rendering going black after native editor attachment. A main
+viewport OpenGL context guard restores the host context around UI callbacks. Lime Sampler and its host render
+together after the fix, including a switch to Settings. The packaged demo renders at −3.7 dBFS; realtime converted
+playback produces 324 device callbacks over 2 s at 44.1 kHz, peak −5.3 dBFS. Native binary verification passes all
+nine bundles across three sample rates/four buffer sizes; app/DMG packaging and strict deep ad-hoc signature check
+pass. CLI save/import/play paths now convert too. Broader native interaction, remote CI and pluginval remain open.
+Details: [lime-vst3-host-validation.md](lime-vst3-host-validation.md).
+
+### 2026-10-23 — native-only playback replacement finished
+
+Continued at the owner's explicit request on `claude/lime-vst3-default` / draft PR #8, stacked on unmerged #7.
+Removed synth/sampler playback states and channel voice construction, host effect factories/adoption and the
+independent track EQ. Shared voice DSP moved to `limeshot-dsp`; native plugins no longer link the host engine or
+sequencer. Test-only reference processors exercise the real plugin rack and retain exact real-binary equivalence.
+The app MVP/demo now renders through actual hosted processors. Native instruments keep 128 voices per instance;
+hosted channel automation preserves interval timing with preallocated gains. Test Gain/Tone are unchanged.
+
+Format 2 reads version 1 without losing legacy/unknown data. Gate/Drive/Chorus are preserved disabled and warn.
+The old track-EQ settings survive inactive with disabled controls; PLG-029 records exact response restoration as P0.
+Silent Playlist audio clips and ignored note pan warn too. Existing P0 gaps remain explicit; replacement completion
+does not claim those capabilities are implemented. PLG-013 is IMPLEMENTED.
+
+Validation: 365 root tests (134 UI), 14 native tests; both workspace fmt/strict Clippy; 290-feature inventory and
+repository links; all nine rebuilt release binaries pass verifier at three rates/four buffers. Non-automated
+reference-versus-VST3 audio retains exact sample bits. Mixer offscreen screenshots inspected. Current artifact checks
+are recorded in [lime-vst3-host-validation.md](lime-vst3-host-validation.md). GitHub Actions remains blocked by billing;
+pluginval unavailable, broader native/platform runtime remains open. No merge.
+
+Future sessions must use a NEW `codex/` branch, separate managed worktree and NEW draft PR stacked on the latest
+unmerged continuation, repeat this policy in handoffs, and create another session only when the owner asks. The
+owner's same-branch takeover instruction applies only to this continuation.
+
+
+### 2026-10-23 — hosted P0 parity after native-only replacement
+
+Created a NEW managed worktree and `codex/hosted-p0-parity` from verified unmerged PR #8 head `31d09f9`,
+stacked on unmerged #7. Implemented PLG-024 clips first, then note pan, exact hosted track EQ, Gate/Drive/Chorus,
+Comp key buses, embedded source waveforms/previews, Lime unit-value menus, dynamics telemetry and native voice
+statistics (PLG-017…020, PLG-022, PLG-025…029). No runtime built-in playback was restored. Test Gain/Tone remain.
+
+Real hosted acceptance tests replace silence/ignored-pan gap assertions and preserve the exact sample-bit/RMS-0
+reference comparison. Local/bridged audio and telemetry are compared. New native editors and Mixer/Playlist/rack
+renders were visually inspected. Validation details and limits: [current handoff](handoff-hosted-p0-parity.md).
+Final checks: 375 root tests (136 UI), 14 native tests; fmt and strict all-target Clippy in both workspaces;
+290-feature/repository checks; twelve rebuilt release and allocation-checked debug bundles pass the binary verifier
+at three rates/four buffers. All release signatures verify. CLI demo: 741207 frames at 44.1 kHz, peak −3.7 dBFS.
+GitHub Actions remains billing-blocked; pluginval unavailable; broader native/platform runtime remains open.
+
+Future sessions must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR based on
+the latest unmerged continuation. Leave older checkouts intact; never merge automatically. Create another session
+only when the owner asks.

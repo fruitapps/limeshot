@@ -1554,6 +1554,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-chorus"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-comp"
 version = "0.1.0"
 dependencies = [
@@ -1570,6 +1578,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-drive"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-eq"
 version = "0.1.0"
 dependencies = [
@@ -1579,6 +1595,14 @@ dependencies = [
 
 [[package]]
 name = "lime-filter"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
+name = "lime-gate"
 version = "0.1.0"
 dependencies = [
  "lime-native",
@@ -1605,10 +1629,8 @@ dependencies = [
  "image",
  "limeshot-core",
  "limeshot-dsp",
- "limeshot-engine",
  "limeshot-plugins",
  "limeshot-project",
- "limeshot-sequencer",
  "nice-plug",
  "nice-plug-egui",
  "parking_lot",
@@ -1666,16 +1688,6 @@ version = "0.1.0"
 dependencies = [
  "hound",
  "symphonia",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "limeshot-engine"
-version = "0.1.0"
-dependencies = [
- "limeshot-core",
- "limeshot-dsp",
- "limeshot-sequencer",
  "thiserror 2.0.21",
 ]
 
