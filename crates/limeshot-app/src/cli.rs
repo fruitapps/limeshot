@@ -327,8 +327,12 @@ fn main() -> ExitCode {
         "import-flp" => match o.positional.first() {
             Some(input) => (|| {
                 let factory = limeshot_project::flp::default_factory_dir();
-                let (p, r) = limeshot_project::flp::import_file(Path::new(input), factory.as_deref())
-                    .map_err(|e| e.to_string())?;
+                let path = Path::new(input);
+                let (mut p, r) =
+                    limeshot_project::flp::import_file(path, factory.as_deref()).map_err(|e| e.to_string())?;
+                if !o.allow_external_samples {
+                    limeshot_ui::lime::restrict_loaded_sources(&mut p, path.parent());
+                }
                 println!(
                     "{input}: FL Studio {} — {}",
                     r.version.as_deref().unwrap_or("?"),

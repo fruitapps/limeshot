@@ -125,3 +125,39 @@ fn external_sample_embedding_requires_explicit_cli_opt_in() {
         assert_eq!(plugin.extra.get("lime-sample-pending").is_some(), !allow);
     }
 }
+
+#[test]
+fn flp_external_samples_require_opt_in_while_local_samples_still_embed() {
+    let dir = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let local = dir.path().join("local.wav");
+    let external = outside.path().join("external.wav");
+    let mut flp = limeshot_project::flp::writer::Writer::new();
+    for path in [&local, &external] {
+        limeshot_dsp::write_wav(path, 48000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+        flp.channel(0, "Sample", Some(path.to_str().unwrap()), 12800, 6400, 1);
+    }
+    let source = dir.path().join("source.flp");
+    std::fs::write(&source, flp.finish(96)).unwrap();
+    for allow in [false, true] {
+        let saved = dir.path().join(if allow { "allowed.lime" } else { "blocked.lime" });
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_limeshot-cli"));
+        command.arg("import-flp").arg(&source).arg(&saved);
+        if allow {
+            command.arg("--allow-external-samples");
+        }
+        let output = command.output().unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let project = limeshot_project::load(&saved).unwrap();
+        assert_eq!(project.channels.len(), 2);
+        for (channel, embedded) in project.channels.iter().zip([true, allow]) {
+            let Instrument::Plugin(plugin) = &channel.instrument else {
+                panic!("not hosted")
+            };
+            let state: serde_json::Value =
+                serde_json::from_slice(lime::component_state(&plugin.state).unwrap()).unwrap();
+            assert_eq!(state["fields"].get("sample-v1").is_some(), embedded);
+            assert_eq!(plugin.extra.get("lime-sample-pending").is_some(), !embedded);
+        }
+    }
+}

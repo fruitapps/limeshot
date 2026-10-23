@@ -30,7 +30,8 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
 * Embedded sampler state accepts at most four million stereo frames at 8–384 kHz. Conversion warns and retains
   source-path metadata and pending state when audio cannot fit; reassign a supported sample or reopen/reload after fixing the source.
-  Incomplete conversions fail export explicitly. Loading a .lime file or recovery does not automatically embed
+  Failed decodes are cached by source path, size and modification time so unrelated edits do not decode unchanged files again.
+  Incomplete conversions fail export explicitly. Loading a .lime file, recovery or CLI FLP import does not automatically embed
   outside-project audio (including symlink escapes): choose that source in the GUI, or explicitly use the CLI
   `--allow-external-samples` option when including outside recordings is intended.
 * Embedded sampler audio is cached for host waveforms/auditions without writing temporary sample files.

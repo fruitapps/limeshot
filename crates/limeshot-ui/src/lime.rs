@@ -55,11 +55,45 @@ pub fn restrict_loaded_sources(project: &mut Project, directory: Option<&Path>) 
     }
 }
 
-/// The document normalizer that converts to Lime plugins.
+/// The document normalizer that converts to Lime plugins. Failed source decodes are cached by
+/// path and file metadata so unrelated edits do not repeatedly decode unchanged sources.
 pub fn normalizer() -> limeshot_core::document::Normalizer {
-    Box::new(|project: &mut Project| {
+    normalizer_with_audio(embedded_audio)
+}
+
+fn normalizer_with_audio(
+    audio: impl Fn(&str) -> Option<EmbeddedAudio> + Send + 'static,
+) -> limeshot_core::document::Normalizer {
+    let failed = std::cell::RefCell::new(std::collections::HashMap::new());
+    Box::new(move |project: &mut Project| {
         if lime::needs_conversion(project) {
-            lime::convert_project(project, &embedded_audio)
+            // New legacy sources need their first conversion and its precise failure warning.
+            let fresh: std::collections::HashSet<_> = project
+                .channels
+                .iter()
+                .filter_map(|c| {
+                    if let limeshot_core::Instrument::Sampler(p) = &c.instrument {
+                        p.sample.as_ref().map(|s| s.path.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            lime::convert_project(project, &|source| {
+                let path = limeshot_project::resolve_sample_path(source, None);
+                let version = std::fs::metadata(&path).ok().map(|m| (m.len(), m.modified().ok()));
+                if !fresh.contains(source) && failed.borrow().get(&path) == Some(&version) {
+                    return None;
+                }
+                let sample = audio(source);
+                // Retain only failed attempts, never decoded PCM. Restored or changed files retry.
+                if sample.as_ref().is_none_or(|s| !lime::embedded_audio_supported(s)) {
+                    failed.borrow_mut().insert(path, version);
+                } else {
+                    failed.borrow_mut().remove(&path);
+                }
+                sample
+            })
         } else {
             Vec::new()
         }
@@ -205,6 +239,73 @@ mod migration_tests {
         restrict_loaded_sources(&mut project, Some(dir.path()));
         assert!(lime::convert_project(&mut project, &embedded_audio).is_empty());
         assert!(!lime::needs_conversion(&project));
+    }
+
+    #[test]
+    fn unrelated_edits_do_not_decode_unchanged_failed_sources() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        // Both decoder failures and audio rejected by the native sampler must be cached.
+        for unsupported in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("source.wav");
+            if unsupported {
+                limeshot_dsp::write_wav(&path, 4000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+            }
+            let attempts = Arc::new(AtomicUsize::new(0));
+            let loaded = attempts.clone();
+            let mut doc = Document::new(sampler(&path));
+            doc.execute(Command::AddChannel {
+                name: "Same source".into(),
+                instrument: doc.project().channels[0].instrument.clone(),
+            })
+            .unwrap();
+            doc.set_normalizer(normalizer_with_audio(move |source| {
+                loaded.fetch_add(1, Ordering::SeqCst);
+                embedded_audio(source)
+            }));
+            assert_eq!(attempts.load(Ordering::SeqCst), 2);
+            if unsupported {
+                assert_eq!(
+                    doc.take_warnings()
+                        .iter()
+                        .filter(|w| w.contains("state limits"))
+                        .count(),
+                    2
+                );
+            }
+            for tempo in [125_000, 126_000, 127_000] {
+                doc.execute(Command::SetTempo(Tempo::from_milli_bpm(tempo))).unwrap();
+            }
+            assert_eq!(attempts.load(Ordering::SeqCst), 2);
+            assert!(lime::needs_conversion(doc.project()));
+            assert_eq!(
+                lime::sampler_params(&doc.project().channels[0].instrument)
+                    .unwrap()
+                    .sample
+                    .unwrap()
+                    .path,
+                path.to_string_lossy()
+            );
+
+            // Replacing the source without changing its length still retries on modified time.
+            limeshot_dsp::write_wav(&path, 48000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+            let modified = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000);
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_times(std::fs::FileTimes::new().set_modified(modified))
+                .unwrap();
+            doc.execute(Command::SetTempo(Tempo::from_milli_bpm(128_000))).unwrap();
+            assert_eq!(attempts.load(Ordering::SeqCst), 4);
+            assert!(!lime::needs_conversion(doc.project()));
+            doc.execute(Command::SetTempo(Tempo::from_milli_bpm(129_000))).unwrap();
+            assert_eq!(attempts.load(Ordering::SeqCst), 4);
+        }
     }
 
     #[test]

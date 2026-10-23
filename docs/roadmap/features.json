@@ -8830,7 +8830,9 @@
         "crates/limeshot-ui/src/lime.rs::migration_tests::missing_sample_conversion_keeps_a_retry_route_across_save_and_reopen",
         "crates/limeshot-ui/src/lime.rs::migration_tests::project_sample_symlinks_cannot_embed_files_outside_the_project",
         "crates/limeshot-app/tests/cli.rs::external_sample_embedding_requires_explicit_cli_opt_in",
-        "crates/limeshot-app/tests/ui.rs::missing_sample_error_can_reload_after_its_in_project_source_is_restored"
+        "crates/limeshot-app/tests/ui.rs::missing_sample_error_can_reload_after_its_in_project_source_is_restored",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::unrelated_edits_do_not_decode_unchanged_failed_sources",
+        "crates/limeshot-app/tests/cli.rs::flp_external_samples_require_opt_in_while_local_samples_still_embed"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8839,7 +8841,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "The runtime replacement and hosted parity PLG-017…020, PLG-022 and PLG-024…029 are implemented. Local suites, strict lints, twelve release/debug bundles and exact native equivalence pass. Remote CI is blocked by account billing; broader native/platform verification remains pending. CodeRabbit follow-up preserves incomplete sample conversions for retry, prevents automatic embedding outside loaded project folders, and bounds serialized state size."
+      "notes": "The runtime replacement and hosted parity PLG-017…020, PLG-022 and PLG-024…029 are implemented. Local suites, strict lints, twelve release/debug bundles and exact native equivalence pass. Remote CI is blocked by account billing; broader native/platform verification remains pending. CodeRabbit follow-up preserves incomplete sample conversions for retry, prevents automatic embedding outside loaded project folders, and bounds serialized state size. Failed decodes are cached by source path, size and modification time; CLI FLP import applies the same external-source opt-in."
     },
     {
       "id": "PLG-014",
