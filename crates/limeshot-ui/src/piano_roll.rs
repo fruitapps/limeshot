@@ -7,7 +7,7 @@
 //! * Ctrl/Cmd+drag: rectangle selection; Ctrl/Cmd+click a note: toggle it in the selection,
 //! * Alt while dragging: no snapping,
 //! * wheel: scroll vertically, Shift+wheel: horizontally, Cmd+wheel: zoom time,
-//! * keyboard on the left: click to audition; the lower lane edits velocity.
+//! * keyboard on the left: click to audition; the lower lane edits velocity or pan.
 //!
 //! Other tools (FL Studio's tool strip and keys, observed in FL Studio 2026.1.1): Paint (B) lays
 //! notes of the last length end to end along a drag; Delete (D) erases; Mute (T) toggles notes'
@@ -68,7 +68,7 @@ enum Drag {
         from: Pos2,
     },
     Erase,
-    Velocity,
+    Control,
     /// Paint tool: the next note goes at `next`.
     Paint {
         next: Tick,
@@ -172,6 +172,37 @@ impl Tool {
     }
 }
 
+/// Which keys carry pitch labels in the preview keyboard.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum KeyboardLabels {
+    None,
+    All,
+    #[default]
+    Root,
+    Highlighted,
+}
+
+impl KeyboardLabels {
+    pub const ALL: [(Self, &'static str); 4] = [
+        (Self::None, "None"),
+        (Self::All, "All notes"),
+        (Self::Root, "Root notes"),
+        (Self::Highlighted, "Highlighted notes"),
+    ];
+
+    fn shows(self, key: u8, scale: Option<(u8, limeshot_core::note_tools::Scale)>, white_only: bool) -> bool {
+        if white_only && is_black(key) {
+            return false;
+        }
+        match self {
+            Self::None => false,
+            Self::All => true,
+            Self::Root => key % 12 == scale.map_or(0, |(root, _)| root % 12),
+            Self::Highlighted => scale.is_none_or(|(root, scale)| scale.contains(root, key)),
+        }
+    }
+}
+
 pub struct State {
     /// Pixels per beat.
     pub zoom_x: f32,
@@ -199,6 +230,10 @@ pub struct State {
     pub scale: Option<(u8, limeshot_core::note_tools::Scale)>,
     /// The Stamp menu's chord or scale: Draw and Paint place it instead of a single note.
     pub stamp: Option<limeshot_core::note_tools::Stamp>,
+    pub target_control: NoteProp,
+    pub keyboard_labels: KeyboardLabels,
+    pub white_key_labels_only: bool,
+    pub keep_labels_on_screen: bool,
 }
 
 impl Default for State {
@@ -225,6 +260,10 @@ impl Default for State {
             menu_button: None,
             scale: None,
             stamp: None,
+            target_control: NoteProp::Velocity,
+            keyboard_labels: KeyboardLabels::Root,
+            white_key_labels_only: false,
+            keep_labels_on_screen: false,
         }
     }
 }
@@ -280,7 +319,7 @@ pub struct Geometry {
     pub grid: Rect,
     pub ruler: Rect,
     pub keys: Rect,
-    /// The velocity lane.
+    /// The note-property lane (velocity or pan).
     pub vel: Rect,
     pub ppt: f32,
     pub key_h: f32,
@@ -531,8 +570,15 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
                 egui::StrokeKind::Inside,
             );
             if r.width() > 26.0 && view.key_h >= 11.0 {
-                painter.text(
-                    r.left_center() + vec2(3.0, 0.0),
+                painter.with_clip_rect(r.intersect(grid)).text(
+                    pos2(
+                        if app.ui.piano.keep_labels_on_screen {
+                            r.left().max(grid.left())
+                        } else {
+                            r.left()
+                        } + 3.0,
+                        r.center().y,
+                    ),
                     Align2::LEFT_CENTER,
                     key_name(n.key),
                     mono(9.0),
@@ -575,7 +621,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     ruler_ui(app, ui, &view, ruler, sig, pat_len);
     keyboard_ui(app, ui, &view, keys, cid);
     grid_input(app, ui, &view, grid, pid, cid, pattern.as_ref());
-    velocity_lane(app, ui, &view, vel, pid, cid, pattern.as_ref(), ch_color);
+    control_lane(app, ui, &view, vel, pid, cid, pattern.as_ref(), ch_color);
     scroll_input(app, ui, full, grid);
 }
 
@@ -732,15 +778,26 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
                         Stroke::new(1.0, mix(t.key_white, t.key_black, 0.35)),
                     );
                 }
-                if k % 12 == 0 {
-                    painter.text(
-                        pos2(keys.right() - 3.0, y + view.key_h / 2.0),
-                        Align2::RIGHT_CENTER,
-                        key_name(k),
-                        mono(9.0),
-                        t.key_black,
-                    );
-                }
+            }
+            if view.key_h >= 11.0
+                && app
+                    .ui
+                    .piano
+                    .keyboard_labels
+                    .shows(k, app.ui.piano.scale, app.ui.piano.white_key_labels_only)
+            {
+                let right = if pass {
+                    keys.left() + KEYS_W * 0.62
+                } else {
+                    keys.right()
+                };
+                painter.text(
+                    pos2(right - 3.0, y + view.key_h / 2.0),
+                    Align2::RIGHT_CENTER,
+                    key_name(k),
+                    mono(9.0),
+                    if pass && !pressed { t.key_white } else { t.key_black },
+                );
             }
         }
     }
@@ -1297,7 +1354,7 @@ fn grid_input(
                     }
                 }
             }
-            Some(Drag::Velocity | Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback) | None => {}
+            Some(Drag::Control | Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback) | None => {}
         }
         app.ui.piano.drag = drag;
     }
@@ -1429,7 +1486,7 @@ fn slice_at(
         .unwrap_or_default();
 }
 
-fn velocity_lane(
+fn control_lane(
     app: &mut LimeShotApp,
     ui: &mut Ui,
     view: &View,
@@ -1440,26 +1497,44 @@ fn velocity_lane(
     color: Color32,
 ) {
     let t = Theme::current();
+    let prop = app.ui.piano.target_control;
     let painter = ui.painter_at(lane);
     painter.rect_filled(lane, 0.0, t.sunken);
-    painter.text(
+    ui.painter().text(
         pos2(lane.left() - KEYS_W + 4.0, lane.top() + 2.0),
         Align2::LEFT_TOP,
-        "Velocity",
+        match prop {
+            NoteProp::Velocity => "Velocity",
+            NoteProp::Pan => "Pan",
+        },
         mono(9.5),
         t.text_dim,
     );
     let Some(p) = pattern else { return };
     let h = lane.height() - 8.0;
+    let y_of = |v: f32| lane.bottom() - 4.0 - v * h;
+    let baseline = match prop {
+        NoteProp::Velocity => lane.bottom() - 4.0,
+        NoteProp::Pan => y_of(0.5),
+    };
+    if prop == NoteProp::Pan {
+        painter.line_segment(
+            [pos2(lane.left(), baseline), pos2(lane.right(), baseline)],
+            Stroke::new(1.0, t.grid_beat),
+        );
+    }
     for n in p.notes_for(cid) {
         let x = view.x(n.start);
         if x < lane.left() - 4.0 || x > lane.right() + 4.0 {
             continue;
         }
-        let y = lane.bottom() - 4.0 - n.velocity * h;
+        let y = y_of(match prop {
+            NoteProp::Velocity => n.velocity,
+            NoteProp::Pan => (n.pan + 1.0) * 0.5,
+        });
         let sel = app.ui.piano.selection.contains(&n.id);
         let c = if sel { t.accent } else { color };
-        painter.line_segment([pos2(x + 1.0, lane.bottom()), pos2(x + 1.0, y)], Stroke::new(2.0, c));
+        painter.line_segment([pos2(x + 1.0, baseline), pos2(x + 1.0, y)], Stroke::new(2.0, c));
         painter.circle_filled(pos2(x + 1.0, y), 3.0, c);
     }
     let resp = ui.interact(lane, ui.id().with("pr_vel"), Sense::click_and_drag());
@@ -1468,7 +1543,7 @@ fn velocity_lane(
     {
         if resp.drag_started() || ui.input(|i| i.pointer.any_pressed()) {
             app.doc.begin_gesture();
-            app.ui.piano.drag = Some(Drag::Velocity);
+            app.ui.piano.drag = Some(Drag::Control);
         }
         let v = ((lane.bottom() - 4.0 - pos.y) / h).clamp(0.0, 1.0);
         // The note whose stem is closest to the pointer (within 8 px).
@@ -1484,16 +1559,32 @@ fn velocity_lane(
             } else {
                 vec![id]
             };
-            app.exec(Command::SetNoteVelocity {
-                pattern: pid,
-                notes: ids,
-                velocity: v,
-            });
-            app.ui.piano.last_vel = v;
+            // Selection may outlive a channel switch; never edit another channel's notes.
+            let ids: Vec<_> = p.notes_for(cid).filter(|n| ids.contains(&n.id)).map(|n| n.id).collect();
+            match prop {
+                NoteProp::Velocity => {
+                    app.exec(Command::SetNoteVelocity {
+                        pattern: pid,
+                        notes: ids,
+                        velocity: v,
+                    });
+                    app.ui.piano.last_vel = v;
+                }
+                NoteProp::Pan => {
+                    app.exec(Command::SetNoteValues {
+                        pattern: pid,
+                        prop,
+                        values: ids.into_iter().map(|id| (id, v * 2.0 - 1.0)).collect(),
+                    });
+                }
+            }
         }
     }
     if resp.hovered() {
-        app.hint("Velocity: click or drag a stem (applies to the selection when the note is selected)");
+        app.hint(match prop {
+            NoteProp::Velocity => "Velocity: click or drag a stem (applies to the selection when the note is selected)",
+            NoteProp::Pan => "Pan: top = right, centre = balanced, bottom = left; click or drag a stem to edit",
+        });
     }
 }
 
@@ -1757,6 +1848,33 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         if key(ctx, Modifiers::NONE, k) {
             app.ui.piano.scroll.x = (app.ui.piano.scroll.x + dx).max(0.0);
             app.ui.piano.scroll.y = (app.ui.piano.scroll.y + dy).max(0.0);
+        }
+    }
+}
+
+#[cfg(test)]
+mod view_tests {
+    use super::KeyboardLabels;
+    use limeshot_core::note_tools::Scale;
+
+    #[test]
+    fn keyboard_labels_follow_scale_root_and_white_key_filter() {
+        for key in 0..=127 {
+            assert!(!KeyboardLabels::None.shows(key, None, false));
+            assert!(KeyboardLabels::All.shows(key, None, false));
+            assert_eq!(KeyboardLabels::Root.shows(key, None, false), key % 12 == 0);
+            assert!(KeyboardLabels::Highlighted.shows(key, None, false));
+            let scale = Some((1, Scale::Major));
+            assert_eq!(KeyboardLabels::Root.shows(key, scale, false), key % 12 == 1);
+            assert_eq!(
+                KeyboardLabels::Highlighted.shows(key, scale, false),
+                Scale::Major.contains(1, key)
+            );
+            for mode in [KeyboardLabels::All, KeyboardLabels::Root, KeyboardLabels::Highlighted] {
+                if super::is_black(key) {
+                    assert!(!mode.shows(key, scale, true));
+                }
+            }
         }
     }
 }

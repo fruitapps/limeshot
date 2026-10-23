@@ -146,6 +146,24 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui) {
     ui.menu_button("Stamp", |ui| stamp_menu(app, ui));
     ui.menu_button("View", |ui| {
         ui.menu_button("Scale highlighting", |ui| scale_menu(app, ui));
+        ui.menu_button("Keyboard labels", |ui| {
+            for (mode, label) in crate::piano_roll::KeyboardLabels::ALL {
+                if ui.radio_value(&mut app.ui.piano.keyboard_labels, mode, label).clicked() {
+                    ui.close();
+                }
+            }
+            ui.separator();
+            ui.checkbox(&mut app.ui.piano.white_key_labels_only, "White notes only");
+        });
+        ui.checkbox(&mut app.ui.piano.keep_labels_on_screen, "Keep labels on screen");
+    });
+    ui.menu_button("Target control", |ui| {
+        for (prop, label) in [(NoteProp::Velocity, "Note velocity"), (NoteProp::Pan, "Note pan")] {
+            if ui.radio_value(&mut app.ui.piano.target_control, prop, label).clicked() {
+                app.doc.end_gesture();
+                ui.close();
+            }
+        }
     });
     if ui.add(Button::new("Center").shortcut_text(key("Shift+0"))).clicked() {
         ui.close();

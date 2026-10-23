@@ -1271,3 +1271,34 @@ GitHub Actions remains billing-blocked; pluginval unavailable; broader native/pl
 Future sessions must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR based on
 the latest unmerged continuation. Leave older checkouts intact; never merge automatically. Create another session
 only when the owner asks.
+
+
+### 2026-10-23 — Piano Roll Target control and label views
+
+Started a NEW managed worktree `editor-view-options/limeshot` and NEW branch `codex/editor-view-options` from
+`68259aa` on `origin/claude/s16-synth-tempo`. PRs #8/#9 had merged into still-open #7; this session's NEW draft PR
+stacks on #7. The primary checkout, previously attached research worktree and older continuations remain intact.
+
+Read the latest handoff, feature dependencies, architectures and decisions. Researched Image-Line's public Piano
+Roll manuals and recorded evidence plus unmeasured fallback choices in
+[piano-roll-view-controls.md](../research/piano-roll-view-controls.md). No FL code, bundle artwork or disassembly
+was used. Implemented Target control › Note velocity / Note pan using existing commands and note data, a central
+pan baseline and channel-filtered selection edits. Pan changes are one undo step per drag, round-trip through
+.lime and preserve velocity. PR-016 remains IN_PROGRESS for its other properties.
+
+Added View › Keyboard labels (None, All, Root, Highlighted, White notes only) and Keep labels on screen. Scale
+changes drive labels, black-key names fit inside the short keys and zoomed-out keys hide text. Note names stay
+inside visible note bodies when scrolled. These are session-local UI choices; PR-030 tracks the implemented subset.
+Fixed the previously clipped lower-lane caption during offscreen inspection. Updated architecture, canonical
+features/menus, generated inventories and known limitations together.
+
+Validation: 378 workspace tests including 138 headless UI tests; all-target workspace build and strict Clippy,
+rustfmt, 291-feature/737-menu inventories, repository references and diff checks pass. Reused the prior hosted-parity
+build cache and its twelve existing native bundles via `LIMESHOT_LIME_PLUGINS`; this session changes no DSP/plugin
+binaries. Offscreen pan/keyboard-label menu renders were inspected. Live native/audio checks remain deferred;
+PLG-006 stays IMPLEMENTED. Current #7 CI run `39924174258` (`68259aa`) has no executed steps: GitHub annotations
+confirm failed account payments/spending limit, so no current remote CI pass is claimed.
+
+Every future development session must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR based on the latest unmerged continuation. Repeat this policy in handoffs even before these docs merge.
+Leave earlier checkouts intact; never merge automatically; create further sessions only when the owner asks.

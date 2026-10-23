@@ -1,6 +1,6 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-23, hosted P0 parity session. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-23, Piano Roll controls session. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -15,7 +15,7 @@ Repeat this policy in every future session handoff before these docs merge. Do n
 The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
 Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
-Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. Review the new stacked draft PR and
+Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8 and #9 merged into still-open #7;
 repeat hands-on native/platform checks; actual evidence and remaining limits are in [the current handoff](handoff-hosted-p0-parity.md).
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
@@ -31,7 +31,9 @@ The plan, the current architecture and the list of lost capabilities are in
 2. **Platform CI (PF-002…PF-005).** Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64
    cross-build and Apple Silicon checks pass at the commits recorded in [platform-validation.md](platform-validation.md).
    The `macos-15-intel` replacement has now passed too (full run `39826217710`, commit `38d9a7b`). Check
-   the latest PR commit and fix actual failures. Native GUI/audio-device validation stays separate from headless CI.
+   the latest PR commit and fix actual failures. Current run `39924174258` at `68259aa` never started its jobs:
+   GitHub annotations report account billing/spending limits. No current platform CI pass is claimed.
+   Native GUI/audio-device validation stays separate from headless CI.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
    compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
    embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.
@@ -45,7 +47,9 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
 ## Next implementation work
 
 1. **Finish editor/context menus from the FL inventories.** Main menus, settings pages, toolbar menus and the core
-   editor menus are in. Remaining work includes editor View options, Piano Roll Time markers / Target control /
+   editor menus are in. Piano Roll now has velocity/pan Target control and keyboard-label/visible-note-label View options
+   ([research and limits](../research/piano-roll-view-controls.md)). Remaining work includes other editor View options,
+   Piano Roll Time markers / further Target control properties /
    Group, Riff machine and chord progressions, Claw machine, Playlist picker options and performance mode, Mixer
    groups/docking/multiselection, and Channel Rack display options (manual Zip / Unzip and Auto zip empty channels are complete). Playlist track modes, grouping,
    icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
@@ -69,3 +73,16 @@ before synthetic live input. Outstanding observations include Alt+wheel vertical
 interaction, FL's STEP/SLIDE automation options, and bindings marked INFERRED. Maintain `menus.json`,
 `keybindings.json` and `settings.json` with code, then regenerate their Markdown views. Historical session notes
 remain evidence of what was tested at that time, not a promise that later changes were manually reverified.
+
+
+## Latest continuation: Piano Roll controls
+
+`codex/editor-view-options` starts at `68259aa`, the latest unmerged #7 continuation after #8/#9 merged.
+Pan editing and the implemented View subset have headless interaction coverage and offscreen review. PR-016 stays
+IN_PROGRESS for release/Mod X/Y/fine pitch; PR-030 records the label subset. Latest local checks: 378 workspace tests
+(138 headless UI), strict all-target Clippy/build, rustfmt and inventories/reference checks. Use the current research
+notes for fallback choices and unverified FL details; PLG-006's live verification is still pending.
+
+Every future session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR,
+stacked on the latest unmerged continuation after checking merge state. Leave older checkouts intact, never merge
+automatically, and create further sessions only when the owner asks.

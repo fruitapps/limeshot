@@ -77,6 +77,11 @@ Right-click channel/mixer volume or pan for Reset, Copy/Paste value,
 Type in value… and Create automation clip. The value clipboard holds normalised control position independently
 of notes/clips. Type-in uses the control's units and commits once on OK; invalid input and Cancel do not edit.
 
+Piano Roll › Target control selects velocity or pan in the lower lane. Pan stems extend from a central zero line;
+selected-note edits are restricted to the current channel. Both properties use Document commands and merge one drag
+into one undo step. View › Keyboard labels follows scale highlighting with a separate white-key restriction;
+Keep labels on screen anchors clipped note names to their visible left edge. These are session-local UI state.
+
 Continuous gestures call `Document::begin_gesture` on drag start and `end_gesture` on release, so a drag is one undo step.
 
 Options › Auto scrolling and the toolbar arrow share `settings.auto_scroll` (off by default). When enabled,
