@@ -256,7 +256,7 @@ The live macOS pass also exposed lost host OpenGL context after a plugin rendere
 owns a context guard restored around the main viewport UI; its live rendering/tab checks are recorded separately.
 CLI save/import/play paths convert before use, and plugin load/state failures surface as app errors and export failures.
 
-### D39 completion — remove runtime built-ins (2026-10-23)
+### D39 completion — remove runtime built-ins (2026-10-23, historical pre-parity state)
 
 The sequencer emits Plugin/Silent instrument states; the renderer no longer creates synth/sampler voices. Effect
 factories and automatic offline/CLI/UI adoption are removed, as is the independent Mixer track EQ. Voice DSP moved

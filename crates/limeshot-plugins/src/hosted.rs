@@ -129,18 +129,23 @@ impl PluginInstance {
 }
 
 impl PluginProcessor {
+    /// Select a routed mixer key; zero selects the main input.
     pub fn set_sidechain_source(&mut self, source: usize) {
         each!(self,p => p.set_sidechain_source(source));
     }
+    /// Selected mixer key source; zero means the processor main input.
     pub fn sidechain_source(&self) -> usize {
         each!(self,p => p.sidechain_source())
     }
+    /// Whether the instrument implements the native additive balance protocol.
     pub fn uses_channel_pan(&self) -> bool {
         each!(self,p => p.uses_channel_pan())
     }
+    /// Copy completed block statistics without retaining borrowed event pointers.
     pub fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
         each!(self,p => p.telemetry())
     }
+    /// Process stereo audio with timestamped events, transport and optional detector input.
     pub fn process_with_sidechain(&mut self, buf: &mut [f32], notes: &[NoteEvent], t: &Transport, key: Option<&[f32]>) {
         each!(self,p => p.process_with_sidechain(buf,notes,t,key));
     }
@@ -162,12 +167,15 @@ impl PluginProcessor {
 }
 
 impl limeshot_dsp::effects::Effect for PluginProcessor {
+    /// Selected mixer key source; zero means the processor main input.
     fn sidechain_source(&self) -> usize {
         self.sidechain_source()
     }
+    /// Maximum dynamics reduction from the preceding block, in dB.
     fn gain_reduction_db(&self) -> f32 {
         self.telemetry().reduction_db
     }
+    /// Use separate detector audio without mixing the key into the audible output.
     fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
         each!(self,p => limeshot_dsp::effects::Effect::process_sidechain(p,buf,key));
     }
@@ -190,9 +198,11 @@ impl limeshot_dsp::effects::Effect for PluginProcessor {
 }
 
 impl limeshot_dsp::Instrument for PluginProcessor {
+    /// Whether the instrument implements the native additive balance protocol.
     fn uses_channel_pan(&self) -> bool {
         self.uses_channel_pan()
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     fn active_voices(&self) -> usize {
         self.telemetry().voices as usize
     }

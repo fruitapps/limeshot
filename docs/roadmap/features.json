@@ -2544,9 +2544,9 @@
       "name": "Audio clips",
       "description": "Place audio on the timeline.",
       "fl_reference": "Audio clips with fades, gain, stretch.",
-      "limeshot_behavior": "Audio clips reference an audio-clip channel (a sampler channel, as in FL Studio), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
+      "limeshot_behavior": "Audio clips reference an audio-clip channel (a Lime Sampler channel; FL Studio uses a distinct Audio Clip generator), so its volume, pan, sampler settings and mixer track apply. The clip plays its sample from its offset for its length (sample-accurate, ends with the sampler's declick release); starting playback inside a clip starts the audio part-way. Waveform overview in the clip; double-click opens the channel settings; ▾ menu: channel settings, mute, fit to sample length, duplicate, delete.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "INS-001"
@@ -2562,11 +2562,12 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::hosted_audio_clips_are_silent_until_offset_and_gate_support_exists",
-        "limeshot-engine tests/audio.rs::seeking_hosted_audio_clips_has_no_builtin_fallback",
         "limeshot-core document::tests::audio_clips_reuse_their_channel_and_follow_it",
         "limeshot-core document::tests::sanitize_drops_audio_clips_without_a_channel",
-        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge"
+        "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_sampler_clips_offset_chase_overlap_gate_and_fade",
+        "limeshot-engine tests/audio.rs::hosted_audio_clips_play_their_source_window",
+        "limeshot-engine tests/audio.rs::seeking_hosted_audio_clips_chases_the_source"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2575,7 +2576,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-024. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-024). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "PL-015",
@@ -3179,7 +3180,7 @@
       "fl_reference": "Sidechain to this track.",
       "limeshot_behavior": "FL Studio's route menu on each strip's route button (right-click): Route to this track (only), Sidechain to this track (only). A sidechain is a route at level 0: no audio is mixed in, but Lime Comp on the destination can pick it as its Sidechain input and its detector then follows that track's post-fader signal. The compressor card shows a gain-reduction meter fed by the audio thread through Status atomics.",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "MIX-008",
@@ -3198,7 +3199,10 @@
       "tests": [
         "limeshot-engine audio.rs sidechained_compressor_ducks_on_the_key_track",
         "ui.rs mixer_sidechain_route_menu_and_compressor_input",
-        "limeshot-app tests/ui.rs::mixer_output_menu_has_route_and_sidechain_entries"
+        "limeshot-app tests/ui.rs::mixer_output_menu_has_route_and_sidechain_entries",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices",
+        "crates/limeshot-plugins/tests/bridge.rs::native_bridge_preserves_pan_key_audio_and_telemetry",
+        "crates/limeshot-app/tests/ui.rs::mixer_sidechain_route_menu_and_compressor_input"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3209,17 +3213,17 @@
           "docs/research/evidence/screenshots/fl-mixer-sidechain.png"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-020. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-020). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "MIX-010",
       "category": "Mixer",
-      "name": "Built-in 3-band EQ",
+      "name": "Mixer 3-band EQ",
       "description": "Track EQ.",
       "fl_reference": "Track properties EQ.",
-      "limeshot_behavior": "Legacy EQ bands are saved unchanged but inactive; the inline panel is disabled. Add a Lime EQ insert for new processing. Exact legacy conversion is P0 PLG-029.",
+      "limeshot_behavior": "The inline Mixer three-band EQ drives a dedicated hosted Lime EQ after ten insert slots and before the fader. Saved EqBand frequency, gain and width remain canonical; appended hidden controls preserve every legal legacy response exactly. Edits use SetMixerEq and undo.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -3238,7 +3242,9 @@
         "limeshot-dsp effects::tests::track_eq_bands_shape_the_response",
         "limeshot-core model::tests::track_eq_is_saved_only_when_changed",
         "limeshot-engine audio.rs legacy_track_eq_is_not_an_in_process_effect",
-        "ui.rs legacy_mixer_eq_is_visible_but_disabled"
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_track_eq_preserves_every_legacy_band_parameter",
+        "crates/limeshot-app/tests/ui.rs::mixer_eq_edits_hosted_state_and_undoes",
+        "limeshot-core lime::tests::track_eq_keeps_ten_inserts_and_sanitizes_without_duplication"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3248,7 +3254,7 @@
           "docs/research/evidence/screenshots/fl-mixer-eq.png"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-029. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-029). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "MIX-011",
@@ -3570,7 +3576,7 @@
       "name": "Polyphony and voice stealing",
       "description": "Many simultaneous notes.",
       "fl_reference": "Polyphony settings per channel.",
-      "limeshot_behavior": "Each Lime instrument has 128 preallocated voices and steals its oldest voice. The host preview/metronome pool is separate; hosted voices are not included in the host statistic (PLG-028).",
+      "limeshot_behavior": "Each Lime instrument has 128 preallocated voices and steals its oldest voice. The transport statistic sums actual native active voices, including releases/auditions, and host preview/metronome voices. Third-party plugins without Lime telemetry contribute zero (PLG-028).",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -3583,7 +3589,9 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "native-plugins/shared/src/processor.rs::tests::instruments_keep_128_voices_and_steal_the_oldest"
+        "native-plugins/shared/src/processor.rs::tests::instruments_keep_128_voices_and_steal_the_oldest",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices",
+        "crates/limeshot-plugins/tests/bridge.rs::native_bridge_preserves_pan_key_audio_and_telemetry"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3630,7 +3638,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "No high-pass/band-pass modes or key tracking yet; the LFO is free-running per voice (starts at phase 0 on each note). D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "LimeSynth supports low-, band- and high-pass modes and key tracking (INS-013). Its LFO restarts per voice. D39: audible instruments are hosted Lime VST3s; engine DSP tests use test-only reference processors."
     },
     {
       "id": "INS-007",
@@ -3859,7 +3867,7 @@
       "fl_reference": "Fruity Parametric EQ 2",
       "limeshot_behavior": "Lime EQ: low shelf, peaking mid (Q), high shelf (RBJ biquads).",
       "priority": "P1",
-      "status": "VERIFIED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -3882,7 +3890,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Three bands only; no graphical EQ curve yet. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Hosted Lime EQ processing and response-curve rendering are implemented. DSP response tests and offscreen native screenshots exist; hands-on response-node dragging across native/platform hosts remains unverified."
     },
     {
       "id": "FX-003",
@@ -3948,7 +3956,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No sidechain input, no knee or lookahead, no gain-reduction meter in the UI. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Hosted Lime Comp accepts a routed stereo key and reports gain reduction to the Mixer (MIX-009, PLG-020/027). No knee or lookahead. D39: active inserts are hosted VST3s."
     },
     {
       "id": "FX-005",
@@ -3991,7 +3999,7 @@
       "fl_reference": "Fruity Limiter gate mode",
       "limeshot_behavior": "Lime Gate: opens when the level passes the threshold, stays open for the hold time, then releases to the range floor (−80 dB shuts completely); attack and release are time constants. Factory presets Tight drums and Hiss cut.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4008,7 +4016,9 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::gate_passes_loud_sound_and_closes_after_hold_and_release",
-        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works",
+        "native-plugins/shared/src/processor.rs::tests::exported_effects_share_the_daw_dsp_at_variable_block_sizes",
+        "limeshot-core lime::tests::legacy_effects_and_track_eq_convert_without_losing_settings"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4018,7 +4028,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-017. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-017). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "FX-007",
@@ -4080,7 +4090,9 @@
         "limeshot-dsp effects::tests::delay_echoes_after_the_delay_time",
         "limeshot-engine tests/audio.rs::insert_effects_process_the_track_and_extend_the_tail",
         "limeshot-core effects::tests::a_synced_delay_takes_its_time_from_the_tempo",
-        "limeshot-sequencer tests::a_tempo_synced_delay_gets_its_time_from_the_tempo"
+        "limeshot-sequencer tests::a_tempo_synced_delay_gets_its_time_from_the_tempo",
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
+        "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4090,7 +4102,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No tempo sync yet. Session 16 (next-steps Then 7): tempo sync, resolved when the mix is compiled; automating Time while synced has no effect, and the time is capped at 2 s. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Hosted Lime Delay resolves tempo sync from block-start transport, including Song tempo automation. Manual Time is ignored while synced; delay time is capped at 2 seconds. D39: no runtime built-in delay factory remains."
     },
     {
       "id": "FX-009",
@@ -4100,7 +4112,7 @@
       "fl_reference": "Fruity Blood Overdrive, Fast Dist, WaveShaper",
       "limeshot_behavior": "Lime Drive: drive (0–36 dB) into a soft clip (tanh), hard clip or wave folder, a tone low-pass, dry/wet mix and output level. Factory presets Warm tape, Fuzz, Folder.",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4117,7 +4129,9 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::drive_saturates_hard_clips_and_folds",
-        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works",
+        "native-plugins/shared/src/processor.rs::tests::exported_effects_share_the_daw_dsp_at_variable_block_sizes",
+        "limeshot-core lime::tests::legacy_effects_and_track_eq_convert_without_losing_settings"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4127,7 +4141,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-018. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-018). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "FX-010",
@@ -4137,7 +4151,7 @@
       "fl_reference": "Fruity Chorus, Flanger, Phaser, Vintage Chorus",
       "limeshot_behavior": "Lime Chorus with three modes: Chorus (a delay swept around 15 ms), Flanger (around 2 ms, with feedback) and Phaser (six all-passes swept 200 Hz–4 kHz, with feedback); rate, depth, feedback, stereo spread (the right side's LFO offset) and mix. Factory presets Wide chorus, Jet flanger, Slow phaser.",
       "priority": "P2",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "FX-001"
@@ -4154,7 +4168,9 @@
       ],
       "tests": [
         "limeshot-dsp effects::tests::chorus_flanger_and_phaser_modulate_and_stay_bounded",
-        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works"
+        "limeshot-engine tests/audio.rs::reference_dsp_effects_are_finite_and_gate_threshold_works",
+        "native-plugins/shared/src/processor.rs::tests::exported_effects_share_the_daw_dsp_at_variable_block_sizes",
+        "limeshot-core lime::tests::legacy_effects_and_track_eq_convert_without_losing_settings"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4164,7 +4180,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 replacement: host playback is unavailable for this capability; see PLG-019. Shared DSP/model tests are reference coverage, not active VST3 integration evidence."
+      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-019). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
     },
     {
       "id": "FX-011",
@@ -4263,7 +4279,7 @@
       "name": "Effect presets",
       "description": "Effect presets.",
       "fl_reference": ".fst presets",
-      "limeshot_behavior": "Each built-in effect's card has a Presets menu: LimeShot's factory presets (2–3 per effect), then the user's own (.limepreset files in the settings folder's presets/<Effect>/), and Save preset as…. Loading is one undo step (Command::SetEffectParams).",
+      "limeshot_behavior": "Hosted Lime effect cards offer factory and user .limepreset menus and Save preset as…. Legacy preset values are translated into Lime plugin state; loading is one undoable SetPluginState edit.",
       "priority": "P2",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -4282,7 +4298,9 @@
       "tests": [
         "limeshot-project preset::tests::factory_presets_are_valid_for_their_slot",
         "limeshot-project preset::tests::saved_presets_list_after_the_factory_ones_and_load_back",
-        "crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save"
+        "crates/limeshot-app/tests/ui.rs::effect_and_instrument_presets_load_and_save",
+        "crates/limeshot-core/tests/plugins.rs::effect_presets_preserve_hosted_bypass_key_and_fields",
+        "crates/limeshot-app/tests/ui.rs::effect_presets_preserve_live_bypass_and_undo_to_the_live_state"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4578,7 +4596,8 @@
       ],
       "tests": [
         "limeshot-engine tests/audio.rs::tempo_automation_changes_the_song_length",
-        "crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip"
+        "crates/limeshot-app/tests/ui.rs::the_tempo_field_creates_a_tempo_automation_clip",
+        "crates/limeshot-engine/tests/plugins.rs::tempo_ramps_preserve_each_tick_once_and_the_integrated_song_length"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5334,7 +5353,8 @@
         "crates/limeshot-plugins/tests/host.rs::state_round_trips_into_a_new_instance",
         "crates/limeshot-core/tests/plugins.rs::plugin_channels_and_effects_survive_json_and_sanitize",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_ref_round_trips_through_json",
-        "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens"
+        "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens",
+        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5835,7 +5855,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span"
+        "limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span",
+        "crates/limeshot-engine/tests/audio.rs::exporting_a_selection_past_the_song_end_is_bounded"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7102,7 +7123,7 @@
       "name": "Control context menu",
       "description": "Right-click menu on knobs, faders and sliders.",
       "fl_reference": "Observed: right-click a knob › Reset, Edit events, Init song with this position, Create automation clip, Link to controller, Copy value, Paste value, Type in value…, Set….",
-      "limeshot_behavior": "Right-click channel/mixer volume and pan or built-in effect parameters for Reset, Copy value, Paste value, Type in value… and Create automation clip. Copy/paste transfers normalised control position using the automation mapping; the value clipboard is separate from notes/clips. Type in uses percentages for channel volume/pan and mixer pan, dB for mixer gain (-inf for silence), and effect units. Edits commit through Commands and undo once; cancel and invalid input leave the project unchanged.",
+      "limeshot_behavior": "Right-click channel/mixer volume and pan or known hosted Lime instrument/effect parameters for Reset, Copy value, Paste value, Type in value… and Create automation clip. Copy/paste transfers normalised control position using the automation mapping; the value clipboard is separate from notes/clips. Type in uses percentages for channel volume/pan and mixer pan, dB for mixer gain (-inf for silence), and effect units. Edits commit through Commands and undo once; cancel and invalid input leave the project unchanged.",
       "priority": "P1",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -7117,7 +7138,10 @@
       "tests": [
         "limeshot-app tests/ui.rs::control_menus_copy_paste_reset_and_undo",
         "limeshot-app tests/ui.rs::control_value_dialog_validates_commits_once_and_cancels",
-        "limeshot-ui automation_ui::tests::typed_values_use_control_units_and_reject_invalid_or_deleted_targets"
+        "limeshot-ui automation_ui::tests::typed_values_use_control_units_and_reject_invalid_or_deleted_targets",
+        "limeshot-ui automation_ui::tests::hosted_lime_typed_values_use_units_and_undo",
+        "crates/limeshot-app/tests/ui.rs::sampler_envelope_controls_reset_and_undo",
+        "crates/limeshot-app/tests/ui.rs::hosted_parameter_menu_types_native_units_and_undoes"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7126,7 +7150,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "Observed 2026-10-20 (session 4) on a Channel Rack pan knob. Codex continuation 2026-10-22: basic value actions implemented; cross-control paste follows LimeShot automation mappings, not a measured FL conversion. Event editing, Init song, Link to controller, and host value menus for instrument/plugin parameters remain open."
+      "notes": "Basic value actions also cover known Lime hosted controls (PLG-026). Cross-control paste uses LimeShot automation mappings. Third-party controls keep the generic automation menu. Edit events, Init song and controller linking remain open."
     },
     {
       "id": "AUT-010",
@@ -7225,7 +7249,7 @@
       "name": "Automated controls follow their automation",
       "description": "Knobs and faders move during playback.",
       "fl_reference": "Automated controls display the automated value while the song plays.",
-      "limeshot_behavior": "While the song plays, automated channel volume/pan knobs, mixer faders, pan knobs and track panel sliders and built-in effect parameters show the automation's current value (LimeShotApp::automated reads the playback snapshot's lanes at the song position); stopped, they show their own setting. Dragging an automated control still edits the stored value.",
+      "limeshot_behavior": "During Song playback, automated channel volume/pan, Mixer gain/pan and track controls show the current automation value. Hosted plugin parameters use the plugin editor for live feedback; the generic host panel shows stored values. Dragging supported host controls edits the stored value.",
       "priority": "P2",
       "status": "VERIFIED",
       "mvp": false,
@@ -7247,7 +7271,7 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": "Session 16 (next-steps Then 8). Plugin parameters are not shown moving (their editors show the plugin's own values)."
+      "notes": "Host feedback covers channel/mixer controls. Historical built-in effect panels were removed by D39; hosted plugin editors display their own automated values."
     },
     {
       "id": "PL-027",
@@ -7497,7 +7521,8 @@
       "tests": [
         "limeshot-dsp filter::tests::high_and_band_pass_outputs",
         "limeshot-engine tests/audio.rs::synth_filter_modes_and_key_tracking",
-        "native-plugins/shared/src/processor.rs::tests::synth_filter_type_and_key_tracking_reach_the_voice"
+        "native-plugins/shared/src/processor.rs::tests::synth_filter_type_and_key_tracking_reach_the_voice",
+        "native-plugins/shared/src/processor.rs::tests::key_tracking_alone_activates_the_open_synth_filter"
       ],
       "reference": {
         "application": "FL Studio",
@@ -8327,7 +8352,7 @@
       "name": "Lime Native standalone VST3 suite",
       "description": "Package LimeShot instruments and built-in effects as independent VST3 plugins usable in any VST3-compatible DAW.",
       "fl_reference": "Owner request (2026-10-22): native Lime instruments/effects as standalone VST plugins with Lime-themed native editors; independent of FL Studio code and assets.",
-      "limeshot_behavior": "Separate native-plugins/ workspace exports LimeSynth, Lime Sampler, Lime Utility, Lime EQ, Lime Filter, Lime Delay, Lime Room, Lime Comp and Lime Limiter. Self-contained VST3 bundles link the existing DSP, expose host automation/state/bypass and embedded resizable Lime-themed editors. Instruments support 64 voices, timestamped notes, sustain and pitch bend; Sampler embeds WAV audio in state; Comp accepts a stereo external key; Delay follows host tempo. Factory and .limepreset presets reuse the DAW implementation. Build collects bundles in native-plugins/dist/ without installing them. Editors have distinct FL-manual-inspired layouts with modern LimeShot Lime Dark styling. Sampler waveform/keyboard audition and trim handles, draggable three-band EQ response and live limiter level/reduction history use real parameters/audio.",
+      "limeshot_behavior": "Separate native-plugins/ workspace exports LimeSynth, Lime Sampler, Lime Utility, Lime EQ, Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter, Lime Gate, Lime Drive and Lime Chorus. Self-contained VST3 bundles link the existing DSP, expose host automation/state/bypass and embedded resizable Lime-themed editors. Instruments support 128 voices, timestamped notes, sustain and pitch bend; Sampler embeds WAV audio in state; Comp accepts a stereo external key; Delay follows host tempo. Factory and .limepreset presets reuse the DAW implementation. Build collects bundles in native-plugins/dist/ without installing them. Editors have distinct FL-manual-inspired layouts with modern LimeShot Lime Dark styling. Sampler waveform/keyboard audition and trim handles, draggable three-band EQ response and live limiter level/reduction history use real parameters/audio.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8368,7 +8393,11 @@
         "native-plugins/shared/src/editor.rs::interaction_tests::waveform_and_keyboard_send_audition_and_release_requests",
         "native-plugins/shared/examples/verify.rs",
         "native-plugins/shared/examples/ui_shot.rs",
-        "native-plugins/VALIDATION.md"
+        "native-plugins/VALIDATION.md",
+        "crates/limeshot-core/tests/plugins.rs::a_converted_disabled_effect_can_be_enabled",
+        "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport",
+        "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8378,7 +8407,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "macOS Apple Silicon: nine release bundles built, actual VST3 ABI audio/state/automation/editor creation checked at 44.1/48/96 kHz and buffers 1/64/333/1024; independent pluginval 1.0.4 level 5 passes all nine, including Editor and Editor Automation. Debug exported-binary verification also passes with realtime allocation assertions enabled. Offscreen editors rendered and inspected. Final GUI-validator results recorded in native-plugins/VALIDATION.md. Hands-on DAW/editor interaction remains pending (development Mac locked); Windows/Linux/Intel runtime validation pending. Separate CI builds native bundles for macOS/Windows/Linux. Source uses nice-plug 0.4.2 with permissively licensed vst3 0.3 bindings. UI revision: 11 native tests cover default/minimum editor geometry and sampler UI/audio audition at multiple block sizes; all nine modern editors visually inspected. INS-013 integration: LimeSynth gained Filter type and Key track (parameters 16–17, appended so existing IDs and saved states stay valid); Lime Sampler now fills the DAW's sampler envelope fields as a gate, fixing the native build on main. Not re-run through the exported-binary verifier or pluginval since. The suite now contains twelve bundles; Gate/Drive/Chorus use appended IDs 9–11. Current validation is in docs/development/handoff-hosted-p0-parity.md."
+      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open."
     },
     {
       "id": "WF-009",
@@ -8799,7 +8828,18 @@
         "native-plugins/shared/src/processor.rs::tests::sampler_takes_up_a_sample_loaded_while_active",
         "crates/limeshot-engine/tests/audio.rs",
         "crates/limeshot-app/tests/mvp_workflow.rs",
-        "limeshot-project tests::version_one_loads_and_saves_as_two_without_losing_legacy_or_unknown_data"
+        "limeshot-project tests::version_one_loads_and_saves_as_two_without_losing_legacy_or_unknown_data",
+        "crates/limeshot-core/tests/plugins.rs::a_converted_disabled_effect_can_be_enabled",
+        "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport",
+        "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
+        "crates/limeshot-core/tests/plugins.rs::conversion_rejects_audio_outside_the_native_sampler_limits_with_a_warning",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::project_open_requires_explicit_selection_before_embedding_external_audio",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::missing_sample_conversion_keeps_a_retry_route_across_save_and_reopen",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::project_sample_symlinks_cannot_embed_files_outside_the_project",
+        "crates/limeshot-app/tests/cli.rs::external_sample_embedding_requires_explicit_cli_opt_in",
+        "crates/limeshot-app/tests/ui.rs::missing_sample_error_can_reload_after_its_in_project_source_is_restored",
+        "crates/limeshot-ui/src/lime.rs::migration_tests::unrelated_edits_do_not_decode_unchanged_failed_sources",
+        "crates/limeshot-app/tests/cli.rs::flp_external_samples_require_opt_in_while_local_samples_still_embed"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8808,7 +8848,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Replacement complete locally. P0 losses PLG-017…020, PLG-022 and PLG-024…029 remain separate work. Local suites, strict lints, release bundles and exact equivalence pass; remote CI blocked by account billing, broader native/platform verification remains pending. P0 losses PLG-017…020, PLG-022 and PLG-024…029 are restored in the following hosted-parity session."
+      "notes": "The runtime replacement and hosted parity PLG-017…020, PLG-022 and PLG-024…029 are implemented. Local suites, strict lints, twelve release/debug bundles and exact native equivalence pass. Remote CI is blocked by account billing; broader native/platform verification remains pending. CodeRabbit follow-up preserves incomplete sample conversions for retry, prevents automatic embedding outside loaded project folders, and bounds serialized state size. Failed decodes are cached by source path, size and modification time; CLI FLP import applies the same external-source opt-in."
     },
     {
       "id": "PLG-014",
@@ -8868,7 +8908,8 @@
       "tests": [
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
         "limeshot-core lime::tests::converts_built_in_instruments_and_effects",
-        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes"
+        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes",
+        "native-plugins/shared/src/processor.rs::tests::held_sampler_notes_follow_loop_and_filter_edits"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8877,7 +8918,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform."
+      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. PR #7 review fix: loop enable/range edits update held voices without retriggering."
     },
     {
       "id": "PLG-016",
@@ -8885,7 +8926,7 @@
       "name": "Lime Sampler filter",
       "description": "The former built-in sampler's low-pass filter (cutoff, resonance) in Lime Sampler (INS-007).",
       "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Sampler has Cutoff (20–20,000 Hz, open by default) and Resonance (0–0.95), appended as parameters 12–13 and shown under the waveform. As in LimeShot's compiler, the filter is off while fully open. They round-trip through .limepreset and the converter carries the built-in sampler's filter over. Changes apply to the next note, not to held notes.",
+      "limeshot_behavior": "Lime Sampler has Cutoff (20–20,000 Hz, open by default) and Resonance (0–0.95), appended as parameters 12–13 and shown under the waveform. As in LimeShot's compiler, the filter is off while fully open. They round-trip through .limepreset and the converter carries the built-in sampler's filter over. Cutoff and resonance edits update held notes without resetting filter history; fully opening the filter bypasses it.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8901,7 +8942,8 @@
       ],
       "tests": [
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
-        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes"
+        "native-plugins/shared/src/editor.rs::layout_tests::all_plugin_controls_fit_and_do_not_overlap_at_supported_sizes",
+        "native-plugins/shared/src/processor.rs::tests::held_sampler_notes_follow_loop_and_filter_edits"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -9036,7 +9078,9 @@
       "tests": [
         "crates/limeshot-ui/tests/lime_vst3.rs::hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices",
         "crates/limeshot-plugins/tests/bridge.rs::native_bridge_preserves_pan_key_audio_and_telemetry",
-        "crates/limeshot-app/tests/ui.rs::mixer_sidechain_route_menu_and_compressor_input"
+        "crates/limeshot-app/tests/ui.rs::mixer_sidechain_route_menu_and_compressor_input",
+        "crates/limeshot-core/tests/plugins.rs::hosted_sidechains_follow_mixer_edits_and_undo",
+        "crates/limeshot-plugins/src/instance.rs::key_input_tests::mono_and_stereo_keys_downmix_and_pad_at_any_block_size"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -9045,7 +9089,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md. PR #7 review fix: source indices and external-key state follow mixer moves/inserts/deletes, including undo and save/reload."
     },
     {
       "id": "PLG-021",
@@ -9148,7 +9192,7 @@
           "docs/development/handoff-lime-vst3-replacement.md"
         ]
       },
-      "notes": "macOS arm64: release bundles built, real-binary verifier passes all nine at three sample rates/four buffer sizes; app/DMG packaging and deep strict ad-hoc signature verification pass; packaged CLI demo peaks at -3.7 dBFS. CI runs are blocked by owner account billing. Windows/Linux packaging/runtime remains pending."
+      "notes": "macOS arm64 packaging and deep strict signatures passed during replacement; the subsequent twelve-bundle parity build passed release/debug real-binary checks. PR #7 review changes require rebuilt binaries, recorded in the review handoff. Remote CI remains blocked by owner billing; Windows/Linux packaging and broader runtime remain pending."
     },
     {
       "id": "PLG-024",
@@ -9241,7 +9285,8 @@
       "tests": [
         "limeshot-ui automation_ui::tests::hosted_lime_typed_values_use_units_and_undo",
         "crates/limeshot-app/tests/ui.rs::sampler_envelope_controls_reset_and_undo",
-        "crates/limeshot-app/tests/ui.rs::hosted_parameter_menu_types_native_units_and_undoes"
+        "crates/limeshot-app/tests/ui.rs::hosted_parameter_menu_types_native_units_and_undoes",
+        "crates/limeshot-app/tests/ui.rs::hosted_sampler_slider_drag_commits_state_only_on_release"
       ],
       "reference": {
         "application": "Owner requirement",

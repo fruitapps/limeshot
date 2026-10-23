@@ -50,6 +50,10 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            native-plugins -> target
       - name: Linux system packages (ALSA, X11/Wayland, GTK for file dialogs)
         if: runner.os == 'Linux'
         run: |

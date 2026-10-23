@@ -118,7 +118,7 @@ uses preallocated per-frame gains captured every automation interval. Evaluation
   processes the sampler output.
 * **LimeSynth**: one or two PolyBLEP oscillators (sine/square/saw/triangle; the second detuned by `detune_cents`), octave
   offset, ADSR. Square and saw are trimmed (×0.5 / ×0.6) so the shapes sound about equally loud. An optional
-  `ModState` (inline, no allocation) adds a TPT state-variable low-pass with an exponentially decaying filter envelope
+  `ModState` (inline, no allocation) adds a TPT state-variable low-/band-/high-pass filter with key tracking, an exponentially decaying filter envelope
   and a sine LFO to pitch and cutoff, recomputed every 16 samples; it is absent at default settings.
 * **Click**: metronome blip (1760 Hz downbeat, 1320 Hz other beats, 30 ms decay).
 * **Preview**: a browser sample played once into the master.
@@ -152,18 +152,18 @@ summed and before volume/pan.
 
 Processors own delay lines, so they must be allocated off the audio thread:
 
-1. `LimeShotApp::send_effect_processors` (control thread) builds a processor for every effect id it has not sent yet
-   (`limeshot_engine::fx::build`, at the device rate) and sends `Msg::Effect(id, Box<dyn Effect>)`, **before** the
-   snapshot that refers to it.
+1. `PluginHost::sync` (control thread) loads each hosted VST3 at the device rate and sends
+   `Msg::Effect(id, Box<dyn Effect>)` before the snapshot that refers to it. Native plugins construct their shared
+   DSP internally; the engine has no production effect factory.
 2. The renderer's `FxRack` adopts it into a preallocated pool. When a snapshot arrives, `FxRack::arrange` moves
-   processors into per-track chains by id (vectors are preallocated: 128 tracks × 10 slots), applies the snapshot's
+   processors into per-track chains by id (vectors are preallocated: 128 tracks × (10 inserts + dedicated track EQ)), applies the snapshot's
    parameters, and parks anything unreferenced in `retired`.
 3. The audio callback returns retired processors through the garbage ring (`Garbage::Effect`), and the control thread
    drops them.
 
 A snapshot effect whose processor has not arrived is bypassed. When the project is replaced (new/open; ids may be
 reused), `Msg::ClearEffects` retires every processor first. Restarting the stream rebuilds all of them at the new rate.
-Offline export builds all processors directly (`fx::build_all`) and keeps rendering the tail while the output is above
+Offline export obtains fresh hosted processors from `PluginHost::offline` and keeps rendering the tail while the output is above
 −80 dBFS (`Renderer::is_ringing`), up to `max_tail_secs`.
 
 Routes read a pre-fader bus: post-fader routes apply track gain and pan, while pre-fader routes apply only send
@@ -222,7 +222,7 @@ check.
 
 Held piano keys and scrub notes use `Msg::NoteOn` / `NoteOff`. Drawn or moved notes and sampler waveform
 previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
-the message. That deadline runs while transport is stopped, for built-in voices and hosted instruments alike;
+the message. That deadline runs while transport is stopped, for preview/metronome voices and hosted instruments alike;
 UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.
 
 ## Hosted parity protocol
@@ -232,3 +232,19 @@ expressions. Native processors report block telemetry through output SysEx, copi
 stereo auxiliary key audio to routed Comp instances. All buffers are preallocated. The optional bridge serializes
 the same data but retains its existing blocking-I/O limitations. Track EQ is a dedicated hosted Lime EQ after ten
 inserts; its saved bands drive appended hidden native controls. See D39 and the current hosted-parity handoff.
+
+## PR #7 review follow-up
+
+Insert processors receive the same block-start transport as hosted instruments, captured after the first tempo
+automation update. Tempo-synced delays therefore follow project tempo and Song tempo automation at plugin block
+boundaries; changes inside a block reach the next block. Native sample changes use bounded lock-free incoming and
+retirement queues. The processor clears voices while retaining the old sample, then returns that reference for
+control-thread destruction. A full retirement queue defers adoption; incoming state changes coalesce old pending
+updates on the control thread. Neither persistence locks nor allocation-checker exemptions occur in this handoff.
+
+
+Tempo retiming retains fractional tick phase as an integer numerator over 60,000 × sample rate, plus the first
+unprocessed event tick at the new origin. This preserves rounded onsets due at the origin without replaying passed
+ticks. A 3,840-note ramp regression checks note order/count and integrated duration at 1/64/333/1024 frames. Native
+sample persistence ignores unchanged name/rate/PCM before decoding or handoff, so control-only state recall does
+not interrupt held sampler notes. Mono auxiliary keys receive the average of stereo input, with absent frames zeroed.

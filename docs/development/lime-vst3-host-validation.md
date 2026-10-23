@@ -2,9 +2,12 @@
 
 Scope: macOS Apple Silicon, `claude/lime-vst3-default`, Codex takeover continuation of draft PR #8.
 
+**Historical pre-parity snapshot:** the checks below describe PR #8 before hosted parity. Current twelve-bundle
+evidence and review results are in [the review handoff](handoff-pr7-rewrite-review.md).
+
 ## Automated and artifact checks
 
-* DAW workspace fmt, all-target Clippy with warnings denied and 365 tests pass; all 134 UI regressions remain.
+* DAW workspace fmt, all-target Clippy with warnings denied and 365 tests pass; all 134 UI tests pass.
 * Native workspace fmt, all-target Clippy and 14 tests pass (including 128-voice stealing).
 * Real bundles built with `python3 build.py`; exported-binary verifier passes all nine plugins at 44.1/48/96 kHz
   and buffer sizes 1/64/333/1024, including editor creation, MIDI offsets, automation and state recall.

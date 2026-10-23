@@ -40,7 +40,7 @@ interaction; the ArtCraft apps only for the broad visual style (decision D24).
   as in FL; other maximised windows keep normal stacking. Shortcuts also work inside detached windows.
 * New projects open with FL Studio's layout: Playlist maximised, Channel Rack floating on top.
 * Clicking a channel button toggles the **Channel Settings** window for that channel (FL behaviour); its content is
-  `inspector::show` (hosted instrument controls and Lime Sampler source-file preview).
+  `inspector::show` (hosted instrument controls and Lime Sampler embedded-PCM/source-file preview).
 * The **Mixer** window shows strips on the left and, like FL, the selected track's panel on the right (level, routing,
   the 10 insert slots via `effects_ui::chain`).
 * `toolbar::header`, `toolbar::show`, `toolbar::status_bar`; `browser::show` (docked left, resizable, as FL's Browser);
@@ -73,7 +73,7 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
-Right-click channel/mixer volume or pan for Reset, Copy/Paste value,
+Right-click channel/mixer volume or pan, or known hosted Lime controls, for Reset, Copy/Paste value,
 Type in value… and Create automation clip. The value clipboard holds normalised control position independently
 of notes/clips. Type-in uses the control's units and commits once on OK; invalid input and Cancel do not edit.
 
@@ -176,3 +176,5 @@ state is applied to an existing plugin instance. Host factory/user `.limepreset`
 The macOS main viewport captures/restores its OpenGL context around UI callbacks: embedded native editors can
 clear the current context, while glutin's surface check only compares bound views. Exports fail on missing plugins
 instead of silently writing an incomplete mix. Live evidence: [host validation](../development/lime-vst3-host-validation.md).
+
+Hosted parameter drags audition through the live instance; release commits one plugin-state command. This avoids serializing embedded sampler PCM on every pointer frame.

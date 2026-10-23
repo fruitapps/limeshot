@@ -149,6 +149,7 @@ impl InstrumentRack {
         self.slots.get(channel)?.as_ref().map(|s| s.inst.latency())
     }
 
+    /// Queue native additive balance at the frame offset and report whether it was handled.
     pub(crate) fn channel_pan(&mut self, index: usize, offset: u32, pan: f32) -> bool {
         if !self
             .slots
@@ -167,6 +168,7 @@ impl InstrumentRack {
         }
         true
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     pub(crate) fn active_voices(&self) -> usize {
         self.slots.iter().flatten().map(|s| s.inst.active_voices()).sum()
     }

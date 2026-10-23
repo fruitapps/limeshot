@@ -230,22 +230,29 @@ impl Snap {
 /// Exact mapping between ticks and samples for one tempo, anchored at an origin.
 ///
 /// A tick `t` sounds at the first sample whose time is at or after it:
-/// `sample(t) = origin_sample + ceil((t - origin_tick) * A / B)` with
+/// `sample(t) = origin_sample + ceil(max(0, (t - origin_tick) * A - sub_tick) / B)` with
 /// `A = 60_000 * sample_rate` and `B = milli_bpm * PPQ`. All arithmetic is `u128`, so there is no
 /// rounding drift however long playback runs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timeline {
     pub origin_tick: Tick,
     pub origin_sample: u64,
+    /// Fractional tick numerator at the origin, with denominator `60_000 * sample_rate`.
+    pub sub_tick: u64,
+    /// Earliest event tick not processed before the origin sample (rounding can leave it due now).
+    pub origin_first_tick: Tick,
     pub tempo: Tempo,
     pub sample_rate: u32,
 }
 
 impl Timeline {
+    /// Start an exact mapping at tick/sample zero, clamping a zero sample rate to one.
     pub fn new(tempo: Tempo, sample_rate: u32) -> Self {
         Self {
             origin_tick: 0,
             origin_sample: 0,
+            sub_tick: 0,
+            origin_first_tick: 0,
             tempo,
             sample_rate: sample_rate.max(1),
         }
@@ -262,7 +269,9 @@ impl Timeline {
     /// The sample at which tick `t` (at or after the origin) sounds.
     pub fn sample_of_tick(&self, t: Tick) -> u64 {
         let dt = u128::from(t.saturating_sub(self.origin_tick));
-        let ds = (dt * self.num()).div_ceil(self.den());
+        let ds = (dt * self.num())
+            .saturating_sub(u128::from(self.sub_tick))
+            .div_ceil(self.den());
         self.origin_sample.saturating_add(u64::try_from(ds).unwrap_or(u64::MAX))
     }
 
@@ -270,18 +279,33 @@ impl Timeline {
     pub fn first_tick_at_or_after(&self, s: u64) -> Tick {
         let ds = s.saturating_sub(self.origin_sample);
         if ds == 0 {
-            return self.origin_tick;
+            return self.origin_first_tick;
         }
-        // ceil(dt * A / B) >= ds  <=>  dt > (ds - 1) * B / A
-        let dt = (u128::from(ds - 1) * self.den()) / self.num() + 1;
+        // Exclude ticks already passed at a retimed origin, retaining the exact fractional phase.
+        let dt = (u128::from(self.sub_tick) + u128::from(ds - 1) * self.den()) / self.num() + 1;
         self.origin_tick.saturating_add(u64::try_from(dt).unwrap_or(u64::MAX))
     }
 
     /// The musical position (in ticks, fractional part dropped) at sample `s`.
     pub fn tick_at_sample(&self, s: u64) -> Tick {
         let ds = u128::from(s.saturating_sub(self.origin_sample));
-        let dt = ds * self.den() / self.num();
+        let dt = (u128::from(self.sub_tick) + ds * self.den()) / self.num();
         self.origin_tick.saturating_add(u64::try_from(dt).unwrap_or(u64::MAX))
+    }
+
+    /// Re-anchor at sample `s` and change tempo without discarding any fractional tick phase.
+    pub fn retimed(&self, s: u64, tempo: Tempo) -> Self {
+        let elapsed = u128::from(s.saturating_sub(self.origin_sample)) * self.den() + u128::from(self.sub_tick);
+        Self {
+            origin_tick: self
+                .origin_tick
+                .saturating_add(u64::try_from(elapsed / self.num()).unwrap_or(u64::MAX)),
+            origin_sample: s,
+            sub_tick: (elapsed % self.num()) as u64,
+            origin_first_tick: self.first_tick_at_or_after(s),
+            tempo,
+            sample_rate: self.sample_rate,
+        }
     }
 
     /// Duration of `ticks` in seconds at this tempo.
@@ -361,6 +385,8 @@ mod tests {
             let tl = Timeline {
                 origin_tick: 1000,
                 origin_sample: 777,
+                sub_tick: 0,
+                origin_first_tick: 1000,
                 tempo: Tempo::from_milli_bpm(bpm),
                 sample_rate: sr,
             };

@@ -6256,3 +6256,140 @@ fn hosted_parameter_menu_types_native_units_and_undoes() {
     let params = lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument).unwrap();
     assert_eq!(params.attack_ms, 0.0);
 }
+
+#[test]
+fn hosted_sampler_slider_drag_commits_state_only_on_release() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    let target = PluginTarget::Channel(channel);
+    let id = lime::param_id(8);
+    h.state_mut().plugins.filter_parameters(target, "Attack");
+    for _ in 0..3 {
+        h.step();
+    }
+    let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    let before = h.state().project().plugin(target).unwrap().state.clone();
+    let revision = h.state().doc.revision();
+    let from = egui::pos2(rect.left() + 5.0, rect.center().y);
+    let to = egui::pos2(rect.right() - 45.0, rect.center().y);
+    press(&mut h, from, PointerButton::Primary, true);
+    for i in 1..=8 {
+        h.event(Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
+        h.step();
+        assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+        assert_eq!(h.state().doc.revision(), revision);
+    }
+    press(&mut h, to, PointerButton::Primary, false);
+    assert_ne!(h.state().project().plugin(target).unwrap().state, before);
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(h.state().project().plugin(target).unwrap().state, before);
+}
+
+#[test]
+fn effect_presets_preserve_live_bypass_and_undo_to_the_live_state() {
+    let mut h = harness(true);
+    let (track, effect) = h
+        .state()
+        .project()
+        .mixer
+        .tracks
+        .iter()
+        .enumerate()
+        .find_map(|(track, t)| {
+            t.effects
+                .iter()
+                .find(|e| e.plugin.as_ref().and_then(LimePlugin::of) == Some(LimePlugin(5)))
+                .map(|e| (track as u16, e.id))
+        })
+        .unwrap();
+    let target = PluginTarget::Effect { track, effect };
+    let bypass = b"bypass"
+        .iter()
+        .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(*b)))
+        & 0x7fff_ffff;
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(0.0)
+    );
+    h.state_mut().plugins.set_param(target, bypass, 1.0);
+    for _ in 0..100 {
+        let mut live = h.state().project().plugin(target).unwrap().clone();
+        live.state = PluginState::new(h.state().plugins.instance(target).unwrap().state().unwrap());
+        if lime::parameter_value(&live, bypass) == Some(1.0) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        h.step();
+    }
+    limeshot_ui::presets_ui::apply(
+        h.state_mut(),
+        limeshot_ui::presets_ui::Target::Effect { track, effect },
+        limeshot_project::preset::Content::Effect {
+            kind: EffectKind::Delay,
+            params: vec![90.0, 0.1, 0.0, 6000.0, 0.5, 0.0],
+        },
+    );
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(1.0)
+    );
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(
+        lime::parameter_value(h.state().project().plugin(target).unwrap(), bypass),
+        Some(1.0)
+    );
+}
+
+#[test]
+fn missing_sample_error_can_reload_after_its_in_project_source_is_restored() {
+    let dir = tempfile::tempdir().unwrap();
+    let sample = dir.path().join("late.wav");
+    let file = dir.path().join("legacy.lime");
+    let mut doc = Document::default();
+    let channel = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "Missing".into(),
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef {
+                    path: sample.to_string_lossy().into_owned(),
+                }),
+                ..Default::default()
+            }),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    limeshot_project::save(doc.project(), &file).unwrap();
+    let mut h = harness(false);
+    h.state_mut().open_path(&file);
+    h.state_mut().select_channel(channel);
+    h.state_mut().show_window(Win::ChannelSettings);
+    for _ in 0..4 {
+        h.step();
+    }
+    let target = PluginTarget::Channel(channel);
+    assert!(h.state().plugins.error(target).is_some());
+    limeshot_dsp::write_wav(&sample, 48000, &[0.5; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+    h.get_by_label("Reload").click();
+    for _ in 0..4 {
+        h.step();
+    }
+    assert!(
+        h.state()
+            .project()
+            .plugin(target)
+            .unwrap()
+            .extra
+            .get("lime-sample-pending")
+            .is_none()
+    );
+    assert!(h.state().plugins.error(target).is_none());
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(
+        h.state().project().plugin(target).unwrap().extra["lime-sample-pending"],
+        true
+    );
+}

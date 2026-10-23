@@ -1,4 +1,4 @@
-//! Render all nine production editors offscreen without screen recording permissions.
+//! Render all twelve production editors offscreen without screen recording permissions.
 use egui_kittest::Harness;
 use lime_native::editor::{NativeEditor, editor_size, install_theme};
 

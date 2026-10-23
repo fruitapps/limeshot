@@ -797,7 +797,8 @@ impl LimeShotApp {
             Ok(project) => {
                 self.send(Msg::Stop);
                 // In memory, sample paths are absolute; they are made relative again on save.
-                let project = absolutize_samples(&project, path.parent());
+                let mut project = absolutize_samples(&project, path.parent());
+                crate::lime::restrict_loaded_sources(&mut project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
@@ -903,7 +904,8 @@ impl LimeShotApp {
         match self.autosave.load() {
             Ok(project) => {
                 self.send(Msg::Stop);
-                let project = absolutize_samples(&project, self.autosave.dir.as_deref());
+                let mut project = absolutize_samples(&project, self.autosave.dir.as_deref());
+                crate::lime::restrict_loaded_sources(&mut project, info.original.as_deref().and_then(Path::parent));
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = info.original.clone();

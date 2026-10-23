@@ -30,17 +30,17 @@ pub const EDITOR_SIZES: [(f32, f32); 12] = [
     (760.0, 420.0),
     (760.0, 420.0),
 ];
-/// Return the default editor width and height in logical points for plugin IDs 0–8.
+/// Return the default editor width and height in logical points for plugin IDs 0–11.
 ///
 /// # Panics
-/// Panics for an ID outside 0–8.
+/// Panics for an ID outside 0–11.
 pub fn editor_size(id: u8) -> (f32, f32) {
     EDITOR_SIZES[id as usize]
 }
 /// Return 90% of the default editor dimensions in logical points.
 ///
 /// # Panics
-/// Panics for a plugin ID outside 0–8.
+/// Panics for a plugin ID outside 0–11.
 pub fn minimum_size(id: u8) -> (f32, f32) {
     let (w, h) = editor_size(id);
     (w * 0.9, h * 0.9)
@@ -124,7 +124,7 @@ impl NativeEditor {
         }
     }
     /// Create an editor with independent default parameters and meters for offscreen use.
-    /// Use a plugin ID in 0–8; drawing requires a valid ID. No host context is attached.
+    /// Use a plugin ID in 0–11; drawing requires a valid ID. No host context is attached.
     pub fn preview(id: u8) -> Self {
         Self::new(id, Arc::new(NativeParams::new(id)), Arc::new(Meters::default()))
     }

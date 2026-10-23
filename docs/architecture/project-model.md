@@ -9,7 +9,8 @@ Project
 ├── title, info, tempo (milli-BPM), time_signature, swing, next_id, extra{}
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
 │     id, name, color, instrument, volume, pan, muted, solo, mute_locked, mixer_track, root_key, extra{}
-│     instrument = Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot,
+│     instrument = Plugin(PluginRef)  — active playback; legacy import/preset variants follow
+│                | Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot,
 │                           looping, loop_start, loop_end, cutoff_hz, resonance}
 │                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
 │                        cutoff_hz, resonance, filter_env, filter_decay_ms, lfo_rate_hz, vibrato_cents, lfo_cutoff}
@@ -22,10 +23,10 @@ Project
 │     clips:  [{id, source, track, start, length, offset, muted, fade_in, fade_out, extra{}}]
 │     source = Pattern(id) | Audio(channel id) | Automation(id)
 ├── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
-│     name, volume (linear, ≤ 2.0), pan, muted, solo, effects, routes, extra{}
+│     name, volume (linear, ≤ 2.0), pan, muted, solo, effects, eq: [EqBand; 3], routes, extra{}
 └── automations: [Automation]      — FL Studio's automation clips
       id, name, color, target, points: [{tick, value 0–1, tension −1–1, mode}], length, extra{}
-      target = ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index} | PluginParam{plugin, id}
+      target = Tempo | ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index} | PluginParam{plugin, id}
 ```
 
 * **Stable ids.** `ChannelId`, `PatternId`, `ClipId` and `NoteId` are `u32`s from one project-wide counter
@@ -80,7 +81,7 @@ and NaN is rejected.
    (for example `SetChannelVolume` for the same channel, or `MoveNotes` for the same note set) share one undo step;
 4. clears the redo stack and bumps `revision` (the UI uses it to know when to recompile the snapshot).
 
-Snapshot undo was chosen over inverse commands because projects are small: notes and settings, with no audio data.
+Snapshot undo was chosen over inverse commands because projects mostly contain notes and settings. Embedded plugin state uses shared blobs, so undo clones do not copy PCM.
 A clone costs microseconds for typical projects, and snapshots cannot drift from the forward path.
 
 **Modified state.** Each distinct content state gets an id. `mark_saved` records the current id, and undoing back to
@@ -90,18 +91,18 @@ it makes the document unmodified again.
 
 In memory, sample paths are **absolute**. The app resolves them when a project is opened. On save, `limeshot-project`
 writes paths inside the project folder **relative** (with `/` separators) and leaves others absolute. Decoded audio
-lives outside the model, in `limeshot_audio::assets::SampleCache`, keyed by resolved path.
+lives in `limeshot_audio::assets::SampleCache`. External audio is keyed by resolved path; embedded Lime Sampler PCM is keyed by a content hash under a synthetic `/.limeshot-embedded/` path, without writing a file. Plugin state carries portable embedded PCM and optional source-path hints.
 
 ## File format (`.lime`)
 
 UTF-8 JSON:
 
 ```json
-{ "format": "limeshot-project", "version": 1, "generator": "LimeShot 0.1.0", "project": { … } }
+{ "format": "limeshot-project", "version": 2, "generator": "LimeShot 0.1.0", "project": { … } }
 ```
 
 * `from_json` checks `format` and refuses newer `version`s (`ProjectError::TooNew`), so a file is never half-read.
-  Older versions go through `migrate(version, value)`. Version 1 is the first, so the chain is empty for now.
+  Older versions go through `migrate(version, value)`. Version 2 accepts version-1 envelopes; document normalization converts preserved legacy instruments/effects into hosted Lime state after resolving sample paths.
 * `#[serde(flatten)] extra` on the project, channels, patterns, clips and mixer tracks keeps unknown fields, and
   `Instrument::Unsupported` keeps unknown instrument objects. A file from a newer minor feature set round-trips.
 * After parsing, `Project::sanitize` repairs hostile values. It clamps ranges, replaces NaN, drops notes for missing
@@ -126,4 +127,18 @@ save/reload equality. `limeshot-app/tests/mvp_workflow.rs` saves, reopens and co
 
 Format 2 accepts version-1 envelopes and preserves legacy instrument/effect fields and unknown data. The host
 resolves relative sample paths before normalization embeds audio and replaces legacy sources with Lime VST3 state.
-Unsupported Gate/Drive/Chorus slots survive disabled; legacy track-EQ bands survive inactive. See PLG-013…029.
+All ten legacy effect kinds have hosted replacements, including Gate/Drive/Chorus. Slot enabled state is authoritative for converted bypass. Legacy track-EQ bands drive a dedicated marked Lime EQ after the ten ordinary insert slots. Hosted compressor sidechain indices and key-enable state follow mixer track edits. See PLG-013…029.
+
+
+## Sample migration boundaries
+
+Decoded audio must meet the native sampler's shared rate/frame limits and the actual serialized state-size bound.
+Missing, rejected or unapproved sources retain a pending plugin reference with settings/path metadata. Pending
+state is not cleared by a failed retry, survives save/reopen, and blocks export with an actionable error. A successful
+conversion removes the marker. Reload runs normalization again; explicit source selection is undoable.
+
+Opening a .lime file and recovery canonicalize unresolved source paths against the loaded project folder; outside
+paths and symlink escapes are not automatically copied into portable state. Explicit GUI source selection clears
+that restriction through ApproveSamplerSource in the source-assignment batch; CLI users can opt in with --allow-external-samples. Already embedded audio
+and normalizer commands for explicitly selected/new sources keep their existing workflow. First-party lime:
+references resolve only known bundle filenames; arbitrary VST3 paths remain the host's explicit plugin-loading boundary.

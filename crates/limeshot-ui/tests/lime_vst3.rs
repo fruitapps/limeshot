@@ -1,7 +1,8 @@
 //! The Lime VST3 plugins sound like the former built-in instruments and effects they replace
 //! (decision D39): a project rendered with the built-ins and the same project converted to Lime
 //! plugins and rendered through the plugin host give the same audio. Needs the bundles
-//! (`python build.py` in `native-plugins/`); without them the test reports that and passes.
+//! (`python3 native-plugins/build.py --debug` and LIMESHOT_LIME_PLUGINS); every test skips with a
+//! diagnostic outside CI when required bundles are missing, and fails in CI instead.
 use std::sync::Arc;
 
 use limeshot_core::*;
@@ -13,6 +14,25 @@ use limeshot_ui::plugins::PluginHost;
 mod reference;
 
 const SR: u32 = 48_000;
+
+/// Keep optional local integration tests and mandatory CI bundle validation consistent.
+fn bundles_or_skip(names: &[&str]) -> bool {
+    let missing: Vec<_> = names
+        .iter()
+        .filter(|name| limeshot_plugins::lime::bundle_path(name).is_none())
+        .collect();
+    if missing.is_empty() {
+        return true;
+    }
+    assert!(
+        std::env::var_os("CI").is_none(),
+        "CI must build required Lime VST3 bundles first: {missing:?}"
+    );
+    eprintln!(
+        "Lime VST3 bundles unavailable: {missing:?}; skipping (run python3 native-plugins/build.py --debug and set LIMESHOT_LIME_PLUGINS)"
+    );
+    false
+}
 
 fn project(wav: &str) -> (Project, PatternId) {
     let mut doc = Document::default();
@@ -39,7 +59,9 @@ fn project(wav: &str) -> (Project, PatternId) {
         doc.execute(Command::AddChannel {
             name: "Hit".into(),
             instrument: Instrument::Sampler(SamplerParams {
-                sample: Some(SampleRef { path: wav.into() }),
+                sample: std::path::Path::new(wav)
+                    .exists()
+                    .then(|| SampleRef { path: wav.into() }),
                 pitch: 3.0,
                 end: 0.8,
                 attack_ms: 5.0,
@@ -105,12 +127,7 @@ fn render(project: &Project, pat: PatternId, processors: Processors) -> Vec<f32>
 
 #[test]
 fn converted_projects_sound_the_same_through_the_lime_vst3s() {
-    if limeshot_plugins::lime::bundle_path("lime:LimeSynth.vst3").is_none() {
-        assert!(
-            std::env::var_os("CI").is_none(),
-            "CI must build the Lime VST3 bundles first"
-        );
-        eprintln!("Lime VST3 bundles not built; skipping (run `python build.py` in native-plugins)");
+    if !bundles_or_skip(&["lime:LimeSynth.vst3", "lime:Lime Sampler.vst3", "lime:Lime EQ.vst3"]) {
         return;
     }
     // A decaying noise burst, so pitch and trim changes show in the comparison.
@@ -177,11 +194,7 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
 
 #[test]
 fn effect_automation_follows_the_converted_lime_plugin() {
-    if limeshot_plugins::lime::bundle_path("lime:Lime EQ.vst3").is_none() {
-        assert!(
-            std::env::var_os("CI").is_none(),
-            "CI must build the Lime VST3 bundles first"
-        );
+    if !bundles_or_skip(&["lime:LimeSynth.vst3", "lime:Lime Sampler.vst3", "lime:Lime EQ.vst3"]) {
         return;
     }
     let (mut project, pat) = project("missing.wav");
@@ -278,10 +291,9 @@ fn effect_automation_follows_the_converted_lime_plugin() {
 
 #[test]
 fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
-    assert!(
-        limeshot_plugins::lime::bundle_path("lime:Lime Sampler.vst3").is_some(),
-        "build native bundles before running hosted acceptance tests"
-    );
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let wav = dir.path().join("ramp.wav");
     let samples: Vec<f32> = (0..48_000).flat_map(|i| [0.1 + i as f32 / 96_000.0; 2]).collect();
@@ -382,6 +394,9 @@ fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
 
 #[test]
 fn hosted_instruments_keep_independent_note_pan() {
+    if !bundles_or_skip(&["lime:LimeSynth.vst3", "lime:Lime Sampler.vst3"]) {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let wav = dir.path().join("dc.wav");
     limeshot_dsp::write_wav(&wav, SR, &vec![0.5; 96_000], limeshot_dsp::BitDepth::Float32).unwrap();
@@ -470,6 +485,9 @@ fn hosted_instruments_keep_independent_note_pan() {
 
 #[test]
 fn hosted_track_eq_preserves_every_legacy_band_parameter() {
+    if !bundles_or_skip(&["lime:Lime EQ.vst3"]) {
+        return;
+    }
     use limeshot_dsp::effects::Effect;
     for bands in [
         [
@@ -542,6 +560,9 @@ fn hosted_track_eq_preserves_every_legacy_band_parameter() {
 
 #[test]
 fn hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3", "lime:Lime Comp.vst3"]) {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let key = dir.path().join("key.wav");
     let signal = dir.path().join("signal.wav");
@@ -639,5 +660,137 @@ fn hosted_comp_uses_the_mixer_key_and_reports_reduction_and_voices() {
         assert_eq!(voices, 2, "real hosted voices, block {block}");
         renderer.silence();
         assert_eq!(renderer.active_voices(), 0);
+    }
+}
+
+#[test]
+fn converted_delay_uses_project_and_automated_tempo_after_enabling() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3", "lime:Lime Delay.vst3"]) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let wav = dir.path().join("impulse.wav");
+    limeshot_dsp::write_wav(&wav, SR, &[1.0, 1.0, 0.0, 0.0], limeshot_dsp::BitDepth::Float32).unwrap();
+    for (bpm, automated, expected_frame) in [(90.0, false, 32000), (180.0, false, 16000), (90.0, true, 16000)] {
+        let mut doc = Document::default();
+        doc.execute(Command::SetTempo(Tempo::from_bpm(bpm))).unwrap();
+        let pat = doc.project().patterns[0].id;
+        let channel = ChannelId(
+            doc.execute(Command::AddChannel {
+                name: "Impulse".into(),
+                instrument: Instrument::Sampler(SamplerParams {
+                    sample: Some(SampleRef {
+                        path: wav.to_str().unwrap().into(),
+                    }),
+                    ..Default::default()
+                }),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        doc.execute(Command::AddNote {
+            pattern: pat,
+            note: NewNote {
+                channel,
+                key: 60,
+                start: 0,
+                length: 960,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+        doc.execute(Command::AddClip {
+            pattern: pat,
+            track: 0,
+            start: 0,
+            length: Some(3840),
+        })
+        .unwrap();
+        let effect = doc
+            .execute(Command::AddEffect {
+                track: 1,
+                kind: EffectKind::Delay,
+            })
+            .unwrap()
+            .0
+            .unwrap();
+        for (index, value) in [(1, 0.0), (2, 0.0), (4, 1.0), (5, 5.0)] {
+            doc.execute(Command::SetEffectParam {
+                track: 1,
+                effect,
+                index,
+                value,
+            })
+            .unwrap();
+        }
+        doc.execute(Command::SetEffectEnabled {
+            track: 1,
+            effect,
+            enabled: false,
+        })
+        .unwrap();
+        if automated {
+            doc.execute(Command::AddAutomationClip {
+                target: AutomationTarget::Tempo,
+                track: 3,
+                start: 0,
+                length: 3840,
+                value: None,
+                name: None,
+            })
+            .unwrap();
+            let automation = doc.project().automations.last().unwrap().id;
+            doc.execute(Command::SetAutomationPoints {
+                automation,
+                points: vec![AutomationPoint {
+                    tick: 0,
+                    value: 1.0,
+                    tension: 0.0,
+                    mode: PointMode::Hold,
+                }],
+            })
+            .unwrap();
+        }
+        let mut project = doc.project().clone();
+        assert!(lime::convert_project(&mut project, &limeshot_ui::lime::embedded_audio).is_empty());
+        let mut doc = Document::new(project);
+        doc.execute(Command::SetEffectEnabled {
+            track: 1,
+            effect,
+            enabled: true,
+        })
+        .unwrap();
+        for block in [1, 64, 333, 1024] {
+            let host = PluginHost::new(None);
+            let (processors, _keep) = host.offline(doc.project(), SR).unwrap();
+            let snapshot = Arc::new(compile(doc.project(), pat, &limeshot_sequencer::NoSamples));
+            let (audio, _) = render_offline_with(
+                snapshot,
+                &RenderSettings {
+                    sample_rate: SR,
+                    range: limeshot_engine::ExportRange::Song,
+                    max_tail_secs: 0.0,
+                    block,
+                },
+                processors,
+            )
+            .unwrap();
+            let first = audio.as_chunks::<2>().0.iter().position(|f| f[0].abs() > 1e-6).unwrap();
+            assert!(
+                first.abs_diff(expected_frame) <= 1,
+                "tempo {bpm}, automated {automated}, block {block}: echo at {first}, expected {expected_frame}"
+            );
+        }
+    }
+}
+
+#[test]
+fn missing_bundle_gate_skips_locally_and_fails_on_ci() {
+    let result = std::panic::catch_unwind(|| bundles_or_skip(&["lime:DefinitelyMissing.vst3"]));
+    if std::env::var_os("CI").is_some() {
+        assert!(result.is_err());
+    } else {
+        assert!(!result.unwrap());
     }
 }

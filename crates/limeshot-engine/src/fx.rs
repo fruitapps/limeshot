@@ -115,6 +115,13 @@ impl FxRack {
         }
     }
 
+    /// Publish the current block's timeline before processing insert chains.
+    pub fn set_transport(&mut self, transport: &limeshot_dsp::Transport) {
+        for p in self.chains.iter_mut().flatten() {
+            p.fx.set_transport(transport);
+        }
+    }
+
     /// Run track `t`'s chain over its bus. `sidechain(s)` gives mixer track `s`'s output for
     /// effects keyed by it (`None` when it does not route to `t`). Returns the largest gain
     /// reduction in dB of the chain's dynamics effects.

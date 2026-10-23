@@ -106,6 +106,7 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     });
     app.samples.request_path(path.to_path_buf());
     app.exec(Command::Batch(vec![
+        Command::ApproveSamplerSource { channel },
         Command::SetInstrument {
             channel,
             instrument: Instrument::Plugin(limeshot_core::lime::sampler_ref(&params, root_key)),

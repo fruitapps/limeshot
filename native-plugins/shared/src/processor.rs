@@ -66,11 +66,13 @@ pub enum ClipSysEx {
 }
 impl SysExMessage for ClipSysEx {
     type Buffer = [u8; limeshot_dsp::CLIP_MESSAGE_LEN];
+    /// Validate supported Lime protocol messages and ignore unrelated SysEx.
     fn from_buffer(buffer: &[u8]) -> Option<Self> {
         limeshot_dsp::ClipMessage::decode(buffer)
             .map(Self::Clip)
             .or_else(|| limeshot_dsp::instrument::decode_channel_pan(buffer).map(Self::ChannelPan))
     }
+    /// Encode bounded native protocol messages into stack-owned host event storage.
     fn as_buffer(&self) -> (Self::Buffer, usize) {
         match self {
             Self::ChannelPan(pan) => {
@@ -95,8 +97,8 @@ pub struct LimePlugin<const ID: u8> {
     notifier: RepaintNotifier,
     effect: Option<Box<dyn Effect>>,
     sample: Option<Arc<SampleData>>,
-    /// The sample store generation `sample` was taken from.
-    sample_generation: u64,
+    /// Defensive overflow retention: never release the last sample reference in process().
+    retired_sample: Option<Arc<SampleData>>,
     voices: [Slot; 128],
     bend: [f32; 16],
     pedal: [bool; 16],
@@ -123,7 +125,7 @@ impl<const ID: u8> Default for LimePlugin<ID> {
             notifier: RepaintNotifier::new(),
             effect: None,
             sample: None,
-            sample_generation: 0,
+            retired_sample: None,
             voices: std::array::from_fn(|_| Slot::default()),
             bend: [0.0; 16],
             pedal: [false; 16],
@@ -147,7 +149,7 @@ impl<const ID: u8> LimePlugin<ID> {
         self.sample_rate = rate;
         Meters::store(&self.meters.sample_rate, rate);
         self.meter_decay = (-1.0 / (rate * 0.18)).exp();
-        self.sample_generation = self.params.sample.generation();
+        while self.params.sample.take_audio().is_some() {}
         self.sample = self.params.sample.audio();
         self.effect = if ID >= 2 {
             Some(build(
@@ -194,21 +196,25 @@ impl<const ID: u8> LimePlugin<ID> {
         self.preview_note = requested;
     }
 
-    /// Take up a sample the host loaded with its state while the plugin was active (nice-plug does
-    /// not reactivate the plugin after loading state). Sounding notes stop, as when a sample is
-    /// loaded in the editor. Releasing the old audio may free memory on the audio thread, which
-    /// is allowed here as nice-plug allows it for the state load itself.
+    /// Adopt decoded audio without locks or sample destruction. Clear voices while `sample`
+    /// still owns the old audio, then transfer that ownership to the control-thread retire queue.
     pub(crate) fn refresh_sample(&mut self) {
-        let generation = self.params.sample.generation();
-        if generation == self.sample_generation {
+        if let Some(old) = self.retired_sample.take()
+            && let Err(old) = self.params.sample.retire_audio(old)
+        {
+            self.retired_sample = Some(old);
             return;
         }
-        if let Some(audio) = self.params.sample.try_audio() {
-            nice_plug::util::permit_alloc(|| {
-                self.clear();
-                self.sample = audio;
-            });
-            self.sample_generation = generation;
+        if self.params.sample.retirement_full() {
+            return;
+        }
+        if let Some(audio) = self.params.sample.take_audio() {
+            self.clear();
+            if let Some(old) = std::mem::replace(&mut self.sample, audio)
+                && let Err(old) = self.params.sample.retire_audio(old)
+            {
+                self.retired_sample = Some(old);
+            }
         }
     }
 
@@ -927,6 +933,120 @@ mod tests {
         plugin.event(on(1, 60), &values);
         assert!(plugin.frame([0.0; 2], None, &values, 120.0)[0] > 0.1);
     }
+    #[test]
+    fn sampler_replacement_retires_audio_without_locks_or_destruction() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("replace.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.prepare(48000.0);
+        let old = Arc::downgrade(plugin.sample.as_ref().unwrap());
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        plugin.params.sample.set(EmbeddedSample::default());
+        // Holding the persistence lock must not prevent a realtime handoff.
+        let store = plugin.params.sample.clone();
+        {
+            let plugin = std::cell::RefCell::new(&mut plugin);
+            store.map(|_| {
+                nice_assert_no_alloc::assert_no_alloc(|| plugin.borrow_mut().refresh_sample());
+            });
+        }
+        assert!(plugin.sample.is_none());
+        assert!(!plugin.voices.iter().any(|s| s.voice.is_active()));
+        assert!(
+            old.upgrade().is_some(),
+            "old audio is retained for control-thread destruction"
+        );
+        plugin.params.sample.set(EmbeddedSample::default());
+        assert!(old.upgrade().is_none());
+        // Queue saturation coalesces obsolete updates and keeps the most recent one.
+        for index in 0..20 {
+            plugin.params.sample.set(EmbeddedSample {
+                name: format!("pending-{index}"),
+                ..Default::default()
+            });
+        }
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        for _ in 0..8 {
+            nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
+        }
+        assert!(plugin.sample.is_some());
+    }
+
+    #[test]
+    fn unchanged_sample_state_keeps_held_voices_and_decoded_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("held.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        let sample = EmbeddedSample::load(&path).unwrap();
+        plugin.params.sample.set(sample.clone());
+        plugin.prepare(48000.0);
+        let before = plugin.sample.clone().unwrap();
+        let values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        plugin.params.sample.set(sample);
+        nice_assert_no_alloc::assert_no_alloc(|| plugin.refresh_sample());
+        assert!(Arc::ptr_eq(&before, plugin.sample.as_ref().unwrap()));
+        assert!(plugin.voices.iter().any(|v| v.voice.is_active()));
+    }
+
+    #[test]
+    fn key_tracking_alone_activates_the_open_synth_filter() {
+        let plugin = LimePlugin::<0>::default();
+        let mut values = plugin.params.values();
+        values[8] = 20_000.0;
+        values[9] = 0.0;
+        values[10] = 0.0;
+        values[14] = 0.0;
+        values[16] = 1.0;
+        let state = plugin.instrument(&values);
+        let voice = Voice::for_instrument(&state, 60, 36, 1.0, 48000.0).unwrap();
+        assert!(matches!(
+            voice.source,
+            limeshot_dsp::voice::Source::Synth { mods: Some(_), .. }
+        ));
+    }
+
+    #[test]
+    fn held_sampler_notes_follow_loop_and_filter_edits() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("held.wav");
+        limeshot_dsp::write_wav(&path, 48000, &[0.5; 2000], limeshot_dsp::BitDepth::Float32).unwrap();
+        let mut plugin = LimePlugin::<1>::default();
+        plugin.params.sample.set(EmbeddedSample::load(&path).unwrap());
+        plugin.prepare(48000.0);
+        let mut values = plugin.params.values();
+        plugin.event(on(1, 60), &values);
+        values[13] = 1.0;
+        values[14] = 0.2;
+        values[15] = 0.8;
+        values[11] = 500.0;
+        values[12] = 0.5;
+        plugin.update_voices(&values);
+        let voice = &mut plugin.voices.iter_mut().find(|s| s.voice.is_active()).unwrap().voice;
+        assert!(voice.filter.is_some());
+        assert!(
+            matches!(voice.source, limeshot_dsp::voice::Source::Sampler { looping: Some((a,b)), .. } if (a-200.0).abs()<0.01 && (b-800.0).abs()<0.01)
+        );
+        for _ in 0..3000 {
+            voice.next_frame();
+        }
+        assert!(voice.is_active(), "a held note keeps looping past the source end");
+        values[13] = 0.0;
+        values[11] = 20_000.0;
+        values[12] = 0.0;
+        plugin.update_voices(&values);
+        let voice = &plugin.voices.iter().find(|s| s.voice.is_active()).unwrap().voice;
+        assert!(voice.filter.is_none());
+        assert!(matches!(
+            voice.source,
+            limeshot_dsp::voice::Source::Sampler { looping: None, .. }
+        ));
+    }
+
     #[test]
     fn tempo_sync_moves_delay_echo_and_bypass_passes_exact_audio() {
         let mut slow = LimePlugin::<5>::default();

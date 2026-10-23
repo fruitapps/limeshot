@@ -576,6 +576,7 @@ impl EventList {
         }
     }
 
+    /// Copy completed block statistics without retaining borrowed event pointers.
     pub(crate) fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
         // SAFETY: only the processor thread reads/writes this event list during processing.
         unsafe { *self.telemetry.get() }

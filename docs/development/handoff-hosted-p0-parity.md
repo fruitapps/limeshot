@@ -1,7 +1,9 @@
 # Handoff: hosted P0 parity
 
+**Current continuation:** [PR #7 review fixes](handoff-pr7-rewrite-review.md). The session record below is historical.
+
 2026-10-23. This owner-requested development session uses the NEW branch `codex/hosted-p0-parity` in the separate
-managed worktree `/Users/sebastian/.codex/worktrees/hosted-p0-parity/limeshot`. It starts at PR #8's verified head
+managed worktree. It starts at PR #8's verified head
 `31d09f913c3afbb1823f684c27ac633bcafb2962`. PRs #7 and #8 were both open and unmerged when inspected; #8 targets
 #7. This session creates its own NEW draft PR targeting `claude/lime-vst3-default`; no merge is authorized.
 Older checkouts, including `limeshot-vst3`, were left intact. Build caches were cloned into this worktree.

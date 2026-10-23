@@ -37,12 +37,12 @@ The core composition loop has automated coverage in
 | **Channel Rack**<br>Program drums from samples on a step grid, with swing, fill, rotate and channel selection. | <a href="docs/screenshots/current/rack.png"><img src="docs/screenshots/current/rack.png" width="240" alt="Channel Rack and Playlist"></a> |
 | **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/current/piano-roll.png"><img src="docs/screenshots/current/piano-roll.png" width="240" alt="Piano Roll"></a> |
 | **Playlist**<br>Arrange pattern, audio and automation clips. Slip, slice, audio clip fades, time selection, markers and a clip picker. | <a href="docs/screenshots/current/audio-clips.png"><img src="docs/screenshots/current/audio-clips.png" width="240" alt="Playlist audio waveforms, clip fades, markers and time selection"></a> |
-| **Mixer**<br>Route channels to inserts with volume, pan, a built-in EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
+| **Mixer**<br>Route channels to inserts with volume, pan, a dedicated hosted EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
 | **Workspace windows**<br>Move, resize, maximise and detach editors; F5/F6/F7/F9 toggle Playlist, Rack, Piano Roll and Mixer. | <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" width="240" alt="Current workspace with floating Channel Rack"></a> |
 | **Automation**<br>Shape Song-mode pan automation with curves, stairs and waves. | <a href="docs/screenshots/current/automation.png"><img src="docs/screenshots/current/automation.png" width="240" alt="Playlist pan automation with curve, stairs and wave segments"></a> |
 | **Sampler**<br>Inspect the sample waveform and adjust playback, loop and filter settings. | <a href="docs/screenshots/current/sampler.png"><img src="docs/screenshots/current/sampler.png" width="240" alt="Sampler Channel Settings with waveform and playback controls"></a> |
 | **LimeSynth**<br>Edit oscillators, envelopes, filtering and modulation. | <a href="docs/screenshots/current/synth.png"><img src="docs/screenshots/current/synth.png" width="240" alt="Built-in LimeSynth Channel Settings"></a> |
-| **Mixer EQ**<br>Shape the selected insert with the built-in three-band EQ. | <a href="docs/screenshots/current/mixer-eq.png"><img src="docs/screenshots/current/mixer-eq.png" width="240" alt="Maximised Mixer with the selected insert EQ"></a> |
+| **Mixer EQ**<br>Shape the selected insert with the inline three-band hosted EQ. | <a href="docs/screenshots/current/mixer-eq.png"><img src="docs/screenshots/current/mixer-eq.png" width="240" alt="Maximised Mixer with the selected insert EQ"></a> |
 | **WAV export**<br>Choose the render range, sample rate and bit depth. | <a href="docs/screenshots/current/export.png"><img src="docs/screenshots/current/export.png" width="240" alt="WAV export dialog over the audio clip arrangement"></a> |
 
 ## Sounds, Effects and Plugins
@@ -60,12 +60,12 @@ The core composition loop has automated coverage in
 
 **Early alpha.** LimeShot can compose, arrange, mix, save and render songs, but production readiness and platform
 coverage are still being established. Automated tests establish the behavior they exercise; they do not establish
-compatibility with every audio device, plugin or host. README screenshots were freshly rendered on 2026-10-22
+compatibility with every audio device, plugin or host. README screenshots were freshly rendered on 2026-10-23
 from the source commits recorded in
 [the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
 plugin embedding and device audio require separate checks.
 
-The inventory currently tracks **290 features: 145 VERIFIED, 31 IMPLEMENTED, 89 NOT_STARTED, 20 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
+The inventory currently tracks **290 features: 144 VERIFIED, 49 IMPLEMENTED, 79 NOT_STARTED, 13 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
 requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
 with FL Studio or measured test coverage.
 
@@ -100,13 +100,14 @@ unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/
 resizable native editor, factory presets, host automation/state and `.limepreset` interchange, with the existing
 LimeShot DSP linked into the bundle. LimeShot does not need to be installed or running.
 
-Previews of the original nine standalone editors (click to enlarge):
+Previews of all twelve standalone editors (click to enlarge):
 
 | | | |
 | --- | --- | --- |
 | <a href="docs/screenshots/current/native/limesynth.png"><img src="docs/screenshots/current/native/limesynth.png" width="280" alt="LimeSynth standalone VST3 editor"></a><br>**LimeSynth** | <a href="docs/screenshots/current/native/lime-sampler.png"><img src="docs/screenshots/current/native/lime-sampler.png" width="280" alt="Lime Sampler standalone VST3 editor"></a><br>**Lime Sampler** | <a href="docs/screenshots/current/native/lime-utility.png"><img src="docs/screenshots/current/native/lime-utility.png" width="280" alt="Lime Utility standalone VST3 editor"></a><br>**Lime Utility** |
 | <a href="docs/screenshots/current/native/lime-eq.png"><img src="docs/screenshots/current/native/lime-eq.png" width="280" alt="Lime EQ standalone VST3 editor"></a><br>**Lime EQ** | <a href="docs/screenshots/current/native/lime-filter.png"><img src="docs/screenshots/current/native/lime-filter.png" width="280" alt="Lime Filter standalone VST3 editor"></a><br>**Lime Filter** | <a href="docs/screenshots/current/native/lime-delay.png"><img src="docs/screenshots/current/native/lime-delay.png" width="280" alt="Lime Delay standalone VST3 editor"></a><br>**Lime Delay** |
 | <a href="docs/screenshots/current/native/lime-room.png"><img src="docs/screenshots/current/native/lime-room.png" width="280" alt="Lime Room standalone VST3 editor"></a><br>**Lime Room** | <a href="docs/screenshots/current/native/lime-comp.png"><img src="docs/screenshots/current/native/lime-comp.png" width="280" alt="Lime Comp standalone VST3 editor"></a><br>**Lime Comp** | <a href="docs/screenshots/current/native/lime-limiter.png"><img src="docs/screenshots/current/native/lime-limiter.png" width="280" alt="Lime Limiter standalone VST3 editor"></a><br>**Lime Limiter** |
+| <a href="docs/screenshots/current/native/lime-gate.png"><img src="docs/screenshots/current/native/lime-gate.png" width="280" alt="Lime Gate standalone VST3 editor"></a><br>**Lime Gate** | <a href="docs/screenshots/current/native/lime-drive.png"><img src="docs/screenshots/current/native/lime-drive.png" width="280" alt="Lime Drive standalone VST3 editor"></a><br>**Lime Drive** | <a href="docs/screenshots/current/native/lime-chorus.png"><img src="docs/screenshots/current/native/lime-chorus.png" width="280" alt="Lime Chorus standalone VST3 editor"></a><br>**Lime Chorus** |
 
 | Plugin | Purpose |
 | --- | --- |
@@ -119,11 +120,14 @@ Previews of the original nine standalone editors (click to enlarge):
 | **Lime Room** | Algorithmic stereo reverb |
 | **Lime Comp** | Compressor with optional external stereo sidechain |
 | **Lime Limiter** | Sample-peak limiter with gain-reduction history; no lookahead or true-peak oversampling |
+| **Lime Gate** | Noise gate with hold and adjustable range |
+| **Lime Drive** | Soft/hard clipping and wave folding with tone and mix |
+| **Lime Chorus** | Chorus, flanger and phaser modes |
 
 The suite is included in this checkout under `native-plugins/`. Its
-[README](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/README.md),
-[validation record](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/VALIDATION.md)
-and [third-party notices](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/THIRD_PARTY.md)
+[README](native-plugins/README.md),
+[validation record](native-plugins/VALIDATION.md)
+and [third-party notices](native-plugins/THIRD_PARTY.md)
 cover building, installing, presets and supported targets. To build the suite (Rust **1.95+**, Python 3
 and platform build tools):
 
@@ -187,7 +191,10 @@ cargo run --release -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out
 ```
 
 `limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device), `import-midi` and `run`. `run`
-applies a JSON list of the same typed commands the UI uses:
+applies a JSON list of the same typed commands the UI uses. Opening a legacy project does not automatically embed
+audio outside its folder. Select the source explicitly in the GUI, or use `--allow-external-samples` in the CLI
+when you intend to include those recordings in portable state:
+
 
 ```json
 [{"SetTempo": 128000}, {"AddPattern": {"name": "Verse"}}]

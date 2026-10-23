@@ -113,6 +113,11 @@ pub enum Command {
         channel: ChannelId,
         key: u8,
     },
+    /// Explicit source-file selection permits embedding that channel's pending external audio.
+    /// Preset and parameter changes do not carry this permission.
+    ApproveSamplerSource {
+        channel: ChannelId,
+    },
     SetInstrument {
         channel: ChannelId,
         instrument: Instrument,
@@ -630,6 +635,23 @@ fn remap_mixer(p: &mut Project, map: impl Fn(u16) -> Option<u16>) {
             t.routes.push(Route::new(0, 1.0));
         }
         for e in &mut t.effects {
+            if let Some(plugin) = &mut e.plugin
+                && let Some(source) = plugin
+                    .extra
+                    .get("lime-sidechain-track")
+                    .and_then(serde_json::Value::as_u64)
+            {
+                let source = u16::try_from(source).ok().and_then(&map).unwrap_or(0);
+                plugin
+                    .extra
+                    .insert("lime-sidechain-track".into(), serde_json::json!(source));
+                let key = b"key"
+                    .iter()
+                    .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(*b)));
+                if let Some(state) = crate::lime::edited_param_state(plugin, key, if source == 0 { 0.0 } else { 1.0 }) {
+                    plugin.state = state;
+                }
+            }
             if e.kind == crate::effects::EffectKind::Compressor
                 && let Some(v) = e.params.get_mut(crate::effects::COMPRESSOR_SIDECHAIN)
                 && *v >= 1.0
@@ -677,6 +699,7 @@ impl Command {
             SetChannelSolo { .. } => "Solo channel",
             SetChannelMixerTrack { .. } => "Route channel",
             SetChannelRootKey { .. } => "Set root key",
+            ApproveSamplerSource { .. } => "Choose sample source",
             SetInstrument { .. } => "Edit instrument",
             SetStep { .. } => "Toggle step",
             AddNote { .. } | AddNotes { .. } => "Add note",
@@ -938,10 +961,16 @@ impl Command {
                     plugin.state = state;
                 }
             }
+            ApproveSamplerSource { channel: id } => {
+                channel(p, id)?.extra.remove("lime-external-source");
+            }
             SetInstrument {
                 channel: id,
                 instrument,
-            } => channel(p, id)?.instrument = instrument,
+            } => {
+                let c = channel(p, id)?;
+                c.instrument = instrument;
+            }
 
             SetStep {
                 pattern: pid,

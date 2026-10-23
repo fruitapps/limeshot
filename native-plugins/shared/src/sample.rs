@@ -1,12 +1,13 @@
 //! Samples are decoded when state is loaded/activated, never during process().
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use crossbeam_queue::ArrayQueue;
 use limeshot_dsp::SampleData;
 use nice_plug::params::persist::PersistentField;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::Arc};
 
-pub const MAX_FRAMES: usize = 4_000_000;
+pub const MAX_FRAMES: usize = limeshot_core::lime::MAX_EMBEDDED_FRAMES;
 const MAX_PCM_TEXT: usize = (MAX_FRAMES * 8).div_ceil(3) * 4;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -82,31 +83,44 @@ impl EmbeddedSample {
     }
 }
 
-/// The embedded sample and its decoded audio, plus a counter that changes with every new sample
-/// so the audio thread can notice a sample loaded from host state while the plugin is active.
-#[derive(Default, Clone)]
-pub struct SampleStore(
-    Arc<RwLock<(EmbeddedSample, Option<Arc<SampleData>>)>>,
-    Arc<std::sync::atomic::AtomicU64>,
-);
-
+/// Persistent state is control-thread-only. Bounded queues transfer decoded samples to the
+/// processor and return retired samples for destruction on the next control-thread state update.
+#[derive(Clone)]
+pub struct SampleStore {
+    state: Arc<RwLock<(EmbeddedSample, Option<Arc<SampleData>>)>>,
+    pending: Arc<ArrayQueue<Option<Arc<SampleData>>>>,
+    retired: Arc<ArrayQueue<Arc<SampleData>>>,
+}
+impl Default for SampleStore {
+    /// Preallocate bounded handoff queues before the processor can enter its realtime callback.
+    fn default() -> Self {
+        Self {
+            state: Arc::new(RwLock::new(Default::default())),
+            pending: Arc::new(ArrayQueue::new(8)),
+            retired: Arc::new(ArrayQueue::new(8)),
+        }
+    }
+}
 impl SampleStore {
-    /// Share the decoded audio, or return `None` for an empty or rejected embedded sample.
-    /// Acquires a read lock; use outside audio processing.
+    /// Share decoded audio during activation, outside audio processing.
     pub fn audio(&self) -> Option<Arc<SampleData>> {
-        self.0.read().1.clone()
+        self.state.read().1.clone()
     }
-    /// Changes whenever a new sample is stored.
-    pub fn generation(&self) -> u64 {
-        self.1.load(std::sync::atomic::Ordering::Acquire)
+    /// Nonblocking audio-thread handoff. Empty samples are explicit updates.
+    pub(crate) fn take_audio(&self) -> Option<Option<Arc<SampleData>>> {
+        self.pending.pop()
     }
-    /// The decoded audio without waiting: `None` while another thread holds the lock.
-    pub fn try_audio(&self) -> Option<Option<Arc<SampleData>>> {
-        self.0.try_read().map(|g| g.1.clone())
+    /// Whether adopting more audio must wait for control-thread sample collection.
+    pub(crate) fn retirement_full(&self) -> bool {
+        self.retired.is_full()
     }
-    /// Copy the stored display name under a read lock.
+    /// Keep the old audio alive until a control-thread state update collects it.
+    pub(crate) fn retire_audio(&self, audio: Arc<SampleData>) -> Result<(), Arc<SampleData>> {
+        self.retired.push(audio)
+    }
+    /// Copy the stored display name under a control-thread read lock.
     pub fn name(&self) -> String {
-        self.0.read().0.name.clone()
+        self.state.read().0.name.clone()
     }
 }
 
@@ -114,17 +128,34 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
     /// Decode and replace the embedded sample and cached audio under a write lock.
     /// Decode errors clear both to their defaults rather than reaching the caller.
     fn set(&self, sample: EmbeddedSample) {
-        match sample.decode() {
-            Ok(audio) => *self.0.write() = (sample, audio),
-            Err(_) => *self.0.write() = Default::default(),
+        while self.retired.pop().is_some() {}
+        let mut state = self.state.write();
+        if state.0.name == sample.name && state.0.sample_rate == sample.sample_rate && state.0.pcm == sample.pcm {
+            return;
         }
-        self.1.fetch_add(1, std::sync::atomic::Ordering::Release);
+        let (sample, audio) = match sample.decode() {
+            Ok(audio) => (sample, audio),
+            Err(_) => Default::default(),
+        };
+        // Serialize producers with the persistence lock, which the processor never takes.
+        *state = (sample, audio.clone());
+        let mut update = audio;
+        loop {
+            match self.pending.push(update) {
+                Ok(()) => break,
+                Err(audio) => {
+                    update = audio;
+                    // Coalesce old, unconsumed updates on this control thread.
+                    self.pending.pop();
+                }
+            }
+        }
     }
     /// Return the callback's result while holding a read lock on the embedded sample.
     fn map<F, R>(&self, f: F) -> R
     where
         F: Fn(&EmbeddedSample) -> R,
     {
-        f(&self.0.read().0)
+        f(&self.state.read().0)
     }
 }

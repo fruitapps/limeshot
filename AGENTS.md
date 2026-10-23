@@ -79,14 +79,17 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-22, session 17)
+## Current state (2026-10-23, hosted rewrite review)
 * The macOS MVP workflow passes automated tests; Windows/Linux runtime validation and Intel GUI/audio remain open.
 * Editors include Playlist tools, audio/automation clips, track mute locks and menus, Piano Roll stamps and scale
   highlighting, Channel Rack selection gestures, and Mixer EQ/sidechain/pre-fader sends.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
   native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
-* The workspace has 132 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* The workspace has 139 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+* Active instruments and effects use twelve Lime Native VST3 bundles; runtime built-in factories are deleted.
+  Hosted clips, note pan, track EQ, Gate/Drive/Chorus, sidechains, source previews, value menus and telemetry are implemented.
+  Native sample replacement uses bounded handoff/retirement queues; decoded audio is never freed in processing.
 * UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
 
 ## Immediate next tasks

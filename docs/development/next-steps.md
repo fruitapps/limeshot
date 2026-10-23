@@ -1,6 +1,6 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-23, Piano Roll controls session. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-23, Piano Roll controls integrated with the PR #7 review updates. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -10,13 +10,14 @@ feature work to an earlier session’s PR. Inspect merge state and stack on the 
 Finish implementation, validation, documentation, commit and push, attach the new PR, and do not merge automatically.
 Repeat this policy in every future session handoff before these docs merge. Do not create further sessions unless asked.
 
-## Highest priority: replace the built-ins with the Lime VST3s (owner decision, 2026-10-22)
+## Hosted rewrite: implemented; native/platform verification remains
 
 The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
 Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
-Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8 and #9 merged into still-open #7;
-repeat hands-on native/platform checks; actual evidence and remaining limits are in [the current handoff](handoff-hosted-p0-parity.md).
+Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 have merged into PR #7, which targets main. Review PR #7 and repeat hands-on native/platform checks;
+current review fixes and evidence are in [the review handoff](handoff-pr7-rewrite-review.md) and
+[CodeRabbit disposition](coderabbit-pr7-followup.md).
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
@@ -55,8 +56,8 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
    icons, individual heights, lock-to-content and consolidation are disabled until their model/engine support exists.
    Continue documenting FL's Browser top bar, clip/note/control context menus and floating View windows before
    implementing them; preserve clean-room evidence in `docs/research/`.
-2. **Audio and automation.** Tempo automation (AUT-008), crossfades/time stretching (PL-023), and a larger
-   automation editing surface. Compressed decoders, clip fades, visible automated controls and point modes are implemented.
+2. **Audio and automation.** Crossfades/time stretching (PL-023) and a larger
+   automation editing surface. Tempo automation (AUT-008), compressed decoders, clip fades, visible automated controls and point modes are implemented.
 3. **MIDI devices and recording.** MIDI input and MIDI/audio recording exist; verify with real devices, then add monitoring,
    latency compensation and count-in according to dependencies. Open an exported MIDI file in another application.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining inferred FL bindings, and automatic layout
@@ -77,10 +78,10 @@ remain evidence of what was tested at that time, not a promise that later change
 
 ## Latest continuation: Piano Roll controls
 
-`codex/editor-view-options` starts at `68259aa`, the latest unmerged #7 continuation after #8/#9 merged.
+`codex/editor-view-options` started at `68259aa` after #8/#9 merged; PR #10 now integrates updated #7 at `5cf0870`.
 Pan editing and the implemented View subset have headless interaction coverage and offscreen review. PR-016 stays
-IN_PROGRESS for release/Mod X/Y/fine pitch; PR-030 records the label subset. Latest local checks: 378 workspace tests
-(138 headless UI), strict all-target Clippy/build, rustfmt and inventories/reference checks. Use the current research
+IN_PROGRESS for release/Mod X/Y/fine pitch; PR-030 records the label subset. Latest integration checks: 399 workspace tests
+(141 headless UI), strict all-target Clippy/build, rustfmt and inventories/reference checks. Use the current research
 notes for fallback choices and unverified FL details; PLG-006's live verification is still pending.
 
 Every future session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR,

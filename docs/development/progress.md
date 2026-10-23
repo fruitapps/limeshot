@@ -1302,3 +1302,79 @@ confirm failed account payments/spending limit, so no current remote CI pass is 
 Every future development session must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached
 draft PR based on the latest unmerged continuation. Repeat this policy in handoffs even before these docs merge.
 Leave earlier checkouts intact; never merge automatically; create further sessions only when the owner asks.
+
+
+### 2026-10-23 — PR #7 rewrite review and repository reconciliation
+
+Started a new `codex/pr7-rewrite-review` branch in a new managed worktree at PR #7 head `68259aa`. The owner
+explicitly requested direct updates to PR #7, overriding the usual new-draft-PR rule for this session. PRs #8/#9
+have merged into #7; main is updated only when the owner merges #7. No automatic merge.
+
+Fixed all five Codex findings: insert transport for tempo-synced effects, mixer sidechain index/key remapping,
+converted slot bypass, lock-free sampler sample handoff/control-thread retirement, and held-note loop/filter edits.
+Also fixed bounded selection export, per-drag hosted state serialization, preset preservation of bypass/key/fields,
+and shared native sample-size acceptance with conversion warnings. Current architecture, feature records,
+instructions, release gates, menus and README now describe twelve hosted bundles and restored parity. Ten app
+screenshots and all twelve native editor screenshots were refreshed and visually inspected. Historical records
+are labelled; source comments/counts and the PR description were reconciled.
+
+Validation: 383 root tests (137 UI), 16 native tests; formatting and strict all-target Clippy in both workspaces;
+290-feature/generated inventory and repository reference checks. All twelve rebuilt release/debug bundles pass
+actual-binary verification at three rates/four buffer sizes; release signatures verify and hashes are recorded.
+Real VST3 regression checks delay timing at 90/180 BPM and automated tempo, including re-enabling a converted slot;
+non-automated DSP parity still requires exact sample bits. Details: [review handoff](handoff-pr7-rewrite-review.md).
+Remote CI remains billing-blocked; current pluginval and broader native/platform runtime validation remain open.
+
+Future sessions resume the standing policy: NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR stacked on the latest unmerged continuation. Leave older checkouts intact, carry work through validation,
+docs, commit and push, never merge automatically, and create further sessions only when the owner asks. The PR #7
+exception is limited to this explicitly requested session.
+
+
+### 2026-10-23 — all CodeRabbit PR #7 findings, including dropdowns
+
+Continued the owner-authorized PR #7 review on `codex/pr7-rewrite-review` in the same isolated managed worktree.
+Audited both CodeRabbit reviews, covering all 36 inline/minor/nitpick/outside-diff findings and the summary
+migration/documentation/scope checks. [Itemized disposition](coderabbit-pr7-followup.md) distinguishes prior fixes
+from this follow-up. No new session/PR or merge.
+
+Completed mono key downmix, uniform hosted-test bundle gating, shared native-pan identity, nested CI caching and
+remaining limitations/path cleanup. Preserved fractional timeline phase plus the first unprocessed event tick:
+3,840-note ramp regression checks exact onset count/order and integrated duration at four block sizes. Key tracking
+alone now activates the synth filter. Unchanged sampler state keeps decoded audio and held notes; effect presets
+merge fresh live state and preserve that baseline on undo. Conversion emits one accurate reason per failure,
+checks serialized state size, retains pending settings/source data and blocks incomplete exports. Loaded .lime and
+recovery sources outside the project folder, including symlinks, require explicit selection; CLI users can opt in
+with --allow-external-samples. Portable Lime resolution accepts known bundle names only.
+
+Corrected feature evidence (FX-002 is IMPLEMENTED pending native interaction verification), FL Audio Clip comparison,
+PLG-013 status and regenerated counts. Added more than 80 API contract comments and fixed rustdoc HTML. Local checks:
+394 root tests including 139 UI tests, 18 native tests; both workspace formatting/strict all-target Clippy; strict
+rustdoc; 290-feature and repository references pass. Rebuilt twelve release/debug plugins pass three-rate/four-buffer
+actual-binary verification; release signatures and hashes are recorded in native-plugins/VALIDATION.md. Hosted
+Settings was rendered and inspected. Exact native/reference sample-bit assertions remain unchanged and pass.
+
+GitHub Actions remains blocked by owner billing; no remote CI or current pluginval pass is claimed. Broader native
+and platform runtime checks remain open. Future sessions retain NEW codex/ branch, separate NEW managed worktree,
+NEW attached draft PR based on latest unmerged work, leave older checkouts intact, validate/document/commit/push,
+never merge automatically, and create further sessions only when the owner asks. This direct-PR exception is limited
+to the explicitly requested PR #7 review follow-up.
+
+
+### 2026-10-23 — PR #10 integration with updated PR #7
+
+At the owner's request, continued the existing PR #10 branch `codex/editor-view-options` in its managed worktree
+and merged `origin/claude/s16-synth-tempo` at `5cf0870`. Resolved the screenshot usage line with both --note-pan
+and --missing-sample, retained both branches' progress entries, kept the latest PR #7 review guidance alongside
+Piano Roll continuation notes, and regenerated features.md from the merged canonical JSON. All PR #7 review
+fixes and PR #10's note-pan/label options are preserved. No new feature session or PR was created.
+
+Validation: 399 workspace tests (141 headless UI), strict all-target Clippy/build, rustfmt, feature/menu inventories,
+repository references and diff checks pass. Used the PR #7 review worktree's updated native bundles/build cache;
+the merged Piano Roll pan/scale render was inspected offscreen. The owner requested marking #10 ready for review
+after resolving and validating the merge; no pull request merge is authorized. Existing remote CI billing and
+live native/platform verification limits remain.
+
+Future development sessions retain the standing policy: NEW codex/ branch, NEW separate managed worktree and
+NEW attached draft PR based on the latest unmerged continuation; preserve older checkouts, validate/document/
+commit/push, never merge automatically, and create further sessions only when the owner asks.

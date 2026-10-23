@@ -598,8 +598,7 @@ impl BridgedInstance {
             reset: false,
             transport: Transport::default(),
             sidechain_source: 0,
-            native_pan: class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000100")
-                || class_id.eq_ignore_ascii_case("4C494D454E4154495645000000000101"),
+            native_pan: crate::lime::is_native_pan_class(class_id),
             telemetry: limeshot_dsp::PluginTelemetry::default(),
         };
         Ok((inst, proc))
@@ -852,18 +851,23 @@ impl BridgedProcessor {
     pub fn process(&mut self, buf: &mut [f32], notes: &[NoteEvent], transport: &Transport) {
         self.process_with_sidechain(buf, notes, transport, None);
     }
+    /// Select a routed mixer key; zero selects the main input.
     pub fn set_sidechain_source(&mut self, source: usize) {
         self.sidechain_source = source;
     }
+    /// Selected mixer key source; zero means the processor main input.
     pub fn sidechain_source(&self) -> usize {
         self.sidechain_source
     }
+    /// Whether the instrument implements the native additive balance protocol.
     pub fn uses_channel_pan(&self) -> bool {
         self.native_pan
     }
+    /// Copy completed block statistics without retaining borrowed event pointers.
     pub fn telemetry(&self) -> limeshot_dsp::PluginTelemetry {
         self.telemetry
     }
+    /// Process stereo audio with timestamped events, transport and optional detector input.
     pub fn process_with_sidechain(
         &mut self,
         buf: &mut [f32],
@@ -981,12 +985,15 @@ impl BridgedProcessor {
 }
 
 impl limeshot_dsp::effects::Effect for BridgedProcessor {
+    /// Selected mixer key source; zero means the processor main input.
     fn sidechain_source(&self) -> usize {
         self.sidechain_source
     }
+    /// Maximum dynamics reduction from the preceding block, in dB.
     fn gain_reduction_db(&self) -> f32 {
         self.telemetry.reduction_db
     }
+    /// Use separate detector audio without mixing the key into the audible output.
     fn process_sidechain(&mut self, buf: &mut [f32], key: &[f32]) {
         let t = self.transport;
         self.process_with_sidechain(buf, &[], &t, Some(key));
@@ -1011,9 +1018,11 @@ impl limeshot_dsp::effects::Effect for BridgedProcessor {
 }
 
 impl limeshot_dsp::Instrument for BridgedProcessor {
+    /// Whether the instrument implements the native additive balance protocol.
     fn uses_channel_pan(&self) -> bool {
         self.native_pan
     }
+    /// Actual reported voices, including releases; plugins without telemetry contribute zero.
     fn active_voices(&self) -> usize {
         self.telemetry.voices as usize
     }

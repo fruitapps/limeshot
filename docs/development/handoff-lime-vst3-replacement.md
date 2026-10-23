@@ -67,7 +67,7 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
   lacked the sampler envelope fields.
 * Cleanup is done: the merged worktrees and the local and remote branches are deleted, and the build outputs
   (`target/`, `native-plugins/{target,dist}`) are removed.
-* The owner's main checkout (`~/Developer/limeshot`) is on `main`. Its earlier uncommitted state, an older draft
+* The owner's primary checkout is on `main`. Its earlier uncommitted state, an older draft
   of the native suite superseded by #6 plus three docs, is kept in `git stash` as "Backup before cleanup
   2026-10-22". The three docs were moved into PR #7: `docs/development/test-coverage-audit.md`,
   `docs/roadmap/first-release.md` and `docs/roadmap/first-release-features.md`. Their baseline is pinned to
@@ -122,9 +122,9 @@ on the latest unmerged continuation, and no new chat/session unless the owner as
    changes), `known-limitations.md`, `decisions.md` (new decision: built-ins replaced by Lime VST3s), README,
    `progress.md`, and the first-release docs.
 
-## Original loss checklist (current records: PLG-014…029)
+## Historical original loss checklist (current records: PLG-014…029)
 
-Add these to `features.json` as P0 (NOT_STARTED), link them from `next-steps.md`, and verify each against the code
+The following was the pre-parity plan. Records PLG-014…029 now exist; PLG-017…020, PLG-022 and PLG-024…029 are implemented. Follow current feature records and the review handoff for remaining validation, rather than re-adding completed work. The original instruction was to verify each against the code
 before writing it down:
 
 * **Lime Sampler VST:** sampler attack/decay/sustain envelope (it is a gate today); sample loop with loop

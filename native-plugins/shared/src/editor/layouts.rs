@@ -20,6 +20,7 @@ impl NativeEditor {
             _ => self.additional_effect(ui, c, t),
         }
     }
+    /// Draw appended effect controls from the shared native parameter schema.
     fn additional_effect(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
         panel(ui.painter(), c.r(12.0, 55.0, 736.0, 330.0), "SOUND / CHARACTER", t, c.s);
         for (index, spec) in crate::parameters::specs(self.id).iter().enumerate() {
