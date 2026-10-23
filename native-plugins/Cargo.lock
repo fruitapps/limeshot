@@ -1554,6 +1554,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-chorus"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-comp"
 version = "0.1.0"
 dependencies = [
@@ -1570,6 +1578,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "lime-drive"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
 name = "lime-eq"
 version = "0.1.0"
 dependencies = [
@@ -1579,6 +1595,14 @@ dependencies = [
 
 [[package]]
 name = "lime-filter"
+version = "0.1.0"
+dependencies = [
+ "lime-native",
+ "nice-plug",
+]
+
+[[package]]
+name = "lime-gate"
 version = "0.1.0"
 dependencies = [
  "lime-native",

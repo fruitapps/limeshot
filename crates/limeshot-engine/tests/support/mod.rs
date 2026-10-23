@@ -118,6 +118,8 @@ struct Reference {
     root: u8,
     rate: f32,
     slots: Vec<(i32, Voice)>,
+    clips: Vec<i32>,
+    pans: Vec<(i32, (f32, f32))>,
 }
 impl limeshot_dsp::Instrument for Reference {
     fn process(&mut self, out: &mut [f32], events: &[limeshot_dsp::NoteEvent], _: &limeshot_dsp::Transport) {
@@ -126,6 +128,7 @@ impl limeshot_dsp::Instrument for Reference {
         for (frame, pair) in out.as_chunks_mut::<2>().0.iter_mut().enumerate() {
             while let Some(event) = events.get(next).filter(|e| e.offset as usize == frame) {
                 match event.kind {
+                    limeshot_dsp::NoteEventKind::ChannelPan { .. } => {}
                     limeshot_dsp::NoteEventKind::On { key, velocity, id } => {
                         if let Some(voice) = Voice::for_instrument(&self.cfg, self.root, key, velocity, self.rate) {
                             let slot = self.slots.iter_mut().find(|(_, v)| !v.is_active());
@@ -134,7 +137,37 @@ impl limeshot_dsp::Instrument for Reference {
                             }
                         }
                     }
+                    limeshot_dsp::NoteEventKind::Clip {
+                        key,
+                        velocity,
+                        id,
+                        playback,
+                    } => {
+                        if let Some(mut voice) = Voice::for_instrument(&self.cfg, self.root, key, velocity, self.rate) {
+                            voice.skip(playback.offset_secs + playback.elapsed_secs, self.rate);
+                            voice.fade = Some(limeshot_dsp::voice::ClipFade {
+                                in_len: playback.fade_in_secs * self.rate,
+                                pos: playback.elapsed_secs as f32 * self.rate,
+                                out_len: playback.fade_out_secs * self.rate,
+                                left: playback.remaining_secs as f32 * self.rate,
+                            });
+                            if let Some(slot) = self.slots.iter_mut().find(|(_, v)| !v.is_active()) {
+                                *slot = (id, voice);
+                                self.clips.push(id);
+                            }
+                        }
+                    }
+                    limeshot_dsp::NoteEventKind::Pan { id, pan } => {
+                        self.pans.push((id, limeshot_dsp::pan_gains(pan)));
+                    }
                     limeshot_dsp::NoteEventKind::Off { id, .. } => {
+                        if self.clips.contains(&id) {
+                            for (vid, voice) in &mut self.slots {
+                                if *vid == id {
+                                    voice.source = Source::Off;
+                                }
+                            }
+                        }
                         let one_shot = matches!(
                             self.cfg,
                             VoiceInstrument::Sampler {
@@ -154,11 +187,17 @@ impl limeshot_dsp::Instrument for Reference {
                 }
                 next += 1;
             }
-            for (_, voice) in &mut self.slots {
+            for (id, voice) in &mut self.slots {
                 if voice.is_active() {
                     let (l, r) = voice.next_frame();
-                    pair[0] += l;
-                    pair[1] += r;
+                    let pan = self
+                        .pans
+                        .iter()
+                        .rev()
+                        .find(|(vid, _)| vid == id)
+                        .map_or((1.0, 1.0), |(_, g)| *g);
+                    pair[0] += l * pan.0;
+                    pair[1] += r * pan.1;
                 }
             }
         }
@@ -182,6 +221,8 @@ pub fn instruments(snapshot: &Snapshot, rate: u32) -> Vec<(u32, Box<dyn limeshot
                     root: *root,
                     rate: rate as f32,
                     slots: (0..128).map(|_| (-1, Voice::default())).collect(),
+                    clips: Vec::new(),
+                    pans: Vec::new(),
                 }) as Box<dyn limeshot_dsp::Instrument>,
             )
         })

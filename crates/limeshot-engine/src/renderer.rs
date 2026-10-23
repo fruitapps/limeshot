@@ -48,7 +48,8 @@ enum Action {
         key: u8,
         velocity: f32,
         end_tick: Tick,
-        clip: bool,
+        pan: f32,
+        playback: Option<limeshot_dsp::ClipPlayback>,
     },
     Click {
         downbeat: bool,
@@ -390,7 +391,7 @@ impl Renderer {
         if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
             let at = (0, self.now);
             self.instruments
-                .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false);
+                .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false, 0.0, None);
         }
     }
 
@@ -428,7 +429,7 @@ impl Renderer {
     }
 
     pub fn active_voices(&self) -> usize {
-        self.voices.iter().filter(|v| v.is_active()).count()
+        self.voices.iter().filter(|v| v.is_active()).count() + self.instruments.active_voices()
     }
 
     /// Peak levels of the last block, per mixer track (index 0 = master).
@@ -490,7 +491,8 @@ impl Renderer {
                 .take(crate::MAX_PLUGIN_CHANNELS)
             {
                 let (volume, pan) = self.chan_mix.get(i).copied().unwrap_or((ch.volume, ch.pan));
-                let (pl, pr) = pan_gains(pan);
+                let native_pan = self.instruments.channel_pan(i, done as u32, pan);
+                let (pl, pr) = pan_gains(if native_pan { 0.0 } else { pan });
                 self.chan_gains[i * MAX_BLOCK + done..i * MAX_BLOCK + done + chunk].fill((volume * pl, volume * pr));
             }
             done += chunk;
@@ -644,7 +646,18 @@ impl Renderer {
                             key: e.key,
                             velocity: e.velocity,
                             end_tick: e.end(),
-                            clip: true,
+                            pan: e.pan,
+                            playback: Some(limeshot_dsp::ClipPlayback {
+                                offset_secs: e.offset_secs,
+                                elapsed_secs: Timeline::new(tl.tempo, self.sample_rate)
+                                    .sample_of_tick(t_lo.saturating_sub(e.tick))
+                                    as f64
+                                    / f64::from(self.sample_rate),
+                                remaining_secs: tl.sample_of_tick(e.end()).saturating_sub(s0) as f64
+                                    / f64::from(self.sample_rate),
+                                fade_in_secs: e.fade_in_secs,
+                                fade_out_secs: e.fade_out_secs,
+                            }),
                         },
                     ));
                 }
@@ -662,7 +675,15 @@ impl Renderer {
                     key: e.key,
                     velocity: e.velocity,
                     end_tick: e.tick + e.length,
-                    clip: e.clip,
+                    pan: e.pan,
+                    playback: e.clip.then_some(limeshot_dsp::ClipPlayback {
+                        offset_secs: e.offset_secs,
+                        elapsed_secs: 0.0,
+                        remaining_secs: tl.sample_of_tick(e.end()).saturating_sub(tl.sample_of_tick(e.tick)) as f64
+                            / f64::from(self.sample_rate),
+                        fade_in_secs: e.fade_in_secs,
+                        fade_out_secs: e.fade_out_secs,
+                    }),
                 },
             ));
         }
@@ -735,17 +756,26 @@ impl Renderer {
                 key,
                 velocity,
                 end_tick,
-                clip,
+                pan,
+                playback,
             } => {
                 let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
                     return;
                 };
-                if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument
-                    && !clip
-                {
+                if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
                     let off_at = self.timeline.sample_of_tick(end_tick);
-                    self.instruments
-                        .note_on(usize::from(channel), id, key, velocity, at, off_at, end_tick, true);
+                    self.instruments.note_on(
+                        usize::from(channel),
+                        id,
+                        key,
+                        velocity,
+                        at,
+                        off_at,
+                        end_tick,
+                        true,
+                        pan,
+                        playback,
+                    );
                 }
             }
             Action::Click { downbeat } => self.alloc_voice(Voice::click(downbeat, sr)),

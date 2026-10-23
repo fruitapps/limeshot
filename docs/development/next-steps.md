@@ -1,6 +1,6 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-22, session 17. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-23, hosted P0 parity session. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -15,7 +15,8 @@ Repeat this policy in every future session handoff before these docs merge. Do n
 The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
 Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
-Next restore the P0 losses PLG-017…020, PLG-022 and PLG-024…029, especially silent Playlist audio clips and legacy track EQ.
+Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. Review the new stacked draft PR and
+repeat hands-on native/platform checks; actual evidence and remaining limits are in [the current handoff](handoff-hosted-p0-parity.md).
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
@@ -58,7 +59,7 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
    persistence. Detachable panels and explicitly saved custom layouts already exist.
 5. **Packaging (PF-006)** (macOS app/DMG exists; signing and Windows/Linux packages remain) and `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
    further arrangements and value-checked fixtures from older FL versions.
-6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's nine standalone VST3 bundles now live in `native-plugins/` (PLG-012).
+6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's twelve standalone VST3 bundles now live in `native-plugins/` (PLG-012).
    Complete hands-on DAW/editor checks and validate Windows/Linux/Intel builds; see `native-plugins/VALIDATION.md`.
 
 ## Research and verification rules

@@ -1251,3 +1251,23 @@ pluginval unavailable, broader native/platform runtime remains open. No merge.
 Future sessions must use a NEW `codex/` branch, separate managed worktree and NEW draft PR stacked on the latest
 unmerged continuation, repeat this policy in handoffs, and create another session only when the owner asks. The
 owner's same-branch takeover instruction applies only to this continuation.
+
+
+### 2026-10-23 — hosted P0 parity after native-only replacement
+
+Created a NEW managed worktree and `codex/hosted-p0-parity` from verified unmerged PR #8 head `31d09f9`,
+stacked on unmerged #7. Implemented PLG-024 clips first, then note pan, exact hosted track EQ, Gate/Drive/Chorus,
+Comp key buses, embedded source waveforms/previews, Lime unit-value menus, dynamics telemetry and native voice
+statistics (PLG-017…020, PLG-022, PLG-025…029). No runtime built-in playback was restored. Test Gain/Tone remain.
+
+Real hosted acceptance tests replace silence/ignored-pan gap assertions and preserve the exact sample-bit/RMS-0
+reference comparison. Local/bridged audio and telemetry are compared. New native editors and Mixer/Playlist/rack
+renders were visually inspected. Validation details and limits: [current handoff](handoff-hosted-p0-parity.md).
+Final checks: 375 root tests (136 UI), 14 native tests; fmt and strict all-target Clippy in both workspaces;
+290-feature/repository checks; twelve rebuilt release and allocation-checked debug bundles pass the binary verifier
+at three rates/four buffers. All release signatures verify. CLI demo: 741207 frames at 44.1 kHz, peak −3.7 dBFS.
+GitHub Actions remains billing-blocked; pluginval unavailable; broader native/platform runtime remains open.
+
+Future sessions must use a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR based on
+the latest unmerged continuation. Leave older checkouts intact; never merge automatically. Create another session
+only when the owner asks.

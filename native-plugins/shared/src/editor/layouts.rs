@@ -16,7 +16,24 @@ impl NativeEditor {
             5 => self.delay(ui, c, t),
             6 => self.room(ui, c, t),
             7 => self.comp(ui, c, t),
-            _ => self.limiter(ui, c, t),
+            8 => self.limiter(ui, c, t),
+            _ => self.additional_effect(ui, c, t),
+        }
+    }
+    fn additional_effect(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
+        panel(ui.painter(), c.r(12.0, 55.0, 736.0, 330.0), "SOUND / CHARACTER", t, c.s);
+        for (index, spec) in crate::parameters::specs(self.id).iter().enumerate() {
+            let col = index % 3;
+            let row = index / 3;
+            self.knob(
+                ui,
+                c,
+                c.r(30.0 + col as f32 * 242.0, 88.0 + row as f32 * 145.0, 212.0, 124.0),
+                index,
+                spec.name,
+                t.accent,
+                t,
+            );
         }
     }
     fn synth(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {

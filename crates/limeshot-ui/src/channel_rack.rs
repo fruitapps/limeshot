@@ -675,6 +675,10 @@ fn channel_button(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, selected: bo
         Instrument::Plugin(_) => !app.plugins.is_loaded(crate::plugins::Target::Channel(ch.id)),
         Instrument::Synth(_) => false,
     };
+    if let Some(path) = app.sampler_source(ch.id) {
+        let waveform = Rect::from_min_max(r.min + vec2(4.0, 2.0), r.max - vec2(4.0, 2.0));
+        crate::browser::paint_sample_wave(app, ui.painter(), waveform, &path, base.gamma_multiply(0.3));
+    }
     let name = elide(&ch.name, 16);
     ui.painter().text(
         r.left_center() + vec2(10.0, 0.0),

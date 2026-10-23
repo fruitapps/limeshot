@@ -150,6 +150,7 @@ pub struct LimeShotApp {
     pub path: Option<PathBuf>,
     pub player: Player,
     pub samples: SampleCache,
+    sampler_sources: std::collections::HashMap<ChannelId, (limeshot_core::PluginState, PathBuf)>,
     /// The plugin database and the project's running plugins.
     pub plugins: crate::plugins::PluginHost,
     pub settings: Settings,
@@ -287,6 +288,7 @@ impl LimeShotApp {
             doc,
             path: None,
             samples: SampleCache::new(),
+            sampler_sources: Default::default(),
             plugins: crate::plugins::PluginHost::new(None),
             settings,
             ui,
@@ -621,6 +623,16 @@ impl LimeShotApp {
 
     /// Rebuild and send the playback snapshot when the project, the current pattern or the loaded
     /// samples changed.
+    /// Runtime source for waveform/audition, using the same embedded PCM as hosted playback.
+    pub fn sampler_source(&self, channel: ChannelId) -> Option<PathBuf> {
+        self.sampler_sources
+            .get(&channel)
+            .map(|(_, path)| path.clone())
+            .or_else(|| {
+                let sampler = limeshot_core::lime::sampler_params(&self.project().channel(channel)?.instrument)?;
+                Some(self.samples.resolve(&sampler.sample?.path))
+            })
+    }
     pub fn sync_engine(&mut self) {
         let loaded = self.samples.poll();
         let key = (self.doc.revision(), self.current_pattern());
@@ -637,6 +649,29 @@ impl LimeShotApp {
             }));
             for r in refs {
                 self.samples.request(&r);
+            }
+        }
+        let sources: Vec<_> = self
+            .project()
+            .channels
+            .iter()
+            .filter_map(|c| {
+                let limeshot_core::Instrument::Plugin(plugin) = &c.instrument else {
+                    return None;
+                };
+                (limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER))
+                    .then(|| (c.id, plugin.state.clone()))
+            })
+            .collect();
+        self.sampler_sources
+            .retain(|id, _| sources.iter().any(|(c, _)| c == id));
+        for (id, state) in sources {
+            if self.sampler_sources.get(&id).is_some_and(|(old, _)| *old == state) {
+                continue;
+            }
+            self.sampler_sources.remove(&id);
+            if let Some(path) = crate::lime::cache_embedded_sample(&state, &mut self.samples) {
+                self.sampler_sources.insert(id, (state, path));
             }
         }
         self.send_effect_processors();

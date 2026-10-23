@@ -260,6 +260,10 @@ impl Eq3 {
 
 impl Effect for Eq3 {
     fn set_params(&mut self, p: &[f32]) {
+        if p.len() >= 17 && get(p, 7, 0.0) >= 0.5 {
+            self.set_bands(&[(p[8], p[9], p[10]), (p[11], p[12], p[13]), (p[14], p[15], p[16])]);
+            return;
+        }
         let (lg, lf, mg, mf, mq, hg, hf) = (
             get(p, 0, 0.0),
             get(p, 1, 120.0),

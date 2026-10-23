@@ -514,6 +514,10 @@ pub enum Command {
         plugin: crate::PluginTarget,
         state: crate::PluginState,
     },
+    SetPluginSidechain {
+        plugin: crate::PluginTarget,
+        source: u16,
+    },
     SetPluginSeparateProcess {
         plugin: crate::PluginTarget,
         on: bool,
@@ -570,14 +574,26 @@ fn add_effect(
     track: u16,
     slot: impl FnOnce(u32) -> crate::effects::EffectSlot,
 ) -> Result<Created, CommandError> {
-    if mixer_track(p, track)?.effects.len() >= crate::effects::MAX_EFFECTS {
+    if mixer_track(p, track)?
+        .effects
+        .iter()
+        .filter(|e| !crate::lime::is_track_eq(e))
+        .count()
+        >= crate::effects::MAX_EFFECTS
+    {
         return Err(CommandError::Invalid(format!(
             "a mixer track holds at most {} effects",
             crate::effects::MAX_EFFECTS
         )));
     }
     let id = p.alloc_id();
-    mixer_track(p, track)?.effects.push(slot(id));
+    let t = mixer_track(p, track)?;
+    let index = t
+        .effects
+        .iter()
+        .position(crate::lime::is_track_eq)
+        .unwrap_or(t.effects.len());
+    t.effects.insert(index, slot(id));
     Ok(Created(Some(id)))
 }
 
@@ -746,6 +762,7 @@ impl Command {
             AddEffect { .. } => "Add effect",
             AddPluginEffect { .. } => "Add plugin",
             SetPluginState { .. } => "Edit plugin",
+            SetPluginSidechain { .. } => "Plugin sidechain",
             SetPluginSeparateProcess { .. } => "Plugin process",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
@@ -1927,6 +1944,7 @@ impl Command {
                 finite(value.gain)?;
                 finite(value.width)?;
                 mixer_track(p, track)?.eq[b] = value.sanitized(b);
+                crate::lime::sync_track_eq(p, usize::from(track));
             }
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
@@ -1967,6 +1985,29 @@ impl Command {
                 p.plugin_mut(plugin)
                     .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?
                     .state = state;
+            }
+            SetPluginSidechain { plugin, source } => {
+                if usize::from(source) >= p.mixer.tracks.len() {
+                    return Err(CommandError::NoMixerTrack(source));
+                }
+                let reference = p
+                    .plugin_mut(plugin)
+                    .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?;
+                if crate::lime::LimePlugin::of(reference) != Some(crate::lime::LimePlugin(7)) {
+                    return Err(CommandError::Invalid(
+                        "this plugin has no Lime sidechain selector".into(),
+                    ));
+                }
+                reference
+                    .extra
+                    .insert("lime-sidechain-track".into(), serde_json::json!(source));
+                let id = b"key"
+                    .iter()
+                    .fold(0u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(*b)));
+                if let Some(state) = crate::lime::edited_param_state(reference, id, if source == 0 { 0.0 } else { 1.0 })
+                {
+                    reference.state = state;
+                }
             }
             SetPluginSeparateProcess { plugin, on } => {
                 p.plugin_mut(plugin)

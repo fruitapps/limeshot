@@ -270,3 +270,21 @@ and the returned demo document use native references. Gate/Drive/Chorus are pres
 Legacy track EQ has no exact native mapping, so its settings survive inactive, its panel is disabled, and PLG-029
 records restoration as P0. PLG-024/025 warnings disclose silent clips and ignored note pan. All outstanding losses
 are recorded independently of the completed factory replacement. Test Gain/Tone fixtures remain unchanged.
+
+
+### D39 hosted parity — native protocol and dedicated track EQ (2026-10-23)
+
+Playlist clips stay inside Lime Sampler. Fixed-size, 7-bit-clean, versioned noncommercial SysEx carries source
+window/chase/fades without allocating in processing. Ordinary notes retain standard VST3 note IDs and pan expressions;
+a channel-pan message preserves the legacy additive balance law before mixing. Output SysEx reports actual native
+voice counts and maximum dynamics reduction per block; the host copies telemetry during the event callback so no
+borrowed pointer survives it. The process bridge serializes the same bounded data plus stereo key audio.
+
+Gate/Drive/Chorus append bundle IDs 9–11. Existing IDs and parameter order remain unchanged. Exact legacy track EQ
+uses appended hidden controls on Lime EQ and a marked hosted slot after the ten inserts, before the fader. Saved
+bands remain canonical; SetMixerEq updates state through Document undo. Sanitization keeps ten inserts plus one
+validated track-EQ slot. No runtime built-in instrument/effect factory returns.
+
+Channel Rack/Settings/Playlist previews cache the embedded sampler PCM under a content key and require no source
+file or temporary file. Known Lime numeric parameters use the existing unit-value menu and named automation.
+Native/platform GUI validation, pluginval and billing-blocked remote CI remain separate from local test evidence.

@@ -27,7 +27,7 @@ pub struct FxRack {
     retired: Vec<Box<dyn Effect>>,
 }
 
-const POOL: usize = Mixer::MAX_TRACKS * MAX_EFFECTS + 64;
+const POOL: usize = Mixer::MAX_TRACKS * (MAX_EFFECTS + 1) + 64;
 
 impl Default for FxRack {
     fn default() -> Self {
@@ -39,7 +39,7 @@ impl FxRack {
     pub fn new() -> Self {
         Self {
             chains: (0..Mixer::MAX_TRACKS)
-                .map(|_| Vec::with_capacity(MAX_EFFECTS))
+                .map(|_| Vec::with_capacity(MAX_EFFECTS + 1))
                 .collect(),
             pool: Vec::with_capacity(POOL),
             retired: Vec::with_capacity(POOL),

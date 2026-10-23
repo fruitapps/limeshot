@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| "out/native-plugins".into());
     std::fs::create_dir_all(&folder)?;
-    for id in 0..9 {
+    for id in 0..lime_native::parameters::NAMES.len() as u8 {
         let mut editor = if id == 1 {
             NativeEditor::preview_sampler(
                 &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/samples/Lime Snare.wav"),

@@ -77,3 +77,39 @@ builds no longer match; rebuild with `python build.py` and re-run the verifier/p
 | Lime Sampler | `759b47f8f68ab8603a9a6f85a3eb536fa89674b22105d8cc91ae0d6f3b8db647` |
 | Lime Utility | `6fa69efe2e3e81533763131c0910cd917ab15c6972ce01994b858bb283ab8c01` |
 | LimeSynth | `6498c799e2ca4fd9fbead4aa5a52847f66514a5a96055061422d4906ab73692c` |
+
+
+## 2026-10-23 — hosted P0 parity session
+
+The twelve current macOS arm64 release bundles and twelve allocation-checked debug bundles were rebuilt with
+`python3 build.py` / `python3 build.py --debug`. Actual-binary `verify` passes all twelve at 44.1/48/96 kHz and
+buffers 1/64/333/1024, covering loading/class names, editor creation, audio/MIDI offsets, state and automation.
+All twelve release signatures pass `codesign --verify --deep --strict`. The earlier nine-bundle/pluginval table
+above is historical: pluginval is unavailable on this host and was not run for these binaries.
+
+Both workspaces pass rustfmt and all-target Clippy with warnings denied. Root: 375 tests including 136 UI tests;
+native: 14 tests, with DSP parity expanded to Gate/Drive/Chorus and layout coverage for all twelve editors.
+Hosted acceptance checks clip offsets/chase/overlap/fades/gates, note pan, exact legal legacy EQ bands, routed
+Comp key audio, actual reduction/voice telemetry and local/bridged sample equality. The non-automated reference
+comparison retains exact sample bits (RMS difference 0). Mixer EQ/sidechain, Playlist/rack and native editor
+renders were inspected. The CLI demo renders 741207 frames at 44.1 kHz, peak −3.7 dBFS.
+
+GitHub Actions remains blocked by owner billing. Windows/Linux/Intel runtime and broader native editor interaction
+remain open; no remote CI or current pluginval pass is claimed. Session details: `docs/development/handoff-hosted-p0-parity.md`.
+
+Current release executable hashes (the previous table identifies older binaries):
+
+| Plugin | SHA-256 |
+| --- | --- |
+| Lime Chorus | `5b3424c83ea409b126b21172180b3df780bfc01092168b19176298c4a6d142dd` |
+| Lime Comp | `428d0de78a454bd76f9b08a9e5522b560c7aed8930a41133ba3772842cb747e3` |
+| Lime Delay | `d7baf5f8465118c8e0d87d13d7ddc4a1ab7b993858cbd54c4af0149e432cca2c` |
+| Lime Drive | `ea9a611510def05e6c5fc59cef45183eb0d354aec170039dc6fdf064cd1e6ec3` |
+| Lime EQ | `75302a0427ebd663b76a41467be318ba6f331086dce45019dff3046d8aa7e19a` |
+| Lime Filter | `4f3a6249905b2a6fbbea73da38f88ad3388bf5129d83c85e19af0e3f88e1f7f4` |
+| Lime Gate | `fe26fe0be1b38578bfeacda35fae9b99f087f2b4e3d1bae2b5c39e94f2f69d5e` |
+| Lime Limiter | `198719169da5fa51432bfaffd06dad4e7bc54a21b10467be06834264b2c3b4ed` |
+| Lime Room | `96413986f258e0249f0b7b833977bd5147356ceb11642a6725f92be6404468aa` |
+| Lime Sampler | `fa667273c35e2a962013d4dcf70e20f507a567e96f8fe22e4e701ff6a7afa610` |
+| Lime Utility | `5459e0ae7242f02a6bf81b0f1d935854679b80a6a70e185b3c6fcd66d36fee57` |
+| LimeSynth | `8fc8ab9a96025712be6a94bbc951e8487af74ec16badcf7ae9ed5d71c7368586` |

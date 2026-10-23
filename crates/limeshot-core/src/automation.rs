@@ -135,7 +135,7 @@ impl AutomationTarget {
                 .get(index)
                 .copied(),
             // The value lives in the plugin, not the project.
-            AutomationTarget::PluginParam { .. } => None,
+            AutomationTarget::PluginParam { plugin, id } => crate::lime::parameter_value(p.plugin(plugin)?, id),
             AutomationTarget::Tempo => Some(p.tempo.bpm() as f32),
         }
     }
@@ -220,7 +220,13 @@ impl AutomationTarget {
                     PluginTarget::Effect { track: t, .. } => track(t),
                 };
                 match p.plugin(plugin) {
-                    Some(pl) => format!("{place} – {}: parameter {id}", pl.name),
+                    Some(pl) => format!(
+                        "{place} – {}: {}",
+                        pl.name,
+                        crate::lime::parameter_spec(pl, id)
+                            .map(|(_, s)| s.name.to_string())
+                            .unwrap_or_else(|| format!("parameter {id}"))
+                    ),
                     None => format!("{place} – (removed plugin)"),
                 }
             }
