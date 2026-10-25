@@ -57,5 +57,13 @@ Repair validation: [CI 40214027778](https://github.com/fruitapps/limeshot/action
 [native 40214027805](https://github.com/fruitapps/limeshot/actions/runs/40214027805), and
 [packaging 40214064487](https://github.com/fruitapps/limeshot/actions/runs/40214064487) run the initial source fix
 `ee55b76`. The filename repair follows separately; final results are recorded in PR #15. Local verification:
-427 workspace tests including 157 UI tests, strict all-target Clippy/build, formatting, inventories, references,
+427 workspace tests with `CI=1` (mandatory bundles), including 157 UI tests, strict all-target Clippy/build,
+formatting, inventories, references,
 five repository-checker tests, 25 independent rack-drop runs, and byte-identical hosted demo/reload WAVs (-3.7 dBFS).
+
+The module regression passes with the corrected portable bundle URI and fails against the original weak cache
+at the residency assertion. Windows CI caught the earlier URI typo; the final test follow-up fixes only that URI.
+
+Linux ARM64 at `3a28f7d` now passes both concurrent MVP tests (including the formerly crashing demo render) and
+all 157 UI tests. That run's only failure is the new module regression's bundle URI typo, corrected in the follow-up.
+The complete final run is still required; this is targeted evidence that the observed MVP crash no longer occurs.

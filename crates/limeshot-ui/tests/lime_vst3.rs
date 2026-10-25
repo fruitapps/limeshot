@@ -798,10 +798,10 @@ fn missing_bundle_gate_skips_locally_and_fails_on_ci() {
 /// Closing the last instance must not unload callbacks registered by the plugin framework.
 #[test]
 fn loaded_modules_survive_last_client_and_concurrent_reloads() {
-    if !bundles_or_skip(&["LimeSynth"]) {
+    if !bundles_or_skip(&["lime:LimeSynth.vst3"]) {
         return;
     }
-    let path = limeshot_plugins::lime::bundle_path("LimeSynth").unwrap();
+    let path = limeshot_plugins::lime::bundle_path("lime:LimeSynth.vst3").unwrap();
     let module = limeshot_plugins::Vst3Module::load(&path).unwrap();
     let resident = Arc::downgrade(&module);
     drop(module);

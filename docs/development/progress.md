@@ -1627,10 +1627,15 @@ with process-lifetime strong retention (D41), preventing unload of framework cal
 teardown/reload. A real-bundle regression checks retention without clients and identity across concurrent loads.
 No UI appearance or audio scheduling changes. Updated architecture, platform evidence, feature notes and limits.
 
-Local verification passes: 427 workspace tests (157 UI), strict all-target Clippy/build, formatting, inventories,
+Local verification with `CI=1` (mandatory bundles) passes: 427 workspace tests (157 UI), strict all-target
+Clippy/build, formatting, inventories,
 repository references, five repository-checker tests, 25 independent rack-drop runs and byte-identical hosted
-demo/reload WAVs (-3.7 dBFS). Reused the existing plugin-workflow build cache and native debug bundles.
+demo/reload WAVs (-3.7 dBFS). The module regression also fails against the original weak cache at its intended
+residency assertion. Corrected its portable bundle URI after Windows CI exposed an optional-local skip.
+Reused the existing plugin-workflow build cache and native debug bundles.
 Fresh remote runs are linked in [platform validation](platform-validation.md); final outcomes are recorded in PR #15.
+Linux ARM64 now passes both formerly crashing concurrent MVP tests and all 157 UI tests; its only failure in
+`3a28f7d` is the new test's corrected bundle URI. Final complete CI remains separate from that targeted evidence.
 
 All five original alpha packaging jobs and draft-release assembly pass. Downloaded and verified all ten package
 hashes, both DMGs, ZIP CRCs and Linux tarball plugin/install contents. Found and repaired the draft checksum manifest:
