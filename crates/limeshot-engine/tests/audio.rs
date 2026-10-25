@@ -1860,3 +1860,30 @@ fn synth_filter_modes_and_key_tracking() {
         "key tracking opens the filter: {tracked} vs {fixed}"
     );
 }
+
+#[test]
+fn playlist_clip_audition_uses_the_source_offset_at_every_block_size() {
+    let (_, snap) = audio_clip_fixture();
+    for block in [1, 64, 333, 1024] {
+        let mut renderer = Renderer::new(SR, snap.clone());
+        let channel = snap.song.events[0].channel;
+        renderer.preview_clip(
+            channel,
+            limeshot_dsp::ClipPlayback {
+                offset_secs: 0.25,
+                elapsed_secs: 0.125,
+                remaining_secs: 0.1,
+                fade_in_secs: 0.0,
+                fade_out_secs: 0.0,
+            },
+        );
+        let mut out = vec![0.0; block * 2];
+        renderer.render(&mut out);
+        assert!((out[0] - 0.375).abs() < 1e-5, "block {block}: {}", out[0]);
+        renderer.preview_note_off(channel, 60);
+        for _ in 0..(1024 / block + 2) {
+            renderer.render(&mut out);
+        }
+        assert!(out.iter().all(|v| v.abs() < 1e-6));
+    }
+}

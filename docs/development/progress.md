@@ -1441,3 +1441,41 @@ Updated native hashes and retained live screenshots. No merge or broader platfor
 Future development sessions require a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR,
 stacked on the latest unmerged continuation after checking merge state. Preserve older checkouts; validate,
 document, commit and push, never merge automatically, and create further sessions only when the owner asks.
+
+## 2026-10-25 — Sampler, mixer and editor workflow fixes (stacked on PR #11)
+
+New branch `codex/sampler-mixer-workflow` and managed worktree, stacked on the unmerged `codex/plugin-workflow-fixes`
+(PR #11) at `b54a522`. Codex implemented most of this pass and was interrupted during live checks; Claude Code finished
+validation, review fixes and documentation.
+
+Done:
+* Native sampler stays visible while a host drag passes over it (AppKit hit-test passthrough instead of hiding).
+* Browser double-click only previews; Browser rows label sampler channels as Samples.
+* Ctrl/Cmd+drag on the Playlist or Piano Roll ruler selects the contents of the range; Cmd+B duplicates them to
+  the range end and advances the range, as in FL Studio. The Piano Roll range also loops Pattern playback.
+* Plugin buttons toggle like other windows: close when the plugin is frontmost or pinned, otherwise raise it.
+* Double-clicking an audio clip or picker entry opens its sampler window; Y (Playback) scrubs audio clips with
+  their offsets and fades.
+* OS drops on the Playlist use AppKit's pointer location and the same deferred import path as Browser drops;
+  multiple files add tracks rather than overlap. Imports decode once on the loader thread with a bounded decoder.
+  The sampler limit is now 6 million stereo frames (about 125 s at 48 kHz, state below 64 MiB); the owner's
+  119 s MP3 imports into a sampler and a Playlist clip.
+* Lock icons contrast on active channels/inserts; the rack's minimum width no longer grows while scrolling.
+* New automation clips start at the playhead. Right-clicking a point offers Delete, Copy/Paste value and Type in
+  value (FL Studio's point menu); the curve modes and Reset tension moved to the tension handles.
+* Mixer inserts are a plain list with On and a host Mix knob (saved, undoable, latency-aligned dry path). Plugin
+  parameters, presets and an On switch live in the plugin window, which opens when a plugin is added. Slots are boxed like Channel Rack
+  buttons and reorder by dragging a grip handle or from the context menu (owner follow-up). The track
+  panel is name, Input, Output, Inserts, Equalizer.
+* Tool cursors are smaller and flat (no outline).
+* CodeRabbit PR #11: live_check no longer saves preferences; locked inserts stay audible through intermediate
+  buses; autosave retries after a partial write; no repeated UI-thread decoding; distinct tracks for multi-file
+  drops; clip titles stay inside 12 px tracks; leading spaces removed from feature notes.
+
+Validation: 420 host tests, 19 native tests, strict Clippy in both workspaces, rustfmt, feature/inventory and
+repository checks. Offscreen mixer and plugin-window renders inspected. Live native interaction for this pass
+(drag passthrough, window toggling, OS drops) was not completed and remains unverified.
+
+Future development sessions require a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR,
+stacked on the latest unmerged continuation after checking merge state. Preserve older checkouts; validate,
+document, commit and push, never merge automatically, and create further sessions only when the owner asks.

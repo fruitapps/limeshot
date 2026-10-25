@@ -118,6 +118,8 @@ pub struct State {
     pub selection: Vec<ClipId>,
     /// The time selection made with Ctrl/Cmd+drag on the ruler; Song mode loops it.
     pub time_sel: Option<(Tick, Tick)>,
+    scrub_tick: Option<Tick>,
+    scrub_audio: Vec<(ChannelId, u8)>,
     /// Ruler gestures: the time selection's anchor, or the marker being dragged (and whether it
     /// moved).
     sel_anchor: Option<Tick>,
@@ -130,6 +132,7 @@ pub struct State {
     /// The automation point menu (FL Studio's right-click on a point): automation, point index,
     /// where, and the frame it opened in.
     pub point_menu: Option<(AutomationId, usize, Pos2, u64)>,
+    pub point_menu_curve: bool,
     /// Waveform overviews of audio clip samples, by stored sample path.
     peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
@@ -171,6 +174,8 @@ impl Default for State {
             scroll: Vec2::ZERO,
             selection: Vec::new(),
             time_sel: None,
+            scrub_tick: None,
+            scrub_audio: Vec::new(),
             sel_anchor: None,
             marker_drag: None,
             menu_marker: None,
@@ -178,6 +183,7 @@ impl Default for State {
             drag: None,
             menu: None,
             point_menu: None,
+            point_menu_curve: false,
             peaks: Default::default(),
             geometry: None,
             cursor: None,
@@ -333,6 +339,7 @@ fn point_menu(app: &mut LimeShotApp, ctx: &Context) {
         app.ui.playlist.point_menu = None;
         return;
     };
+    let curve = app.ui.playlist.point_menu_curve;
     let mut close = false;
     let area = egui::Area::new(egui::Id::new("automation_point_menu"))
         .order(egui::Order::Foreground)
@@ -340,12 +347,13 @@ fn point_menu(app: &mut LimeShotApp, ctx: &Context) {
         .show(ctx, |ui| {
             egui::Frame::menu(ui.style()).show(ui, |ui| {
                 ui.set_min_width(150.0);
-                if ui
-                    .add_enabled(
-                        points.len() > 1,
-                        egui::Button::new(RichText::new("Delete").color(Theme::current().danger)),
-                    )
-                    .clicked()
+                if !curve
+                    && ui
+                        .add_enabled(
+                            points.len() > 1,
+                            egui::Button::new(RichText::new("Delete").color(Theme::current().danger)),
+                        )
+                        .clicked()
                 {
                     let mut pts = points.clone();
                     pts.remove(i);
@@ -355,25 +363,63 @@ fn point_menu(app: &mut LimeShotApp, ctx: &Context) {
                     });
                     close = true;
                 }
-                ui.separator();
-                for mode in PointMode::ALL {
+                if !curve {
+                    if ui.button("Copy value").clicked() {
+                        app.control_clipboard = Some(point.value);
+                        close = true;
+                    }
                     if ui
-                        .add(egui::Button::selectable(point.mode == mode, mode.label()))
+                        .add_enabled(app.control_clipboard.is_some(), egui::Button::new("Paste value"))
                         .clicked()
                     {
-                        let mut pts = points.clone();
-                        if let Some(p) = pts.get_mut(i) {
-                            p.mode = mode;
-                            // A counting mode starts at a few steps rather than the curve's bend.
-                            if mode.counts() && !point.mode.counts() {
-                                p.tension = -1.0 + 2.0 * 3.0 / 15.0;
-                            }
+                        if let Some(value) = app.control_clipboard {
+                            let mut pts = points.clone();
+                            pts[i].value = value.clamp(0.0, 1.0);
+                            app.exec(Command::SetAutomationPoints {
+                                automation: a,
+                                points: pts,
+                            });
                         }
-                        app.exec(Command::SetAutomationPoints {
+                        close = true;
+                    }
+                    if ui.button("Type in value…").clicked() {
+                        app.dialog = Some(crate::dialogs::Dialog::AutomationPointValue {
                             automation: a,
-                            points: pts,
+                            tick: point.tick,
+                            text: point.value.to_string(),
                         });
                         close = true;
+                    }
+                } else if ui.button("Reset tension").clicked() {
+                    let mut pts = points.clone();
+                    pts[i].tension = 0.0;
+                    app.exec(Command::SetAutomationPoints {
+                        automation: a,
+                        points: pts,
+                    });
+                    close = true;
+                }
+                if curve {
+                    ui.separator();
+                    for mode in PointMode::ALL {
+                        if ui
+                            .add(egui::Button::selectable(point.mode == mode, mode.label()))
+                            .clicked()
+                        {
+                            let mut pts = points.clone();
+                            if let Some(p) = pts.get_mut(i) {
+                                p.mode = mode;
+                                // A counting mode starts at a few steps rather than the curve's bend.
+                                if mode.counts() && !point.mode.counts() {
+                                    p.tension = -1.0 + 2.0 * 3.0 / 15.0;
+                                }
+                            }
+                            app.exec(Command::SetAutomationPoints {
+                                automation: a,
+                                points: pts,
+                            });
+                            close = true;
+                        }
                     }
                 }
             });
@@ -573,7 +619,10 @@ fn picker_row(app: &mut LimeShotApp, ui: &mut Ui, source: ClipSource, name: &str
     if resp.double_clicked() {
         match source {
             ClipSource::Pattern(_) => app.show_window(crate::workspace::Win::PianoRoll),
-            ClipSource::Audio(_) => app.show_window(crate::workspace::Win::ChannelSettings),
+            ClipSource::Audio(ch) => {
+                app.select_channel(ch);
+                app.plugins.open_window(crate::plugins::Target::Channel(ch), None);
+            }
             ClipSource::Automation(_) => {}
         }
     }
@@ -674,44 +723,56 @@ fn preview_audio_source(app: &mut LimeShotApp, ch: ChannelId) {
 
 /// Add the sample at `path` to the picker's audio clips without placing it: a sampler channel
 /// with the sample loaded, filed under "Audio" (reused when the sample is already there).
-pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
-    if let Err(error) = crate::browser::validate_sample(path) {
-        app.toast_error(error);
-        return None;
-    }
-    let stored = path.to_string_lossy().into_owned();
-    let existing = audio_channels(app.project()).into_iter().find(|id| {
+fn existing_audio_source(app: &LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
+    audio_channels(app.project()).into_iter().find(|id| {
         app.project()
             .channel(*id)
             .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
-            .is_some_and(|s| s.sample.as_ref().is_some_and(|r| r.path == stored))
-    });
-    let ch = match existing {
-        Some(c) => c,
-        None => {
-            if let Err(e) = app.samples.load_blocking(&stored) {
-                app.toast_error(format!("Could not load {}: {e}", path.display()));
-                return None;
-            }
-            app.doc.begin_gesture();
-            let id = app.exec(Command::AddChannel {
+            .is_some_and(|s| s.sample.is_some_and(|r| app.samples.resolve(&r.path) == path))
+    })
+}
+
+fn audio_source_commands(
+    app: &LimeShotApp,
+    path: &std::path::Path,
+    sample: &limeshot_dsp::SampleData,
+) -> (ChannelId, Vec<Command>) {
+    if let Some(channel) = existing_audio_source(app, path) {
+        return (channel, Vec::new());
+    }
+    let channel = ChannelId(app.project().next_id);
+    let params = SamplerParams {
+        sample: Some(SampleRef {
+            path: path.to_string_lossy().into_owned(),
+        }),
+        one_shot: false,
+        ..Default::default()
+    };
+    let plugin = crate::browser::sampler_with_audio(&params, 60, sample);
+    (
+        channel,
+        vec![
+            Command::AddChannel {
                 name: crate::browser::file_label(path),
-                instrument: Instrument::Sampler(SamplerParams {
-                    sample: Some(SampleRef { path: stored }),
-                    // An audio clip plays for the clip's length, not the whole sample.
-                    one_shot: false,
-                    ..SamplerParams::default()
-                }),
-            });
-            if let Some(id) = id {
-                app.exec(Command::SetChannelGroup {
-                    channels: vec![ChannelId(id)],
-                    group: Some("Audio".into()),
-                });
-            }
-            app.doc.end_gesture();
-            ChannelId(id?)
-        }
+                instrument: Instrument::Plugin(plugin),
+            },
+            Command::SetChannelGroup {
+                channels: vec![channel],
+                group: Some("Audio".into()),
+            },
+        ],
+    )
+}
+
+pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
+    let ch = if let Some(ch) = existing_audio_source(app, path) {
+        ch
+    } else {
+        let sample = crate::browser::import_audio(app, path, crate::browser::ImportTarget::Picker)?;
+        let (ch, commands) = audio_source_commands(app, path, &sample);
+        app.exec(Command::Batch(commands));
+        app.project().channel(ch)?;
+        ch
     };
     pick_source(app, ClipSource::Audio(ch));
     Some(ch)
@@ -817,7 +878,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         let strip = if muted { mix(t.raised, base, 0.3) } else { base };
         let rr = r.intersect(grid);
         painter.rect_filled(rr, CornerRadius::same(t.radius_sm), fill);
-        let title = Rect::from_min_size(r.min, vec2(r.width(), 14.0)).intersect(grid);
+        let title = Rect::from_min_size(r.min, vec2(r.width(), 14.0))
+            .intersect(r)
+            .intersect(grid);
         painter.rect_filled(
             title,
             CornerRadius {
@@ -1069,16 +1132,16 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
     let resp = ui.interact(grid, ui.id().with("pl_drop"), Sense::hover());
     app.ui.playlist.drop_ghost = None;
     source_drop(app, ui, view, grid, tracks);
-    let drop_pos = ui.input(|i| i.pointer.hover_pos());
+    let drop_pos = app.external_drop_position(ui.ctx());
     let on_layer = drop_pos.is_some_and(|p| ui.ctx().layer_id_at(p) == Some(ui.layer_id()));
     let external = ui.input_mut(|i| {
-        if i.pointer.hover_pos().is_some_and(|p| grid.contains(p)) && on_layer {
+        if drop_pos.is_some_and(|p| grid.contains(p)) && on_layer {
             std::mem::take(&mut i.raw.dropped_files)
         } else {
             Vec::new()
         }
     });
-    if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
+    if let Some(pos) = drop_pos {
         let mut track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
         let start = app
             .ui
@@ -1090,7 +1153,7 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
             .filter(|p| limeshot_dsp::is_audio_file(p))
         {
             add_audio_clip(app, &path, track, start);
-            track = (track + 1).min(tracks.saturating_sub(1));
+            track = track.saturating_add(1);
         }
     }
     let sig = app.project().time_signature;
@@ -1103,9 +1166,19 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
         && grid.contains(pos)
     {
         app.hint("Drop to place the sample as an audio clip");
-        if app.ui.playlist.drop_len.as_ref().is_none_or(|(p, _)| *p != payload.0) {
+        if app
+            .ui
+            .playlist
+            .drop_len
+            .as_ref()
+            .is_none_or(|(p, len)| *p != payload.0 || len.is_none())
+        {
             let stored = payload.0.to_string_lossy().into_owned();
-            let len = app.samples.load_blocking(&stored).ok().map(|s| sample_ticks(app, &s));
+            app.samples.request(&stored);
+            let len = match app.samples.status(&stored) {
+                Some(limeshot_audio::assets::SampleStatus::Ready(s)) => Some(sample_ticks(app, s)),
+                _ => None,
+            };
             app.ui.playlist.drop_len = Some((payload.0.clone(), len));
         }
         let (track, start) = target(app, pos);
@@ -1158,26 +1231,23 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
 
 /// Place the sample file at `path` as an audio clip (decoding it now to know its length).
 pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32, start: Tick) -> Option<ClipId> {
-    let stored = path.to_string_lossy().into_owned();
-    let sample = match app.samples.load_blocking(&stored) {
-        Ok(s) => s,
-        Err(e) => {
-            app.toast_error(format!("Could not load {}: {e}", path.display()));
-            return None;
-        }
-    };
+    let sample = crate::browser::import_audio(app, path, crate::browser::ImportTarget::Playlist { track, start })?;
     let length = sample_ticks(app, &sample);
-    let name = path
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "Audio".into());
-    let id = app.exec(Command::AddAudioClip {
-        sample: SampleRef { path: stored },
-        name,
+    let (channel, mut commands) = audio_source_commands(app, path, &sample);
+    if track >= 500 {
+        app.toast_error("The Playlist holds at most 500 tracks");
+        return None;
+    }
+    commands.extend((app.project().playlist.tracks.len()..=track as usize).map(|_| Command::AddPlaylistTrack));
+    commands.push(Command::PlaceClip {
+        source: ClipSource::Audio(channel),
         track,
         start,
         length,
-    })?;
+        offset: 0,
+    });
+    let id = app.exec(Command::Batch(commands))?;
+
     if let Some(c) = app.project().clip(ClipId(id)).cloned() {
         // The picker shows the new audio clip, ready to be drawn elsewhere (FL Studio).
         focus_source(app, &c);
@@ -1387,6 +1457,14 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
         } else if let Some(a) = app.ui.playlist.sel_anchor {
             let b = snapped(p);
             app.ui.playlist.time_sel = Some((a.min(b), a.max(b)));
+            app.ui.playlist.selection = app
+                .project()
+                .playlist
+                .clips
+                .iter()
+                .filter(|c| c.start < a.max(b) && c.end() > a.min(b))
+                .map(|c| c.id)
+                .collect();
         } else if resp.clicked() || resp.dragged() {
             let tick = Snap::Beat.floor(view.tick_at(p.x).max(0) as u64, sig);
             app.set_mode(PlayMode::Song);
@@ -1807,6 +1885,49 @@ pub fn pattern_color_menu(app: &mut LimeShotApp, ui: &mut Ui, id: PatternId) -> 
     picked
 }
 
+fn scrub_audio(app: &mut LimeShotApp, clips: &[Clip], tick: Option<Tick>) {
+    if app.ui.playlist.scrub_tick == tick {
+        return;
+    }
+    for (channel, key) in std::mem::take(&mut app.ui.playlist.scrub_audio) {
+        app.preview_off(channel, key);
+    }
+    app.ui.playlist.scrub_tick = tick;
+    let Some(tick) = tick else { return };
+    let seconds_per_tick = 60.0 / app.project().tempo.bpm() / PPQ as f64;
+    app.sync_engine();
+    for c in clips.iter().filter(|c| !c.muted && c.start <= tick && tick < c.end()) {
+        if app
+            .project()
+            .playlist
+            .tracks
+            .get(c.track as usize)
+            .is_none_or(|t| t.muted)
+        {
+            continue;
+        }
+        let Some(channel) = c.audio_channel() else { continue };
+        let Some(index) = app.project().channel_index(channel).and_then(|i| u16::try_from(i).ok()) else {
+            continue;
+        };
+        let Some(ch) = app.project().channel(channel) else {
+            continue;
+        };
+        let key = ch.root_key;
+        app.send(limeshot_audio::Msg::PreviewClip {
+            channel: index,
+            playback: limeshot_dsp::ClipPlayback {
+                offset_secs: c.offset as f64 * seconds_per_tick,
+                elapsed_secs: (tick - c.start) as f64 * seconds_per_tick,
+                remaining_secs: (c.end() - tick) as f64 * seconds_per_tick,
+                fade_in_secs: (c.fade_in as f64 * seconds_per_tick) as f32,
+                fade_out_secs: (c.fade_out as f64 * seconds_per_tick) as f32,
+            },
+        });
+        app.ui.playlist.scrub_audio.push((channel, key));
+    }
+}
+
 /// The notes of the (unmuted) pattern clips sounding at song position `tick`, for the Playback
 /// tool's scrub. A pattern clip plays its pattern once from its offset (silent past the end).
 fn notes_under(app: &LimeShotApp, clips: &[Clip], tick: Tick) -> Vec<(ChannelId, u8, f32)> {
@@ -1923,6 +2044,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 // FL Studio: a point's right-click menu (Delete and the point modes).
                 let pass = ui.ctx().cumulative_pass_nr();
                 app.ui.playlist.point_menu = Some((a, i, p, pass));
+                app.ui.playlist.point_menu_curve = false;
             }
             (AutoHit::Tension(i), true) => {
                 app.doc.begin_gesture();
@@ -1933,7 +2055,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     tension: points.get(i).map_or(0.0, |x| x.tension),
                 });
             }
-            (AutoHit::Tension(_), false) => {}
+            (AutoHit::Tension(i), false) => {
+                app.ui.playlist.point_menu = Some((a, i, p, ui.ctx().cumulative_pass_nr()));
+                app.ui.playlist.point_menu_curve = true;
+            }
             (AutoHit::Curve(tick, value), left) => {
                 let mut pts = points;
                 let index = pts.partition_point(|x| x.tick < tick);
@@ -2376,7 +2501,9 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         let held = matches!(app.ui.playlist.drag, Some(Drag::Playback));
         crate::piano_roll::playback_line(ui, grid, p.x, held);
         if held {
-            let want = notes_under(app, clips, view.tick_at(p.x).max(0) as u64);
+            let tick = view.tick_at(p.x).max(0) as u64;
+            scrub_audio(app, clips, Some(tick));
+            let want = notes_under(app, clips, tick);
             crate::piano_roll::scrub(app, &want);
         }
     }
@@ -2411,6 +2538,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             Some(Drag::Playback) => {
                 app.ui.playlist.drag = None;
                 crate::piano_roll::scrub(app, &[]);
+                scrub_audio(app, clips, None);
             }
             _ => {}
         }
@@ -2429,7 +2557,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         focus_source(app, &c);
         match c.source {
             ClipSource::Pattern(_) => app.show_window(crate::workspace::Win::PianoRoll),
-            ClipSource::Audio(_) => app.show_window(crate::workspace::Win::ChannelSettings),
+            ClipSource::Audio(ch) => {
+                app.select_channel(ch);
+                app.plugins.open_window(crate::plugins::Target::Channel(ch), None);
+            }
             ClipSource::Automation(_) => {}
         }
     }
@@ -2770,17 +2901,8 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
             clipboard(app, op);
         }
     }
-    if key(ctx, Modifiers::COMMAND, Key::B) && !sel.is_empty() {
-        let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
-        app.exec(Command::DuplicateClips(sel.clone()));
-        app.ui.playlist.selection = app
-            .project()
-            .playlist
-            .clips
-            .iter()
-            .map(|c| c.id)
-            .filter(|id| !before.contains(id))
-            .collect();
+    if key(ctx, Modifiers::COMMAND, Key::B) {
+        crate::playlist_menu::run(app, crate::playlist_menu::Act::Duplicate);
     }
     if key(ctx, Modifiers::NONE, Key::Home) {
         app.locate(0);

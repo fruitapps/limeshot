@@ -177,8 +177,8 @@ fn clicking_a_channel_button_toggles_its_settings_window() {
     let button = h.state().ui.rack.step_pos(kick, 0).expect("strip") - vec2(60.0, 0.0);
     click(&mut h, button, PointerButton::Primary);
     assert!(
-        !h.state().plugins.is_window_open(PluginTarget::Channel(kick)),
-        "a second click closes it"
+        h.state().plugins.is_window_open(PluginTarget::Channel(kick)),
+        "a background plugin is raised"
     );
 }
 
@@ -306,6 +306,9 @@ fn clicking_the_playlist_places_the_current_pattern() {
     // Track 5, bar 3 — empty in the demo.
     let bar = h.state().project().time_signature.ticks_per_bar();
     click(&mut h, g.pos(2 * bar + 100, 4), PointerButton::Primary);
+    wait_for(&mut h, "external Playlist import", |a| {
+        a.project().playlist.clips.len() == before + 1
+    });
     let clips = &h.state().project().playlist.clips;
     assert_eq!(clips.len(), before + 1);
     let c = clips.last().expect("clip").clone();
@@ -593,8 +596,8 @@ fn samples_become_audio_clips_that_trim_from_the_left_edge() {
     let c = h.state().project().clip(id).expect("clip").clone();
     assert_eq!(
         h.state().project().channels.len(),
-        channels + 1,
-        "an audio clip channel"
+        channels,
+        "reuse the existing sampler for this source"
     );
     assert!(c.audio_channel().is_some());
     // The clip is as long as the sample at the project tempo.
@@ -659,15 +662,13 @@ fn automation_clips_are_created_from_controls_and_edited_in_the_playlist() {
     let p = points(&h)[1];
     assert_eq!((p.tick, p.value), (2 * bar, 1.0));
     assert_eq!(h.state().doc.history().len(), undo + 1);
-    // AUT-012: right-click the point opens its menu; Stairs sets the segment's mode, then
-    // Delete removes the point (FL Studio).
-    click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
-    assert!(h.state().ui.playlist.point_menu.is_some(), "the point menu is open");
+    // Curve modes belong to the between-point tension handle.
+    let handle = egui::pos2(g.pos(bar, c.track).x, y_of((flat + 1.0) * 0.5));
+    click(&mut h, handle, PointerButton::Secondary);
     h.step();
     h.get_by_label("Stairs").click();
     h.step();
-    assert_eq!(points(&h)[1].mode, PointMode::Stairs);
-    assert!(h.state().ui.playlist.point_menu.is_none());
+    assert_eq!(points(&h)[0].mode, PointMode::Stairs);
     click(&mut h, egui::pos2(x, y_of(1.0)), PointerButton::Secondary);
     h.step();
     h.get_by_label("Delete").click();
@@ -1341,7 +1342,7 @@ fn wait_for(h: &mut Harness<'static, LimeShotApp>, what: &str, mut done: impl Fn
 }
 
 #[test]
-fn browser_click_previews_and_double_click_loads_a_sample() {
+fn browser_click_and_double_click_only_preview_samples() {
     let mut h = harness(true);
     h.state_mut().ui.workspace.close(Win::ChannelRack);
     h.step();
@@ -1353,32 +1354,17 @@ fn browser_click_previews_and_double_click_loads_a_sample() {
     wait_for(&mut h, "the preview", |a| !a.ui.browser.preview_pending());
     wait_for(&mut h, "a preview voice", |a| a.player.status().voices() > 0);
 
-    // Double-click loads it into the selected sampler channel and names the channel after it.
+    // Double-click never edits or replaces a channel, even when a sampler is selected.
     let clap = h.state().project().channels[1].id;
     h.state_mut().select_channel(clap);
+    let before = h.state().project().clone();
     let pos = h.state().ui.browser.file_pos(&kick).expect("listed");
     double_click(&mut h, pos);
-    let ch = h.state().project().channel(clap).expect("clap").clone();
-    assert_eq!(ch.name, "Lime Kick");
-    let sampler = lime::sampler_params(&ch.instrument).expect("Lime sampler");
-    assert_eq!(
-        sampler.sample.as_ref().map(|r| std::path::PathBuf::from(&r.path)),
-        Some(kick.clone())
-    );
-    // On a synth channel a double-click makes a new sampler channel instead.
-    let n = h.state().project().channels.len();
-    let lead = h
-        .state()
-        .project()
-        .channels
-        .iter()
-        .find(|c| matches!(&c.instrument, Instrument::Plugin(p) if LimePlugin::of(p) == Some(LimePlugin::SYNTH)))
-        .expect("synth")
-        .id;
+    assert_eq!(h.state().project(), &before);
+    let lead = h.state().project().channels.last().unwrap().id;
     h.state_mut().select_channel(lead);
     double_click(&mut h, pos);
-    assert_eq!(h.state().project().channels.len(), n + 1);
-    assert_eq!(h.state().selected_channels(), vec![h.state().project().channels[n].id]);
+    assert_eq!(h.state().project(), &before);
 }
 
 #[test]
@@ -2583,6 +2569,11 @@ fn mixer_sidechain_route_menu_and_compressor_input() {
     for _ in 0..3 {
         h.step();
     }
+    h.state_mut().plugins.open_window(
+        PluginTarget::Effect { track: 5, effect: fx },
+        Some(limeshot_ui::plugin_window::Tab::Settings),
+    );
+    h.run_steps(3);
     h.get_by_label("Sidechain: own input").click();
     h.run_steps(4);
     let option = h.get_by_label("Insert 1").rect();
@@ -2916,15 +2907,11 @@ fn send_knob_covers_the_send_range() {
 fn double_click_resets_sliders_and_knobs() {
     assert_eq!(MixerTrack::new("x").volume, 1.0, "FL Studio's insert default is 0 dB");
     let mut h = mixer_harness(1);
-    // Track panel volume slider.
+    // Volume remains on the mixer strip.
     h.state_mut().exec(Command::SetMixerVolume { track: 1, volume: 0.3 });
     h.step();
-    let r = h
-        .get_all_by_label("Volume")
-        .map(|n| n.rect())
-        .max_by(|a, b| a.width().total_cmp(&b.width()))
-        .expect("volume slider");
-    double_click(&mut h, egui::pos2(r.left() + 20.0, r.center().y));
+    let r = h.state().ui.mixer.fader_rects.iter().find(|(i, _)| *i == 1).unwrap().1;
+    double_click(&mut h, r.center());
     assert_eq!(h.state().project().mixer.tracks[1].volume, 1.0);
     // Hosted effects use the same reset gesture, with an undoable plugin state.
     let fx = h
@@ -2938,6 +2925,10 @@ fn double_click_resets_sliders_and_knobs() {
     h.step();
     h.step();
     let id = lime::param_id(0);
+    h.state_mut()
+        .plugins
+        .open_window(target, Some(limeshot_ui::plugin_window::Tab::Settings));
+    h.run_steps(3);
     h.state_mut().plugins.set_param(target, id, 0.9);
     h.step();
     let rect = h.state().plugins.parameter_rect(target, id).unwrap();
@@ -3282,6 +3273,10 @@ fn tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks() {
 
     // An audio clip whose clip was deleted leaves its channel behind; the purge removes it.
     let dir = limeshot_app::bundled_samples_dir().expect("samples");
+    h.state_mut()
+        .samples
+        .load_blocking(&dir.join("Lime Snare.wav").to_string_lossy())
+        .unwrap();
     limeshot_ui::playlist::add_audio_clip(h.state_mut(), &dir.join("Lime Snare.wav"), 7, 0);
     let clip = h
         .state()
@@ -4604,6 +4599,10 @@ fn right_click_on_an_effect_slider_offers_automation_without_moving_it() {
     let spec = EffectKind::Delay.params()[0];
     let target = PluginTarget::Effect { track: 1, effect: fx };
     let id = lime::param_id(0);
+    h.state_mut()
+        .plugins
+        .open_window(target, Some(limeshot_ui::plugin_window::Tab::Settings));
+    h.run_steps(3);
     let before = h.state().plugins.instance(target).unwrap().param(id);
     let label = h.get_by_label(spec.name).rect();
     click(
@@ -4716,8 +4715,8 @@ fn a_plugin_insert_with_an_editor_opens_its_window_from_the_slot() {
         effect: fx[slot - 1].id,
     };
     h.step();
-    // The card's Editor button opens the window.
-    h.get_by_label("Editor").click();
+    // Adding an effect opens its editor immediately.
+    assert!(h.state().plugins.is_window_open(target));
     for _ in 0..3 {
         h.step();
     }
@@ -5275,6 +5274,12 @@ fn effect_and_instrument_presets_load_and_save() {
     let values = |h: &Harness<'static, LimeShotApp>| {
         lime::plain_values(delay(h).plugin.as_ref().unwrap(), &EffectKind::Delay.defaults())
     };
+    let effect = delay(&h).id;
+    h.state_mut().plugins.open_window(
+        PluginTarget::Effect { track, effect },
+        Some(limeshot_ui::plugin_window::Tab::Settings),
+    );
+    h.run_steps(3);
     let before = values(&h);
     h.get_by_label("Presets").click();
     h.step();
@@ -5724,6 +5729,7 @@ fn audio_clip_fade_handles_set_the_fades() {
         .expect("samples")
         .join("Lime Snare.wav");
     let bar = h.state().project().time_signature.ticks_per_bar();
+    h.state_mut().samples.load_blocking(&snare.to_string_lossy()).unwrap();
     let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &snare, 4, bar).expect("placed");
     h.state_mut().exec(Command::ResizeClip { clip: id, length: bar });
     h.step();
@@ -5817,6 +5823,9 @@ fn an_audio_take_becomes_an_audio_clip() {
     };
     // The demo's first tracks are busy at bar 2: the take goes below them.
     limeshot_ui::recording::place_take(h.state_mut(), &take, 2 * bar);
+    wait_for(&mut h, "recorded audio import", |a| {
+        a.project().playlist.clips.len() == clips + 1
+    });
     let p = h.state().project();
     assert_eq!(p.playlist.clips.len(), clips + 1);
     let c = p
@@ -5886,12 +5895,13 @@ fn sampler_envelope_controls_reset_and_undo() {
 }
 
 fn mixer_control_menu(h: &mut Harness<'static, LimeShotApp>, label: &str) {
-    let r = h
-        .get_all_by_label(label)
-        .map(|n| n.rect())
-        .max_by(|a, b| a.width().total_cmp(&b.width()))
-        .expect("mixer control");
-    click(h, r.left_center() + vec2(20.0, 0.0), PointerButton::Secondary);
+    let rects = if label == "Volume" {
+        &h.state().ui.mixer.fader_rects
+    } else {
+        &h.state().ui.mixer.pan_rects
+    };
+    let r = rects.iter().find(|(i, _)| *i == h.state().ui.mixer.selected).unwrap().1;
+    click(h, r.center(), PointerButton::Secondary);
     h.step();
 }
 
@@ -6421,6 +6431,7 @@ fn mp3_samples_embed_and_join_the_playlist_picker_from_the_rack() {
     assert_eq!(decoded.sample_rate, 44_100);
     assert!(decoded.frames() > 0);
     let mut h = harness(false);
+    h.state_mut().samples.load_blocking(&source.to_string_lossy()).unwrap();
     let id = limeshot_ui::browser::new_sampler_channel(h.state_mut(), &source).unwrap();
     let plugin = h.state().project().plugin(PluginTarget::Channel(id)).unwrap();
     assert!(plugin.extra.get("lime-sample-pending").is_none());
@@ -6451,6 +6462,9 @@ fn external_files_drop_on_playlist_at_the_pointer_and_undo() {
         .dropped_files
         .push(std::sync::Arc::new(ExternalAudioFile(source)));
     h.step();
+    wait_for(&mut h, "external Playlist import", |a| {
+        a.project().playlist.clips.len() == before + 1
+    });
     let clips = &h.state().project().playlist.clips;
     assert_eq!(clips.len(), before + 1);
     let clip = clips.last().unwrap();
@@ -6475,6 +6489,9 @@ fn external_files_drop_on_rack_without_creating_a_playlist_clip() {
         .dropped_files
         .push(std::sync::Arc::new(ExternalAudioFile(source)));
     h.step();
+    wait_for(&mut h, "sample channel import", |a| {
+        a.project().channels.len() == before + 1
+    });
     assert_eq!(h.state().project().channels.len(), before + 1);
     assert!(h.state().project().playlist.clips.is_empty());
     let id = h.state().project().channels.last().unwrap().id;
@@ -6630,6 +6647,7 @@ fn sampler_wrapper_accepts_browser_payload_and_external_sample_replacement() {
     limeshot_dsp::write_wav(&first, 44_100, &[0.2; 128], limeshot_dsp::BitDepth::Float32).unwrap();
     silent_mp3(&second);
     let mut h = harness(false);
+    h.state_mut().samples.load_blocking(&first.to_string_lossy()).unwrap();
     let id = limeshot_ui::browser::new_sampler_channel(h.state_mut(), &first).unwrap();
     h.step();
     let target = Target::Channel(id);
@@ -6651,6 +6669,14 @@ fn sampler_wrapper_accepts_browser_payload_and_external_sample_replacement() {
             .unwrap()
             .path
     };
+    wait_for(&mut h, "sample replacement", |a| {
+        lime::sampler_params(&a.project().channel(id).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path
+            == second.to_string_lossy()
+    });
     assert_eq!(source(&h), second.to_string_lossy());
     h.event(Event::PointerMoved(position));
     h.input_mut()
@@ -6679,10 +6705,325 @@ fn browser_file_drag_creates_a_rack_sampler_from_real_pointer_events() {
     let before = h.state().project().channels.len();
     drag(&mut h, from, rack.center());
     h.step();
+    wait_for(&mut h, "sample channel import", |a| {
+        a.project().channels.len() == before + 1
+    });
     assert_eq!(h.state().project().channels.len(), before + 1);
     let channel = h.state().project().channels.last().unwrap();
     assert_eq!(
         lime::sampler_params(&channel.instrument).unwrap().sample.unwrap().path,
         path.to_string_lossy()
     );
+}
+
+#[test]
+fn ruler_ranges_select_contents_and_duplicate_by_the_range_length() {
+    let (mut h, pid, cid) = melody_piano_roll();
+    let g = h.state().ui.piano.geometry.unwrap();
+    let from = egui::pos2(g.pos(0, 60).x, g.ruler.center().y);
+    let to = egui::pos2(g.pos(2 * PPQ, 60).x, g.ruler.center().y);
+    drag_with(&mut h, from, to, Modifiers::COMMAND);
+    assert_eq!(h.state().ui.piano.time_sel, Some((0, 2 * PPQ)));
+    let selected = h.state().ui.piano.selection.clone();
+    assert!(!selected.is_empty());
+    let original: Vec<_> = h
+        .state()
+        .project()
+        .pattern(pid)
+        .unwrap()
+        .notes
+        .iter()
+        .filter(|n| selected.contains(&n.id))
+        .copied()
+        .collect();
+    let history = h.state().doc.history().len();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::B);
+    h.step();
+    assert_eq!(h.state().doc.history().len(), history + 1);
+    for n in original {
+        assert!(
+            h.state()
+                .project()
+                .pattern(pid)
+                .unwrap()
+                .notes
+                .iter()
+                .any(|copy| copy.channel == cid
+                    && copy.id != n.id
+                    && copy.start == n.start + 2 * PPQ
+                    && copy.key == n.key)
+        );
+    }
+    let notes = &h.state().project().pattern(pid).unwrap().notes;
+    assert!(
+        notes
+            .windows(2)
+            .all(|pair| { (pair[0].start, pair[0].key, pair[0].id) <= (pair[1].start, pair[1].key, pair[1].id) })
+    );
+    assert_eq!(h.state().ui.piano.time_sel, Some((2 * PPQ, 4 * PPQ)));
+    let mut h = playlist_harness();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let y = g.grid.top() - 6.0;
+    drag_with(
+        &mut h,
+        egui::pos2(g.pos(0, 0).x, y),
+        egui::pos2(g.pos(4 * PPQ, 0).x, y),
+        Modifiers::COMMAND,
+    );
+    assert_eq!(h.state().ui.playlist.time_sel, Some((0, 4 * PPQ)));
+    let selected = h.state().ui.playlist.selection.clone();
+    assert!(!selected.is_empty());
+    let original: Vec<_> = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| selected.contains(&c.id))
+        .cloned()
+        .collect();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::B);
+    h.step();
+    for c in original {
+        assert!(
+            h.state()
+                .project()
+                .playlist
+                .clips
+                .iter()
+                .any(|copy| copy.id != c.id && copy.source == c.source && copy.start == c.start + 4 * PPQ)
+        );
+    }
+    assert_eq!(h.state().ui.playlist.time_sel, Some((4 * PPQ, 8 * PPQ)));
+}
+
+#[test]
+fn automation_creation_uses_current_playhead_even_with_an_old_range() {
+    for case in 0..4 {
+        let mut h = playlist_harness();
+        // Pattern mode can seek past the song end only when its pattern is longer.
+        let pattern = h.state().current_pattern();
+        h.state_mut().exec(Command::SetPatternLength {
+            pattern,
+            steps: Some(512),
+        });
+        h.state_mut().sync_engine();
+        let sig = h.state().project().time_signature;
+        let end = h.state().project().playlist.song_length(sig);
+        let bar = sig.ticks_per_bar();
+        let (at, length) = [
+            (0, end),
+            (3 * PPQ + 120, end - 3 * PPQ - 120),
+            (end - bar / 2, bar),
+            (end + bar, bar),
+        ][case];
+        h.state_mut().locate(at);
+        wait_for(&mut h, "locate", |a| a.player.status().position() == at);
+        h.state_mut().ui.playlist.time_sel = Some((0, PPQ));
+        let id = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerPan(1)).unwrap();
+        let clip = h.state().project().clip(id).unwrap();
+        assert_eq!(clip.start, at);
+        assert_eq!(clip.length, length);
+    }
+}
+
+#[test]
+fn external_multiple_samples_extend_playlist_tracks_and_undo_atomically() {
+    let mut h = playlist_harness();
+    let dir = tempfile::tempdir().unwrap();
+    let paths: Vec<_> = (0..3)
+        .map(|i| {
+            let path = dir.path().join(format!("drop-{i}.wav"));
+            limeshot_dsp::write_wav(&path, 48000, &[0.1; 256], limeshot_dsp::BitDepth::Float32).unwrap();
+            path
+        })
+        .collect();
+    let tracks = h.state().project().playlist.tracks.len();
+    let before = h.state().project().playlist.clips.len();
+    // Bring the last track into view.
+    h.state_mut().ui.playlist.scroll.y = tracks as f32 * h.state().ui.playlist.track_h;
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let pos = g.pos(2 * PPQ, tracks as u32 - 1);
+    h.event(Event::PointerMoved(pos));
+    h.step();
+    for path in paths {
+        h.input_mut()
+            .dropped_files
+            .push(std::sync::Arc::new(ExternalAudioFile(path)));
+    }
+    h.step();
+    wait_for(&mut h, "three drops", |a| {
+        a.project().playlist.clips.len() == before + 3
+    });
+    let added = &h.state().project().playlist.clips[before..];
+    assert_eq!(
+        added.iter().map(|c| c.track).collect::<Vec<_>>(),
+        vec![tracks as u32 - 1, tracks as u32, tracks as u32 + 1]
+    );
+    assert!(added.iter().all(|c| c.start == 2 * PPQ));
+    for _ in 0..3 {
+        assert!(h.state_mut().doc.undo());
+    }
+    assert_eq!(h.state().project().playlist.clips.len(), before);
+    assert_eq!(h.state().project().playlist.tracks.len(), tracks);
+}
+
+#[test]
+fn long_rack_horizontal_scrolling_does_not_grow_the_window() {
+    let mut h = harness(true);
+    let pid = h.state().current_pattern();
+    h.state_mut().exec(Command::SetPatternLength {
+        pattern: pid,
+        steps: Some(512),
+    });
+    h.run_steps(4);
+    let before = window_rect(&h, Win::ChannelRack);
+    h.event(Event::PointerMoved(before.center()));
+    h.step();
+    for _ in 0..10 {
+        h.event(Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: vec2(-220.0, 0.0),
+            phase: egui::TouchPhase::Move,
+            modifiers: Modifiers::NONE,
+        });
+        h.step();
+    }
+    h.run_steps(3);
+    assert!((window_rect(&h, Win::ChannelRack).width() - before.width()).abs() < 1.0);
+}
+
+#[test]
+fn insert_slots_reorder_by_dragging_their_handle() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 3;
+    let names: Vec<_> = limeshot_core::LimePlugin::ALL
+        .into_iter()
+        .filter(|p| !p.is_instrument())
+        .take(2)
+        .collect();
+    for p in &names {
+        h.state_mut().exec(Command::AddPluginEffect {
+            track: 3,
+            plugin: p.plugin_ref(),
+        });
+    }
+    for _ in 0..3 {
+        h.step();
+    }
+    let order = |h: &Harness<'static, LimeShotApp>| -> Vec<u32> {
+        h.state().project().mixer.tracks[3]
+            .effects
+            .iter()
+            .filter(|e| !limeshot_core::lime::is_track_eq(e))
+            .map(|e| e.id)
+            .collect()
+    };
+    let before = order(&h);
+    assert_eq!(before.len(), 2);
+    assert!(h.query_by_label("▼").is_none(), "no arrow buttons");
+    // Drag the first slot's handle onto the second row, then back.
+    let grip = |h: &Harness<'static, LimeShotApp>, n: usize| h.get_by_label(&format!("Reorder {n}")).rect().center();
+    let (first, second) = (grip(&h, 1), grip(&h, 2));
+    drag_with(&mut h, first, second, Modifiers::NONE);
+    h.step();
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+    drag_with(&mut h, second, first, Modifiers::NONE);
+    h.step();
+    assert_eq!(order(&h), before);
+    h.state_mut().doc.undo();
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+    h.step();
+    // The gap beside the plugin button belongs to the row, not to a child control.
+    for (row, action, expected) in [
+        (1, "Move down", before.clone()),
+        (2, "Move up", vec![before[1], before[0]]),
+        (1, "Remove", vec![before[0]]),
+    ] {
+        let label = format!("{row}. {}", names[1].name());
+        let slot = h.get_by_label(&label).rect();
+        click(
+            &mut h,
+            egui::pos2(slot.left() - 2.0, slot.center().y),
+            PointerButton::Secondary,
+        );
+        let button = h.get_by_label(action).rect().center();
+        click(&mut h, button, PointerButton::Primary);
+        assert_eq!(order(&h), expected, "{action}");
+    }
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+}
+
+#[test]
+fn mixer_bus_on_buttons_match_routed_engine_audibility() {
+    let mut h = mixer_harness(1);
+    for (from, to, level) in [(1, 2, 1.0), (2, 3, 0.5), (1, 4, 0.0)] {
+        h.state_mut().exec(Command::SetRoute {
+            from,
+            to,
+            level: Some(level),
+        });
+    }
+    h.state_mut().exec(Command::SetMixerSolo { track: 1, solo: true });
+    for muted in [false, true, false] {
+        h.state_mut().exec(Command::SetMixerMute { track: 2, muted });
+        h.step();
+        h.step();
+        for (track, audible) in [(1, true), (2, !muted), (3, !muted), (4, false)] {
+            assert_eq!(h.state().snapshot().mixer[track].audible, audible);
+            let rect = h
+                .state()
+                .ui
+                .mixer
+                .on_buttons
+                .iter()
+                .find(|(i, _)| usize::from(*i) == track)
+                .unwrap()
+                .1;
+            let fill = h
+                .output()
+                .shapes
+                .iter()
+                .find_map(|s| match &s.shape {
+                    egui::Shape::Rect(r) if r.rect == rect => Some(r.fill),
+                    _ => None,
+                })
+                .expect("ON button painted");
+            assert_eq!(
+                fill == limeshot_ui::theme::Theme::current().accent,
+                audible,
+                "track {track}"
+            );
+        }
+    }
+}
+
+#[test]
+fn failed_audio_import_can_be_requested_again_after_repairing_the_file() {
+    let mut h = playlist_harness();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("retry.wav");
+    let before = h.state().project().playlist.clips.len();
+    assert!(limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 4, 0).is_none());
+    assert!(limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 5, 0).is_none());
+    wait_for(&mut h, "failed import to be reported and forgotten", |a| {
+        a.samples.status_of_path(&path).is_none()
+    });
+    assert_eq!(h.state().project().playlist.clips.len(), before);
+    limeshot_dsp::write_wav(&path, 48_000, &[0.1; 256], limeshot_dsp::BitDepth::Float32).unwrap();
+    limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 4, 0);
+    wait_for(&mut h, "repaired audio import", |a| {
+        a.project().playlist.clips.len() == before + 1
+    });
+    assert!(matches!(
+        h.state().samples.status_of_path(&path),
+        Some(limeshot_audio::assets::SampleStatus::Ready(_))
+    ));
+    h.run_steps(3);
+    assert_eq!(h.state().project().playlist.clips.len(), before + 1);
 }

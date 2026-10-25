@@ -19,7 +19,7 @@ pub struct EmbeddedSample {
 
 #[derive(Debug, thiserror::Error)]
 pub enum SampleError {
-    #[error("Sample exceeds the 4 million frame limit")]
+    #[error("Sample exceeds the 6 million frame limit")]
     TooLong,
     #[error("Invalid sample data")]
     Invalid,
@@ -32,10 +32,10 @@ impl EmbeddedSample {
     /// Mono is duplicated; extra channels are discarded and non-finite values become zero.
     ///
     /// # Errors
-    /// Returns `TooLong` above 4 million frames, or `Decode` for errors from the shared
+    /// Returns `TooLong` above 6 million frames, or `Decode` for errors from the shared
     /// WAV/MP3/FLAC/Ogg/AIFF decoder.
     pub fn load(path: &Path) -> Result<Self, SampleError> {
-        let sample = limeshot_dsp::load_audio(path)?;
+        let sample = limeshot_dsp::load_audio_bounded(path, MAX_FRAMES)?;
         if sample.data.len() / 2 > MAX_FRAMES {
             return Err(SampleError::TooLong);
         }

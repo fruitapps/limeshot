@@ -197,3 +197,38 @@ fn conversion_rejects_audio_outside_the_native_sampler_limits_with_a_warning() {
     assert!(state["fields"].get("sample-v1").is_none());
     assert!(plugin.state.bytes().len() < 4096);
 }
+
+#[test]
+fn insert_mix_defaults_sanitizes_persists_and_undoes() {
+    let mut doc = Document::default();
+    let id = doc
+        .execute(Command::AddPluginEffect {
+            track: 1,
+            plugin: plugin("Verb"),
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    doc.execute(Command::SetEffectMix {
+        track: 1,
+        effect: id,
+        mix: 0.3,
+    })
+    .unwrap();
+    assert_eq!(doc.project().mixer.tracks[1].effects[0].mix, 0.3);
+    let json = serde_json::to_string(doc.project()).unwrap();
+    let back: Project = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.mixer.tracks[1].effects[0].mix, 0.3);
+    doc.undo();
+    assert_eq!(doc.project().mixer.tracks[1].effects[0].mix, 1.0);
+    let mut slot = EffectSlot::new(1, EffectKind::Delay);
+    slot.mix = f32::NAN;
+    slot.sanitize();
+    assert_eq!(slot.mix, 1.0);
+    slot.mix = 3.0;
+    slot.sanitize();
+    assert_eq!(slot.mix, 1.0);
+    let mut old = serde_json::to_value(&slot).unwrap();
+    old.as_object_mut().unwrap().remove("mix");
+    assert_eq!(serde_json::from_value::<EffectSlot>(old).unwrap().mix, 1.0);
+}

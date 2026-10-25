@@ -21,6 +21,7 @@ pub struct State {
     pub selected: u16,
     pub strip_rects: Vec<(u16, Rect)>,
     pub pan_rects: Vec<(u16, Rect)>,
+    pub fader_rects: Vec<(u16, Rect)>,
     pub meter_rects: Vec<(u16, Rect)>,
     /// Route buttons drawn in the last frame: (strip, rectangle). For tests and tools.
     pub route_buttons: Vec<(u16, Rect)>,
@@ -81,6 +82,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.mixer.name_rects.clear();
     app.ui.mixer.strip_rects.clear();
     app.ui.mixer.pan_rects.clear();
+    app.ui.mixer.fader_rects.clear();
     app.ui.mixer.meter_rects.clear();
     app.ui.mixer.send_knobs.clear();
     let n = app.project().mixer.tracks.len();
@@ -121,6 +123,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let ui = &mut strips_ui;
     // A thin bar in its own gutter under the strips, so it never covers their colour bars.
     ui.spacing_mut().scroll = crate::theme::gutter_scroll_style();
+    let audibility = limeshot_sequencer::mixer_audibility(app.project());
     egui::ScrollArea::horizontal()
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -129,8 +132,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.horizontal_top(|ui| {
                 ui.add_space(8.0);
                 ui.spacing_mut().item_spacing.x = 4.0;
-                for i in 0..n {
-                    strip(app, ui, i as u16, height);
+                for (i, audible) in audibility.routed.iter().copied().enumerate() {
+                    strip(app, ui, i as u16, height, audible);
                     if i == 0 {
                         ui.add_space(8.0);
                     }
@@ -158,13 +161,11 @@ fn routed(app: &LimeShotApp, i: u16) -> Vec<(String, egui::Color32)> {
 
 /// Draw a mixer strip with meters, routing, and undoable controls; ignore a missing track.
 /// Clicks on its background select it without making control drags change the selection.
-fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
+fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32, audible: bool) {
     let t = Theme::current();
     let Some(track) = app.project().mixer.tracks.get(usize::from(i)).cloned() else {
         return;
     };
-    let any_solo = app.project().mixer.tracks.iter().skip(1).any(|t| t.solo);
-    let audible = !track.muted && (i == 0 || !any_solo || track.solo || track.mute_locked);
     let selected = app.ui.mixer.selected == i;
     let routed = routed(app, i);
     let color = track
@@ -313,6 +314,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         let mut v = app.automated(AutomationTarget::MixerVolume(i)).unwrap_or(track.volume);
         // Every track defaults to 0 dB, as in FL Studio's Mixer.
         let r = fader(ui, &mut v, MAX_GAIN, 1.0, vec2(24.0, fader_h), "Volume");
+        app.ui.mixer.fader_rects.push((i, r.rect));
         let cmd = r.changed().then_some(Command::SetMixerVolume { track: i, volume: v });
         app.exec_gesture(&r, cmd);
         crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
@@ -344,7 +346,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
                 ui.painter(),
                 m.rect.shrink2(vec2(6.0, 2.0)),
                 crate::icons::Icon::Lock,
-                if audible { t.accent } else { t.text_faint },
+                if audible { t.bg } else { t.text_faint },
             );
         }
         let solo_click = m.secondary_clicked() || (m.clicked() && ui.input(|x| x.modifiers.command));
@@ -593,35 +595,6 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 }
             }
             ui.add_space(8.0);
-            section(ui, "Level");
-            let volume = app.automated(AutomationTarget::MixerVolume(i)).unwrap_or(track.volume);
-            let mut db = limeshot_dsp::gain_to_db(volume).max(-60.0);
-            let r = reset(
-                ui.add(
-                    egui::Slider::new(&mut db, -60.0..=6.0)
-                        .suffix(" dB")
-                        .fixed_decimals(1)
-                        .text("Volume"),
-                ),
-                &mut db,
-                0.0,
-            );
-            let cmd = crate::widgets::user_changed(&r).then(|| Command::SetMixerVolume {
-                track: i,
-                volume: if db <= -60.0 { 0.0 } else { limeshot_dsp::db_to_gain(db) },
-            });
-            app.exec_gesture(&r, cmd);
-            crate::automation_ui::menu(app, &r, AutomationTarget::MixerVolume(i));
-            let mut pan = app.automated(AutomationTarget::MixerPan(i)).unwrap_or(track.pan);
-            let r = reset(
-                ui.add(egui::Slider::new(&mut pan, -1.0..=1.0).fixed_decimals(2).text("Pan")),
-                &mut pan,
-                0.0,
-            );
-            let cmd = crate::widgets::user_changed(&r).then_some(Command::SetMixerPan { track: i, pan });
-            app.exec_gesture(&r, cmd);
-            crate::automation_ui::menu(app, &r, AutomationTarget::MixerPan(i));
-            ui.add_space(8.0);
             section(ui, "Input");
             let routed = routed(app, i);
             // Mixer tracks sending here: audio sends, or sidechain-only links (level 0).
@@ -749,12 +722,8 @@ fn track_panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 });
             }
             crate::effects_ui::chain(app, ui, i);
+            // FL Studio: insert slots carry only On and Mix; plugin readouts live in the plugin's window.
             ui.add_space(10.0);
-            let reduction = app.player.status().gain_reduction(usize::from(i));
-            ui.add(
-                egui::ProgressBar::new((reduction / 36.0).clamp(0.0, 1.0))
-                    .text(format!("Gain reduction  {reduction:.1} dB")),
-            );
             eq_section(app, ui, i, &track.eq);
         });
     });

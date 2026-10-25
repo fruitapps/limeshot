@@ -101,6 +101,7 @@ impl Autosave {
         }
         std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
         limeshot_project::save(project, &dir.join(PROJECT_FILE)).map_err(|e| e.to_string())?;
+        self.owned = true;
         let info = SessionInfo {
             original: original.map(Path::to_path_buf),
             title: project.title.clone(),
@@ -185,5 +186,23 @@ mod ownership_tests {
         assert_eq!(new.load().unwrap(), replacement);
         new.clear_if_owned();
         assert!(new.find().is_none());
+    }
+}
+
+#[cfg(test)]
+mod partial_write_tests {
+    use super::*;
+    #[test]
+    fn metadata_failure_can_be_retried_by_the_owner() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join(SESSION_FILE)).unwrap();
+        let mut autosave = Autosave::new(Some(dir.path().into()));
+        let project = Project::default();
+        assert!(autosave.write(&project, None, 1).is_err());
+        assert!(autosave.owned);
+        std::fs::remove_dir(dir.path().join(SESSION_FILE)).unwrap();
+        autosave.write(&project, None, 1).unwrap();
+        assert!(autosave.find().is_some());
+        assert_eq!(autosave.load().unwrap(), project);
     }
 }

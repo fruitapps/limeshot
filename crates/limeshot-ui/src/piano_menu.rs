@@ -297,16 +297,25 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
         Act::Cut => crate::piano_roll::clipboard(app, ClipOp::Cut),
         Act::Copy => crate::piano_roll::clipboard(app, ClipOp::Copy),
         Act::Paste => crate::piano_roll::clipboard(app, ClipOp::Paste),
-        Act::Duplicate if !sel.is_empty() => {
+        Act::Duplicate if !tids.is_empty() && (app.ui.piano.time_sel.is_none() || !sel.is_empty()) => {
             let before: Vec<NoteId> = app
                 .project()
                 .pattern(pid)
                 .map(|p| p.notes.iter().map(|n| n.id).collect())
                 .unwrap_or_default();
-            app.exec(Command::DuplicateNotes {
-                pattern: pid,
-                notes: sel,
-            });
+            if let Some((from, to)) = app.ui.piano.time_sel.filter(|(a, b)| b > a) {
+                app.exec(Command::DuplicateNotesBy {
+                    pattern: pid,
+                    notes: tids,
+                    ticks: to - from,
+                });
+                app.ui.piano.time_sel = Some((to, to.saturating_add(to - from)));
+            } else {
+                app.exec(Command::DuplicateNotes {
+                    pattern: pid,
+                    notes: tids,
+                });
+            }
             // Select the copies.
             app.ui.piano.selection = app
                 .project()

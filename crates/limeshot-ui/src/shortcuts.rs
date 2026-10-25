@@ -57,7 +57,10 @@ pub const EDITING: &[(&str, &str)] = &[
     ("Delete / Backspace", "Delete selected notes or clips"),
     ("Cmd+A", "Select all"),
     ("Cmd+D", "Deselect"),
-    ("Cmd+B", "Duplicate selection to the right"),
+    (
+        "Cmd+B",
+        "Duplicate selection, or the time selection’s contents, after it",
+    ),
     (
         "Cmd+C / Cmd+X / Cmd+V",
         "Copy / cut / paste notes, steps (Channel Rack) or clips (Playlist; pastes at the song position in Song mode)",

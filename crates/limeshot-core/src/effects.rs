@@ -247,6 +247,9 @@ pub struct EffectSlot {
     pub kind: EffectKind,
     #[serde(default = "enabled_default")]
     pub enabled: bool,
+    /// Host dry/wet balance, independent of the plugin’s own parameters.
+    #[serde(default = "full_mix")]
+    pub mix: f32,
     /// Parameter values in the units of `kind.params()`.
     pub params: Vec<f32>,
     /// The plugin of a [`EffectKind::Plugin`] slot.
@@ -254,6 +257,10 @@ pub struct EffectSlot {
     pub plugin: Option<crate::PluginRef>,
     #[serde(flatten)]
     pub extra: crate::Extra,
+}
+
+fn full_mix() -> f32 {
+    1.0
 }
 
 fn enabled_default() -> bool {
@@ -266,6 +273,7 @@ impl EffectSlot {
             id,
             kind,
             enabled: true,
+            mix: 1.0,
             params: kind.defaults(),
             plugin: None,
             extra: crate::Extra::new(),
@@ -306,6 +314,11 @@ impl EffectSlot {
 
     /// Bring `params` to the right length and clamp every value to its range.
     pub fn sanitize(&mut self) {
+        self.mix = if self.mix.is_finite() {
+            self.mix.clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
         if self.kind != EffectKind::Plugin {
             self.plugin = None;
         }

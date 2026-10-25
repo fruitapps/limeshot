@@ -65,14 +65,18 @@ impl SampleData {
 pub enum SampleError {
     #[error("{path}: {message}")]
     Decode { path: PathBuf, message: String },
-    #[error("{path}: longer than the 10-minute sample limit")]
-    TooLong { path: PathBuf },
+    #[error("{path}: exceeds the {max_frames} frame sample limit")]
+    TooLong { path: PathBuf, max_frames: usize },
     #[error("{path}: {source}")]
     Write { path: PathBuf, source: hound::Error },
 }
 
 /// Read a WAV file (8/16/24/32-bit integer or 32-bit float PCM).
 pub fn load_wav(path: &Path) -> Result<SampleData, SampleError> {
+    load_wav_bounded(path, MAX_FRAMES)
+}
+
+fn load_wav_bounded(path: &Path, max_frames: usize) -> Result<SampleData, SampleError> {
     let err = |e: hound::Error| SampleError::Decode {
         path: path.to_path_buf(),
         message: e.to_string(),
@@ -81,34 +85,37 @@ pub fn load_wav(path: &Path) -> Result<SampleData, SampleError> {
     let spec = reader.spec();
     let channels = usize::from(spec.channels.max(1));
     let frames = reader.duration() as usize;
-    if frames > MAX_FRAMES {
+    if frames > max_frames {
         return Err(SampleError::TooLong {
             path: path.to_path_buf(),
+            max_frames,
         });
     }
-    let raw: Vec<f32> = match spec.sample_format {
-        hound::SampleFormat::Float => reader.samples::<f32>().collect::<Result<_, _>>().map_err(err)?,
-        hound::SampleFormat::Int => {
-            let bits = u32::from(spec.bits_per_sample.clamp(1, 32));
-            let scale = 1.0 / (1u64 << (bits - 1)) as f32;
-            reader
-                .samples::<i32>()
-                .map(|s| s.map(|v| v as f32 * scale))
-                .collect::<Result<_, _>>()
-                .map_err(err)?
+    // Decode directly to stereo: never retain a second, potentially multichannel PCM buffer.
+    let mut data = Vec::with_capacity(frames * 2);
+    let mut push = |index: usize, v: f32| {
+        let clean = if v.is_finite() { v } else { 0.0 };
+        if index.is_multiple_of(channels) {
+            data.push(clean);
+            if channels == 1 {
+                data.push(clean);
+            }
+        } else if index % channels == 1 {
+            data.push(clean);
         }
     };
-    let mut data = Vec::with_capacity(raw.len() / channels * 2);
-    for frame in raw.chunks_exact(channels) {
-        let l = frame.first().copied().unwrap_or(0.0);
-        let r = if channels > 1 {
-            frame.get(1).copied().unwrap_or(l)
-        } else {
-            l
-        };
-        let clean = |v: f32| if v.is_finite() { v } else { 0.0 };
-        data.push(clean(l));
-        data.push(clean(r));
+    match spec.sample_format {
+        hound::SampleFormat::Float => {
+            for (i, value) in reader.samples::<f32>().enumerate() {
+                push(i, value.map_err(err)?);
+            }
+        }
+        hound::SampleFormat::Int => {
+            let scale = 1.0 / (1u64 << (u32::from(spec.bits_per_sample.clamp(1, 32)) - 1)) as f32;
+            for (i, value) in reader.samples::<i32>().enumerate() {
+                push(i, value.map_err(err)? as f32 * scale);
+            }
+        }
     }
     Ok(SampleData {
         sample_rate: spec.sample_rate.max(1),
@@ -130,11 +137,21 @@ pub fn is_audio_file(path: &Path) -> bool {
 /// Read a sample in any supported format: WAV with hound, MP3, FLAC, Ogg Vorbis and AIFF with
 /// symphonia.
 pub fn load_audio(path: &Path) -> Result<SampleData, SampleError> {
-    let wav = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("wav"));
-    if wav { load_wav(path) } else { load_compressed(path) }
+    load_audio_bounded(path, MAX_FRAMES)
 }
 
-fn load_compressed(path: &Path) -> Result<SampleData, SampleError> {
+/// Decode at most `max_frames` stereo frames. Reject declared oversized files before decoding,
+/// and check every compressed packet before appending PCM when duration is unknown.
+pub fn load_audio_bounded(path: &Path, max_frames: usize) -> Result<SampleData, SampleError> {
+    let max_frames = max_frames.min(MAX_FRAMES);
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("wav")) {
+        load_wav_bounded(path, max_frames)
+    } else {
+        load_compressed(path, max_frames)
+    }
+}
+
+fn load_compressed(path: &Path, max_frames: usize) -> Result<SampleData, SampleError> {
     use symphonia::core::audio::SampleBuffer;
     use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
     use symphonia::core::errors::Error;
@@ -161,6 +178,12 @@ fn load_compressed(path: &Path) -> Result<SampleData, SampleError> {
         .iter()
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or_else(|| fail("no audio track".into()))?;
+    if track.codec_params.n_frames.is_some_and(|n| n > max_frames as u64) {
+        return Err(SampleError::TooLong {
+            path: path.to_path_buf(),
+            max_frames,
+        });
+    }
     let track_id = track.id;
     let mut sample_rate = track.codec_params.sample_rate.unwrap_or(44_100);
     let mut decoder = symphonia::default::get_codecs()
@@ -184,6 +207,12 @@ fn load_compressed(path: &Path) -> Result<SampleData, SampleError> {
             Err(Error::DecodeError(_)) => continue,
             Err(e) => return Err(fail(e.to_string())),
         };
+        if data.len() / 2 + decoded.frames() > max_frames {
+            return Err(SampleError::TooLong {
+                path: path.to_path_buf(),
+                max_frames,
+            });
+        }
         let spec = *decoded.spec();
         sample_rate = spec.rate;
         let channels = spec.channels.count().max(1);
@@ -202,11 +231,6 @@ fn load_compressed(path: &Path) -> Result<SampleData, SampleError> {
             let clean = |v: f32| if v.is_finite() { v } else { 0.0 };
             data.push(clean(l));
             data.push(clean(r));
-        }
-        if data.len() / 2 > MAX_FRAMES {
-            return Err(SampleError::TooLong {
-                path: path.to_path_buf(),
-            });
         }
     }
     if data.is_empty() {
@@ -336,5 +360,30 @@ mod tests {
         assert_eq!(s.frame_at(0.5), (0.5, -0.5));
         assert_eq!(s.frame_at(5.0), (0.0, 0.0));
         assert_eq!(s.frame_at(-1.0), (0.0, 0.0));
+    }
+}
+
+#[cfg(test)]
+mod bounded_tests {
+    use super::*;
+    #[test]
+    fn bounded_decoders_reject_declared_wav_and_compressed_duration() {
+        let dir = tempfile::tempdir().unwrap();
+        let wav = dir.path().join("bounded.wav");
+        write_wav(&wav, 48000, &[0.2; 256], BitDepth::Float32).unwrap();
+        assert!(matches!(
+            load_audio_bounded(&wav, 127),
+            Err(SampleError::TooLong { max_frames: 127, .. })
+        ));
+        assert_eq!(load_audio_bounded(&wav, 128).unwrap().frames(), 128);
+        let mp3 = dir.path().join("bounded.mp3");
+        let mut frame = vec![0; 417];
+        frame[..4].copy_from_slice(&[0xff, 0xfb, 0x90, 0]);
+        std::fs::write(&mp3, frame.repeat(8)).unwrap();
+        assert!(matches!(
+            load_audio_bounded(&mp3, 1000),
+            Err(SampleError::TooLong { .. })
+        ));
+        assert!(load_audio_bounded(&mp3, 10000).unwrap().frames() > 1000);
     }
 }

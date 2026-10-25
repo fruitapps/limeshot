@@ -95,8 +95,8 @@ automatically, and create further sessions only when the owner asks.
 [session handoff](handoff-plugin-workflow-fixes.md). Native window sizing/title controls, AppKit host preset
 menus, GL teardown, sampler compressed loading/drops, track locks and extended zoom have local automated
 coverage. Repeat live Serum resizing, native preset selection and close/reopen checks when the execution
-host has Screen Recording and Accessibility. Sampler sources remain bounded to 4 million stereo frames;
-long MP3/audio files still need shorter sources. Native Windows/Linux embedding remains pending.
+host has Screen Recording and Accessibility. Sampler sources are bounded to 6 million stereo frames
+(about 125 seconds at 48 kHz); longer sources still need trimming. Native Windows/Linux embedding remains pending.
 
 Future sessions retain NEW codex/ branch, NEW managed worktree and NEW attached draft PR; preserve older
 checkouts, inspect unmerged continuations, validate/document/commit/push and never merge automatically.
