@@ -170,6 +170,12 @@ fn main() {
     {
         // Audio clips on tracks 5 and 6, zoomed in enough to show their waveforms.
         let bar = app.project().time_signature.ticks_per_bar();
+        app.samples
+            .load_blocking(&dir.join("Lime Snare.wav").to_string_lossy())
+            .ok();
+        app.samples
+            .load_blocking(&dir.join("Lime Hat Open.wav").to_string_lossy())
+            .ok();
         let snare = limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Snare.wav"), 4, 2 * bar);
         limeshot_ui::playlist::add_audio_clip(&mut app, &dir.join("Lime Hat Open.wav"), 5, 2 * bar + bar / 2);
         // The snare stretched to a bar with fades, to show the fade handles.

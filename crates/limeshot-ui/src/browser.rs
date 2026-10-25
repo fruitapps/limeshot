@@ -1,6 +1,6 @@
 //! The Browser: project contents and sample folders.
 //!
-//! Click a WAV to preview it; double-click (or use its menu) to load it into the selected sampler
+//! Click or double-click a sample to preview it; use its explicit menu to replace a sampler
 //! channel; drag it onto the Channel Rack to create a channel or onto a channel to replace its
 //! sample. As in FL Studio, the panel at the bottom shows the selected sample's waveform with the
 //! preview's position; click it (or its play button) to hear the sample again.
@@ -24,6 +24,7 @@ pub struct DraggedSample(pub PathBuf);
 #[derive(Default)]
 pub struct State {
     pub filter: String,
+    pending_imports: Vec<(PathBuf, ImportTarget)>,
     /// Put the keyboard in the search field on the next frame (Tools › Browser find…).
     pub focus_search: bool,
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
@@ -94,8 +95,97 @@ pub fn file_label(p: &Path) -> String {
         .unwrap_or_else(|| p.display().to_string())
 }
 
-/// Load `path` into `channel` (making it a sampler) and name the channel after the file.
+/// A requested edit waits for the background decoder; no broken channel is created on failure.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ImportTarget {
+    Channel(ChannelId),
+    NewChannel,
+    Picker,
+    Playlist { track: u32, start: u64 },
+}
+
+pub(crate) fn import_audio(
+    app: &mut LimeShotApp,
+    path: &Path,
+    target: ImportTarget,
+) -> Option<std::sync::Arc<limeshot_dsp::SampleData>> {
+    app.samples.request_path(path.to_path_buf());
+    match app.samples.status_of_path(path).cloned() {
+        Some(SampleStatus::Ready(sample)) => Some(sample),
+        Some(SampleStatus::Failed(error)) => {
+            app.toast_error(error);
+            app.samples.remove_failed(path);
+            None
+        }
+        _ => {
+            let pending = (path.to_path_buf(), target);
+            if !app.ui.browser.pending_imports.contains(&pending) {
+                app.ui.browser.pending_imports.push(pending);
+            }
+            None
+        }
+    }
+}
+
+pub(crate) fn poll_imports(app: &mut LimeShotApp) {
+    let pending = std::mem::take(&mut app.ui.browser.pending_imports);
+    for (path, target) in pending {
+        let Some(status) = app.samples.status_of_path(&path) else {
+            // Another target for this path already reported and removed the failed load.
+            continue;
+        };
+        if matches!(status, SampleStatus::Loading) {
+            app.ui.browser.pending_imports.push((path, target));
+            continue;
+        }
+        match target {
+            ImportTarget::Channel(ch) => assign_sample(app, ch, &path),
+            ImportTarget::NewChannel => {
+                new_sampler_channel(app, &path);
+            }
+            ImportTarget::Picker => {
+                crate::playlist::add_audio_source(app, &path);
+            }
+            ImportTarget::Playlist { track, start } => {
+                crate::playlist::add_audio_clip(app, &path, track, start);
+            }
+        }
+    }
+}
+
+pub(crate) fn sampler_with_audio(
+    params: &SamplerParams,
+    root_key: u8,
+    sample: &limeshot_dsp::SampleData,
+) -> limeshot_core::PluginRef {
+    let audio = limeshot_core::EmbeddedAudio {
+        name: sample
+            .source
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        sample_rate: sample.sample_rate,
+        stereo: sample.data.clone(),
+    };
+    let mut plugin = limeshot_core::LimePlugin::SAMPLER.with_values(
+        &limeshot_core::lime::sampler_values(params, root_key),
+        false,
+        Some(&audio),
+    );
+    if let Some(source) = &params.sample {
+        plugin
+            .extra
+            .insert("lime-sample-path".into(), serde_json::json!(source.path));
+    }
+    plugin
+}
+
+/// Replace a sampler only after its requested source has decoded successfully.
 pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
+    let Some(sample) = import_audio(app, path, ImportTarget::Channel(channel)) else {
+        return;
+    };
     let Some(ch) = app.project().channel(channel) else {
         return;
     };
@@ -104,12 +194,12 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     params.sample = Some(SampleRef {
         path: path.to_string_lossy().into_owned(),
     });
-    app.samples.request_path(path.to_path_buf());
+    let plugin = sampler_with_audio(&params, root_key, &sample);
     app.exec(Command::Batch(vec![
         Command::ApproveSamplerSource { channel },
         Command::SetInstrument {
             channel,
-            instrument: Instrument::Plugin(limeshot_core::lime::sampler_ref(&params, root_key)),
+            instrument: Instrument::Plugin(plugin),
         },
         Command::RenameChannel {
             channel,
@@ -118,18 +208,19 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     ]));
 }
 
-/// A new sampler channel playing `path`.
+/// Queue a new sampler; returns its id immediately only when the source is already cached.
 pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<ChannelId> {
-    app.samples.request_path(path.to_path_buf());
+    let sample = import_audio(app, path, ImportTarget::NewChannel)?;
     let params = SamplerParams {
         sample: Some(SampleRef {
             path: path.to_string_lossy().into_owned(),
         }),
-        ..SamplerParams::default()
+        ..Default::default()
     };
+    let plugin = sampler_with_audio(&params, 60, &sample);
     let id = app.exec(Command::AddChannel {
         name: file_label(path),
-        instrument: Instrument::Plugin(limeshot_core::lime::sampler_ref(&params, 60)),
+        instrument: Instrument::Plugin(plugin),
     })?;
     app.select_channel(ChannelId(id));
     Some(ChannelId(id))
@@ -359,7 +450,18 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
         .project()
         .channels
         .iter()
-        .map(|c| (c.id, c.name.clone(), c.color, c.instrument.kind_label()))
+        .map(|c| {
+            (
+                c.id,
+                c.name.clone(),
+                c.color,
+                if limeshot_core::lime::sampler_params(&c.instrument).is_some() {
+                    "Samples"
+                } else {
+                    c.instrument.kind_label()
+                },
+            )
+        })
         .collect();
     if chans.is_empty() {
         ui.label(RichText::new("No channels yet").color(t.text_faint));
@@ -472,12 +574,9 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
             app.ui.browser.selected = Some(path.clone());
             preview(app, &path);
         }
-        if resp.double_clicked() {
-            load_into_selected(app, &path);
-        }
         if resp.hovered() {
             app.hint(format!(
-                "{} — click to preview, double-click to load into the selected channel, drag to the Channel Rack",
+                "{} — click or double-click to preview, drag to the Channel Rack",
                 path.display()
             ));
         }

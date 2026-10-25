@@ -141,7 +141,7 @@ from files. Master:
 Pan law (`limeshot_dsp::pan_gains`): balance. `L = min(1, 1 − p)`, `R = min(1, 1 + p)`. Centre is unity, the far side
 fades linearly, and panning never boosts.
 
-Solo: if any channel is soloed, soloed channels and unmuted channels with a mute lock are audible. If any insert is soloed, only soloed inserts are
+Solo: if any channel is soloed, soloed channels and unmuted channels with a mute lock are audible. If any insert is soloed, soloed inserts and unmuted inserts with a mute lock are
 audible. The master is never solo-muted.
 
 ### Insert effects

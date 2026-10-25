@@ -21,7 +21,10 @@ pub use instrument::{
     CLIP_MESSAGE_LEN, ClipMessage, ClipPlayback, Instrument, NoteEvent, NoteEventKind, PluginTelemetry, Transport,
 };
 pub use osc::Oscillator;
-pub use sample::{AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, is_audio_file, load_audio, load_wav, write_wav};
+pub use sample::{
+    AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, is_audio_file, load_audio, load_audio_bounded, load_wav,
+    write_wav,
+};
 
 /// Decibels to linear gain. −120 dB and below is silence.
 pub fn db_to_gain(db: f32) -> f32 {

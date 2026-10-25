@@ -117,6 +117,17 @@ impl NativeWindow {
         platform::Window::find(title).map(Self)
     }
 
+    /// Show a host menu above native plugin views. Coordinates are from the content layout’s
+    /// top left, in platform points. Returns the chosen entry, or None on cancel/unavailable.
+    /// Current pointer from AppKit, including OS drags which do not send ordinary mouse moves.
+    pub fn pointer_position(&self) -> Option<(f64, f64)> {
+        self.0.pointer_position()
+    }
+
+    pub fn popup_menu(&self, labels: &[String], x: f64, y: f64) -> Option<usize> {
+        self.0.popup_menu(labels, x, y)
+    }
+
     /// Make it a tool window, as FL Studio's plugin windows are: it floats above the main window
     /// and hides while another application is active.
     pub fn make_tool_window(&self) {
@@ -303,6 +314,15 @@ impl Vst3Editor {
         }
     }
 
+    /// Let host drags reach the underlying workspace without hiding the native editor.
+    pub fn set_input_passthrough(&self, passthrough: bool) {
+        if let Ok(s) = self.frame.state.try_borrow()
+            && let Some(c) = &s.container
+        {
+            c.set_input_passthrough(passthrough);
+        }
+    }
+
     /// The editor's new size if the plugin resized it since the last call.
     pub fn take_resized(&mut self) -> Option<EditorSize> {
         let mut s = self.frame.state.try_borrow_mut().ok()?;
@@ -322,6 +342,7 @@ impl Vst3Editor {
 
     /// Take the editor out of its window. Called by `Drop` too.
     pub fn detach(&mut self) {
+        let _graphics = crate::graphics::HostGraphicsGuard::suspend();
         if self.attached {
             // SAFETY: `removed` on the attached view, before its parent goes.
             unsafe { self.view.removed() };
@@ -349,13 +370,61 @@ mod platform {
     use super::EditorSize;
     use crate::PluginError;
     use objc2::rc::Retained;
-    use objc2::{MainThreadMarker, MainThreadOnly};
-    use objc2_app_kit::{NSApplication, NSFloatingWindowLevel, NSView, NSWindow};
-    use objc2_foundation::{NSPoint, NSRect, NSSize};
+    use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+    use objc2_app_kit::{NSApplication, NSFloatingWindowLevel, NSMenu, NSMenuItem, NSView, NSWindow};
+    use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
 
     pub(super) struct Window(Retained<NSWindow>);
 
     impl Window {
+        pub(super) fn popup_menu(&self, labels: &[String], x: f64, y: f64) -> Option<usize> {
+            let mtm = MainThreadMarker::new()?;
+            let content = self.0.contentView()?;
+            let target = PresetMenuTarget::alloc(mtm).set_ivars(MenuResult::default());
+            // SAFETY: initialize an allocated NSObject subclass with its superclass initializer.
+            let target: Retained<PresetMenuTarget> = unsafe { msg_send![super(target), init] };
+            let menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &NSString::from_str("Presets"));
+            menu.setAutoenablesItems(false);
+            for (index, label) in labels.iter().enumerate() {
+                // SAFETY: target implements selectPreset: with NSMenuItem’s action signature,
+                // and remains retained throughout the synchronous menu tracking call below.
+                let item = unsafe {
+                    menu.addItemWithTitle_action_keyEquivalent(
+                        &NSString::from_str(label),
+                        Some(sel!(selectPreset:)),
+                        &NSString::new(),
+                    )
+                };
+                item.setTag(isize::try_from(index).ok()?);
+                // SAFETY: the target has the action implementation and outlives menu tracking.
+                unsafe { item.setTarget(Some(&target)) };
+            }
+            let inset = (content.bounds().size.height - self.0.contentLayoutRect().size.height).max(0.0);
+            let top = y + inset;
+            let point = NSPoint::new(
+                x,
+                if content.isFlipped() {
+                    top
+                } else {
+                    content.bounds().size.height - top
+                },
+            );
+            menu.popUpMenuPositioningItem_atLocation_inView(None, point, Some(&content));
+            target.ivars().selected.get()
+        }
+
+        pub(super) fn pointer_position(&self) -> Option<(f64, f64)> {
+            let content = self.0.contentView()?;
+            let point = content.convertPoint_fromView(self.0.mouseLocationOutsideOfEventStream(), None);
+            let inset = (content.bounds().size.height - self.0.contentLayoutRect().size.height).max(0.0);
+            let y = if content.isFlipped() {
+                point.y
+            } else {
+                content.bounds().size.height - point.y
+            } - inset;
+            Some((point.x, y))
+        }
+
         /// Above the main window, hidden while another application is active.
         pub(super) fn make_tool_window(&self) {
             self.0.setLevel(NSFloatingWindowLevel);
@@ -371,9 +440,58 @@ mod platform {
         }
     }
 
+    #[derive(Default)]
+    struct MenuResult {
+        selected: std::cell::Cell<Option<usize>>,
+    }
+
+    define_class!(
+        // SAFETY: NSObject imposes no subclassing requirements; this class has no Drop.
+        #[unsafe(super = NSObject)]
+        #[thread_kind = MainThreadOnly]
+        #[ivars = MenuResult]
+        struct PresetMenuTarget;
+
+        // SAFETY: NSObjectProtocol has no additional requirements.
+        unsafe impl NSObjectProtocol for PresetMenuTarget {}
+
+        impl PresetMenuTarget {
+            // SAFETY: matches NSMenuItem’s target/action signature (sender: id).
+            #[unsafe(method(selectPreset:))]
+            fn select_preset(&self, sender: &NSMenuItem) {
+                self.ivars().selected.set(usize::try_from(sender.tag()).ok());
+            }
+        }
+    );
+
+    #[derive(Default)]
+    struct ContainerInput {
+        passthrough: std::cell::Cell<bool>,
+    }
+
+    define_class!(
+        // SAFETY: NSView permits subclassing; this class only customizes hit testing.
+        #[unsafe(super = NSView)]
+        #[thread_kind = MainThreadOnly]
+        #[ivars = ContainerInput]
+        struct PluginContainerView;
+        // SAFETY: NSObjectProtocol adds no requirements.
+        unsafe impl NSObjectProtocol for PluginContainerView {}
+        impl PluginContainerView {
+            // SAFETY: signature matches NSView hitTest:, returning an optional retained view.
+            #[unsafe(method_id(hitTest:))]
+            fn hit_test(&self, point: NSPoint) -> Option<Retained<NSView>> {
+                if self.ivars().passthrough.get() { None } else {
+                    // SAFETY: calls the superclass implementation with its declared point argument.
+                    unsafe { msg_send![super(self), hitTest: point] }
+                }
+            }
+        }
+    );
+
     /// A plain view in the host's window that the plugin's view goes into.
     pub(super) struct Container {
-        view: Retained<NSView>,
+        view: Retained<PluginContainerView>,
         window: Retained<NSWindow>,
         embedded: std::cell::Cell<bool>,
     }
@@ -391,7 +509,9 @@ mod platform {
                 NSPoint::new(0.0, 0.0),
                 NSSize::new(size.width as f64, size.height as f64),
             );
-            let view = NSView::initWithFrame(NSView::alloc(mtm), frame);
+            let allocated = PluginContainerView::alloc(mtm).set_ivars(ContainerInput::default());
+            // SAFETY: initialize the NSView subclass through its designated initializer.
+            let view: Retained<PluginContainerView> = unsafe { msg_send![super(allocated), initWithFrame: frame] };
             content.addSubview(&view);
             let c = Self {
                 view,
@@ -463,6 +583,10 @@ mod platform {
                 .setFrame(NSRect::new(NSPoint::new(x, y), NSSize::new(width, height)));
         }
 
+        pub(super) fn set_input_passthrough(&self, passthrough: bool) {
+            self.view.ivars().passthrough.set(passthrough);
+        }
+
         pub(super) fn set_hidden(&self, hidden: bool) {
             self.view.setHidden(hidden);
         }
@@ -483,6 +607,12 @@ mod platform {
     pub(super) struct Window;
 
     impl Window {
+        pub(super) fn pointer_position(&self) -> Option<(f64, f64)> {
+            None
+        }
+        pub(super) fn popup_menu(&self, _labels: &[String], _x: f64, _y: f64) -> Option<usize> {
+            None
+        }
         pub(super) fn make_tool_window(&self) {}
 
         pub(super) fn find(_title: &str) -> Option<Self> {
@@ -506,5 +636,6 @@ mod platform {
         /// Do nothing on platforms without native editor embedding.
         pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}
+        pub(super) fn set_input_passthrough(&self, _passthrough: bool) {}
     }
 }

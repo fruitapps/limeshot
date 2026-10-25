@@ -178,3 +178,18 @@ clear the current context, while glutin's surface check only compares bound view
 instead of silently writing an incomplete mix. Live evidence: [host validation](../development/lime-vst3-host-validation.md).
 
 Hosted parameter drags audition through the live instance; release commits one plugin-state command. This avoids serializing embedded sampler PCM on every pointer frame.
+
+
+### Plugin wrapper synchronization (2026-10-25)
+
+Plugin wrappers reuse the workspace title painter with minimize/pin/close and no maximize or detach.
+The native editor’s resize requests become wrapper content sizes before old layout can overwrite them;
+host resizing applies the plugin’s constraints and reconciles the wrapper to the accepted dimensions.
+Native fixed-size editors retain their natural dimensions. Host preset menus use AppKit above native macOS views, with an egui fallback for parameter/headless wrappers,
+rather than blanket-hiding native views whenever a popup opens. During Browser sample drags the native
+view temporarily hides so the wrapper can receive egui’s release event and assign the source through commands.
+External filesystem drops route to visible Playlist/rack/sampler targets.
+
+Native egui-baseview teardown binds its own retained GL context before deleting painter resources.
+The host additionally suspends its current GL context during editor removal and restores its context
+around logic/UI frames. The native backend patch is an isolated dependency with upstream licenses.

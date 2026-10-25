@@ -9,7 +9,7 @@ use limeshot_core::{EmbeddedAudio, Project, lime};
 /// Decode a sampler's sample (an absolute path in memory) for Lime Sampler's state.
 pub fn embedded_audio(stored: &str) -> Option<EmbeddedAudio> {
     let path = limeshot_project::resolve_sample_path(stored, None);
-    let data = limeshot_dsp::load_audio(&path).ok()?;
+    let data = limeshot_dsp::load_audio_bounded(&path, lime::MAX_EMBEDDED_FRAMES).ok()?;
     Some(EmbeddedAudio {
         name: Path::new(stored)
             .file_name()

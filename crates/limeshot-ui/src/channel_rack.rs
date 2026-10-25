@@ -297,8 +297,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let sel = app.selected_channel();
     let rows_top = ui.cursor().top();
 
-    let body_left = ui.max_rect().left();
-    let scroll = egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
+    egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
         ui.add_space(2.0);
         let filter = app.ui.rack.filter.clone();
         for ch in channels.iter().filter(|c| filter.shows(c)) {
@@ -322,29 +321,31 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 let r = toggle_label(
                     ui,
                     active,
-                    if ch.mute_locked {
-                        "L"
-                    } else if ch.solo {
-                        "S"
-                    } else {
-                        ""
-                    },
+                    if ch.solo && !ch.mute_locked { "S" } else { "" },
                     led_color,
                     vec2(10.0, 18.0),
                     "Left-click: mute · Ctrl+click or right-click: solo",
                 );
+                if ch.mute_locked {
+                    crate::icons::paint(
+                        ui.painter(),
+                        r.rect.shrink2(vec2(0.0, 2.0)),
+                        crate::icons::Icon::Lock,
+                        if active { t.bg } else { t.text_faint },
+                    );
+                }
                 let solo_click = r.secondary_clicked() || (r.clicked() && ui.input(|i| i.modifiers.command));
                 if r.clicked() && ui.input(|i| i.modifiers.shift) {
                     app.exec(Command::SetChannelMuteLock {
                         channel: ch.id,
                         locked: !ch.mute_locked,
                     });
-                } else if !ch.mute_locked && solo_click {
+                } else if solo_click {
                     app.exec(Command::SetChannelSolo {
                         channel: ch.id,
                         solo: !ch.solo,
                     });
-                } else if r.clicked() && !ch.mute_locked {
+                } else if r.clicked() {
                     app.exec(Command::SetChannelMute {
                         channel: ch.id,
                         muted: !ch.muted,
@@ -402,9 +403,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     }
     // Long patterns scroll inside the same four-to-eight-beat window; keep five rows visible.
     let row_pitch = ROW_H + ui.spacing().item_spacing.y;
-    let w = app.ui.rack.step_strips.first().map_or(700.0, |(_, strip, _)| {
-        strip.left() + scroll.state.offset.x - body_left + 16.0 * STEP_W + 18.0
-    });
+    let w = 700.0;
     let h = crate::workspace::TITLE_H + (rows_top - body_top) + 2.0 + 5.0 * row_pitch + 10.0;
     app.ui.workspace.set_content_min(Win::ChannelRack, vec2(w, h));
     // Dropping a sample anywhere else in the rack makes a new channel.

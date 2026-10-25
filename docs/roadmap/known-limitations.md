@@ -101,9 +101,10 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
 * VST3 plugins: native plugin editor embedding is implemented for macOS only and awaits final live verification (on Windows and Linux the Plugin tab lists the
-  parameters); the internal windows have no ▸ menu, captionize or wrapper options page (FL's). Fixed-size plugins
+  parameters); the internal windows have minimize/pin/close but no ▸ menu or wrapper options page (FL's). Fixed-size plugins
   retain a minimum wrapper size; resizable plugins negotiate their editor size. Native views hide completely
-  when another window or popup covers them (partial native-view occlusion is not implemented). The presets menu lists factory
+  when another window or popup covers them (partial native-view occlusion is not implemented). Host presets use an AppKit menu above
+  native macOS views to keep the editor visible; parameter/headless views use an egui menu. The presets menu lists factory
   programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
   their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
   characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
@@ -149,8 +150,8 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   The supplied development builds are macOS Apple Silicon, ad-hoc signed, not notarized. Windows/Linux/Intel
   runtime and hands-on FL Studio/other-DAW editor checks remain pending; the development Mac was locked.
   Validator and actual VST3 ABI tests are recorded in `native-plugins/VALIDATION.md`.
-* Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV and embeds at most
-  4 million stereo frames in host state. Loading a sample resets sounding notes. Sampler .limepreset files
+* Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV, MP3, FLAC, Ogg Vorbis and AIFF and embeds at most
+  6 million stereo frames (about 125 seconds at 48 kHz) in host state. Loading a sample resets sounding notes. Sampler .limepreset files
   preserve the sample/root key; host state saves both. Loop points are supported; no time stretching or multisampling.
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
@@ -170,3 +171,24 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
 * Converted effect automation follows the plugin closely but not bit for bit (smoothing and interpolation).
   Non-automated equivalence is checked bit for bit, allowing only trailing silent frames to differ in length.
   Lime Sampler embeds sample audio, so projects grow with their samples.
+
+
+## 2026-10-25 plugin/workflow fixes
+
+Plugin resize/title/teardown changes require another live native pass, including Serum’s internal resize control,
+constrained wrappers, opening host presets, minimize/restore, and repeated native instrument/effect closing.
+Headless wrapper tests and offscreen native editor renders do not establish those native checks.
+The sampler’s limit is 6 million stereo frames / 8–384 kHz (about 125 seconds at 48 kHz, embedded state below 64 MiB),
+for every format including MP3. Imports decode on the loader thread and report failures before any channel or clip exists.
+External drops use filesystem audio paths; directories and unsupported extensions are ignored.
+
+
+### Live follow-up, 2026-10-25
+
+The execution host now has Screen Recording/Accessibility. Partial live rendering, tabs, preset visibility,
+Serum internal shrink/minimize-restore, native instrument/effect close-reopen and native MP3 Load checks pass.
+The Load dialog exposed a backend modal re-entrancy abort, now repaired and retested.
+Browser-to-native drops and modifier clicks were inconclusive under this automation driver; external OS drops,
+keyboard forwarding, pin/occlusion stress and host-edge resize remain unverified. PLG-006/PLG-012 remain IMPLEMENTED.
+See [live results and evidence](../development/live-plugin-checks-2026-10-25.md). Future live tests use the
+autosave-disabled live_check example; new sessions cannot overwrite an unclaimed recovery copy.

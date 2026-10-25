@@ -145,7 +145,9 @@ impl NativeEditor {
             t.text,
         );
         if self.button(ui, c, c.r(618.0, 60.0, 63.0, 26.0), "Load…", t)
-            && let Some(path) = rfd::FileDialog::new().add_filter("WAV audio", &["wav"]).pick_file()
+            && let Some(path) = rfd::FileDialog::new()
+                .add_filter("Audio files", &limeshot_dsp::AUDIO_EXTENSIONS)
+                .pick_file()
         {
             self.load_sample(&path);
         }
@@ -189,7 +191,7 @@ impl NativeEditor {
                 sample.sample_rate
             )
         } else {
-            "WAV sample player  ·  Drag a file onto the waveform".into()
+            "Sample player  ·  Drag a file onto the waveform".into()
         };
         ui.painter().text(
             c.p(24.0, 523.0),

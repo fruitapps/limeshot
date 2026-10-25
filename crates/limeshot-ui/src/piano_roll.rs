@@ -209,6 +209,8 @@ pub struct State {
     pub key_h: f32,
     pub scroll: Vec2,
     pub selection: Vec<NoteId>,
+    pub time_sel: Option<(Tick, Tick)>,
+    time_anchor: Option<Tick>,
     drag: Option<Drag>,
     pub last_len: Tick,
     pub last_vel: f32,
@@ -244,6 +246,8 @@ impl Default for State {
             key_h: 14.0,
             scroll: Vec2::ZERO,
             selection: Vec::new(),
+            time_sel: None,
+            time_anchor: None,
             drag: None,
             // FL Studio's first drawn note is two steps long; after that new notes take the
             // length of the last note drawn or resized (observed, fl-studio-analysis.md §3).
@@ -731,15 +735,44 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
             Stroke::new(2.0, t.accent_dim),
         );
     }
-    let resp = ui.interact(ruler, ui.id().with("pr_ruler"), Sense::click());
-    if resp.clicked()
-        && let Some(p) = resp.interact_pointer_pos()
+    if let Some((from, to)) = app.ui.piano.time_sel {
+        painter.rect_filled(
+            Rect::from_min_max(pos2(view.x(from), ruler.top()), pos2(view.x(to), ruler.bottom())).intersect(ruler),
+            0.0,
+            t.selection,
+        );
+    }
+    let resp = ui.interact(ruler, ui.id().with("pr_ruler"), Sense::click_and_drag());
+    let pointer = resp.interact_pointer_pos();
+    if resp.is_pointer_button_down_on() && ui.input(|i| i.pointer.primary_pressed() && i.modifiers.command) {
+        app.ui.piano.time_anchor = pointer.map(|p| app.ui.snap.floor(view.tick_at(p.x).max(0) as u64, sig));
+    }
+    if let (Some(from), Some(p)) = (app.ui.piano.time_anchor, pointer) {
+        let to = app.ui.snap.floor(view.tick_at(p.x).max(0) as u64, sig);
+        let (from, to) = (from.min(to), from.max(to));
+        app.ui.piano.time_sel = (to > from).then_some((from, to));
+        app.ui.piano.selection = app
+            .project()
+            .pattern(app.current_pattern())
+            .map(|pat| {
+                pat.notes
+                    .iter()
+                    .filter(|n| Some(n.channel) == app.selected_channel() && n.start < to && n.end() > from)
+                    .map(|n| n.id)
+                    .collect()
+            })
+            .unwrap_or_default();
+    } else if resp.clicked()
+        && let Some(p) = pointer
     {
         let tick = app.ui.snap.floor(view.tick_at(p.x).max(0) as u64, sig);
         app.set_mode(limeshot_engine::PlayMode::Pattern);
         app.locate(tick);
     }
-    resp.hint("Click to move the playhead (Pattern mode)");
+    if !ui.input(|i| i.pointer.primary_down()) {
+        app.ui.piano.time_anchor = None;
+    }
+    resp.hint("Click: move playhead · Ctrl/Cmd+drag: select time and notes");
 }
 
 /// Draw the piano keys and audition the channel while the pointer is held, releasing on key changes or release.
@@ -866,7 +899,7 @@ pub fn tool_cursor(ctx: &Context, tool: Tool, at: Pos2, special: Option<egui::Cu
         return false;
     }
     ctx.set_cursor_icon(egui::CursorIcon::None);
-    let size = 22.0;
+    let size = 16.0;
     let u = size / 16.0;
     // The hotspot in icon units (see `icons::paint`; its centre is 0, 0).
     let hot = match tool {
@@ -878,19 +911,6 @@ pub fn tool_cursor(ctx: &Context, tool: Tool, at: Pos2, special: Option<egui::Cu
     } * u;
     let r = Rect::from_center_size(at - hot, vec2(size, size));
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("tool-cursor")));
-    let outline = Color32::from_black_alpha(230);
-    for d in [
-        vec2(-1.0, 0.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, -1.0),
-        vec2(0.0, 1.0),
-        vec2(-1.0, -1.0),
-        vec2(1.0, 1.0),
-        vec2(-1.0, 1.0),
-        vec2(1.0, -1.0),
-    ] {
-        crate::icons::paint(&painter, r.translate(d), tool.icon(), outline);
-    }
     crate::icons::paint(
         &painter,
         r,
@@ -898,7 +918,7 @@ pub fn tool_cursor(ctx: &Context, tool: Tool, at: Pos2, special: Option<egui::Cu
         if tool == Tool::Delete {
             Theme::current().danger
         } else {
-            Color32::WHITE
+            Theme::current().text
         },
     );
     true
@@ -1203,7 +1223,7 @@ fn grid_input(
         let anchor = pointer.map_or(0.0, |p| p.x - grid.left());
         let st = &mut app.ui.piano;
         let old = st.zoom_x;
-        st.zoom_x = (st.zoom_x / 2.0).max(12.0);
+        st.zoom_x = (st.zoom_x / 2.0).max(crate::piano_menu::MIN_ZOOM);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
     } else if secondary_pressed {
         if pointer.is_some_and(|p| hit(view, notes, cid, p).is_none()) {
@@ -1402,12 +1422,13 @@ fn grid_input(
                 let st = &mut app.ui.piano;
                 if (p.x - from.x).abs() > 4.0 && t1 > t0 {
                     // Fit the dragged range to the grid width.
-                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32).clamp(12.0, 800.0);
+                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32)
+                        .clamp(crate::piano_menu::MIN_ZOOM, crate::piano_menu::MAX_ZOOM);
                     st.scroll.x = t0 as f32 * st.zoom_x / PPQ as f32;
                 } else {
                     let anchor = p.x - grid.left();
                     let old = st.zoom_x;
-                    st.zoom_x = (st.zoom_x * 2.0).min(800.0);
+                    st.zoom_x = (st.zoom_x * 2.0).min(crate::piano_menu::MAX_ZOOM);
                     st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
                 }
             }
@@ -1632,7 +1653,7 @@ pub fn wheel_zoom_y(ui: &Ui, grid: Rect, row_h: &mut f32, scroll_y: &mut f32, mi
 }
 
 /// The Piano Roll's key height range (vertical zoom).
-pub const KEY_H: (f32, f32) = (6.0, 40.0);
+pub const KEY_H: (f32, f32) = (2.0, 160.0);
 
 fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     let hovered = ui.rect_contains_pointer(full);
@@ -1643,7 +1664,14 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     if wheel_zoom_y(ui, grid, &mut st.key_h, &mut st.scroll.y, KEY_H.0, KEY_H.1) {
         return;
     }
-    if wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 12.0, 800.0) {
+    if wheel_zoom(
+        ui,
+        grid,
+        &mut st.zoom_x,
+        &mut st.scroll.x,
+        crate::piano_menu::MIN_ZOOM,
+        crate::piano_menu::MAX_ZOOM,
+    ) {
         return;
     }
     let (delta, mods) = ui.input(|i| (i.smooth_scroll_delta, i.modifiers));

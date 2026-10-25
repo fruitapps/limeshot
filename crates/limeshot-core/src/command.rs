@@ -186,6 +186,11 @@ pub enum Command {
         notes: Vec<NoteId>,
     },
     /// Copy the notes right after the selection's span.
+    DuplicateNotesBy {
+        pattern: PatternId,
+        notes: Vec<NoteId>,
+        ticks: Tick,
+    },
     DuplicateNotes {
         pattern: PatternId,
         notes: Vec<NoteId>,
@@ -361,6 +366,10 @@ pub enum Command {
         at: Tick,
     },
     DuplicateClips(Vec<ClipId>),
+    DuplicateClipsBy {
+        clips: Vec<ClipId>,
+        ticks: Tick,
+    },
     /// Give the clip its own copy of its pattern.
     MakeClipUnique(ClipId),
     SetClipMuted {
@@ -453,6 +462,10 @@ pub enum Command {
         band: u8,
         value: EqBand,
     },
+    SetMixerMuteLock {
+        track: u16,
+        locked: bool,
+    },
     SetMixerMute {
         track: u16,
         muted: bool,
@@ -535,6 +548,11 @@ pub enum Command {
         track: u16,
         effect: u32,
         delta: i32,
+    },
+    SetEffectMix {
+        track: u16,
+        effect: u32,
+        mix: f32,
     },
     SetEffectEnabled {
         track: u16,
@@ -707,7 +725,7 @@ impl Command {
             MoveNotes { .. } => "Move notes",
             ResizeNotes { .. } | ResizeNotesStart { .. } => "Resize notes",
             SetNoteVelocity { .. } => "Note velocity",
-            DuplicateNotes { .. } => "Duplicate notes",
+            DuplicateNotesBy { .. } | DuplicateNotes { .. } => "Duplicate notes",
             SetNotesMuted { muted: true, .. } => "Mute notes",
             SetNotesMuted { .. } => "Unmute notes",
             SliceNotes { .. } => "Slice notes",
@@ -743,7 +761,7 @@ impl Command {
             ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
             SlipClip { .. } => "Slip clip",
             SliceClips { .. } => "Slice clips",
-            DuplicateClips(_) => "Duplicate clips",
+            DuplicateClipsBy { .. } | DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
             SetClipFades { .. } => "Clip fade",
@@ -768,6 +786,7 @@ impl Command {
             SetMixerVolume { .. } => "Mixer volume",
             SetMixerPan { .. } => "Mixer pan",
             SetMixerEq { .. } => "Mixer EQ",
+            SetMixerMuteLock { .. } => "Lock mixer mute",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
             MoveMixerTrack { .. } => "Move mixer track",
@@ -789,6 +808,7 @@ impl Command {
             SetPluginSeparateProcess { .. } => "Plugin process",
             RemoveEffect { .. } => "Remove effect",
             MoveEffect { .. } => "Move effect",
+            SetEffectMix { .. } => "Effect mix",
             SetEffectEnabled { .. } => "Bypass effect",
             SetEffectParam { .. } => "Effect parameter",
             Batch(_) => "Edit",
@@ -810,6 +830,7 @@ impl Command {
             SetEffectParam {
                 track, effect, index, ..
             } => format!("fx{track}:{effect}:{index}"),
+            SetEffectMix { track, effect, .. } => format!("fxmix{track}:{effect}"),
             SetSwing(_) => "swing".into(),
             SetChannelVolume { channel, .. } => format!("chvol{}", channel.0),
             SetChannelPan { channel, .. } => format!("chpan{}", channel.0),
@@ -1128,6 +1149,38 @@ impl Command {
                     if let Some((_, len)) = glued.iter().find(|(id, _)| *id == n.id) {
                         n.length = *len;
                     }
+                }
+            }
+            DuplicateNotesBy {
+                pattern: pid,
+                notes,
+                ticks,
+            } => {
+                let selected: Vec<_> = pattern(p, pid)?
+                    .notes
+                    .iter()
+                    .filter(|n| notes.contains(&n.id))
+                    .copied()
+                    .collect();
+                for mut n in selected {
+                    n.id = NoteId(p.alloc_id());
+                    n.start = n.start.saturating_add(ticks);
+                    pattern(p, pid)?.notes.push(n);
+                }
+                sort_notes(pattern(p, pid)?);
+            }
+            DuplicateClipsBy { clips, ticks } => {
+                let selected: Vec<_> = p
+                    .playlist
+                    .clips
+                    .iter()
+                    .filter(|c| clips.contains(&c.id))
+                    .cloned()
+                    .collect();
+                for mut c in selected {
+                    c.id = ClipId(p.alloc_id());
+                    c.start = c.start.saturating_add(ticks);
+                    p.playlist.clips.push(c);
                 }
             }
             DuplicateNotes { pattern: pid, notes } => {
@@ -1975,6 +2028,7 @@ impl Command {
                 mixer_track(p, track)?.eq[b] = value.sanitized(b);
                 crate::lime::sync_track_eq(p, usize::from(track));
             }
+            SetMixerMuteLock { track, locked } => mixer_track(p, track)?.mute_locked = locked,
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
             SetRoute { from, to, level } => {
@@ -2062,6 +2116,15 @@ impl Command {
                 let j = (i as i64 + i64::from(delta)).clamp(0, t.effects.len() as i64 - 1) as usize;
                 let e = t.effects.remove(i);
                 t.effects.insert(j, e);
+            }
+            SetEffectMix { track, effect, mix } => {
+                let mix = finite(mix)?.clamp(0.0, 1.0);
+                mixer_track(p, track)?
+                    .effects
+                    .iter_mut()
+                    .find(|e| e.id == effect)
+                    .ok_or(CommandError::NoEffect(effect))?
+                    .mix = mix;
             }
             SetEffectEnabled { track, effect, enabled } => {
                 let t = mixer_track(p, track)?;

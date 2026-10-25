@@ -4,30 +4,12 @@ use crate::processor::Meters;
 use egui::*;
 use limeshot_dsp::effects::{Effect, Eq3};
 use nice_plug::prelude::*;
-use std::{f32::consts::TAU, sync::atomic::Ordering};
+use std::sync::atomic::Ordering;
 
 impl NativeEditor {
-    pub(super) fn paint_header(&self, ui: &mut Ui, c: Canvas, t: &Theme) {
+    pub(super) fn paint_bypass(&self, ui: &mut Ui, c: Canvas, t: &Theme) {
         let p = ui.painter();
-        p.rect_filled(c.r(0.0, 0.0, c.w, 43.0), 2, t.header);
-        p.line_segment([c.p(0.0, 43.0), c.p(c.w, 43.0)], Stroke::new(c.s, t.border));
-        let center = c.p(19.0, 22.0);
-        p.circle_stroke(center, 10.0 * c.s, Stroke::new(2.0 * c.s, t.lime));
-        for i in 0..5 {
-            let a = i as f32 * TAU / 5.0;
-            p.line_segment(
-                [center, center + vec2(a.cos(), a.sin()) * 7.0 * c.s],
-                Stroke::new(1.3 * c.s, t.lime),
-            );
-        }
-        p.text(
-            c.p(38.0, 22.0),
-            Align2::LEFT_CENTER,
-            crate::parameters::NAMES[self.id as usize],
-            FontId::proportional(17.0 * c.s),
-            t.text,
-        );
-        let rect = c.r(c.w - 84.0, 9.0, 73.0, 25.0);
+        let rect = c.r(c.w - 84.0, c.h - 57.0, 73.0, 25.0);
         let response = ui.interact(rect, ui.scope_id().with("active"), Sense::click());
         let active = !self.params.bypass.value();
         p.rect_filled(rect, 2, t.surface);
@@ -517,7 +499,7 @@ impl NativeEditor {
         );
         preview
             .clone()
-            .on_hover_text("Hold to audition · Drag START / END handles to trim · Drop a WAV to replace");
+            .on_hover_text("Hold to audition · Drag START / END handles to trim · Drop an audio file to replace");
         if preview.is_pointer_button_down_on() {
             self.meters.preview_note.store(
                 self.params.controls[7].value.value().round() as u32 + 1,
@@ -528,7 +510,7 @@ impl NativeEditor {
             p.text(
                 r.center(),
                 Align2::CENTER_CENTER,
-                "DROP A WAV FILE HERE",
+                "DROP AN AUDIO FILE HERE",
                 FontId::monospace(13.0 * c.s),
                 t.dim,
             );

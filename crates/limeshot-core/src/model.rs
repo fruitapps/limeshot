@@ -492,6 +492,9 @@ impl Playlist {
 /// A mixer track (insert, or the master at index 0).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MixerTrack {
+    /// Keep this insert audible during other inserts’ solo operations.
+    #[serde(default)]
+    pub mute_locked: bool,
     pub name: String,
     /// Linear gain (1.0 = 0 dB, max 2.0 ≈ +6 dB).
     pub volume: f32,
@@ -600,6 +603,7 @@ impl MixerTrack {
             pan: 0.0,
             muted: false,
             solo: false,
+            mute_locked: false,
             effects: Vec::new(),
             routes: default_routes(),
             eq: EqBand::DEFAULTS,

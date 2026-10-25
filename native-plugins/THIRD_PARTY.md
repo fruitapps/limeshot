@@ -21,3 +21,10 @@ Editors reuse LimeShot's bundled Inter and JetBrains Mono fonts. Their licenses 
 are in `../ATTRIBUTION.md` and `../assets/fonts/`; build.py also copies license texts into `dist/licenses/`.
 No additional graphic assets are used.
 VST is a trademark of Steinberg Media Technologies GmbH. LimeShot is an independent implementation.
+
+Local patch: `vendor/egui-baseview` contains egui-baseview 0.9.0 (MIT OR Apache-2.0), with original licenses.
+Its OpenGL renderer retains and binds its own context before deleting painter resources on close.
+See `vendor/egui-baseview/LIMESHOT-PATCH.md`.
+
+The same egui-baseview patch also defers native-modal re-entrant draw/resize callbacks and lets the modal
+panel handle nested input, preventing an active-frame RefCell borrow abort.

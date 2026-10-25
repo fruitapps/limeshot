@@ -147,7 +147,7 @@ impl LimePlugin {
 }
 
 /// Shared with the native sampler's state reader to prevent successful but silent conversion.
-pub const MAX_EMBEDDED_FRAMES: usize = 4_000_000;
+pub const MAX_EMBEDDED_FRAMES: usize = 6_000_000;
 
 /// Validate native sample limits and conservatively bound escaped state metadata.
 pub fn embedded_audio_supported(audio: &EmbeddedAudio) -> bool {
@@ -441,7 +441,7 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                             None
                         }
                         Some(a) if !embedded_audio_supported(&a) => {
-                            warnings.push(format!("{}: sample exceeds Lime Sampler state limits (4 million frames, 8–384 kHz); source path retained", c.name));
+                            warnings.push(format!("{}: sample exceeds Lime Sampler state limits (6 million frames, 8–384 kHz); source path retained", c.name));
                             None
                         }
                         Some(a) => Some(a),

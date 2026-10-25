@@ -4,7 +4,16 @@
 //! project folder and decodes it on a worker thread. Decoded samples stay cached for the life of
 //! the cache, which also guarantees the audio thread never drops the last reference to a buffer.
 
-use limeshot_dsp::{SampleData, load_audio};
+use limeshot_dsp::SampleData;
+
+fn load_audio(path: &Path) -> Result<SampleData, String> {
+    let sample =
+        limeshot_dsp::load_audio_bounded(path, limeshot_core::lime::MAX_EMBEDDED_FRAMES).map_err(|e| e.to_string())?;
+    if sample.frames() < 2 || !(8_000..=384_000).contains(&sample.sample_rate) {
+        return Err("Sample must have at least two frames at 8–384 kHz".into());
+    }
+    Ok(sample)
+}
 use limeshot_sequencer::SampleLookup;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -91,9 +100,8 @@ impl SampleCache {
                 self.entries.insert(path, SampleStatus::Loading);
             }
             _ => {
-                // No loader thread: decode here.
-                let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
-                self.entries.insert(path, status(r));
+                self.entries
+                    .insert(path, SampleStatus::Failed("Sample loader is unavailable".into()));
             }
         }
     }
@@ -142,11 +150,20 @@ impl SampleCache {
         self.entries.get(path)
     }
 
+    /// Forget only a failed load, allowing a later request to decode the path again.
+    pub fn remove_failed(&mut self, path: &Path) -> bool {
+        if matches!(self.entries.get(path), Some(SampleStatus::Failed(_))) {
+            self.entries.remove(path);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Forget a failed load so it can be retried (e.g. after the file was restored).
     pub fn retry(&mut self, stored: &str) {
         let path = self.resolve(stored);
-        if matches!(self.entries.get(&path), Some(SampleStatus::Failed(_))) {
-            self.entries.remove(&path);
+        if self.remove_failed(&path) {
             self.request_path(path);
         }
     }
@@ -191,5 +208,35 @@ mod tests {
         }
         assert_eq!(c.sample("a.wav").unwrap().frames(), 2);
         assert!(matches!(c.status("missing.wav"), Some(SampleStatus::Failed(_))));
+    }
+
+    #[test]
+    fn forgetting_failed_paths_preserves_other_states_and_allows_a_fresh_decode() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("restored.wav");
+        let mut c = SampleCache::new();
+        assert!(!c.remove_failed(&path));
+        c.request_path(path.clone());
+        assert!(!c.remove_failed(&path));
+        assert!(matches!(c.status_of_path(&path), Some(SampleStatus::Loading)));
+        let t0 = Instant::now();
+        while matches!(c.status_of_path(&path), Some(SampleStatus::Loading)) && t0.elapsed() < Duration::from_secs(5) {
+            c.poll();
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(c.remove_failed(&path));
+        assert!(c.status_of_path(&path).is_none());
+        limeshot_dsp::write_wav(&path, 48_000, &[0.1; 4], limeshot_dsp::BitDepth::Float32).unwrap();
+        c.request_path(path.clone());
+        let t0 = Instant::now();
+        while matches!(c.status_of_path(&path), Some(SampleStatus::Loading)) && t0.elapsed() < Duration::from_secs(5) {
+            c.poll();
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let Some(SampleStatus::Ready(sample)) = c.status_of_path(&path).cloned() else {
+            panic!("restored sample was not decoded");
+        };
+        assert!(!c.remove_failed(&path));
+        assert!(matches!(c.status_of_path(&path), Some(SampleStatus::Ready(s)) if Arc::ptr_eq(s, &sample)));
     }
 }

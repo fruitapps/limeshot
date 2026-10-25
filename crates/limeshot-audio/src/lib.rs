@@ -69,6 +69,10 @@ pub enum Msg {
         key: u8,
     },
     PreviewSample(Arc<SampleData>),
+    PreviewClip {
+        channel: u16,
+        playback: limeshot_dsp::ClipPlayback,
+    },
     /// A processor for insert effect `id`, built on the control thread
     /// (prepared by the plugin host). Send it before the snapshot that uses it.
     Effect(u32, Box<dyn limeshot_dsp::effects::Effect>),
@@ -214,6 +218,7 @@ impl AudioState {
                 } => r.preview_note_for(channel, key, velocity, seconds),
                 Msg::NoteOff { channel, key } => r.preview_note_off(channel, key),
                 Msg::PreviewSample(s) => r.preview_sample(s),
+                Msg::PreviewClip { channel, playback } => r.preview_clip(channel, playback),
                 Msg::StopPreview => r.stop_sample_preview(),
                 Msg::Panic => r.all_notes_off(),
                 Msg::Effect(id, fx) => r.adopt_effect(id, fx),

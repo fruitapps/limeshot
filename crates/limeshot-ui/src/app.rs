@@ -635,6 +635,7 @@ impl LimeShotApp {
     }
     pub fn sync_engine(&mut self) {
         let loaded = self.samples.poll();
+        crate::browser::poll_imports(self);
         let key = (self.doc.revision(), self.current_pattern());
         let resync = self.plugins.take_needs_sync();
         if !loaded && !resync && self.compiled == Some(key) {
@@ -1047,6 +1048,7 @@ impl LimeShotApp {
 
     /// Per-frame logic that is not drawing: theme, engine sync, window title, close requests.
     pub fn logic(&mut self, ctx: &Context) {
+        let _graphics = self.plugins.host_graphics.guard();
         if !self.themed {
             crate::theme::Theme::current().apply(ctx);
             self.themed = true;
@@ -1107,7 +1109,11 @@ impl LimeShotApp {
         if self.plugins.is_scanning() {
             ctx.request_repaint_after(Duration::from_millis(250));
         }
-        let range = self.ui.playlist.time_sel;
+        let range = if self.ui.mode == PlayMode::Song {
+            self.ui.playlist.time_sel
+        } else {
+            self.ui.piano.time_sel
+        };
         if self.loop_sent != Some(range) {
             self.send(Msg::LoopRange(range));
             self.loop_sent = Some(range);
@@ -1121,13 +1127,60 @@ impl LimeShotApp {
             self.dialog = Some(dialogs::Dialog::ConfirmDiscard(Pending::Quit));
         }
         if self.allow_close {
-            // A normal exit: nothing to recover next time.
-            self.autosave.clear();
+            // Preserve any earlier session’s unclaimed recovery copy.
+            self.autosave.clear_if_owned();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         // Meters and the playhead animate; keep frames coming at a modest rate.
         ctx.request_repaint_after(Duration::from_millis(if self.is_playing() { 16 } else { 50 }));
         self.toasts.retain(|t| t.until > Instant::now());
+    }
+
+    /// Cocoa drag sessions can leave egui’s last ordinary mouse position stale.
+    pub(crate) fn external_drop_position(&self, ctx: &Context) -> Option<egui::Pos2> {
+        if ctx.input(|i| !i.raw.hovered_files.is_empty() || !i.raw.dropped_files.is_empty())
+            && let Some((x, y)) =
+                limeshot_plugins::NativeWindow::find(&self.window_title()).and_then(|w| w.pointer_position())
+        {
+            return Some(egui::pos2(x as f32, y as f32) / ctx.zoom_factor());
+        }
+        ctx.input(|i| i.pointer.hover_pos())
+    }
+
+    fn external_sample_drops(&mut self, ctx: &Context) {
+        let Some(pos) = self.external_drop_position(ctx) else {
+            return;
+        };
+        let layer = ctx.layer_id_at(pos);
+        let sampler = self.plugins.windows.iter().find_map(|(target, window)| {
+            if layer.is_some_and(|l| l.id == crate::plugin_window::window_id(*target))
+                && window.rect.is_some_and(|r| r.contains(pos))
+                && let crate::plugins::Target::Channel(channel) = target
+            {
+                return self
+                    .project()
+                    .channel(*channel)
+                    .filter(|c| limeshot_core::lime::sampler_params(&c.instrument).is_some())
+                    .map(|_| *channel);
+            }
+            None
+        });
+        let rack = layer.is_some_and(|l| l.id == crate::workspace::Win::ChannelRack.id());
+        if sampler.is_none() && !rack {
+            return;
+        }
+        let files = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
+        for path in files
+            .into_iter()
+            .map(|f| f.path().to_path_buf())
+            .filter(|p| limeshot_dsp::is_audio_file(p))
+        {
+            if let Some(channel) = sampler {
+                crate::browser::assign_sample(self, channel, &path);
+            } else {
+                crate::browser::new_sampler_channel(self, &path);
+            }
+        }
     }
 
     /// Draw the whole window.
@@ -1185,6 +1238,7 @@ impl LimeShotApp {
             .inner;
         crate::workspace::show(self, &ctx, area, window_body);
         crate::plugin_window::show_all(self, &ctx);
+        self.external_sample_drops(&ctx);
         // Last, when every control has described itself.
         toolbar::hint_panel(self, ui);
         crate::settings_window::show(self, &ctx);

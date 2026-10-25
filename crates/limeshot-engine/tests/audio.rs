@@ -485,6 +485,48 @@ fn song_stops_at_the_end_without_loop() {
 }
 
 #[test]
+fn pattern_ignores_time_selection_at_any_block_size() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let bar = 96_000;
+    for block in [1, 64, 480, 1000, MAX_BLOCK] {
+        for range in [(960, 1920), (3840, 3 * 3840)] {
+            let mut r = Renderer::new(SR, snapshot(&f));
+            r.set_mode(PlayMode::Song);
+            r.set_song_loop(false);
+            r.set_loop_range(Some(range));
+            r.set_mode(PlayMode::Pattern);
+            r.play();
+            let mut audio = Vec::new();
+            let mut buf = vec![0.0; 2 * block];
+            while audio.len() < 2 * 3 * bar {
+                r.render(&mut buf);
+                audio.extend_from_slice(&buf);
+            }
+            assert_eq!(
+                onsets(&audio[..2 * 3 * bar], 0.1),
+                vec![0, bar, 2 * bar],
+                "block {block}, range {range:?}: loops the whole pattern"
+            );
+            assert!(r.is_playing());
+            assert!(r.position() < 3840);
+            r.locate(10 * 3840);
+            assert_eq!(r.position(), 0, "Pattern locate ignores the selection");
+            r.set_mode(PlayMode::Song);
+            r.locate(10 * 3840);
+            assert_eq!(r.position(), range.0, "Song mode retains the selection");
+        }
+    }
+}
+
+#[test]
 fn song_loops_the_time_selection_at_any_block_size() {
     let mut f = fixture();
     // Pattern A hits on step 0, pattern B on step 8 (half a bar later).
@@ -1859,4 +1901,31 @@ fn synth_filter_modes_and_key_tracking() {
         tracked > 2.0 * fixed,
         "key tracking opens the filter: {tracked} vs {fixed}"
     );
+}
+
+#[test]
+fn playlist_clip_audition_uses_the_source_offset_at_every_block_size() {
+    let (_, snap) = audio_clip_fixture();
+    for block in [1, 64, 333, 1024] {
+        let mut renderer = Renderer::new(SR, snap.clone());
+        let channel = snap.song.events[0].channel;
+        renderer.preview_clip(
+            channel,
+            limeshot_dsp::ClipPlayback {
+                offset_secs: 0.25,
+                elapsed_secs: 0.125,
+                remaining_secs: 0.1,
+                fade_in_secs: 0.0,
+                fade_out_secs: 0.0,
+            },
+        );
+        let mut out = vec![0.0; block * 2];
+        renderer.render(&mut out);
+        assert!((out[0] - 0.375).abs() < 1e-5, "block {block}: {}", out[0]);
+        renderer.preview_note_off(channel, 60);
+        for _ in 0..(1024 / block + 2) {
+            renderer.render(&mut out);
+        }
+        assert!(out.iter().all(|v| v.abs() < 1e-6));
+    }
 }
