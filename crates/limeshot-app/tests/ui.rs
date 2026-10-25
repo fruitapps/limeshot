@@ -6471,6 +6471,8 @@ fn external_files_drop_on_playlist_at_the_pointer_and_undo() {
     assert_eq!(clip.track, 2);
     assert_eq!(clip.start, 4 * PPQ);
     assert!(matches!(clip.source, ClipSource::Audio(_)));
+    // The dropped clip draws its waveform from the embedded sample.
+    wait_for(&mut h, "dropped clip waveform", |a| !a.ui.playlist.peaks.is_empty());
     h.state_mut().doc.undo();
     assert_eq!(h.state().project().playlist.clips.len(), before);
 }
