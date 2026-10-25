@@ -485,6 +485,48 @@ fn song_stops_at_the_end_without_loop() {
 }
 
 #[test]
+fn pattern_ignores_time_selection_at_any_block_size() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.drum,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+    let bar = 96_000;
+    for block in [1, 64, 480, 1000, MAX_BLOCK] {
+        for range in [(960, 1920), (3840, 3 * 3840)] {
+            let mut r = Renderer::new(SR, snapshot(&f));
+            r.set_mode(PlayMode::Song);
+            r.set_song_loop(false);
+            r.set_loop_range(Some(range));
+            r.set_mode(PlayMode::Pattern);
+            r.play();
+            let mut audio = Vec::new();
+            let mut buf = vec![0.0; 2 * block];
+            while audio.len() < 2 * 3 * bar {
+                r.render(&mut buf);
+                audio.extend_from_slice(&buf);
+            }
+            assert_eq!(
+                onsets(&audio[..2 * 3 * bar], 0.1),
+                vec![0, bar, 2 * bar],
+                "block {block}, range {range:?}: loops the whole pattern"
+            );
+            assert!(r.is_playing());
+            assert!(r.position() < 3840);
+            r.locate(10 * 3840);
+            assert_eq!(r.position(), 0, "Pattern locate ignores the selection");
+            r.set_mode(PlayMode::Song);
+            r.locate(10 * 3840);
+            assert_eq!(r.position(), range.0, "Song mode retains the selection");
+        }
+    }
+}
+
+#[test]
 fn song_loops_the_time_selection_at_any_block_size() {
     let mut f = fixture();
     // Pattern A hits on step 0, pattern B on step 8 (half a bar later).

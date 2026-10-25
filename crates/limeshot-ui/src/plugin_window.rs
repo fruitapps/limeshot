@@ -641,6 +641,8 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 && !w.fallback
                 && app.dialog.is_none()
                 && !w.minimized
+                && !minimized
+                && area.is_positive()
                 && [
                     area.shrink(3.0).left_top(),
                     area.shrink(3.0).right_top(),

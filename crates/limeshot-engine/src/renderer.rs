@@ -223,7 +223,10 @@ impl Renderer {
     }
 
     fn active_loop(&self) -> Option<(Tick, Tick)> {
-        self.loop_range
+        match self.mode {
+            PlayMode::Song => self.loop_range,
+            PlayMode::Pattern => None,
+        }
     }
 
     pub fn set_metronome(&mut self, on: bool) {
