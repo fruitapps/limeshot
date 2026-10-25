@@ -1,223 +1,131 @@
 # Known limitations
 
-Current as of 2026-10-25 (sampler/mixer workflow merged). Everything here is either not implemented or not verified.
+Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not implemented or not verified.
 
-## Platforms
-* Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
-  headless under Rosetta, but its GUI and audio were not exercised.
-* Historical Windows x86-64 and Linux x86-64/ARM64 headless CI passes are commit-specific. Main `5ab09c9`
-  passes Windows checks, but Linux hosted tests crash and macOS Apple Silicon has a sample-import test race;
-  the repair branch needs fresh platform CI. Windows ARM64 passes a cross-build.
-  Native GUI/audio-device checks remain open. Intel headless CI now passes on `macos-15-intel`.
-  See [platform-validation.md](../development/platform-validation.md) for commit-specific evidence.
+## Platforms and packages
+* macOS Apple Silicon is the only platform exercised end to end by hand: build, tests, GUI, realtime audio and
+  VST3 processing. The owner has run the Windows x64 build (plugin editors, Explorer drops); there has been no
+  systematic hands-on pass on Windows, Linux or Intel macOS.
+* Headless CI passes on Windows x86-64, Linux x86-64/ARM64 and macOS Apple Silicon/Intel; Windows ARM64 is a
+  cross-build only. CI results are commit-specific: see [platform-validation.md](../development/platform-validation.md).
+* Packages ([release packaging](../development/release-packaging.md)) are unsigned on Windows (SmartScreen warns)
+  and signed ad hoc on macOS (Gatekeeper blocks them until allowed; no Developer ID or notarisation).
+  Double-clicking a `.lime` file in Finder starts LimeShot without opening the file. No AppImage, MSI, Flatpak or
+  Windows ARM64 package exists, and the Windows executables carry no embedded icon (shortcuts and the installer use
+  `LimeShot.ico`). The macOS PKG/DMG and the Linux `.deb`/tarball have been tested on CI runners, not on hardware.
 
 ## Audio
-* Loaded VST3 module code/factories remain resident until process exit to preserve framework callbacks;
-  closing instances still releases their DSP/state. Restart LimeShot after updating a loaded plugin binary.
-* No ASIO, JACK or surround output (extra device channels are silent). Audio recording is implemented;
-  real input-device validation remains open.
-* Switching output devices was tested only with the default device.
+* Loaded VST3 module code stays resident until LimeShot exits, to keep framework callbacks valid; closing
+  instances still releases their DSP and state. Restart LimeShot after updating a loaded plugin binary.
+* No ASIO, JACK or surround output (extra device channels are silent). Switching output devices was tested only with
+  the default device.
 * MIDI input plays the selected channel from one device; it was checked with a virtual port, not a hardware
-  keyboard. Controllers, pitch bend, MIDI output and sync are not used yet. Recording takes notes and (with the Audio filter) the audio input;
-  audio recording was not tried with a real input yet, has no latency compensation or input monitoring, and there is
-  no automation or clip recording, count-in or loop takes. A recorded note appears when it ends.
-* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only.
-* Instruments and active inserts use the twelve Lime Native VST3 bundles; missing bundles abort export and produce GUI errors.
-  Playlist audio windows/chase/overlap/fades, per-note pan, exact track EQ, Gate/Drive/Chorus, key-bus routing,
-  host Lime value menus, dynamics reduction and native voice statistics are restored (PLG-017…029).
-* Clip playback is a Lime Sampler extension; arbitrary third-party samplers do not understand its clip SysEx.
-  Clip fades/offsets use output time without time stretching. Changing tempo does not stretch source audio.
-* Track EQ uses a dedicated hosted processor after all ten inserts. Its hidden extension controls are driven by
-  the undoable inline Mixer bands; ordinary Lime EQ inserts retain their original parameter IDs and ranges.
-* Factory/user `.limepreset` files remain supported. Host unit-value menus cover known Lime controls;
-  arbitrary third-party controls retain the generic automation menu. Compressor key-track selection is discrete,
-  and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
-* Embedded sampler state accepts at most 6 million stereo frames at 8–384 kHz (about 125 seconds at 48 kHz). Conversion warns and retains
-  source-path metadata and pending state when audio cannot fit; reassign a supported sample or reopen/reload after fixing the source.
-  Failed decodes are cached by source path, size and modification time so unrelated edits do not decode unchanged files again.
-  Incomplete conversions fail export explicitly. Loading a .lime file, recovery or CLI FLP import does not automatically embed
-  outside-project audio (including symlink escapes): choose that source in the GUI, or explicitly use the CLI
-  `--allow-external-samples` option when including outside recordings is intended.
-* Embedded sampler audio is cached for host waveforms/auditions without writing temporary sample files.
-  Native editor changes and platform/native GUI interaction still need broader hands-on validation.
-* Plugins receive tempo context at block boundaries; a tempo change inside a block reaches synced effects in the next block.
-* Automation runs in Song mode. Converted effect automation is re-expressed in plugin ranges; smoothing and curve
-  differences mean automated output is close rather than bit-identical. Non-automated reference equivalence is exact.
-* Sampler supports ADSR, loop points and a low-pass filter. No delay/hold stages, extra modulation envelopes or time
-  stretching. Linear interpolation aliases when pitched far up. LimeSynth has low/band/high-pass and key tracking;
-  its LFO restarts per voice and mono/glide are absent.
-* Each Lime instrument has 128 voices and steals the oldest abruptly. The host counts actual native voices plus browser
-  previews/metronome; third-party plugins without Lime telemetry contribute zero (PLG-028).
-* Integer WAV export is clipped, not dithered. Export is stereo only; there are no stems.
+  keyboard. Controllers, pitch bend, MIDI output and sync are not used yet.
+* Recording takes notes and (with the Audio filter) the audio input. Audio recording has not been tried with a real
+  input, has no latency compensation or input monitoring, and there is no automation or clip recording, count-in or
+  loop takes. A recorded note appears when it ends.
+* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only, stereo only, without stems.
+  Integer WAV export is clipped, not dithered.
+* Instruments and inserts are the twelve Lime Native VST3s. Missing bundles abort export and show errors in the GUI;
+  missing realtime channels stay silent and report load errors.
+* Clip playback is a Lime Sampler extension (bounded, versioned SysEx); third-party samplers do not understand it.
+  Clip fades and offsets use output time; changing the tempo does not stretch source audio.
+* The Mixer track EQ is a dedicated hosted Lime EQ after all ten inserts, driven by the inline bands.
+* Lime Sampler embeds at most 6 million stereo frames at 8–384 kHz (about 125 seconds at 48 kHz, state below
+  64 MiB); longer samples must be trimmed (no streaming from disk). Projects grow with their samples. Imports decode
+  on the loader thread and report failures before any channel or clip exists; failed decodes are cached by path,
+  size and modification time.
+* Opening a `.lime` file, a recovery copy or an `.flp` does not embed audio from outside the project folder
+  (symlinks included): choose the source in the GUI, or pass `--allow-external-samples` to the CLI.
+* Plugins receive tempo at block boundaries; a tempo change inside a block reaches synced effects in the next block.
+  Tempo automation steps every 64 frames, works in Song mode only, and minutes:seconds displays and new audio clip
+  lengths use the current tempo (no integrated tempo map).
+* Automation runs in Song mode. Effect automation from projects older than the Lime VST3 switch follows the plugin
+  closely but not bit for bit (smoothing and interpolation); automation of the old compressor sidechain selector
+  warns instead of converting.
+* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, time
+  stretching or multisampling. Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
+  12 dB/oct and key tracking; its LFO restarts per voice; no mono/glide.
+* Each Lime instrument has 128 voices and steals the oldest abruptly. Third-party plugins without Lime telemetry
+  contribute zero to the voice count.
+* The optional process bridge uses synchronous I/O with a timeout; bridged processing is not real-time safe, and a
+  bridged plugin's own editor is not shown.
 * The stream error callback logs through `log`, which may take a lock (error path only).
 
+## Plugins
+* Native editor embedding (PLG-006) works on macOS and Windows but is IMPLEMENTED, not VERIFIED: keyboard
+  forwarding, external OS drops onto native views, pin/occlusion stress and host-edge resizing are unverified
+  ([live checks](../development/live-plugin-checks-2026-10-25.md)). Linux shows the parameter list instead.
+* Plugin windows have minimize/pin/close but no ▸ menu or wrapper options page. On macOS a covered native view
+  hides completely; on Windows the editor popup is clipped around covering windows. At Windows display scaling above
+  100 % the wrapper can be larger than a fixed-size editor, and keyboard focus may stay in a clicked plugin view
+  until the host window is clicked again.
+* Presets: factory programs and `.vstpreset` files (no FL `.fst`, no preset browser in the Browser); some plugins
+  name programs only by number; loading a preset is not an undo step.
+* The keyboard toggle forwards typed characters only (not arrows or function keys).
+* Native-editor and third-party parameter changes are not undo steps; known Lime host controls are.
+* Delay compensation covers up to about 340 ms per path and 64 delayed paths; export trimming cannot be turned off.
+* No custom plugin folders; a crashing plugin takes LimeShot down unless it runs in a separate process (macOS and
+  Linux). No CLAP or Audio Units.
+* Value menus cover channel/mixer volume and pan and known Lime controls; third-party controls have the generic
+  automation menu only.
+
 ## Editing
-* Clipboard is app-internal (not the system clipboard). The separate value clipboard supports channel/mixer volume/pan
-  and known hosted Lime instrument/effect parameters. Arbitrary third-party controls retain generic automation menus;
-  Edit events, Init song and controller linking remain unavailable. Cross-control paste uses LimeShot's automation mappings. Quantize… has start and duration strength only (no swing templates). Swing is
-  global only (no per-channel mix). The Piano Roll has FL's eight tools and a Stamp
-  menu (chords and scales; no snap to scale, and the highlighted scale is not saved), no Riff machine or chord progressions and no Claw machine; its tool dialogs (Strum, Arpeggiate, Randomize …) use sliders and cover fewer options than FL's (no arpeggio presets, levels for velocity and pan only), and the Articulate, Chop, Flip and LFO dialogs were designed without seeing FL's; the quick-zoom levels and Center are LimeShot's own; the Playlist has FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or Shift+click slicing, no zero-cross snapping). Resizing notes
-  from the left edge cannot be turned off. Older LimeShot versions drop a note's mute when they open a newer file.
-* Piano Roll Target control edits velocity and pan only. Release velocity, fine pitch, Mod X/Y and a note-properties
-  dialog remain pending (PR-016). Pan playback requires a plugin supporting note-pan expressions (Lime instruments do).
-  Coincident stems retain nearest-note targeting; select their notes to edit together.
-* Piano Roll keyboard-label modes and Keep labels on screen are session-local. No custom key names/presets/styles;
-  labels hide below 11-pixel key height. Without a scale, roots use C and highlighted labels include every pitch.
-* Piano Roll ghost notes only show other channels in the same pattern.
-* The Mixer's track menu acts on one selected track (FL selects several). Moving, inserting or deleting a track
-  restarts the plugins on the tracks that move (from their state, read just before). No FL colour dialog, gradient
-  colours, icons, groups, docking, arming or Insert multiple….
-* The Playlist's ⏵ menu covers Edit, Select, Zoom and Time markers in part: no Merge similar pattern clips, Merge
-  automation clips, audio clip pitch/reverse keys, crossfade options, Consolidate, track groups, picker panel options
-  or performance mode. Merged clips get a new pattern named "<first> (merged)" (FL's naming not checked). Insert space
-  uses Cmd+Insert as FL does, a key most Mac keyboards lack (the menu works).
-* The Playback tool scrubs notes only: the Playlist's line sounds the pattern clips' notes under it, not audio clips
-  (no audio scrubbing). Notes start from their beginning when the line reaches them. FL Studio's Playback tool plays
-  on from the pointer instead; LimeShot scrubs at the owner's request.
-* Auto scrolling follows the existing playheads: Playlist in Song mode and Piano Roll in Pattern mode only.
-  It starts off; enable it from Options or the toolbar. Paging thresholds are LimeShot's own.
-* Vertical zoom (Opt+wheel) was taken from FL Studio's Alt+wheel without a live check in FL.
-* The Channel Rack has Fill each 2/4/8 steps and Rotate, but not FL's Advanced fill… dialog. Zip selected / Unzip all
-  and right-click restoration are available. General settings can automatically zip empty channels on pattern switches;
-  it waits for a switch after enabling, counts muted notes as data and leaves manual restoration usable until the
-  next switch. Zip state is session-only; new/open projects start expanded. No live FL timing/parity pass performed.
-  Its ⏵ menu has no layers, per-channel swing mix or display options; Sort by offers name, type and colour only.
-* The graph editor has the Velocity and Pan lanes only (no note pitch, release, fine pitch, Mod X/Y, shift or repeat).
-* Pattern clips do not loop when longer than their pattern (FL Studio behaves the same, D14).
-* Playlist markers are plain named points (no loop, key, time-signature or jump markers); the time selection is
-  Playlist-only and not saved with the project. No performance mode.
-* MIDI files: notes, tempo and time signature only; exported files were only read
-  back by LimeShot's own reader.
-* There is no confirmation when deleting a pattern (undo restores it). Channel deletion asks first, as in FL Studio;
-  once "Remember my choice" is ticked the question can only be turned back on in `settings.json`.
-* The channel selection is not saved with the project (FL Studio saves it).
+* The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not
+  available.
+* Quantize… has start and duration strength only (no swing templates). Swing is global (no per-channel mix).
+* Piano Roll: FL's eight tools and a Stamp menu (chords and scales; no snap to scale, the highlighted scale is not
+  saved); no Riff machine, chord progressions or Claw machine. Tool dialogs use sliders and cover fewer options than
+  FL's (no arpeggio presets; levels for velocity and pan only); Articulate, Chop, Flip and LFO were designed without
+  seeing FL's. Quick-zoom levels and Center are LimeShot's own. Left-edge note resizing cannot be turned off.
+* Piano Roll Target control edits velocity and pan only (no release, fine pitch, Mod X/Y or note-properties dialog,
+  PR-016). Keyboard-label modes are session-local and hide below an 11-pixel key height. Ghost notes only show
+  other channels in the same pattern.
+* Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not
+  loop Pattern playback.
+* Playlist: FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or
+  Shift+click slicing, no zero-cross snapping). The ⏵ menu lacks Merge similar pattern clips, Merge automation clips,
+  audio clip pitch/reverse, crossfades, Consolidate, track groups, picker options and performance mode. Track modes,
+  grouping, icons, per-track heights, lock-to-content and consolidation are shown disabled. Cloning a track shares its
+  clip sources; it does not clone instrument channels, plugins or mixer effects. Insert space uses Cmd+Insert, which
+  most Mac keyboards lack (the menu works).
+* Markers are plain named points (no loop, key, time-signature or jump markers); the time selection is not saved.
+* The Playback tool scrubs notes only (not audio clips); FL plays on from the pointer instead.
+* Auto scrolling starts off and follows the Playlist in Song mode and the Piano Roll in Pattern mode only.
+* Vertical zoom (Opt+wheel) was taken from FL's Alt+wheel without a live check in FL.
+* Channel Rack: no Advanced fill…, layers, per-channel swing mix or display options; Sort by offers name, type and
+  colour only. Zip state is session-only. The graph editor has Velocity and Pan lanes only.
+* Mixer: the track menu acts on one selected track; moving, inserting or deleting tracks restarts the plugins on the
+  tracks that move. No FL colour dialog, gradients, icons, groups, docking, arming or Insert multiple…. Insert slots
+  show only On and Mix; plugin parameters and presets are in the plugin window.
+* Pattern clips do not loop when longer than their pattern (FL behaves the same, D14). Deleting a pattern does not
+  ask (undo restores it). Once channel deletion's "Remember my choice" is ticked, the question can only be turned
+  back on in `settings.json`. The channel selection is not saved with the project.
+* MIDI files: notes, tempo and time signature only; exported files were only read back by LimeShot's own reader.
+* Older LimeShot versions drop a note's mute when they open a newer file.
 
 ## Project and app
-* Save new version is available from File only; it has no shortcut. No templates. Recent files have no Alt+number shortcuts. Keyboard shortcuts cannot be remapped
-  (`docs/roadmap/keybindings.json`). The tabbed Settings window exposes implemented settings; FL-only controls remain absent or disabled (`docs/roadmap/settings.json`).
-* The main menus and editor menus implement a subset of FL Studio actions. Tools, pattern commands and layouts exist;
-  templates and many advanced editor actions remain missing (`docs/roadmap/menus.md` tracks each item).
+* Save new version has no shortcut. No templates. Recent files have no Alt+number shortcuts. Shortcuts cannot be
+  remapped ([keybindings](keybindings.md)). The Settings window shows implemented settings only ([settings](settings.md)).
+* The main and editor menus implement a subset of FL's actions ([menus](menus.md)).
 * One autosave slot per user: two LimeShot instances share it.
 * `.flp` import (APP-022) converts channels, samples, levels, inserts, patterns, notes and the first arrangement's
-  pattern and audio clips only. Plugin generators become default LimeSynth channels; plugin and effect states, mixer
-  effects and routing, automation clip curves, layers, markers and further arrangements are dropped (the toast says
-  how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
-  without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
-  LimeShot cannot write `.flp`.
-* VST3 plugins: native plugin editor embedding is implemented for macOS and Windows and awaits final live verification (on Linux the Plugin tab lists the
-  parameters); the internal windows have minimize/pin/close but no ▸ menu or wrapper options page (FL's). Fixed-size plugins
-  retain a minimum wrapper size; resizable plugins negotiate their editor size. Native views hide completely
-  when another window or popup covers them (partial native-view occlusion is not implemented). Host presets use an AppKit menu above
-  native macOS views to keep the editor visible; parameter/headless views use an egui menu. The presets menu lists factory
-  programs and `.vstpreset` files only (no FL `.fst` presets, no preset browser in the Browser); some plugins name
-  their programs only by number. Loading a preset is not an undo step. The keyboard toggle forwards typed
-  characters only (not arrows or function keys) and has no effect where the platform gives keys to the plugin's
-  view directly. Native-editor and arbitrary third-party parameter changes are not undo steps; known Lime host controls use undoable state edits. delay compensation covers up to about 340 ms per path and 64
-  delayed paths, and its trimming in exports cannot be switched off,
-  no custom plugin folders, and a plugin that crashes takes LimeShot down unless it was set to run in a separate
-  process (macOS and Linux; such a plugin's own editor is not shown).
-  Hosted channel volume/pan uses per-frame gains captured every 64-frame automation interval. Lime Sampler
-  handles audio clips; arbitrary third-party samplers do not implement the clip protocol. No CLAP or Audio Units. Processing tests and prior native OS-window checks were on macOS; the replacement embedded view is not yet verified.
+  pattern and audio clips. Plugin generators become LimeSynth channels; plugin and effect states, mixer effects and
+  routing, automation curves, layers, markers and further arrangements are dropped (the toast says how many). Test
+  files come from FL 26.1.1 only. LimeShot cannot write `.flp`.
 * Window positions, sizes and detached/maximised states are not remembered between sessions unless saved as the
-  custom layout (View › Arrange windows › Save custom layout, applied with Custom).
-* Accessibility: custom-painted editors expose no accessibility labels.
-
-## Research
-* FL Studio and LimeShot are now driven with synthetic input (Accessibility granted, session 4). Still unobserved in
-  FL: in-clip automation point dragging (synthetic drags did not register), the Playlist's STEP/SLIDE automation
-  options, and many shortcuts marked INFERRED in `docs/roadmap/keybindings.json`.
-* Owner hands-on feedback informed the interaction fixes; reproducible synthetic real-input passes are recorded in `docs/development/progress.md`.
-
-* Session 17's Playlist track header menu exposes rename/color, auto name/reset, mute/solo/lock, selection, merge
-  patterns, clip mute, clone linked sources, reorder, insert and delete. FL's track modes, grouping, icons, per-track
-  heights, lock-to-content and consolidation are visible but disabled pending their model/engine implementations.
-  Cloning tracks shares the clip sources; it does not clone instrument channels, plugins or mixer effects.
-* Sampler playback heads use the transport/preview time, rather than a per-voice audio-thread playhead; when a sample
-  is polyphonic the most recently started visible voice is shown. Previews honor trim, pitch and reverse.
-
-* Session 17 native embedding is IMPLEMENTED, with final live resize/tab/keyboard verification pending. A native
-  Vital view appeared during the first live pass, but subsequent window captures showed an empty editor. The
-  terminal helper reports `AXIsProcessTrusted() == false`, so activation and input could not be verified reliably.
-  Repeat with Accessibility enabled for the Codex execution host; test Vital and a resize-capable plugin, both tabs,
-  covering/pinning windows, typing keyboard input, and reopening saved wrappers before calling this VERIFIED.
-* Packages (PF-006, [release packaging](../development/release-packaging.md)) are unsigned (Windows: SmartScreen
-  warns) or signed ad hoc (macOS: other Macs need a Developer ID signature and notarisation).
-  Double-clicking a .lime file in Finder starts LimeShot without opening the file. The macOS and Linux packaging
-  scripts have run only in the release workflow, not on hardware; no AppImage, MSI, Flatpak or Windows ARM64 package
-  exists, and the Windows executables carry no embedded icon (shortcuts and the installer use `LimeShot.ico`).
-* Tempo automation steps every 64 frames and works in Song mode only; minutes:seconds displays and new audio clip
-  lengths use the tempo playing now (no integrated tempo map), and audio clips do not stretch with the tempo.
-
-
+  custom layout (View › Arrange windows › Save custom layout).
+* OS file-drop positions come from AppKit on macOS and the Win32 cursor on Windows; Linux uses egui's last pointer
+  position, unchecked against a real file-manager drag.
+* Custom-painted editors expose no accessibility labels.
 
 ## Lime Native standalone plugins (PLG-012)
+* Hands-on checks in FL Studio and other DAWs are pending; Windows/Linux/Intel binaries are built and checked by CI
+  only. Validation is recorded in [VALIDATION.md](../../native-plugins/VALIDATION.md).
+* Stereo layouts only. No VST2, AU or CLAP (Logic Pro needs AU). Loading a sample resets sounding notes.
+* Limiter is a zero-lookahead sample-peak limiter without true-peak oversampling. The EQ graph shows the actual
+  response; the filter graph is a guide. Neither is a spectrum analyzer. Pitch bend is fixed at ±2 semitones.
 
-* `native-plugins/` exports independent VST3 instruments/effects for other DAWs; it does not require LimeShot.
-  The supplied development builds are macOS Apple Silicon, ad-hoc signed, not notarized. Windows/Linux/Intel
-  runtime and hands-on FL Studio/other-DAW editor checks remain pending; the development Mac was locked.
-  Validator and actual VST3 ABI tests are recorded in `native-plugins/VALIDATION.md`.
-* Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV, MP3, FLAC, Ogg Vorbis and AIFF and embeds at most
-  6 million stereo frames (about 125 seconds at 48 kHz) in host state. Loading a sample resets sounding notes. Sampler .limepreset files
-  preserve the sample/root key; host state saves both. Loop points are supported; no time stretching or multisampling.
-* Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
-  response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
-
-## Lime VST3s as LimeShot's instruments and effects (PLG-013, replacement complete)
-
-* GUI and headless apps convert legacy instruments and all ten effect kinds to Lime VST3s. Runtime built-in
-  factories remain deleted. Hosted Playlist clips, note pan and exact track EQ have positive acceptance coverage.
-* CI builds debug bundles; macOS packaging builds and copies release bundles into `Contents/PlugIns` (PLG-023).
-  GitHub Actions remains blocked by owner account billing. Missing plugins fail CLI/GUI export; realtime missing
-  channels remain silent and report load errors. No remote CI pass is claimed.
-* Native clip/channel-pan events and processor telemetry use bounded, versioned, allocation-free SysEx messages.
-  Stereo key audio, pan and telemetry also traverse the optional process bridge. Its existing synchronous I/O
-  and timeout limitations remain; this work does not make bridged processing real-time safe.
-* Broader native resizing/occlusion/keyboard/detached/third-party interaction, pluginval and Windows/Linux/Intel
-  runtime are still open. See [current handoff](../development/handoff-hosted-p0-parity.md).
-* Converted effect automation follows the plugin closely but not bit for bit (smoothing and interpolation).
-  Non-automated equivalence is checked bit for bit, allowing only trailing silent frames to differ in length.
-  Lime Sampler embeds sample audio, so projects grow with their samples.
-
-
-## 2026-10-25 plugin/workflow fixes
-
-Plugin resize/title/teardown changes require another live native pass, including Serum’s internal resize control,
-constrained wrappers, opening host presets, minimize/restore, and repeated native instrument/effect closing.
-Headless wrapper tests and offscreen native editor renders do not establish those native checks.
-The sampler’s limit is 6 million stereo frames / 8–384 kHz (about 125 seconds at 48 kHz, embedded state below 64 MiB),
-for every format including MP3. Imports decode on the loader thread and report failures before any channel or clip exists.
-External drops use filesystem audio paths; directories and unsupported extensions are ignored.
-
-
-### Live follow-up, 2026-10-25
-
-The execution host now has Screen Recording/Accessibility. Partial live rendering, tabs, preset visibility,
-Serum internal shrink/minimize-restore, native instrument/effect close-reopen and native MP3 Load checks pass.
-The Load dialog exposed a backend modal re-entrancy abort, now repaired and retested.
-Browser-to-native drops and modifier clicks were inconclusive under this automation driver; external OS drops,
-keyboard forwarding, pin/occlusion stress and host-edge resize remain unverified. PLG-006/PLG-012 remain IMPLEMENTED.
-See [live results and evidence](../development/live-plugin-checks-2026-10-25.md). Future live tests use the
-autosave-disabled live_check example; new sessions cannot overwrite an unclaimed recovery copy.
-
-
-### Sampler/mixer workflow, 2026-10-25
-
-* Live native checks for this pass were not completed: sampler drag passthrough, plugin-button toggle/raise,
-  OS drops onto the Playlist and Y scrubbing of audio clips have headless coverage only.
-* OS file-drop positions come from AppKit on macOS and the Win32 cursor on Windows (unverified). Linux falls back to
-  egui's last pointer position, which has not been checked against a real drag from a file manager.
-* Mixer insert slots expose only On and a host Mix knob; plugin parameters and presets are only in the plugin window.
-* Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not loop
-  Pattern playback.
-* Samples longer than 6 million stereo frames must be trimmed; streaming from disk is not implemented.
-
-### Windows fixes, 2026-10-25 (owner report; not yet run on Windows)
-
-* VST3 class ids are now hex in the SDK's portable order on every platform. Before this, Windows builds used COM
-  byte order, so every Lime plugin (`lime:` references) failed with "the plugin has no class …". Lookups fall back to
-  the raw order for plugin databases and projects saved by older Windows builds.
-* Native editors sit in popup windows owned by the main window and kept over the wrapper. At display scaling above 100 % the wrapper can be larger than a
-  fixed-size editor (plugin sizes are physical pixels, wrapper sizes logical points). Keyboard focus may stay in
-  a clicked plugin view until the host window is clicked again.
-* Explorer drops use the Win32 cursor position. Release builds of `limeshot.exe` no longer open a console window;
-  debug builds keep it for logs.
+## Research
+* Still unobserved in FL: in-clip automation point dragging, the Playlist's STEP/SLIDE automation options, and
+  shortcuts marked INFERRED in [keybindings](keybindings.md).

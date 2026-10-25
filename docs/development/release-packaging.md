@@ -33,8 +33,9 @@ CLI while the checkout's `native-plugins/dist` is hidden, and uninstalls both. P
 `v0.1.0-alpha.1` attaches every package and `SHA256SUMS.txt` to a **draft** prerelease; publishing is manual.
 `workflow_dispatch` builds the packages as workflow artifacts.
 
-To cut the alpha: make sure CI is green on `main`, then `git tag v0.1.0-alpha.1 && git push origin v0.1.0-alpha.1`,
-review the draft release and publish it.
+To cut a release: set the workspace version if it changes, add its section to [CHANGELOG.md](../../CHANGELOG.md),
+make sure CI is green on `main`, then push a tag such as `git tag v0.1.0-alpha.2 && git push origin v0.1.0-alpha.2`.
+Review the draft release (its assets and `SHA256SUMS.txt`) and publish it as a prerelease.
 
 ## Signing
 
@@ -46,6 +47,10 @@ notarisation (`codesign --options runtime`, `productsign`, `notarytool`) are the
 
 ## Verification record
 
-2026-10-25, Windows 11 x64 (this session): see the PF-006 record in
-[features.json](../roadmap/features.json) and the progress entry. The macOS and Linux scripts were written for this
-session and run only in the release workflow; they have not run on hardware yet.
+* Windows 11 x64 (2026-10-25): installer in per-user and private-plugin modes, the installed CLI renders the demo
+  with the checkout's bundles hidden, and the uninstaller removes everything (PF-006 record in
+  [features.json](../roadmap/features.json)).
+* v0.1.0-alpha.1 was built by release run
+  [40219554203](https://github.com/fruitapps/limeshot/actions/runs/40219554203) at `28d3a41`; the Linux jobs install,
+  test and uninstall the `.deb` and the tarball. See [platform validation](platform-validation.md).
+* The macOS PKG/DMG and the Linux packages have not been installed on hardware yet.

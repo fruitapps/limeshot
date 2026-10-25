@@ -4,20 +4,14 @@ LimeShot is an open-source, offline-first, cross-platform DAW in Rust with an FL
 (Channel Rack, Piano Roll, Playlist, Mixer). It is an independent implementation: no FL Studio code or assets, and no
 code copied from ArtCraft/SoundCraft. The full brief is `START.md`.
 
-## Development session policy
-Every new development session creates its own new `codex/` branch and NEW draft PR. Never append new-session
-feature work to a prior session’s PR. Use a separate managed worktree; leave older checkouts intact. Inspect merge
-state and base stacked PRs on the latest unmerged continuation. Carry useful work through implementation,
-validation, documentation, commit, push and an attached draft PR; never merge automatically. Repeat this policy
-in every session handoff, including before these instructions merge. Create further sessions only when the owner asks.
-
 ## Start every session here
-1. Read `docs/development/next-steps.md` (prioritised work) and the latest entry in `docs/development/progress.md`.
+1. Read `docs/development/next-steps.md` (prioritised work) and the latest entries in `docs/development/progress.md`.
 2. Pick work from `docs/roadmap/features.json` (P0 → P3, respecting `dependencies`). Read the record first.
 3. Architecture: `docs/architecture/{audio-engine,project-model,ui}.md`; reasons: `docs/development/decisions.md`.
 
 ## Build, run, test
 ```
+python3 native-plugins/build.py   # the twelve Lime VST3 bundles LimeShot plays through (once, and after changing them)
 cargo build --workspace
 cargo run --release -p limeshot-app [-- --demo | path/to/song.lime] [--show=piano --detach=mixer]
 cargo run -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --render out/demo.wav
@@ -83,31 +77,25 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-25, after PRs #11 and #12 merged)
-* The macOS MVP workflow passes automated tests; Windows/Linux runtime validation and Intel GUI/audio remain open.
-* Editors include Playlist tools, audio/automation clips, track mute locks and menus, Piano Roll stamps and scale
-  highlighting, Channel Rack selection gestures, ruler range selection with Cmd+B duplication, and Mixer
-  EQ/sidechain/pre-fader sends. Rack, Playlist and Mixer tracks all have Shift-click mute locks.
-* Mixer insert slots show only On and a host Mix knob and reorder by dragging a grip handle; plugin parameters,
-  presets and a second On switch live in the plugin window, which opens when a plugin is added.
-* VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
-  Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
-  a partial live macOS pass is recorded in `docs/development/live-plugin-checks-2026-10-25.md`; keyboard, OS drops,
-  pin/occlusion and host-edge resizing remain open. Windows embeds editors as child `HWND`s (IMPLEMENTED,
-  never run on Windows hardware); Linux uses parameters. VST3 class ids are portable hex (`util::tuid_to_hex`).
+## Current state (v0.1.0-alpha.1, 2026-10-25)
+* The first prerelease ships installers for Windows x64, macOS Apple Silicon/Intel and Linux x86-64/ARM64
+  (`docs/development/release-packaging.md`). CI passes on all platforms; hands-on GUI/audio checks exist for macOS
+  Apple Silicon and partly for Windows (`docs/development/platform-validation.md`).
+* Instruments and effects are the twelve Lime Native VST3 bundles (D39), hosted like any VST3. Build them with
+  `python3 native-plugins/build.py` before running from source. Lime Test Gain / Tone are compiled-in test fixtures.
+* Plugin editors live in internal Plugin / Settings wrappers. **PLG-006 is IMPLEMENTED, not VERIFIED**: keyboard,
+  OS drops, pin/occlusion and host-edge resizing are open (`docs/development/live-plugin-checks-2026-10-25.md`).
+  Windows embeds editors in owned popups; Linux shows parameters. VST3 class ids are portable hex (`util::tuid_to_hex`).
 * Samples (WAV/MP3/FLAC/Ogg/AIFF) are bounded to 6 million stereo frames (about 125 s at 48 kHz) and decode once on
-  the loader thread.
-* The latest recorded run is 428 host tests and 19 native tests (`docs/development/progress.md`). Feature, shortcut,
-  setting and menu counts live in the generated inventories.
-* Active instruments and effects use twelve Lime Native VST3 bundles; runtime built-in factories are deleted.
-  Hosted clips, note pan, track EQ, Gate/Drive/Chorus, sidechains, source previews, value menus and telemetry are implemented.
-  Native sample replacement uses bounded handoff/retirement queues; decoded audio is never freed in processing.
+  the loader thread; Lime Sampler embeds them in its state and replaces them through bounded hand-off queues.
+* Feature, shortcut, setting and menu counts live in the generated inventories; the latest test counts are in
+  `docs/development/progress.md`.
 * UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
 
 ## Immediate next tasks
-Follow `docs/development/next-steps.md`: verify native plugin embedding, run platform CI, then continue the remaining
-editor menus and production features by priority and dependencies. Keep unverified behavior and disabled actions in
-`docs/roadmap/known-limitations.md`.
+Follow `docs/development/next-steps.md`: verify native plugin embedding and the alpha packages on real hardware,
+then continue the editor menus and production features by priority and dependencies. Keep unverified behavior and
+disabled actions in `docs/roadmap/known-limitations.md`.
 
 ## REA (reverse-engineering research tool; not a runtime dependency)
 Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.

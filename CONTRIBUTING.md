@@ -4,7 +4,7 @@ LimeShot is an offline-first digital audio workstation with a pattern-based work
 Contributions to the audio engine, editors, file formats, accessibility, testing, documentation and platform
 support are welcome. Small, reproducible bug reports and recorded device/host checks are useful contributions too.
 
-The project is in early alpha. Start with the existing behavior and tracked requirements, keep changes focused,
+The project is in early alpha (first prerelease: v0.1.0-alpha.1). Start with the existing behavior and tracked requirements, keep changes focused,
 and describe what you tested. A feature being implemented does not mean every workflow or platform is verified.
 
 ## Find your starting point
@@ -18,9 +18,8 @@ Read these before choosing implementation work:
 3. [Known limitations](docs/roadmap/known-limitations.md), the [MVP](docs/roadmap/mvp.md), and related issues or PRs.
 4. The relevant [architecture documents](docs/architecture/) and [design decisions](docs/development/decisions.md).
 
-Feature priorities run P0 through P3; satisfy dependencies before implementing dependent behavior. Some historical
-continuation notes predate newer code. Check a record against its latest progress evidence and the source before
-assuming a feature is missing. For substantial architecture, format or workflow changes, open an issue with a
+Feature priorities run P0 through P3; satisfy dependencies before implementing dependent behavior. Check a record
+against the source before assuming a feature is missing. For substantial architecture, format or workflow changes, open an issue with a
 concrete proposal before investing in a large patch. Documentation fixes and small bug fixes can go straight to a PR.
 
 Useful entry points include parser regressions with redistributable fixtures, focused editor interaction bugs,
@@ -75,13 +74,10 @@ The repository's root Cargo workspace builds the DAW and CLI:
 | `limeshot-ui` | egui editors, settings, menus, windows, theme and interaction |
 | `limeshot-app` | Desktop/CLI entry points, demo, screenshots and integration tests |
 
-Lime Native currently lives on the separate
-[`codex/lime-native-vst3-suite` branch](https://github.com/fruitapps/limeshot/tree/codex/lime-native-vst3-suite/native-plugins).
-Check that branch out in another clone/worktree for suite contributions. Its `native-plugins/` directory is an
-independent Cargo workspace with its own lockfile. Root workspace checks do not check that workspace. Its
-[README](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/README.md)
-and [validation record](https://github.com/fruitapps/limeshot/blob/codex/lime-native-vst3-suite/native-plugins/VALIDATION.md)
-describe build prerequisites and current platform evidence.
+The Lime Native VST3 suite in `native-plugins/` is an independent Cargo workspace with its own lockfile; root
+workspace checks do not cover it. LimeShot hosts these bundles as its instruments and effects, so build them with
+`python3 native-plugins/build.py` before running the DAW from source. Its [README](native-plugins/README.md) and
+[validation record](native-plugins/VALIDATION.md) describe build prerequisites and platform evidence.
 
 ## Model, command and UI conventions
 
@@ -144,7 +140,7 @@ use these to reconnect sessions and automation. Share DSP with the DAW instead o
 suite's sampler embeds bounded decoded audio (at most 6 million stereo frames) in host state; `.limepreset` and host project state have different sample
 recall behavior, documented in the suite README.
 
-From a checkout that contains the suite, run:
+For suite changes, run:
 
 ```sh
 cargo test --manifest-path native-plugins/Cargo.toml --workspace
@@ -288,9 +284,10 @@ release on every platform.
 
 ## Packaging and release contributions
 
-On macOS, `bash scripts/package-macos.sh` builds an app/DMG in `dist/`, with an ad-hoc signature. Developer ID
-signing and notarization are separate release work. Windows/Linux installers and broader runtime validation remain
-open. Never commit signing keys or certificates. Label artifacts by OS and architecture, retain license notices,
+`scripts/package-windows.ps1`, `scripts/package-macos.sh` and `scripts/package-linux.sh` build the installers in
+`dist/`; pushing a `v*` tag builds them all in the release workflow
+([release packaging](docs/development/release-packaging.md)). Authenticode and Developer ID signing with
+notarization are open release work. Never commit signing keys or certificates. Label artifacts by OS and architecture, retain license notices,
 and document what was actually tested; cross-compilation does not prove native startup or device support.
 
 Treat other contributors respectfully, keep reviews specific and actionable, and welcome different levels of

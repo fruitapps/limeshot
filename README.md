@@ -3,21 +3,22 @@
 <p align="center"><strong>The pattern-based DAW, in Rust.</strong></p>
 
 <p align="center">
+  <a href="https://github.com/fruitapps/limeshot/releases"><img src="https://img.shields.io/github/v/release/fruitapps/limeshot?include_prereleases&amp;style=flat-square&amp;color=7cb342" alt="Latest release"></a>
   <a href="https://github.com/fruitapps/limeshot/actions/workflows/ci.yml"><img src="https://github.com/fruitapps/limeshot/actions/workflows/ci.yml/badge.svg?branch=main" alt="Main branch CI status"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/Rust-1.88%2B-b7410e?style=flat-square&amp;logo=rust" alt="DAW declared Rust minimum: 1.88"></a>
-  <a href="#project-status"><img src="https://img.shields.io/badge/status-early%20alpha-d69e2e?style=flat-square" alt="Status: early alpha"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-3a3a3a?style=flat-square" alt="License: MIT or Apache-2.0"></a>
   <a href="https://github.com/fruitapps/limeshot/stargazers"><img src="https://img.shields.io/github/stars/fruitapps/limeshot?style=flat-square" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" alt="Current LimeShot workspace rendered from main: Channel Rack and Playlist" width="900"></a>
+  <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" alt="LimeShot workspace: Channel Rack and Playlist" width="900"></a>
 </p>
 
 <p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#first-steps">First steps</a> ·
   <a href="#build-from-source">Build from source</a> ·
-  <a href="#lime-native-standalone-vst3-suite">Standalone VST3 suite</a> ·
-  <a href="docs/roadmap/features.md">Feature inventory</a> ·
+  <a href="#lime-native-vst3-suite">Lime Native VST3s</a> ·
   <a href="docs/roadmap/known-limitations.md">Known limitations</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
@@ -25,90 +26,171 @@
 LimeShot is an open-source, offline-first digital audio workstation built around the pattern workflow of FL Studio:
 program beats in the Channel Rack, write melodies in the Piano Roll, arrange patterns on the Playlist and mix them on
 Mixer inserts. The audio engine, the project model and the native [egui](https://github.com/emilk/egui) interface are
-written in Rust. The app runs locally without a web view, account or network connection.
+written in Rust. It runs locally without a web view, account or network connection.
+
+> **Alpha.** [v0.1.0-alpha.1](https://github.com/fruitapps/limeshot/releases/tag/v0.1.0-alpha.1) is the first
+> prerelease. You can compose, arrange, mix, save and export songs, but expect rough edges: save often, and please
+> [open an issue](https://github.com/fruitapps/limeshot/issues) when something breaks.
+
+## Install
+
+Download the package for your system from the
+[latest release](https://github.com/fruitapps/limeshot/releases/latest). Every package contains LimeShot, the
+command-line tool `limeshot-cli`, the bundled samples and the twelve [Lime Native VST3s](#lime-native-vst3-suite)
+that LimeShot's instruments and effects run on.
+
+| System | Package | What it installs |
+| --- | --- | --- |
+| Windows 10/11 x64 | `LimeShot-<version>-windows-x64-setup.exe` | LimeShot in Program Files (or just for you), the Lime VST3s in `Common Files\VST3`, `.lime` file association, uninstaller |
+| | `LimeShot-<version>-windows-x64-portable.zip` | Nothing: unzip anywhere and run `limeshot.exe` |
+| macOS 11+ Apple Silicon | `LimeShot-<version>-macos-arm64.pkg` | `/Applications/LimeShot.app` and the Lime VST3s in `/Library/Audio/Plug-Ins/VST3` |
+| | `LimeShot-<version>-macos-arm64.dmg` | Drag `LimeShot.app` to Applications; the VST3s stay inside the app |
+| macOS 11+ Intel | `…-macos-x86_64.pkg` / `…-macos-x86_64.dmg` | As above |
+| Linux x86-64 / ARM64 (Debian, Ubuntu) | `limeshot_<version>_amd64.deb` / `_arm64.deb` | `/opt/limeshot`, `limeshot` and `limeshot-cli` on the path, the Lime VST3s in `/usr/lib/vst3`, a desktop entry |
+| Linux x86-64 / ARM64 (any glibc 2.35+) | `limeshot-<version>-linux-x86_64.tar.gz` / `-linux-aarch64.tar.gz` | Runs in place, or installs with `install.sh` |
+
+The packages are not signed with a developer identity yet, so your system will warn the first time:
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+Run the installer. If SmartScreen says "Windows protected your PC", choose **More info › Run anyway**. The
+installer lets you install for all users or only for yourself; unticking the VST3 component keeps the Lime VST3s
+private to LimeShot instead of sharing them with other hosts. Uninstall from **Settings › Apps**.
+
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+Open the PKG, or open the DMG and drag LimeShot to Applications. Because the app is signed ad hoc, macOS blocks it
+the first time: right-click (or Control-click) the PKG or `LimeShot.app` and choose **Open**, or allow it under
+**System Settings › Privacy & Security**. Microphone access is requested only when you record audio.
+
+To uninstall, delete `/Applications/LimeShot.app`; a PKG install also put the `Lime*.vst3` bundles in
+`/Library/Audio/Plug-Ins/VST3`.
+
+</details>
+
+<details>
+<summary><strong>Linux</strong></summary>
+
+Debian or Ubuntu:
+
+```bash
+sudo apt install ./limeshot_0.1.0-alpha.1_amd64.deb   # or _arm64.deb
+limeshot
+sudo apt remove limeshot                               # uninstall
+```
+
+Any other distribution, with the tarball:
+
+```bash
+tar -xzf limeshot-0.1.0-alpha.1-linux-x86_64.tar.gz
+cd limeshot-0.1.0-alpha.1-linux-x86_64
+./limeshot                # run in place, or install:
+sudo ./install.sh         # /opt/limeshot, VST3s in /usr/local/lib/vst3
+./install.sh --user       # ~/.local/opt/limeshot, VST3s in ~/.vst3
+```
+
+Add `--private-plugins` to keep the VST3s out of the shared folders; `uninstall.sh` in the installed folder
+removes everything. LimeShot needs ALSA, OpenGL and libxkbcommon on X11 or Wayland; file dialogs use the XDG desktop
+portal. On Linux, plugin editors are not embedded yet: plugins show their parameters instead.
+
+</details>
+
+To check a download, compare it with `SHA256SUMS.txt` from the same release:
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing    # macOS: shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+```
+
+## First steps
+
+To hear a short demo song, start LimeShot with `--demo`: `limeshot --demo` on Linux, `limeshot.exe --demo` on
+Windows, `open -a LimeShot --args --demo` on macOS.
+
+| Key | Action |
+| --- | --- |
+| **Space** | Play / stop |
+| **L** | Switch between Pattern and Song mode |
+| **F5 / F6 / F7 / F9** | Show or hide the Playlist, Channel Rack, Piano Roll and Mixer |
+| **Cmd/Ctrl+S**, **Cmd/Ctrl+R** | Save, export WAV |
+| **F1** | List every shortcut |
+
+Drag samples from the Browser onto the Channel Rack or the Playlist. Turn on typing-keyboard notes in the toolbar to
+play the selected instrument from your computer keyboard (Cmd/Ctrl+T outside the Playlist). To use your own VST3
+plugins, choose **Plugins › Find plugins…** in the Channel Rack's or an insert's Add menu once; the scanned plugins
+are then listed there.
 
 ## Make a Beat, Start to Finish
 
-The core composition loop has automated coverage in
+The core loop has an automated end-to-end test,
 [`mvp_workflow.rs`](crates/limeshot-app/tests/mvp_workflow.rs). Click a preview to see it at full size.
 
 | Feature | Preview |
 | --- | --- |
 | **Channel Rack**<br>Program drums from samples on a step grid, with swing, fill, rotate and channel selection. | <a href="docs/screenshots/current/rack.png"><img src="docs/screenshots/current/rack.png" width="240" alt="Channel Rack and Playlist"></a> |
-| **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/current/piano-roll.png"><img src="docs/screenshots/current/piano-roll.png" width="240" alt="Piano Roll"></a> |
+| **Piano Roll**<br>Write notes for LimeSynth, Lime Sampler or any VST3 instrument, with FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/current/piano-roll.png"><img src="docs/screenshots/current/piano-roll.png" width="240" alt="Piano Roll"></a> |
 | **Playlist**<br>Arrange pattern, audio and automation clips. Slip, slice, audio clip fades, time selection, markers and a clip picker. | <a href="docs/screenshots/current/audio-clips.png"><img src="docs/screenshots/current/audio-clips.png" width="240" alt="Playlist audio waveforms, clip fades, markers and time selection"></a> |
-| **Mixer**<br>Route channels to inserts with volume, pan, a dedicated hosted EQ, sidechain compression and up to ten effects per track. Each effect slot has On and a Mix knob, and you reorder slots by dragging. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
-| **Workspace windows**<br>Move, resize, maximise and detach editors; F5/F6/F7/F9 toggle Playlist, Rack, Piano Roll and Mixer. | <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" width="240" alt="Current workspace with floating Channel Rack"></a> |
-| **Automation**<br>Shape Song-mode pan automation with curves, stairs and waves. | <a href="docs/screenshots/current/automation.png"><img src="docs/screenshots/current/automation.png" width="240" alt="Playlist pan automation with curve, stairs and wave segments"></a> |
-| **Sampler**<br>Inspect the sample waveform and adjust playback, loop and filter settings. | <a href="docs/screenshots/current/sampler.png"><img src="docs/screenshots/current/sampler.png" width="240" alt="Sampler Channel Settings with waveform and playback controls"></a> |
-| **LimeSynth**<br>Edit oscillators, envelopes, filtering and modulation. | <a href="docs/screenshots/current/synth.png"><img src="docs/screenshots/current/synth.png" width="240" alt="Built-in LimeSynth Channel Settings"></a> |
-| **Mixer EQ**<br>Shape the selected insert with the inline three-band hosted EQ. | <a href="docs/screenshots/current/mixer-eq.png"><img src="docs/screenshots/current/mixer-eq.png" width="240" alt="Maximised Mixer with the selected insert EQ"></a> |
+| **Mixer**<br>Route channels to inserts with volume, pan, a three-band track EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
+| **Workspace windows**<br>Move, resize, maximise and detach editors, as in FL Studio. | <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" width="240" alt="Workspace with floating Channel Rack"></a> |
+| **Automation**<br>Shape Song-mode automation with curves, stairs and waves. | <a href="docs/screenshots/current/automation.png"><img src="docs/screenshots/current/automation.png" width="240" alt="Playlist pan automation with curve, stairs and wave segments"></a> |
+| **Sampler**<br>Inspect the waveform and adjust playback, loop and filter settings. | <a href="docs/screenshots/current/sampler.png"><img src="docs/screenshots/current/sampler.png" width="240" alt="Sampler Channel Settings with waveform and playback controls"></a> |
+| **LimeSynth**<br>Edit oscillators, envelopes, filtering and modulation. | <a href="docs/screenshots/current/synth.png"><img src="docs/screenshots/current/synth.png" width="240" alt="LimeSynth Channel Settings"></a> |
+| **Mixer EQ**<br>Shape the selected insert with the inline three-band EQ. | <a href="docs/screenshots/current/mixer-eq.png"><img src="docs/screenshots/current/mixer-eq.png" width="240" alt="Maximised Mixer with the selected insert EQ"></a> |
 | **WAV export**<br>Choose the render range, sample rate and bit depth. | <a href="docs/screenshots/current/export.png"><img src="docs/screenshots/current/export.png" width="240" alt="WAV export dialog over the audio clip arrangement"></a> |
 
 ## Sounds, Effects and Plugins
 
 | Kind | What's included |
 | --- | --- |
-| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-/band-/high-pass filter, LFO) and Lime Sampler (ADSR, trim, reverse, loop points, low-pass filter; samples up to about 125 s at 48 kHz), both hosted as Lime Native VST3s; bundled Lime samples and factory presets |
+| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-/band-/high-pass filter, LFO) and Lime Sampler (ADSR, trim, reverse, loop points, low-pass filter; samples up to about 125 s at 48 kHz); bundled Lime samples and factory presets |
 | **Effects** | Lime EQ, Filter, tempo-synced Delay, Room (reverb), Comp (with sidechain), Limiter, Gate, Drive, Chorus (chorus/flanger/phaser) and Utility |
-| **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
-| **Automation** | Song-mode clips for channel/mixer volume and pan, hosted VST3 parameters; point modes and visible automated controls |
-| **Recording** | MIDI input and note recording from a device or typing keyboard; audio input recording to Playlist clips is implemented but awaits real-input verification |
+| **Plugins** | VST3 instruments and effects: a scanned plugin database, state saved in the project, plugin editors in LimeShot windows (macOS and Windows), presets, automation, delay compensation and an optional separate process per plugin |
+| **Automation** | Song-mode clips for channel/mixer volume and pan, tempo and VST3 parameters; point modes; automated controls move |
+| **Recording** | MIDI input and note recording from a device or the typing keyboard; audio recording to Playlist clips |
 | **Files** | `.lime` projects (versioned, atomic save, autosave/recovery), WAV/MP3/FLAC/Ogg Vorbis/AIFF samples, WAV export of a song/pattern/time selection, MIDI import/export and partial FL Studio `.flp` import |
+
+Not there yet: CLAP/AU plugins, stems, templates, remappable shortcuts, time stretching and many advanced editor
+actions. Hardware MIDI and audio recording still need hands-on checks; audio recording has no input monitoring or
+latency compensation. `.flp` import leaves out plugin state, mixer effects and routing, and automation curves. The
+full list is in [known limitations](docs/roadmap/known-limitations.md).
 
 ## Project Status
 
-**Early alpha.** LimeShot can compose, arrange, mix, save and render songs, but production readiness and platform
-coverage are still being established. Automated tests establish the behavior they exercise; they do not establish
-compatibility with every audio device, plugin or host. README screenshots were freshly rendered on 2026-10-23
-from the source commits recorded in
-[the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
-plugin embedding and device audio require separate checks. The Mixer screenshots predate the 2026-10-25 insert-slot
-redesign (On + Mix, drag handle).
+The [feature inventory](docs/roadmap/features.md) tracks 291 features against FL Studio, each with its acceptance
+criteria and evidence: IMPLEMENTED means the code exists, VERIFIED that listed tests or recorded manual checks pass.
+These are tracked features, not a percentage of parity with FL Studio.
 
-The inventory currently tracks **291 features: 144 VERIFIED, 50 IMPLEMENTED, 78 NOT_STARTED, 14 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-25). IMPLEMENTED means code exists; VERIFIED additionally
-requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
-with FL Studio or measured test coverage.
-
-| State tracker | What it records |
+| Platform | State |
 | --- | --- |
-| [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, implementation states and verification evidence |
-| [Menu inventory](docs/roadmap/menus.md) | 737 menu/toolbar/editor entries and their implementation differences |
-| [Shortcut inventory](docs/roadmap/keybindings.md) | 143 bindings, including differences and unimplemented shortcuts |
-| [Settings inventory](docs/roadmap/settings.md) | 189 controls/settings and their current states |
-| [MVP acceptance](docs/roadmap/mvp.md) / [milestones](docs/roadmap/milestones.md) | End-to-end acceptance and delivery scope |
-| [Progress log](docs/development/progress.md) / [next steps](docs/development/next-steps.md) | Dated verification records and continuation priorities |
-| [Known limitations](docs/roadmap/known-limitations.md) | Outstanding restrictions and manual/platform checks |
-| [Live CI](https://github.com/fruitapps/limeshot/actions/workflows/ci.yml) | Build, test and lint results for the actual commit and platform |
+| macOS Apple Silicon | CI passes; GUI, realtime audio and VST3 processing used by hand; native plugin embedding partly verified |
+| macOS Intel | CI passes; GUI and audio devices not exercised by hand |
+| Windows x64 | CI passes; GUI and plugin editors used by hand, no systematic pass yet |
+| Linux x86-64 / ARM64 | CI passes; GUI and audio devices not exercised by hand |
 
-The DAW now uses the twelve Lime Native VST3 bundles for its instruments and effects. Build them with
-`python3 native-plugins/build.py` before running from source; macOS packages include them. Legacy projects convert
-to portable `lime:` references with embedded sampler audio. Hosted Playlist clips, note pan, exact track EQ, all ten effect kinds and mixer key buses are implemented; see [known limitations](docs/roadmap/known-limitations.md).
+| Tracker | What it records |
+| --- | --- |
+| [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, states and evidence |
+| [Menus](docs/roadmap/menus.md), [shortcuts](docs/roadmap/keybindings.md), [settings](docs/roadmap/settings.md) | FL Studio's menu items, shortcuts and settings against LimeShot's |
+| [Known limitations](docs/roadmap/known-limitations.md) | What does not work yet, or is not verified |
+| [Next steps](docs/development/next-steps.md) / [progress log](docs/development/progress.md) | Priorities and dated verification evidence |
+| [Platform validation](docs/development/platform-validation.md) | CI and hands-on evidence per platform |
 
-Some older continuation/limitation entries predate the recording, decoder, sampler, fade and automation additions;
-use the canonical feature record and its latest progress evidence to resolve those historical descriptions.
+## Lime Native VST3 Suite
 
-Still missing or limited: CLAP/AU, stems, templates, remappable shortcuts, automatic workspace
-layout persistence, time stretching and several advanced editor actions. Hardware MIDI and audio recording need
-hands-on checks; audio recording has no input monitoring or latency compensation. Native macOS VST3 embedding
-needs another live resize/tab/keyboard pass; Windows embeds editors as child windows (untested on real hardware); Linux exposes plugin parameters. The process bridge
-is opt-in and has no native editor. `.flp` import omits plugin state, mixer effects/routing and automation curves;
-unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/Drive/Chorus use their standalone Lime VST3 replacements.
-
-## Lime Native Standalone VST3 Suite
-
-**Lime Native** packages two instruments and ten effects as twelve independent VST3 plugins. Each has its own
-resizable native editor, factory presets, host automation/state and `.limepreset` interchange, with the existing
-LimeShot DSP linked into the bundle. LimeShot does not need to be installed or running.
-
-Previews of all twelve standalone editors (click to enlarge):
+**Lime Native** is two instruments and ten effects as twelve independent VST3 plugins. LimeShot uses them as its
+instruments and effects, and they work in any VST3 host (FL Studio, REAPER, Cubase, Ableton Live, Bitwig; Logic Pro
+needs AU). Each has its own resizable editor, factory presets, host automation and state, and `.limepreset`
+interchange. The LimeShot installers put them in your system's VST3 folder, so other hosts find them after a rescan.
 
 | | | |
 | --- | --- | --- |
-| <a href="docs/screenshots/current/native/limesynth.png"><img src="docs/screenshots/current/native/limesynth.png" width="280" alt="LimeSynth standalone VST3 editor"></a><br>**LimeSynth** | <a href="docs/screenshots/current/native/lime-sampler.png"><img src="docs/screenshots/current/native/lime-sampler.png" width="280" alt="Lime Sampler standalone VST3 editor"></a><br>**Lime Sampler** | <a href="docs/screenshots/current/native/lime-utility.png"><img src="docs/screenshots/current/native/lime-utility.png" width="280" alt="Lime Utility standalone VST3 editor"></a><br>**Lime Utility** |
-| <a href="docs/screenshots/current/native/lime-eq.png"><img src="docs/screenshots/current/native/lime-eq.png" width="280" alt="Lime EQ standalone VST3 editor"></a><br>**Lime EQ** | <a href="docs/screenshots/current/native/lime-filter.png"><img src="docs/screenshots/current/native/lime-filter.png" width="280" alt="Lime Filter standalone VST3 editor"></a><br>**Lime Filter** | <a href="docs/screenshots/current/native/lime-delay.png"><img src="docs/screenshots/current/native/lime-delay.png" width="280" alt="Lime Delay standalone VST3 editor"></a><br>**Lime Delay** |
-| <a href="docs/screenshots/current/native/lime-room.png"><img src="docs/screenshots/current/native/lime-room.png" width="280" alt="Lime Room standalone VST3 editor"></a><br>**Lime Room** | <a href="docs/screenshots/current/native/lime-comp.png"><img src="docs/screenshots/current/native/lime-comp.png" width="280" alt="Lime Comp standalone VST3 editor"></a><br>**Lime Comp** | <a href="docs/screenshots/current/native/lime-limiter.png"><img src="docs/screenshots/current/native/lime-limiter.png" width="280" alt="Lime Limiter standalone VST3 editor"></a><br>**Lime Limiter** |
-| <a href="docs/screenshots/current/native/lime-gate.png"><img src="docs/screenshots/current/native/lime-gate.png" width="280" alt="Lime Gate standalone VST3 editor"></a><br>**Lime Gate** | <a href="docs/screenshots/current/native/lime-drive.png"><img src="docs/screenshots/current/native/lime-drive.png" width="280" alt="Lime Drive standalone VST3 editor"></a><br>**Lime Drive** | <a href="docs/screenshots/current/native/lime-chorus.png"><img src="docs/screenshots/current/native/lime-chorus.png" width="280" alt="Lime Chorus standalone VST3 editor"></a><br>**Lime Chorus** |
+| <a href="docs/screenshots/current/native/limesynth.png"><img src="docs/screenshots/current/native/limesynth.png" width="280" alt="LimeSynth VST3 editor"></a><br>**LimeSynth** | <a href="docs/screenshots/current/native/lime-sampler.png"><img src="docs/screenshots/current/native/lime-sampler.png" width="280" alt="Lime Sampler VST3 editor"></a><br>**Lime Sampler** | <a href="docs/screenshots/current/native/lime-utility.png"><img src="docs/screenshots/current/native/lime-utility.png" width="280" alt="Lime Utility VST3 editor"></a><br>**Lime Utility** |
+| <a href="docs/screenshots/current/native/lime-eq.png"><img src="docs/screenshots/current/native/lime-eq.png" width="280" alt="Lime EQ VST3 editor"></a><br>**Lime EQ** | <a href="docs/screenshots/current/native/lime-filter.png"><img src="docs/screenshots/current/native/lime-filter.png" width="280" alt="Lime Filter VST3 editor"></a><br>**Lime Filter** | <a href="docs/screenshots/current/native/lime-delay.png"><img src="docs/screenshots/current/native/lime-delay.png" width="280" alt="Lime Delay VST3 editor"></a><br>**Lime Delay** |
+| <a href="docs/screenshots/current/native/lime-room.png"><img src="docs/screenshots/current/native/lime-room.png" width="280" alt="Lime Room VST3 editor"></a><br>**Lime Room** | <a href="docs/screenshots/current/native/lime-comp.png"><img src="docs/screenshots/current/native/lime-comp.png" width="280" alt="Lime Comp VST3 editor"></a><br>**Lime Comp** | <a href="docs/screenshots/current/native/lime-limiter.png"><img src="docs/screenshots/current/native/lime-limiter.png" width="280" alt="Lime Limiter VST3 editor"></a><br>**Lime Limiter** |
+| <a href="docs/screenshots/current/native/lime-gate.png"><img src="docs/screenshots/current/native/lime-gate.png" width="280" alt="Lime Gate VST3 editor"></a><br>**Lime Gate** | <a href="docs/screenshots/current/native/lime-drive.png"><img src="docs/screenshots/current/native/lime-drive.png" width="280" alt="Lime Drive VST3 editor"></a><br>**Lime Drive** | <a href="docs/screenshots/current/native/lime-chorus.png"><img src="docs/screenshots/current/native/lime-chorus.png" width="280" alt="Lime Chorus VST3 editor"></a><br>**Lime Chorus** |
 
 | Plugin | Purpose |
 | --- | --- |
@@ -125,63 +207,32 @@ Previews of all twelve standalone editors (click to enlarge):
 | **Lime Drive** | Soft/hard clipping and wave folding with tone and mix |
 | **Lime Chorus** | Chorus, flanger and phaser modes |
 
-The suite is included in this checkout under `native-plugins/`. Its
-[README](native-plugins/README.md),
-[validation record](native-plugins/VALIDATION.md)
-and [third-party notices](native-plugins/THIRD_PARTY.md)
-cover building, installing, presets and supported targets. To build the suite (Rust **1.95+**, Python 3
-and platform build tools):
-
-```bash
-python3 native-plugins/build.py
-```
-
-The script collects bundles and a ZIP in `native-plugins/dist/`; it does not install them (the LimeShot installers do). Copy the `.vst3` bundles
-to your host's plugin directory and rescan. Current macOS Apple Silicon release/debug builds pass exported ABI checks for all twelve bundles. The historical
-nine-bundle baseline passed pluginval 1.0.4 strictness 5; pluginval is unavailable for the current binaries. Hands-on DAW checks, Windows/Linux/Intel runtime
-validation and notarization remain pending. Local macOS bundles are arm64 and ad-hoc signed. Generated binaries
-are build outputs, not files included by cloning Git. VST3-compatible hosts are required; Logic Pro needs AU.
-The suite exports twelve plugins, including Lime Gate, Lime Drive and Lime Chorus.
-
-## Platforms
-
-| Platform | State |
-| --- | --- |
-| macOS Apple Silicon | Built, all tests pass, GUI, realtime audio and VST3 processing tested; new native editor embedding unverified |
-| macOS Intel | Native headless CI passes; earlier Rosetta render matched arm64; GUI/audio-device checks remain open |
-| Windows x86-64 / ARM64 | x86-64 headless CI and ARM64 cross-build pass; native GUI/audio checks remain open |
-| Linux x86-64 / ARM64 | Native headless CI passes; GUI/audio-device checks remain open |
-
-Commit-specific CI evidence is recorded in [platform-validation.md](docs/development/platform-validation.md);
-successful results apply to the listed commits, and later commits need their own CI runs.
+The suite lives in [`native-plugins/`](native-plugins/README.md); its [validation record](native-plugins/VALIDATION.md)
+and [third-party notices](native-plugins/THIRD_PARTY.md) are alongside.
 
 ## Build from Source
 
-The DAW manifest declares Rust 1.88 or newer; current development/CI uses stable Rust.
-The separate Lime Native workspace requires Rust 1.95 or newer. On Linux, install the ALSA and windowing headers first:
+The DAW needs Rust 1.88 or newer and the Lime Native workspace Rust 1.95 or newer; development and CI use current
+stable Rust. You also need Python 3 and your platform's C/C++ build tools. On Linux, install the ALSA and windowing
+headers first:
 
 ```bash
-sudo apt install libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev \
+sudo apt install build-essential pkg-config libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev \
   libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev mesa-vulkan-drivers
 ```
 
-Run the app, or open the bundled demo song:
+Build the Lime VST3s once (LimeShot plays through them), then run the app or the demo song:
 
 ```bash
 git clone https://github.com/fruitapps/limeshot.git
 cd limeshot
+python3 native-plugins/build.py
 cargo run --release -p limeshot-app
 cargo run --release -p limeshot-app -- --demo
 ```
 
-Press **Space** to play, **L** to switch between Pattern and Song mode, **F5/F6/F7/F9** to toggle the Playlist/Rack/Piano Roll/Mixer and **F1** to see
-every shortcut. Enable typing-keyboard notes in the toolbar to play the selected Channel Rack instrument;
-Cmd+T toggles this outside the Playlist (where it adds a marker).
-
-Installers that put LimeShot and the Lime VST3 suite in place are built by `scripts/package-windows.ps1` (Inno
-Setup installer and portable ZIP), `scripts/package-macos.sh` (app, DMG and PKG) and `scripts/package-linux.sh`
-(tarball with `install.sh`, and a `.deb`); a `v*` tag builds them all in the release workflow. They are unsigned or
-ad-hoc signed alpha packages. See [release packaging](docs/development/release-packaging.md).
+`scripts/package-windows.ps1`, `scripts/package-macos.sh` and `scripts/package-linux.sh` build the installers
+above into `dist/`; see [release packaging](docs/development/release-packaging.md).
 
 <details>
 <summary><strong>Headless CLI</strong></summary>
@@ -194,14 +245,14 @@ cargo run --release -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out
 ```
 
 `limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device), `import-midi` and `run`. `run`
-applies a JSON list of the same typed commands the UI uses. Opening a legacy project does not automatically embed
-audio outside its folder. Select the source explicitly in the GUI, or use `--allow-external-samples` in the CLI
-when you intend to include those recordings in portable state:
-
+applies a JSON list of the same typed commands the UI uses:
 
 ```json
 [{"SetTempo": 128000}, {"AddPattern": {"name": "Verse"}}]
 ```
+
+Opening a project does not embed audio from outside its folder automatically. Choose the source in the GUI, or
+pass `--allow-external-samples` to the CLI when you mean to include those recordings.
 
 </details>
 
@@ -229,23 +280,20 @@ effects, mixing, VST3 hosting, project round trips, undo and redo, and the edito
 | `limeshot-project` | `.lime` files (versioned envelope, migrations, atomic saving), MIDI, and `.flp` import |
 | `limeshot-dsp` | Oscillators, envelopes, effect processors, pan law and audio decoding/WAV writing |
 | `limeshot-sequencer` | Compiles a project into an immutable playback snapshot |
-| `limeshot-engine` | The renderer (voices, scheduling, mixer, transport, effects), shared by playback and export |
+| `limeshot-engine` | The renderer (scheduling, mixer, transport, plugin hosting), shared by playback and export |
 | `limeshot-audio` | cpal device output/input recording, MIDI input, lock-free control and background sample loading |
 | `limeshot-plugins` | VST3 hosting: loading, scanning, processing, state and editor windows |
 | `limeshot-ui` | The egui interface: toolbar, browser, Channel Rack, Piano Roll, Playlist, Mixer, windows |
 | `limeshot-app` | The `limeshot` desktop app and `limeshot-cli` |
 
-For contributor setup, regression tests, real-time constraints, plugin compatibility and pull requests, read
-[CONTRIBUTING.md](CONTRIBUTING.md). Agent-specific guidance remains in [AGENTS.md](AGENTS.md).
+Design notes: [architecture](docs/architecture/) (audio engine, project model, UI) and
+[design decisions](docs/development/decisions.md). Research on the reference application is in
+[docs/research/](docs/research/).
 
-## Documentation
+## Contributing
 
-- [Contributing](CONTRIBUTING.md)
-- [Architecture](docs/architecture/): audio engine, project model and UI
-- [Design decisions](docs/development/decisions.md)
-- [Roadmap and feature inventory](docs/roadmap/)
-- [Research](docs/research/): how the reference application was studied
-- [Working on LimeShot with agents](AGENTS.md)
+Bug reports, device and plugin checks, and pull requests are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Instructions for coding agents are in [AGENTS.md](AGENTS.md).
 
 ## License
 
@@ -259,6 +307,3 @@ and observable behaviour (see [docs/research/](docs/research/)).
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=fruitapps/limeshot&type=Date&legend=top-left)](https://www.star-history.com/?repos=fruitapps%2Flimeshot&type=date&legend=top-left)
-
-GitHub badges and the star-history chart are external README services and become useful once the repository is
-public. They are separate from the offline application.

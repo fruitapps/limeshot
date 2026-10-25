@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-25 (documentation refresh)",
+  "updated": "2026-10-25 (post-release documentation cleanup)",
   "features": [
     {
       "id": "APP-001",
@@ -2581,7 +2581,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-024). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-024)."
     },
     {
       "id": "PL-015",
@@ -3220,7 +3220,7 @@
           "docs/research/evidence/screenshots/fl-mixer-sidechain.png"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-020). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-020)."
     },
     {
       "id": "MIX-010",
@@ -3228,7 +3228,7 @@
       "name": "Mixer 3-band EQ",
       "description": "Track EQ.",
       "fl_reference": "Track properties EQ.",
-      "limeshot_behavior": "The inline Mixer three-band EQ drives a dedicated hosted Lime EQ after ten insert slots and before the fader. Saved EqBand frequency, gain and width remain canonical; appended hidden controls preserve every legal legacy response exactly. Edits use SetMixerEq and undo.",
+      "limeshot_behavior": "The inline Mixer three-band EQ drives a dedicated hosted Lime EQ after ten insert slots and before the fader. Saved EqBand frequency, gain and width remain canonical; appended hidden controls reproduce every legal response exactly. Edits use SetMixerEq and undo.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -3261,7 +3261,7 @@
           "docs/research/evidence/screenshots/fl-mixer-eq.png"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-029). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-029)."
     },
     {
       "id": "MIX-011",
@@ -3477,7 +3477,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample."
     },
     {
       "id": "INS-002",
@@ -3510,13 +3510,13 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "INS-003",
       "category": "Instruments",
       "name": "LimeSynth: oscillators",
-      "description": "Built-in synthesizer.",
+      "description": "LimeShot's own synthesizer.",
       "fl_reference": "3x Osc, MiniSynth etc. (reference only).",
       "limeshot_behavior": "Sine, square, saw, triangle (PolyBLEP), octave, optional detuned second oscillator.",
       "priority": "P0",
@@ -3543,7 +3543,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "INS-004",
@@ -3575,7 +3575,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "INS-005",
@@ -3608,7 +3608,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "The previous global host instrument pool is removed (D39)."
+      "notes": ""
     },
     {
       "id": "INS-006",
@@ -3645,7 +3645,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "LimeSynth supports low-, band- and high-pass modes and key tracking (INS-013). Its LFO restarts per voice. D39: audible instruments are hosted Lime VST3s; engine DSP tests use test-only reference processors."
+      "notes": "LimeSynth supports low-, band- and high-pass modes and key tracking (INS-013). Its LFO restarts per voice."
     },
     {
       "id": "INS-007",
@@ -3679,7 +3679,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in."
     },
     {
       "id": "INS-008",
@@ -3717,7 +3717,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the effective embedding limit is 6 million stereo frames, enforced by MAX_EMBEDDED_FRAMES and embedded_audio_supported, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25 sampler/mixer workflow: the embedded limit is 6 million stereo frames (about 125 s at 48 kHz); imports decode once on the loader thread with a bounded decoder, and the owner’s 119 s 48 kHz MP3 imports into a sampler and a Playlist clip."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the effective embedding limit is 6 million stereo frames, enforced by MAX_EMBEDDED_FRAMES and embedded_audio_supported, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25 sampler/mixer workflow: the embedded limit is 6 million stereo frames (about 125 s at 48 kHz); imports decode once on the loader thread with a bounded decoder, and the owner’s 119 s 48 kHz MP3 imports into a sampler and a Playlist clip."
     },
     {
       "id": "INS-009",
@@ -3778,7 +3778,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008). D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16 (next-steps Then 7). Plugin instruments use their own presets (PLG-008)."
     },
     {
       "id": "INS-011",
@@ -3867,7 +3867,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "FX-002",
@@ -3933,7 +3933,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "FX-004",
@@ -3966,7 +3966,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Hosted Lime Comp accepts a routed stereo key and reports gain reduction to the Mixer (MIX-009, PLG-020/027). No knee or lookahead. D39: active inserts are hosted VST3s."
+      "notes": "Hosted Lime Comp accepts a routed stereo key and reports gain reduction to the Mixer (MIX-009, PLG-020/027). No knee or lookahead."
     },
     {
       "id": "FX-005",
@@ -3999,7 +3999,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "No lookahead, so fast peaks are shaped hard. Standalone VST3 export (PLG-012): shared Limiter now reports gain reduction through Effect::gain_reduction_db; ceiling/reduction/reset/bypass tested in native-plugins/shared/src/processor.rs. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "No lookahead, so fast peaks are shaped hard. Standalone VST3 export (PLG-012): shared Limiter now reports gain reduction through Effect::gain_reduction_db; ceiling/reduction/reset/bypass tested in native-plugins/shared/src/processor.rs."
     },
     {
       "id": "FX-006",
@@ -4038,7 +4038,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-017). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-017)."
     },
     {
       "id": "FX-007",
@@ -4071,7 +4071,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "FX-008",
@@ -4112,7 +4112,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Hosted Lime Delay resolves tempo sync from block-start transport, including Song tempo automation. Manual Time is ignored while synced; delay time is capped at 2 seconds. D39: no runtime built-in delay factory remains."
+      "notes": "Hosted Lime Delay resolves tempo sync from block-start transport, including Song tempo automation. Manual Time is ignored while synced; delay time is capped at 2 seconds."
     },
     {
       "id": "FX-009",
@@ -4151,7 +4151,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-018). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-018)."
     },
     {
       "id": "FX-010",
@@ -4190,7 +4190,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39 hosted parity is implemented through the Lime VST3 path (PLG-019). Automated integration evidence is listed below; broader native GUI/platform runtime validation remains open."
+      "notes": "Runs in the hosted Lime VST3 (PLG-019)."
     },
     {
       "id": "FX-011",
@@ -4281,7 +4281,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": ""
     },
     {
       "id": "FX-014",
@@ -4289,7 +4289,7 @@
       "name": "Effect presets",
       "description": "Effect presets.",
       "fl_reference": ".fst presets",
-      "limeshot_behavior": "Hosted Lime effect cards offer factory and user .limepreset menus and Save preset as…. Legacy preset values are translated into Lime plugin state; loading is one undoable SetPluginState edit.",
+      "limeshot_behavior": "Hosted Lime effect cards offer factory and user .limepreset menus and Save preset as…. Preset values are translated into Lime plugin state; loading is one undoable SetPluginState edit.",
       "priority": "P2",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -4320,7 +4320,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer_plugin.htm"
         ]
       },
-      "notes": "Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16 (next-steps Then 7). Not FL's .fst format; no preset browsing ◀ ▶ for effects yet."
     },
     {
       "id": "FX-015",
@@ -5410,7 +5410,7 @@
         "crates/limeshot-app/tests/ui.rs::a_plugin_insert_with_an_editor_opens_its_window_from_the_slot",
         "crates/limeshot-app/tests/ui.rs::plugin_window_presets_step_and_the_window_place_is_saved_in_the_project",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_window_round_trips_and_bad_values_are_dropped",
-        "docs/development/lime-vst3-host-validation.md",
+        "docs/development/progress.md",
         "crates/limeshot-app/tests/ui.rs::plugin_wrapper_title_controls_minimize_pin_restore_and_close",
         "crates/limeshot-plugins/src/graphics.rs::tests::teardown_suspends_and_restores_the_callers_gl_context",
         "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement",
@@ -6911,7 +6911,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: replacement Intel runner confirmed by successful CI 39826217710 at 38d9a7b. See docs/development/platform-validation.md. Intel GUI/audio remain unverified."
+      "notes": "Native CI passes on macos-15-intel (latest: 40219529679 at 28d3a41); see docs/development/platform-validation.md. Intel GUI/audio remain unverified."
     },
     {
       "id": "PF-003",
@@ -6943,7 +6943,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
+      "notes": "Runner evidence is in docs/development/platform-validation.md (latest: 40219529679 at 28d3a41). The owner has run the Windows build by hand (plugin editors, Explorer drops); no systematic GUI/audio-device pass yet."
     },
     {
       "id": "PF-004",
@@ -6975,7 +6975,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
+      "notes": "Runner evidence is in docs/development/platform-validation.md; full CI passes at 28d3a41 (40219529679) and the v0.1.0-alpha.1 packages were built and install-tested on the runner. Headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-005",
@@ -7009,7 +7009,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
+      "notes": "Runner evidence is in docs/development/platform-validation.md; full CI passes at 28d3a41 (40219529679) and the v0.1.0-alpha.1 packages were built and install-tested on the runner. Headless CI does not establish GUI/audio-device verification or validate later commits."
     },
     {
       "id": "PF-006",
@@ -7017,7 +7017,7 @@
       "name": "Packaging (DMG, MSI, AppImage/deb)",
       "description": "Installers.",
       "fl_reference": "Installers per platform.",
-      "limeshot_behavior": "scripts/package-windows.ps1 builds a portable ZIP and an Inno Setup installer (LimeShot and the twelve Lime Native VST3 bundles in the shared VST3 folder, or private in <app>/plugins; per-machine or per-user; .lime association; uninstaller). scripts/package-macos.sh builds dist/LimeShot.app (with the Lime VST3s in Contents/PlugIns), a DMG and a PKG installer (/Applications/LimeShot.app + /Library/Audio/Plug-Ins/VST3). scripts/package-linux.sh builds a tarball with install.sh/uninstall.sh (/opt/limeshot + /usr/local/lib/vst3, or --user in ~/.local/opt/limeshot + ~/.vst3, or --private-plugins) and a .deb (/opt/limeshot + /usr/lib/vst3). .github/workflows/release.yml builds all platforms and attaches them to a draft GitHub release on v* tags.",
+      "limeshot_behavior": "scripts/package-windows.ps1 builds a portable ZIP and an Inno Setup installer (LimeShot and the twelve Lime Native VST3 bundles in the shared VST3 folder, or private in <app>/plugins; per-machine or per-user; .lime association; uninstaller). scripts/package-macos.sh builds dist/LimeShot.app (with the Lime VST3s in Contents/PlugIns), a DMG and a PKG installer (/Applications/LimeShot.app + /Library/Audio/Plug-Ins/VST3). scripts/package-linux.sh builds a tarball with install.sh/uninstall.sh (/opt/limeshot + /usr/local/lib/vst3, or --user in ~/.local/opt/limeshot + ~/.vst3, or --private-plugins) and a .deb (/opt/limeshot + /usr/lib/vst3). .github/workflows/release.yml builds all platforms and attaches them to a draft GitHub release on v* tags; v0.1.0-alpha.1 was published this way.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -7037,7 +7037,8 @@
         "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.",
         "Windows 11 x64 (2026-10-25): scripts/package-windows.ps1 builds LimeShot-0.1.0-alpha.1-windows-x64-portable.zip and LimeShot-0.1.0-alpha.1-windows-x64-setup.exe; silent /CURRENTUSER install places limeshot.exe, samples and all 12 Lime VST3 bundles in %LOCALAPPDATA%\\Programs\\Common\\VST3, installed limeshot-cli renders demo (-3.7 dBFS) with checkout dist hidden, /TYPE=app installs private plugins, and unins000.exe removes everything cleanly.",
         "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root.",
-        "2026-10-25: release run 40211718081 passes all five packaging jobs; all ten downloaded assets match SHA-256 after draft manifest filename repair, both DMGs pass hdiutil verify, Windows ZIP CRCs pass, Linux tarballs contain 12 VST3s and installers. See docs/development/platform-validation.md."
+        "2026-10-25: release run 40211718081 passes all five packaging jobs; all ten downloaded assets match SHA-256 after draft manifest filename repair, both DMGs pass hdiutil verify, Windows ZIP CRCs pass, Linux tarballs contain 12 VST3s and installers. See docs/development/platform-validation.md.",
+        "2026-10-25: release run 40219554203 at 28d3a41 builds the published v0.1.0-alpha.1 assets; the Linux jobs install and uninstall the .deb and the tarball and render the demo with the installed CLI. See docs/development/platform-validation.md."
       ],
       "reference": {
         "application": "FL Studio",
@@ -7046,7 +7047,7 @@
           "START.md §14"
         ]
       },
-      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification. 2026-10-25: all five alpha packaging jobs pass at 5ab09c9. GitHub rewrote Debian asset tildes to dots and broke manifest filenames; package filenames now keep the original version while Debian control metadata retains the prerelease tilde. All ten downloaded hashes pass after correcting the existing draft manifest to the actual uploaded names; repaired-source packages are checked separately."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1."
     },
     {
       "id": "PL-025",
@@ -7297,7 +7298,7 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": "Host feedback covers channel/mixer controls. Historical built-in effect panels were removed by D39; hosted plugin editors display their own automated values."
+      "notes": "Host feedback covers channel/mixer controls; hosted plugin editors display their own automated values."
     },
     {
       "id": "PL-027",
@@ -7556,7 +7557,7 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": []
       },
-      "notes": "Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16 continuation. Still 12 dB/oct; no notch or 24 dB modes; the cutoff readout says Open at the top whatever the type."
     },
     {
       "id": "INS-014",
@@ -7593,7 +7594,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
         ]
       },
-      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024."
     },
     {
       "id": "EXP-013",
@@ -8377,7 +8378,7 @@
       "id": "PLG-012",
       "category": "Plugins",
       "name": "Lime Native standalone VST3 suite",
-      "description": "Package LimeShot instruments and built-in effects as independent VST3 plugins usable in any VST3-compatible DAW.",
+      "description": "Package LimeShot's instruments and effects as independent VST3 plugins usable in any VST3-compatible DAW.",
       "fl_reference": "Owner request (2026-10-22): native Lime instruments/effects as standalone VST plugins with Lime-themed native editors; independent of FL Studio code and assets.",
       "limeshot_behavior": "Separate native-plugins/ workspace exports LimeSynth, Lime Sampler, Lime Utility, Lime EQ, Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter, Lime Gate, Lime Drive and Lime Chorus. Self-contained VST3 bundles link the existing DSP, expose host automation/state/bypass and embedded resizable Lime-themed editors. Instruments support 128 voices, timestamped notes, sustain and pitch bend; Sampler embeds WAV audio in state; Comp accepts a stereo external key; Delay follows host tempo. Factory and .limepreset presets reuse the DAW implementation. Build collects bundles in native-plugins/dist/ without installing them. Editors have distinct FL-manual-inspired layouts with modern LimeShot Lime Dark styling. Sampler waveform/keyboard audition and trim handles, draggable three-band EQ response and live limiter level/reduction history use real parameters/audio.",
       "priority": "P1",
@@ -8437,7 +8438,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
+      "notes": "Twelve release and debug bundles pass the exported-binary verifier on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024; native-plugin CI passes on macOS, Windows and Linux. pluginval 1.0.4 strictness 5 passed the first nine bundles; it has not been rerun on the current twelve. Gate/Drive/Chorus use IDs 9–11; original IDs and control order are stable. Native editor geometry and sampler audio tests are automated. The local egui-baseview patch binds its own GL context during painter destruction, so closing a plugin cannot delete a host's GL objects. Live macOS pass: docs/development/live-plugin-checks-2026-10-25.md (partial). Hands-on checks in other DAWs remain open. Evidence: native-plugins/VALIDATION.md."
     },
     {
       "id": "WF-009",
@@ -8828,10 +8829,10 @@
     {
       "id": "PLG-013",
       "category": "Plugins",
-      "name": "Lime VST3s replace the built-in instruments and effects",
-      "description": "LimeShot plays every instrument and the exported effects through the Lime Native VST3 plugins instead of in-process built-ins.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "LimeSynth, Sampler and all active insert effects run through VST3 processors. Runtime synth/sampler snapshot variants, engine voice creation, effect factories and track EQ are deleted. Shared Voice DSP lives in limeshot-dsp for native plugins. Legacy schema remains readable; app/CLI normalization converts it before playback/save. All ten legacy effect kinds now convert to Lime VST3s; exact track EQ uses a dedicated hosted processor. Project format 2 reads version 1. Test-only reference processors preserve exact native equivalence.",
+      "name": "Instruments and effects as hosted Lime VST3s",
+      "description": "LimeShot plays every instrument and effect through the Lime Native VST3 plugins.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "LimeSynth, Lime Sampler and all insert effects run through VST3 processors; shared voice DSP lives in limeshot-dsp. Projects saved by builds before the switch (format 1) open with portable lime: references and are saved as format 2; the Mixer track EQ uses a dedicated hosted Lime EQ. Test-only reference processors check exact native equivalence.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8846,9 +8847,9 @@
         "native-plugins/shared"
       ],
       "acceptance_criteria": [
-        "Opening a project with built-in instruments/effects converts them to Lime VST3s with identical sound.",
-        "New channels and effects created through any command become Lime VST3s.",
-        "The built-in instrument and effect code paths are removed from the engine and UI.",
+        "Projects from before the switch open with Lime VST3s and identical sound.",
+        "New channels and effects created through any command are Lime VST3s.",
+        "No in-process instrument or effect path remains in the engine or UI.",
         "CI builds the Lime bundles and runs the equivalence test."
       ],
       "tests": [
@@ -8875,18 +8876,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "The runtime replacement and hosted parity PLG-017…020, PLG-022 and PLG-024…029 are implemented. Local suites, strict lints, twelve release/debug bundles and exact native equivalence pass. Remote CI is blocked by account billing; broader native/platform verification remains pending. CodeRabbit follow-up preserves incomplete sample conversions for retry, prevents automatic embedding outside loaded project folders, and bounds serialized state size. Failed decodes are cached by source path, size and modification time; CLI FLP import applies the same external-source opt-in."
+      "notes": "Exact sample-bit equivalence between the reference processors and the real bundles is tested. Incomplete sample conversions are kept for retry; audio outside a loaded project's folder is embedded only after explicit selection (CLI: --allow-external-samples); serialized state size is bounded."
     },
     {
       "id": "PLG-014",
       "category": "Plugins",
       "name": "Lime Sampler volume envelope",
-      "description": "Attack, decay and sustain for Lime Sampler (the former built-in sampler's envelope, INS-014).",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Sampler has Attack, Decay (0–10,000 ms) and Sustain controls, appended as parameters 9–11 (defaults are a gate, so older states sound the same) and shown in a row under the waveform. They feed the shared sampler voice envelope, round-trip through .limepreset, and the converter carries the built-in sampler's envelope over.",
+      "description": "Attack, decay and sustain for Lime Sampler (INS-014).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Sampler has Attack, Decay (0–10,000 ms) and Sustain controls, appended as parameters 9–11 (defaults are a gate, so older states sound the same) and shown in a row under the waveform. They feed the shared sampler voice envelope, round-trip through .limepreset.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8898,8 +8899,7 @@
         "native-plugins/shared"
       ],
       "acceptance_criteria": [
-        "Lime Sampler has attack/decay/sustain controls appended to its parameters.",
-        "The converter carries the built-in envelope over."
+        "Lime Sampler has attack/decay/sustain controls appended to its parameters; older states sound the same."
       ],
       "tests": [
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_projects_sound_the_same_through_the_lime_vst3s",
@@ -8910,7 +8910,7 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
       "notes": "Equivalence test with attack 5 ms, decay 80 ms, sustain 0.4 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW."
@@ -8920,8 +8920,8 @@
       "category": "Plugins",
       "name": "Lime Sampler loop points",
       "description": "Sample looping with loop start and end in Lime Sampler (INS-007).",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Sampler has Loop (off/on), Loop start and Loop end (fractions of the sample), appended as parameters 14–16 and shown under the waveform. A looping note plays the loop while held and releases on note-off even in one-shot mode, as in LimeShot's renderer. They round-trip through .limepreset and the converter carries the built-in sampler's loop over.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Sampler has Loop (off/on), Loop start and Loop end (fractions of the sample), appended as parameters 14–16 and shown under the waveform. A looping note plays the loop while held and releases on note-off even in one-shot mode, as in LimeShot's renderer. They round-trip through .limepreset.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8945,18 +8945,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. PR #7 review fix: loop enable/range edits update held voices without retriggering."
+      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. Loop enable/range edits update held voices without retriggering."
     },
     {
       "id": "PLG-016",
       "category": "Plugins",
       "name": "Lime Sampler filter",
-      "description": "The former built-in sampler's low-pass filter (cutoff, resonance) in Lime Sampler (INS-007).",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Sampler has Cutoff (20–20,000 Hz, open by default) and Resonance (0–0.95), appended as parameters 12–13 and shown under the waveform. As in LimeShot's compiler, the filter is off while fully open. They round-trip through .limepreset and the converter carries the built-in sampler's filter over. Cutoff and resonance edits update held notes without resetting filter history; fully opening the filter bypasses it.",
+      "description": "Low-pass filter (cutoff, resonance) in Lime Sampler (INS-007).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Sampler has Cutoff (20–20,000 Hz, open by default) and Resonance (0–0.95), appended as parameters 12–13 and shown under the waveform. As in LimeShot's compiler, the filter is off while fully open. They round-trip through .limepreset. Cutoff and resonance edits update held notes without resetting filter history; fully opening the filter bypasses it.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -8979,7 +8979,7 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
       "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW."
@@ -8989,8 +8989,8 @@
       "category": "Plugins",
       "name": "Lime Gate VST3",
       "description": "The noise gate (FX-006) as a Lime VST3.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Gate is a standalone VST3 (stable ID 9) with threshold, attack, hold, release and range. Legacy Gate slots convert with their settings and enable state.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Gate is a standalone VST3 (stable ID 9) with threshold, attack, hold, release and range.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9012,18 +9012,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-018",
       "category": "Plugins",
       "name": "Lime Drive VST3",
       "description": "Saturation/distortion (FX-009: soft clip, hard clip, wave folding) as a Lime VST3.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Drive is a standalone VST3 (stable ID 10) with soft/hard clip and wave folding, tone, mix and output gain. Legacy Drive slots convert with their settings.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Drive is a standalone VST3 (stable ID 10) with soft/hard clip and wave folding, tone, mix and output gain.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9045,18 +9045,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-019",
       "category": "Plugins",
       "name": "Lime Chorus VST3",
       "description": "Chorus, flanger and phaser (FX-010) as a Lime VST3.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Chorus is a standalone VST3 (stable ID 11) with chorus/flanger/phaser, rate, depth, feedback, spread and mix. Legacy Chorus slots convert with their settings.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Chorus is a standalone VST3 (stable ID 11) with chorus/flanger/phaser, rate, depth, feedback, spread and mix.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9078,17 +9078,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-020",
       "category": "Plugins",
       "name": "Mixer-track sidechain into Lime Comp",
-      "description": "Route a mixer track into Lime Comp's external key bus, replacing the built-in compressor's sidechain selector (MIX-009).",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "description": "Route a mixer track into Lime Comp's external key bus (MIX-009).",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "Conversion retains the selected key track and enables the Comp external-key parameter. The host feeds the routed track into the stereo auxiliary input, locally and through the optional process bridge. The insert card provides an undoable source selector for tracks routed to it.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9116,18 +9116,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md. PR #7 review fix: source indices and external-key state follow mixer moves/inserts/deletes, including undo and save/reload."
+      "notes": "Source indices and external-key state follow mixer moves/inserts/deletes, including undo and save/reload."
     },
     {
       "id": "PLG-021",
       "category": "Plugins",
-      "name": "Automation of converted instruments and effects",
-      "description": "Automation clips of built-in effect parameters keep working after conversion, as plugin-parameter automation.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "convert_project retargets EffectParam automation of converted effects to PluginParam automation of the Lime plugin: the parameter id is nice-plug's hash of value_<n>, and every point is re-expressed in the plugin's normalised range (linear, or nice-plug's skewed range for logarithmic controls). Compressor sidechain automation cannot be converted and warns. Between points, logarithmic controls interpolate along the plugin's curve rather than the built-in's, and the plugin smooths parameter changes, so automated renders are close rather than identical.",
+      "name": "Automation of Lime plugin parameters in older projects",
+      "description": "Effect-parameter automation in projects from before the Lime VST3 switch keeps working, as plugin-parameter automation.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "convert_project retargets EffectParam automation of converted effects to PluginParam automation of the Lime plugin: the parameter id is nice-plug's hash of value_<n>, and every point is re-expressed in the plugin's normalised range (linear, or nice-plug's skewed range for logarithmic controls). Compressor sidechain automation cannot be converted and warns. Between points, logarithmic controls interpolate along the plugin's curve rather than the reference processor's, and the plugin smooths parameter changes, so automated renders are close rather than identical.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9149,17 +9149,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "Song-mode test automating Lime EQ's mid gain: RMS difference to the built-in render 0.00038, against 0.0115 if the automation were not followed. Instrument parameters had no built-in automation targets, so nothing else to convert."
+      "notes": "Song-mode test automating Lime EQ's mid gain: RMS difference to the reference render 0.00038, against 0.0115 if the automation were not followed."
     },
     {
       "id": "PLG-022",
       "category": "Plugins",
       "name": "Channel Settings and Channel Rack for Lime instruments",
-      "description": "The former built-in instruments' inline Channel Settings panels, sample drops onto an existing channel, and Channel Rack sample waveforms, for Lime Synth/Sampler channels.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "description": "Inline Channel Settings panels, sample drops onto an existing channel, and Channel Rack sample waveforms for Lime Synth/Sampler channels.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "Browser file drops retain sampler settings. Channel Rack buttons show sample waveforms; Channel Settings and Playlist waveforms/auditions use cached embedded PCM, including when the source file is missing. Embedded-only sources can be dragged as audio clip sources. Parameter automation uses control names.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9184,18 +9184,18 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-023",
       "category": "Plugins",
       "name": "Ship the Lime VST3s with LimeShot",
       "description": "The app package and CI contain the Lime bundles, so lime: references resolve without a development checkout.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "CI builds debug Lime bundles before the DAW tests and points LIMESHOT_LIME_PLUGINS at them (the equivalence test fails on CI without them); scripts/package-macos.sh builds release bundles and copies them into LimeShot.app/Contents/PlugIns, where limeshot-plugins::lime looks. Windows and Linux packages do not exist yet; their bundles would go in a plugins folder beside the executable.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "CI builds debug Lime bundles before the DAW tests and points LIMESHOT_LIME_PLUGINS at them. The packaging scripts build release bundles and ship them in every package: LimeShot.app/Contents/PlugIns (DMG), the shared VST3 folders (Windows installer, macOS PKG, .deb, install.sh) or a plugins folder beside the executable (portable ZIP, tarball run in place).",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9210,27 +9210,27 @@
       "acceptance_criteria": [
         "The macOS app contains Contents/PlugIns/*.vst3.",
         "CI builds the bundles before the DAW tests and the equivalence test runs instead of skipping.",
-        "Windows and Linux packages place them beside the executable."
+        "Windows and Linux packages install them where limeshot_plugins::lime finds them."
       ],
       "tests": [
-        "docs/development/lime-vst3-host-validation.md"
+        "docs/development/progress.md"
       ],
       "reference": {
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "macOS arm64 packaging and deep strict signatures passed during replacement; the subsequent twelve-bundle parity build passed release/debug real-binary checks. PR #7 review changes require rebuilt binaries, recorded in the review handoff. Remote CI remains blocked by owner billing; Windows/Linux packaging and broader runtime remain pending."
+      "notes": "Release run 40219554203 built every v0.1.0-alpha.1 package with the twelve bundles; the Linux jobs render the demo with the installed CLI while the checkout's bundles are hidden. See docs/development/release-packaging.md."
     },
     {
       "id": "PLG-024",
       "category": "Plugins",
       "name": "Audio clips through Lime Sampler",
       "description": "Preserve Playlist sample windows, playback chase, overlap and fades when the channel is a hosted sampler.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
-      "limeshot_behavior": "Lime Sampler receives versioned, fixed-size SysEx clip events with source offset, elapsed time, remaining time and fades. Clip IDs preserve same-key overlap. Clip end is gated independently of one-shot mode. Play/locate/selection export chase clips already running; no built-in playback fallback exists.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
+      "limeshot_behavior": "Lime Sampler receives versioned, fixed-size SysEx clip events with source offset, elapsed time, remaining time and fades. Clip IDs preserve same-key overlap. Clip end is gated independently of one-shot mode. Play/locate/selection export chase clips already running.",
       "priority": "P0",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -9254,17 +9254,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-025",
       "category": "Plugins",
       "name": "Per-note pan for hosted instruments",
       "description": "Preserve Piano Roll note pan when instruments run as VST3 plugins.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "Sequenced note pan reaches each native voice using standard VST3 pan expressions. A native channel-pan event preserves the former additive note/channel balance law, including automated channel pan and releasing voices.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9287,17 +9287,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-026",
       "category": "Plugins",
       "name": "Typed plugin control values in host units",
       "description": "Retain the former effect controls’ type-in-value and copy/paste/reset actions on hosted parameter controls.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "Known Lime controls (including named choices and bypass/key switches) use the shared value menu: type in native units, copy/paste normalized control travel, reset, create automation, and undo. Unknown third-party parameters retain their generic host automation menu.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9322,17 +9322,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-027",
       "category": "Plugins",
       "name": "Hosted dynamics meters in the Mixer",
-      "description": "Preserve Mixer gain-reduction metering for converted dynamics effects.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "description": "Mixer gain-reduction metering for hosted dynamics effects.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "Native processors report measured block-maximum dynamics reduction through bounded output SysEx telemetry; local and bridged hosts forward it through the existing status atomics to the selected Mixer track gain-reduction meter.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9355,17 +9355,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-028",
       "category": "Plugins",
       "name": "Hosted instrument voice statistics",
       "description": "Include hosted instruments in the transport voice count.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "The transport voice count adds actual active native voices reported at the end of each processed block, including releases and native auditions, to host preview/metronome voices. Unknown plugins without telemetry contribute zero; the count is not an estimate of held MIDI notes.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9388,17 +9388,17 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PLG-029",
       "category": "Plugins",
-      "name": "Replace the legacy Mixer track equalizer",
+      "name": "Mixer track EQ as a hosted Lime EQ",
       "description": "Preserve the Mixer track EQ response and inline controls through a hosted Lime EQ.",
-      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins; every capability lost in the replacement is P0.",
+      "fl_reference": "Owner decision (2026-10-22): LimeShot's instruments and effects are the Lime Native VST3 plugins.",
       "limeshot_behavior": "A dedicated hosted Lime EQ follows the ten insert slots and precedes the fader, preserving the old position in the signal chain. Appended hidden track-mode parameters carry all legal frequency, gain and width values without changing existing insert IDs/ranges. Inline controls use SetMixerEq and update hosted state in one undo step; saved bands remain canonical.",
       "priority": "P0",
       "status": "IMPLEMENTED",
@@ -9411,7 +9411,7 @@
         "limeshot-ui"
       ],
       "acceptance_criteria": [
-        "Convert every legal legacy track-EQ response without losing frequency, gain or width.",
+        "Reproduce every legal track-EQ response without losing frequency, gain or width.",
         "Keep inline EQ controls functional through undoable hosted state."
       ],
       "tests": [
@@ -9423,10 +9423,10 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/handoff-lime-vst3-replacement.md"
+          "docs/development/decisions.md"
         ]
       },
-      "notes": "2026-10-23 hosted P0 parity session. Automated local evidence covers the restored path; broader native GUI/platform runtime and remote CI remain open. See docs/development/handoff-hosted-p0-parity.md."
+      "notes": ""
     },
     {
       "id": "PR-030",

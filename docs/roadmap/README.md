@@ -1,9 +1,6 @@
 # Roadmap and feature tracking
 
-* [`first-release.md`](first-release.md) — human-readable v0.1 scope, AI-assisted effort estimates and release gates, pinned to a main-branch baseline.
-* [`first-release-features.md`](first-release-features.md) — complete disposition of all 272 baseline features for that release.
-
-* [`features.json`](features.json) — **the canonical inventory** (272 features, schema below).
+* [`features.json`](features.json) — **the canonical inventory** (schema below).
 * [`features.md`](features.md) — generated overview; run `python3 scripts/features.py generate` after editing the JSON.
 * [`menus.json`](menus.json) / [`menus.md`](menus.md) — every item of FL Studio's main menu bar against LimeShot's menus
   (status, keys, feature links; static lists such as templates and plugins).

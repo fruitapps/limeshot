@@ -188,12 +188,12 @@ Hosted Lime sliders write `SetPluginState` commands, merging drags and preservin
 state is applied to an existing plugin instance. Host factory/user `.limepreset` menus translate through Lime state.
 The macOS main viewport captures/restores its OpenGL context around UI callbacks: embedded native editors can
 clear the current context, while glutin's surface check only compares bound views. Exports fail on missing plugins
-instead of silently writing an incomplete mix. Live evidence: [host validation](../development/lime-vst3-host-validation.md).
+instead of silently writing an incomplete mix.
 
 Hosted parameter drags audition through the live instance; release commits one plugin-state command. This avoids serializing embedded sampler PCM on every pointer frame.
 
 
-### Plugin wrapper synchronization (2026-10-25)
+### Plugin wrapper synchronization
 
 Plugin wrappers reuse the workspace title painter with minimize/pin/close and no maximize or detach.
 The native editor’s resize requests become wrapper content sizes before old layout can overwrite them;
@@ -205,7 +205,7 @@ egui’s release event and assigns the source through commands. Minimized wrappe
 Plugin buttons toggle like other windows: they close a frontmost or pinned plugin window and otherwise raise it.
 External filesystem drops route to visible Playlist/rack/sampler targets through the deferred loader. On macOS the
 drop position comes from AppKit (`NativeWindow::pointer_position`), on Windows from the Win32 cursor; Linux
-falls back to egui's last hover position. Neither Windows nor Linux drops are verified yet.
+falls back to egui's last hover position, which has not been checked against a real file-manager drag.
 
 Native egui-baseview teardown binds its own retained GL context before deleting painter resources.
 The host additionally suspends its current GL context during editor removal and restores its context
