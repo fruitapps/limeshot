@@ -48,6 +48,8 @@ pub enum Icon {
     Graph,
     /// A push pin (keep a window on top).
     Pin,
+    Lock,
+    Minimize,
 }
 
 fn tri(p: &Painter, pts: [Pos2; 3], c: Color32) {
@@ -189,6 +191,18 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             ));
             p.line_segment([at(2.0, -2.5), at(6.0, 2.5)], line);
             p.line_segment([at(2.0, 2.5), at(6.0, -2.5)], line);
+        }
+        Icon::Minimize => {
+            p.line_segment([at(-5.0, 4.0), at(5.0, 4.0)], line);
+        }
+        Icon::Lock => {
+            p.rect_stroke(
+                Rect::from_min_max(at(-3.5, -6.0), at(3.5, 2.0)),
+                3.5 * u,
+                line,
+                egui::StrokeKind::Inside,
+            );
+            p.rect_filled(Rect::from_min_max(at(-5.5, -1.0), at(5.5, 6.0)), 1.5 * u, c);
         }
         Icon::Pin => {
             // A round head, a collar and a needle, leaning right.

@@ -51,6 +51,19 @@ impl HostGraphicsContext {
 }
 
 impl HostGraphicsGuard {
+    /// Prevent a plugin teardown from deleting GL names in the host’s current context.
+    /// Some editor backends destroy their painter without binding their own context.
+    pub(crate) fn suspend() -> Self {
+        #[cfg(target_os = "macos")]
+        {
+            let context = NSOpenGLContext::currentContext();
+            NSOpenGLContext::clearCurrentContext();
+            Self { context }
+        }
+        #[cfg(not(target_os = "macos"))]
+        Self {}
+    }
+
     /// Restore the host OpenGL context after a plugin editor callback changes it.
     fn restore(&self) {
         #[cfg(target_os = "macos")]
@@ -64,5 +77,38 @@ impl Drop for HostGraphicsGuard {
     /// Restore the host context even when the editor callback exits early.
     fn drop(&mut self) {
         self.restore();
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::*;
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSOpenGLPFAAllowOfflineRenderers, NSOpenGLPixelFormat};
+
+    #[test]
+    fn teardown_suspends_and_restores_the_callers_gl_context() {
+        let mut attributes = [NSOpenGLPFAAllowOfflineRenderers, 0];
+        // SAFETY: the non-null, zero-terminated attributes array lives throughout initialization.
+        let format = unsafe {
+            NSOpenGLPixelFormat::initWithAttributes(
+                NSOpenGLPixelFormat::alloc(),
+                std::ptr::NonNull::from(&mut attributes[0]),
+            )
+        }
+        .expect("offscreen GL pixel format");
+        let context = NSOpenGLContext::initWithFormat_shareContext(NSOpenGLContext::alloc(), &format, None)
+            .expect("offscreen GL context");
+        context.makeCurrentContext();
+        assert_eq!(NSOpenGLContext::currentContext().as_deref(), Some(context.as_ref()));
+        {
+            let _guard = HostGraphicsGuard::suspend();
+            assert!(
+                NSOpenGLContext::currentContext().is_none(),
+                "plugin teardown cannot delete host GL names"
+            );
+        }
+        assert_eq!(NSOpenGLContext::currentContext().as_deref(), Some(context.as_ref()));
+        NSOpenGLContext::clearCurrentContext();
     }
 }

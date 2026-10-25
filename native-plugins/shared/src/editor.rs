@@ -128,7 +128,7 @@ impl NativeEditor {
     pub fn preview(id: u8) -> Self {
         Self::new(id, Arc::new(NativeParams::new(id)), Arc::new(Meters::default()))
     }
-    /// Create an offscreen sampler editor with an embedded WAV.
+    /// Create an offscreen sampler editor with embedded audio.
     /// Propagates file/header, decode, and size-limit errors from [`EmbeddedSample::load`];
     /// embedded data rejected by the sample store instead leaves the preview empty.
     pub fn preview_sampler(path: &std::path::Path) -> Result<Self, crate::sample::SampleError> {
@@ -158,35 +158,43 @@ impl NativeEditor {
         let c = Canvas::new(whole, editor_size(self.id));
         let painter = ui.painter_at(whole);
         painter.rect_filled(whole, 3, t.bg);
-        self.paint_header(ui, c, &t);
+        self.paint_bypass(ui, c, &t);
         let mut load_factory = None;
         let mut load_file = false;
         let mut save_file = false;
-        ui.scope_builder(UiBuilder::new().max_rect(c.r(c.w - 245.0, 9.0, 148.0, 25.0)), |ui| {
-            ui.menu_button(format!("Presets: {}", self.preset_name), |ui| {
-                if ui.button("Init / reset all controls").clicked() {
-                    load_factory = Some(None);
-                    ui.close();
-                }
-                ui.separator();
-                for p in preset::factory(self.slot()) {
-                    if ui.button(&p.name).clicked() {
-                        load_factory = Some(Some(p));
+        ui.scope_builder(
+            UiBuilder::new().max_rect(c.r(c.w - 245.0, c.h - 57.0, 148.0, 25.0)),
+            |ui| {
+                ui.menu_button(format!("Presets: {}", self.preset_name), |ui| {
+                    if ui.button("Init / reset all controls").clicked() {
+                        load_factory = Some(None);
                         ui.close();
                     }
-                }
-                ui.separator();
-                if ui.button("Open .limepreset…").clicked() {
-                    load_file = true;
-                    ui.close();
-                }
-                if ui.button("Save .limepreset…").clicked() {
-                    save_file = true;
-                    ui.close();
-                }
-            });
-        });
-        self.paint_plugin(ui, c, &t);
+                    ui.separator();
+                    for p in preset::factory(self.slot()) {
+                        if ui.button(&p.name).clicked() {
+                            load_factory = Some(Some(p));
+                            ui.close();
+                        }
+                    }
+                    ui.separator();
+                    if ui.button("Open .limepreset…").clicked() {
+                        load_file = true;
+                        ui.close();
+                    }
+                    if ui.button("Save .limepreset…").clicked() {
+                        save_file = true;
+                        ui.close();
+                    }
+                });
+            },
+        );
+        // The redundant branded header is gone; keep presets/bypass in the footer instead.
+        let body = Canvas {
+            origin: c.origin - vec2(0.0, 43.0 * c.s),
+            ..c
+        };
+        self.paint_plugin(ui, body, &t);
         let status = if self.status.is_empty() {
             "Drag: adjust   ·   Shift: fine   ·   Double-click: reset   ·   Right-click: type value"
         } else {
@@ -273,7 +281,7 @@ impl NativeEditor {
         self.status.clear();
     }
 
-    /// Load a WAV into the host's embedded-sample state, preserving other state fields.
+    /// Load supported audio into the host's embedded-sample state, preserving other state fields.
     /// Load or serialization errors become status text. Does nothing without a host context.
     fn load_sample(&mut self, path: &std::path::Path) {
         let Some(context) = &self.context else {

@@ -502,8 +502,7 @@ fn picker_entries(app: &LimeShotApp, tab: PickerTab) -> Vec<(ClipSource, String,
     }
 }
 
-/// The channels listed as audio clips: samplers with a sample that play audio clips or were added
-/// as audio clips (filed under the "Audio" group, as FL Studio files its audio clip channels).
+/// Every loaded sampler is also available as an audio source, including Channel Rack instruments.
 pub fn audio_channels(p: &Project) -> Vec<ChannelId> {
     p.channels
         .iter()
@@ -511,9 +510,6 @@ pub fn audio_channels(p: &Project) -> Vec<ChannelId> {
             limeshot_core::lime::sampler_params(&c.instrument).is_some_and(|s| {
                 s.sample.is_some() || matches!(&c.instrument,Instrument::Plugin(p) if !p.state.is_empty())
             })
-        })
-        .filter(|c| {
-            c.group.as_deref() == Some("Audio") || p.playlist.clips.iter().any(|x| x.audio_channel() == Some(c.id))
         })
         .map(|c| c.id)
         .collect()
@@ -679,6 +675,10 @@ fn preview_audio_source(app: &mut LimeShotApp, ch: ChannelId) {
 /// Add the sample at `path` to the picker's audio clips without placing it: a sampler channel
 /// with the sample loaded, filed under "Audio" (reused when the sample is already there).
 pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option<ChannelId> {
+    if let Err(error) = crate::browser::validate_sample(path) {
+        app.toast_error(error);
+        return None;
+    }
     let stored = path.to_string_lossy().into_owned();
     let existing = audio_channels(app.project()).into_iter().find(|id| {
         app.project()
@@ -1069,6 +1069,30 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
     let resp = ui.interact(grid, ui.id().with("pl_drop"), Sense::hover());
     app.ui.playlist.drop_ghost = None;
     source_drop(app, ui, view, grid, tracks);
+    let drop_pos = ui.input(|i| i.pointer.hover_pos());
+    let on_layer = drop_pos.is_some_and(|p| ui.ctx().layer_id_at(p) == Some(ui.layer_id()));
+    let external = ui.input_mut(|i| {
+        if i.pointer.hover_pos().is_some_and(|p| grid.contains(p)) && on_layer {
+            std::mem::take(&mut i.raw.dropped_files)
+        } else {
+            Vec::new()
+        }
+    });
+    if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
+        let mut track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
+        let start = app
+            .ui
+            .snap
+            .floor(view.tick_at(pos.x).max(0) as u64, app.project().time_signature);
+        for path in external
+            .into_iter()
+            .map(|f| f.path().to_path_buf())
+            .filter(|p| limeshot_dsp::is_audio_file(p))
+        {
+            add_audio_clip(app, &path, track, start);
+            track = (track + 1).min(tracks.saturating_sub(1));
+        }
+    }
     let sig = app.project().time_signature;
     let target = |app: &LimeShotApp, pos: Pos2| {
         let track = view.track_at(pos.y).clamp(0, tracks.saturating_sub(1) as i32) as u32;
@@ -1457,7 +1481,12 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
         );
         let led = Rect::from_center_size(pos2(r.right() - 12.0, r.center().y), vec2(10.0, 10.0));
         if led.top() >= area.top() {
-            painter.circle_filled(led.center(), 4.5, if muted { t.raised_hover } else { t.accent });
+            let color = if muted { t.text_faint } else { t.accent };
+            if locked {
+                crate::icons::paint(&painter, led.expand(2.0), Icon::Lock, color);
+            } else {
+                painter.circle_filled(led.center(), 4.5, color);
+            }
         }
         if r.center().y > area.top() {
             painter.text(
@@ -1469,9 +1498,6 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
             );
         }
         let led_resp = ui.interact(led.intersect(area), ui.id().with(("pl_mute", tr)), Sense::click());
-        if locked {
-            crate::icons::paint(&painter, led.expand(2.0), Icon::Pin, t.text);
-        }
         if led_resp.clicked() && ui.input(|i| i.modifiers.shift) {
             app.exec(Command::SetPlaylistTrackMuteLock {
                 track: tr,
@@ -1479,7 +1505,7 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
             });
         } else if led_resp.secondary_clicked() || (led_resp.clicked() && ui.input(|i| i.modifiers.command)) {
             solo_track(app, tr);
-        } else if led_resp.clicked() && !locked {
+        } else if led_resp.clicked() {
             app.exec(Command::SetPlaylistTrackMute {
                 track: tr,
                 muted: !muted,
@@ -1584,10 +1610,7 @@ fn track_menu(app: &mut LimeShotApp, ui: &mut Ui, track: u32) {
     }
     ui.separator();
     if ui
-        .add_enabled(
-            !t.mute_locked,
-            egui::Button::new(if t.muted { "Unmute" } else { "Mute" }),
-        )
+        .add_enabled(true, egui::Button::new(if t.muted { "Unmute" } else { "Mute" }))
         .clicked()
     {
         app.exec(Command::SetPlaylistTrackMute { track, muted: !t.muted });
@@ -2137,7 +2160,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         let anchor = pointer.map_or(0.0, |p| p.x - grid.left());
         let st = &mut app.ui.playlist;
         let old = st.zoom_x;
-        st.zoom_x = (st.zoom_x / 2.0).max(3.0);
+        st.zoom_x = (st.zoom_x / 2.0).max(crate::playlist_menu::MIN_ZOOM);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
     } else if secondary {
         // Right-click deletes the clip under the pointer; on empty space it clears the
@@ -2375,12 +2398,13 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 let st = &mut app.ui.playlist;
                 if (p.x - from.x).abs() > 4.0 && t1 > t0 {
                     // Fit the dragged range to the grid width.
-                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32).clamp(3.0, 400.0);
+                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32)
+                        .clamp(crate::playlist_menu::MIN_ZOOM, crate::playlist_menu::MAX_ZOOM);
                     st.scroll.x = t0 as f32 * st.zoom_x / PPQ as f32;
                 } else {
                     let anchor = p.x - grid.left();
                     let old = st.zoom_x;
-                    st.zoom_x = (st.zoom_x * 2.0).min(400.0);
+                    st.zoom_x = (st.zoom_x * 2.0).min(crate::playlist_menu::MAX_ZOOM);
                     st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
                 }
             }
@@ -2642,7 +2666,14 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     if crate::piano_roll::wheel_zoom_y(ui, grid, &mut st.track_h, &mut st.scroll.y, lo, hi) {
         return;
     }
-    if crate::piano_roll::wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 3.0, 400.0) {
+    if crate::piano_roll::wheel_zoom(
+        ui,
+        grid,
+        &mut st.zoom_x,
+        &mut st.scroll.x,
+        crate::playlist_menu::MIN_ZOOM,
+        crate::playlist_menu::MAX_ZOOM,
+    ) {
         return;
     }
     let (delta, mods) = ui.input(|i| (i.smooth_scroll_delta, i.modifiers));
@@ -2658,7 +2689,7 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
 }
 
 /// The Playlist's track height range (vertical zoom).
-pub const TRACK_H: (f32, f32) = (20.0, 160.0);
+pub const TRACK_H: (f32, f32) = (12.0, 640.0);
 
 /// Edit › Cut / Copy / Paste (and Cmd+X / C / V) in the Playlist: the selected clips; pasting
 /// puts them at the song position in Song mode, else where they were.

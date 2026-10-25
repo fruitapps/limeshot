@@ -322,29 +322,31 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                 let r = toggle_label(
                     ui,
                     active,
-                    if ch.mute_locked {
-                        "L"
-                    } else if ch.solo {
-                        "S"
-                    } else {
-                        ""
-                    },
+                    if ch.solo && !ch.mute_locked { "S" } else { "" },
                     led_color,
                     vec2(10.0, 18.0),
                     "Left-click: mute · Ctrl+click or right-click: solo",
                 );
+                if ch.mute_locked {
+                    crate::icons::paint(
+                        ui.painter(),
+                        r.rect.shrink2(vec2(0.0, 2.0)),
+                        crate::icons::Icon::Lock,
+                        if active { t.accent } else { t.text_faint },
+                    );
+                }
                 let solo_click = r.secondary_clicked() || (r.clicked() && ui.input(|i| i.modifiers.command));
                 if r.clicked() && ui.input(|i| i.modifiers.shift) {
                     app.exec(Command::SetChannelMuteLock {
                         channel: ch.id,
                         locked: !ch.mute_locked,
                     });
-                } else if !ch.mute_locked && solo_click {
+                } else if solo_click {
                     app.exec(Command::SetChannelSolo {
                         channel: ch.id,
                         solo: !ch.solo,
                     });
-                } else if r.clicked() && !ch.mute_locked {
+                } else if r.clicked() {
                     app.exec(Command::SetChannelMute {
                         channel: ch.id,
                         muted: !ch.muted,

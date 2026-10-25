@@ -182,3 +182,32 @@ Final CodeRabbit follow-up release executable hashes:
 | Lime Sampler | `b06bb31c9a174ee6a88bd8b74bd0b7b6c8d284b9e218236fbc0c2eff66a7ccf1` |
 | Lime Utility | `6c6485fab669b5eec7eb9bdceabdc603f03ff6a803bab1b4cd344cec6f0b6588` |
 | LimeSynth | `83985c6f075afc782984fa6308ff9090a47886869f94a5e82234dbfa6e5c09a6` |
+
+
+## 2026-10-25 — plugin/workflow fixes (macOS Apple Silicon, debug)
+
+All twelve freshly rebuilt allocation-checked debug bundles pass `examples/verify` at 44.1/48/96 kHz and
+blocks 1/64/333/1024. Native workspace: 19 tests; strict all-target Clippy and rustfmt pass. Host: 408 tests
+(including 149 UI); strict Clippy/build and inventories pass. Offscreen native layouts were inspected after
+removing title rows and moving presets/bypass to the footer. The sampler uses the shared WAV/MP3/FLAC/Ogg/AIFF
+decoder, with synthetic MP3 and exact FLAC state tests. The 4 million stereo-frame bound is retained.
+
+The local egui-baseview 0.9.0 renderer binds its retained context before deleting GL resources. Host GL
+suspension/restoration passes an offscreen context test. Screen Recording/Accessibility were both false;
+no new live embedded rendering/menu/Serum resize/close-reopen pass is claimed. Existing release hashes above
+refer to earlier builds; this section records only current debug binaries. Broader platform runtime remains open.
+
+| Debug bundle | Executable SHA-256 |
+|---|---|
+| Lime Chorus.vst3 | `8674b8090d6c31029855bdc276f781cbb1adccaaef167489afe71cda22d23627` |
+| Lime Comp.vst3 | `c8ff2cb0d58fc4d8da6b64243ed9e2faba4d61f7dc42de92efa0c629020f0f57` |
+| Lime Delay.vst3 | `e827cff18782374a2620de9a21f89069a37baf824102cf7c828ffce344bf2c1e` |
+| Lime Drive.vst3 | `43eb54726f7de3fc39f90e8fb37e50b515a959a2ec265a2e754a2cfb88fa098c` |
+| Lime EQ.vst3 | `2998cbed8bd771d97917c35475ed25fddb1111851ab6c0d3e57ffedbe1bc9e5b` |
+| Lime Filter.vst3 | `6454d4ad6d0c9cba0777985a9fd002561cef5ee598df6ab3cfe524a14390cd07` |
+| Lime Gate.vst3 | `b1914520ee7762a6c0bc028b8da63fedf13b39a95bbaf395e1898ad4baefc961` |
+| Lime Limiter.vst3 | `871f94d91fab1708a1d4653d0aa1eec693dbc6a0371724d699f22aff6ddbd6ff` |
+| Lime Room.vst3 | `4f4d593c3f8771ce167ef7b8126cae2f2446def12f824d46015d1cdcd712e5f7` |
+| Lime Sampler.vst3 | `bb31ef8cce04e31bcadd2d8e1c52a411f875440c397d8892bef10bd44191e0fe` |
+| Lime Utility.vst3 | `9066ae006b59678f382307e2caec3d29015c21af381dd3219f7c38161df57cc8` |
+| LimeSynth.vst3 | `0b6a977ad9237fbba6ca963cac88ba5255f618554d5bd848ef03e0545e344715` |

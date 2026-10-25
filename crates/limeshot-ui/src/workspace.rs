@@ -335,15 +335,16 @@ impl Workspace {
 }
 
 #[derive(Default)]
-struct TitleActions {
-    close: bool,
+pub(crate) struct TitleActions {
+    pub minimize: bool,
+    pub close: bool,
     maximize: bool,
     detach: bool,
-    pin: bool,
+    pub pin: bool,
 }
 
 /// A flat title bar with the window buttons; returns what was clicked.
-fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> TitleActions {
+pub(crate) fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool, plugin: bool) -> TitleActions {
     let t = Theme::current();
     // Senses clicks for the double-click; drags still move the window.
     let (r, title_resp) = ui.allocate_exact_size(vec2(ui.available_width(), TITLE_H), Sense::click());
@@ -393,7 +394,10 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
         resp.clicked()
     };
     actions.close = button(ui, Icon::Close, "Close", false);
-    if !detached {
+    if plugin {
+        actions.minimize = button(ui, Icon::Minimize, "Minimize", false);
+    }
+    if !detached && !plugin {
         actions.maximize = button(
             ui,
             if state.maximized { Icon::Restore } else { Icon::Maximize },
@@ -403,16 +407,18 @@ fn title_bar(ui: &mut Ui, title: &str, state: WinState, detached: bool) -> Title
         // Double-clicking the title maximises or restores, like the button (FL Studio).
         actions.maximize |= title_resp.double_clicked();
     }
-    actions.detach = button(
-        ui,
-        if detached { Icon::Attach } else { Icon::Detach },
-        if detached {
-            "Attach to the main window"
-        } else {
-            "Detach into its own window"
-        },
-        false,
-    );
+    if !plugin {
+        actions.detach = button(
+            ui,
+            if detached { Icon::Attach } else { Icon::Detach },
+            if detached {
+                "Attach to the main window"
+            } else {
+                "Detach into its own window"
+            },
+            false,
+        );
+    }
     if !detached {
         actions.pin = button(
             ui,
@@ -493,7 +499,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context, area: Rect, body: fn(&mut Lime
             }
         }
         let resp = win.show(ctx, |ui| {
-            let actions = title_bar(ui, &title, st, false);
+            let actions = title_bar(ui, &title, st, false, false);
             // The body gets exactly the window's area: a row wider than that is clipped instead
             // of growing the window. (egui windows grow to their widest content, and a row whose
             // width follows the window — a slider row with a long value — grew it every frame
@@ -574,7 +580,7 @@ fn show_detached(app: &mut LimeShotApp, ctx: &Context, w: Win, title: &str, body
             egui::CentralPanel::default()
                 .frame(egui::Frame::new().fill(t.surface))
                 .show(ui, |ui| {
-                    actions = title_bar(ui, &title, app.ui.workspace.state(w), true);
+                    actions = title_bar(ui, &title, app.ui.workspace.state(w), true, false);
                     if ui.rect_contains_pointer(ui.max_rect()) && vctx.input(|i| i.pointer.any_pressed()) {
                         app.ui.focus = w.focus();
                     }

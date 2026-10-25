@@ -24,6 +24,7 @@ pub struct State {
     pub meter_rects: Vec<(u16, Rect)>,
     /// Route buttons drawn in the last frame: (strip, rectangle). For tests and tools.
     pub route_buttons: Vec<(u16, Rect)>,
+    pub on_buttons: Vec<(u16, Rect)>,
     /// The EQ graph drawn in the last frame.
     pub eq_graph: Option<Rect>,
     /// The EQ band being dragged in the graph.
@@ -76,6 +77,7 @@ fn pos_gain(p: f32) -> f32 {
 /// Draw the Mixer strips and selected track's controls, updating peak holds from audio status.
 pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     app.ui.mixer.route_buttons.clear();
+    app.ui.mixer.on_buttons.clear();
     app.ui.mixer.name_rects.clear();
     app.ui.mixer.strip_rects.clear();
     app.ui.mixer.pan_rects.clear();
@@ -162,7 +164,7 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         return;
     };
     let any_solo = app.project().mixer.tracks.iter().skip(1).any(|t| t.solo);
-    let audible = !track.muted && (i == 0 || !any_solo || track.solo);
+    let audible = !track.muted && (i == 0 || !any_solo || track.solo || track.mute_locked);
     let selected = app.ui.mixer.selected == i;
     let routed = routed(app, i);
     let color = track
@@ -330,14 +332,28 @@ fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
         ui.add_space(if i == 0 { 17.0 } else { 4.0 });
         let m = toggle_label(
             ui,
-            track.muted,
-            "M",
-            t.danger,
+            audible,
+            if track.mute_locked { "" } else { "ON" },
+            t.accent,
             vec2(24.0, 18.0),
-            "Mute (left-click) · Solo (right-click / Cmd+click)",
+            "On/off · right-click: solo · Shift+click: lock mute state",
         );
+        app.ui.mixer.on_buttons.push((i, m.rect));
+        if track.mute_locked {
+            crate::icons::paint(
+                ui.painter(),
+                m.rect.shrink2(vec2(6.0, 2.0)),
+                crate::icons::Icon::Lock,
+                if audible { t.accent } else { t.text_faint },
+            );
+        }
         let solo_click = m.secondary_clicked() || (m.clicked() && ui.input(|x| x.modifiers.command));
-        if solo_click && i != 0 {
+        if m.clicked() && ui.input(|x| x.modifiers.shift) {
+            app.exec(Command::SetMixerMuteLock {
+                track: i,
+                locked: !track.mute_locked,
+            });
+        } else if solo_click && i != 0 {
             app.exec(Command::SetMixerSolo {
                 track: i,
                 solo: !track.solo,

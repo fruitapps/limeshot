@@ -758,8 +758,6 @@ dependencies = [
 [[package]]
 name = "egui-baseview"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de6df8bd2f1c6b481ab6c029f741980d1a7b409053178fb9459053ae457828fe"
 dependencies = [
  "baseview",
  "copypasta",

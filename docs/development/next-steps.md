@@ -1,6 +1,6 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-23, Piano Roll controls integrated with the PR #7 review updates. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-25, plugin/workflow fixes following the merged PR #7/#10 work. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -87,3 +87,17 @@ notes for fallback choices and unverified FL details; PLG-006's live verificatio
 Every future session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached draft PR,
 stacked on the latest unmerged continuation after checking merge state. Leave older checkouts intact, never merge
 automatically, and create further sessions only when the owner asks.
+
+
+## Latest continuation: plugin/workflow fixes
+
+`codex/plugin-workflow-fixes` starts from main `3e2fd641` (#7/#10 merged). See the
+[session handoff](handoff-plugin-workflow-fixes.md). Native window sizing/title controls, AppKit host preset
+menus, GL teardown, sampler compressed loading/drops, track locks and extended zoom have local automated
+coverage. Repeat live Serum resizing, native preset selection and close/reopen checks when the execution
+host has Screen Recording and Accessibility. Sampler sources remain bounded to 4 million stereo frames;
+long MP3/audio files still need shorter sources. Native Windows/Linux embedding remains pending.
+
+Future sessions retain NEW codex/ branch, NEW managed worktree and NEW attached draft PR; preserve older
+checkouts, inspect unmerged continuations, validate/document/commit/push and never merge automatically.
+Create further sessions only when the owner asks.

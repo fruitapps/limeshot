@@ -1378,3 +1378,38 @@ live native/platform verification limits remain.
 Future development sessions retain the standing policy: NEW codex/ branch, NEW separate managed worktree and
 NEW attached draft PR based on the latest unmerged continuation; preserve older checkouts, validate/document/
 commit/push, never merge automatically, and create further sessions only when the owner asks.
+
+
+### 2026-10-25 — plugin windows, sampler imports, mute locks and timeline zoom
+
+New managed worktree and branch `codex/plugin-workflow-fixes`, based on fetched main `3e2fd641` after #7/#10
+merged; the open-PR query found no unmerged continuation. Older checkouts remain intact.
+[Session handoff](handoff-plugin-workflow-fixes.md) records implementation and remaining native checks.
+
+Unified plugin/outer-wrapper sizing, shared workspace title controls (minimize/pin/close, no maximize), native
+AppKit preset menus, Browser/OS sample drops and sampler audio-picker inclusion. Corrected direct clicking of
+locked rack/Playlist tracks, replaced the lock indicator with a padlock and added Mixer On/mute-lock support
+through saved commands and sequencer solo resolution. Native sampler file actions now use the shared compressed
+audio decoder. Imports report decode/size/rate errors before creating broken channels. Native title rows are
+removed, with preset/bypass controls in the footer. Both timelines zoom from 0.25 to 16,384 pixels per beat,
+with wider vertical ranges.
+
+Fixed native renderer teardown via a small, licensed egui-baseview 0.9.0 source patch that binds its own GL
+context before destroying painter objects; host context suspension/restoration is covered by an offscreen GL
+regression. The backend previously destroyed GL names in whichever context happened to be current.
+
+Validation: 408 host workspace tests (149 UI), 19 native tests; strict all-target Clippy in both workspaces;
+workspace build, both formatting checks, generated inventories, repository references and diff checks pass.
+All twelve freshly rebuilt allocation-checked debug VST3s pass actual-binary verification at 44.1/48/96 kHz and
+blocks 1/64/333/1024; debug hashes are recorded in native-plugins/VALIDATION.md. App/plugin-wrapper and native
+editor offscreen renders were visually inspected. Synthetic MP3 silence tests exercise real decoding and
+portable state, and FLAC checks sample equality.
+
+Screen Recording and Accessibility checks both returned false for the execution host. Live Serum internal
+resizing, native preset selection, occlusion/keyboard and repeated native close/reopen remain pending;
+PLG-006/PLG-012 stay IMPLEMENTED. The existing sampler limit remains 4 million stereo frames / 8–384 kHz
+(about 83 seconds at 48 kHz), including MP3; oversized imports now give a specific error.
+
+Every future session must create a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR
+based on the latest unmerged continuation after checking merge state. Preserve older checkouts, validate,
+document, commit and push; never merge automatically, and create further sessions only when the owner asks.

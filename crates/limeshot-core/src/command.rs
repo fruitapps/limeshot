@@ -453,6 +453,10 @@ pub enum Command {
         band: u8,
         value: EqBand,
     },
+    SetMixerMuteLock {
+        track: u16,
+        locked: bool,
+    },
     SetMixerMute {
         track: u16,
         muted: bool,
@@ -768,6 +772,7 @@ impl Command {
             SetMixerVolume { .. } => "Mixer volume",
             SetMixerPan { .. } => "Mixer pan",
             SetMixerEq { .. } => "Mixer EQ",
+            SetMixerMuteLock { .. } => "Lock mixer mute",
             SetMixerMute { .. } => "Mute mixer track",
             SetMixerSolo { .. } => "Solo mixer track",
             MoveMixerTrack { .. } => "Move mixer track",
@@ -1975,6 +1980,7 @@ impl Command {
                 mixer_track(p, track)?.eq[b] = value.sanitized(b);
                 crate::lime::sync_track_eq(p, usize::from(track));
             }
+            SetMixerMuteLock { track, locked } => mixer_track(p, track)?.mute_locked = locked,
             SetMixerMute { track, muted } => mixer_track(p, track)?.muted = muted,
             SetMixerSolo { track, solo } => mixer_track(p, track)?.solo = solo,
             SetRoute { from, to, level } => {

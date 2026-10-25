@@ -1203,7 +1203,7 @@ fn grid_input(
         let anchor = pointer.map_or(0.0, |p| p.x - grid.left());
         let st = &mut app.ui.piano;
         let old = st.zoom_x;
-        st.zoom_x = (st.zoom_x / 2.0).max(12.0);
+        st.zoom_x = (st.zoom_x / 2.0).max(crate::piano_menu::MIN_ZOOM);
         st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
     } else if secondary_pressed {
         if pointer.is_some_and(|p| hit(view, notes, cid, p).is_none()) {
@@ -1402,12 +1402,13 @@ fn grid_input(
                 let st = &mut app.ui.piano;
                 if (p.x - from.x).abs() > 4.0 && t1 > t0 {
                     // Fit the dragged range to the grid width.
-                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32).clamp(12.0, 800.0);
+                    st.zoom_x = (grid.width() / (t1 - t0) as f32 * PPQ as f32)
+                        .clamp(crate::piano_menu::MIN_ZOOM, crate::piano_menu::MAX_ZOOM);
                     st.scroll.x = t0 as f32 * st.zoom_x / PPQ as f32;
                 } else {
                     let anchor = p.x - grid.left();
                     let old = st.zoom_x;
-                    st.zoom_x = (st.zoom_x * 2.0).min(800.0);
+                    st.zoom_x = (st.zoom_x * 2.0).min(crate::piano_menu::MAX_ZOOM);
                     st.scroll.x = ((st.scroll.x + anchor) * st.zoom_x / old - anchor).max(0.0);
                 }
             }
@@ -1632,7 +1633,7 @@ pub fn wheel_zoom_y(ui: &Ui, grid: Rect, row_h: &mut f32, scroll_y: &mut f32, mi
 }
 
 /// The Piano Roll's key height range (vertical zoom).
-pub const KEY_H: (f32, f32) = (6.0, 40.0);
+pub const KEY_H: (f32, f32) = (2.0, 160.0);
 
 fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     let hovered = ui.rect_contains_pointer(full);
@@ -1643,7 +1644,14 @@ fn scroll_input(app: &mut LimeShotApp, ui: &mut Ui, full: Rect, grid: Rect) {
     if wheel_zoom_y(ui, grid, &mut st.key_h, &mut st.scroll.y, KEY_H.0, KEY_H.1) {
         return;
     }
-    if wheel_zoom(ui, grid, &mut st.zoom_x, &mut st.scroll.x, 12.0, 800.0) {
+    if wheel_zoom(
+        ui,
+        grid,
+        &mut st.zoom_x,
+        &mut st.scroll.x,
+        crate::piano_menu::MIN_ZOOM,
+        crate::piano_menu::MAX_ZOOM,
+    ) {
         return;
     }
     let (delta, mods) = ui.input(|i| (i.smooth_scroll_delta, i.modifiers));

@@ -803,7 +803,8 @@
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
         "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
         "crates/limeshot-app/tests/ui.rs::channel_rack_menu_acts_on_the_selected_channels",
-        "crates/limeshot-app/tests/ui.rs::channel_and_playlist_mute_locks_preserve_state_when_soloing"
+        "crates/limeshot-app/tests/ui.rs::channel_and_playlist_mute_locks_preserve_state_when_soloing",
+        "crates/limeshot-app/tests/ui.rs::locked_rack_and_playlist_tracks_allow_explicit_on_off_clicks"
       ],
       "reference": {
         "application": "FL Studio",
@@ -812,7 +813,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
         ]
       },
-      "notes": "Session 17: Shift-click the mute LED locks its state; locked active channels remain audible when another channel is soloed."
+      "notes": "Session 17: Shift-click the mute LED locks its state; locked active channels remain audible when another channel is soloed. 2026-10-25: Shift-click locks the mute state against other channels’ solo operations; direct on/off and solo clicks remain available. The locked indicator uses a padlock."
     },
     {
       "id": "SEQ-004",
@@ -1461,7 +1462,8 @@
       "tests": [
         "crates/limeshot-app/tests/ui.rs::piano_roll_wheel_and_arrows_zoom_and_scroll",
         "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically",
-        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom"
+        "crates/limeshot-app/tests/ui.rs::piano_roll_menu_tools_select_and_zoom",
+        "crates/limeshot-app/tests/ui.rs::timeline_zoom_extends_to_tick_detail_and_whole_arrangements"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1470,7 +1472,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1. Session 9: Opt+wheel / Opt+pinch zooms the key height around the pointer. Session 16: FL's Zoom submenu; the quick-zoom levels are LimeShot's (not observed in FL)."
+      "notes": "Session 7 fixed Cmd+wheel zoom, which never worked: egui reports Cmd+wheel (and pinch) as a zoom delta, not as scrolling. Plain arrow keys scroll the view, as observed in FL 2026.1.1. Session 9: Opt+wheel / Opt+pinch zooms the key height around the pointer. Session 16: FL's Zoom submenu; the quick-zoom levels are LimeShot's (not observed in FL). 2026-10-25: Horizontal zoom now spans 0.25–16,384 pixels per beat, through menu, tool and wheel paths. Vertical key heights span 2–160 pixels."
     },
     {
       "id": "PR-006",
@@ -2366,7 +2368,8 @@
         "crates/limeshot-app/tests/ui.rs::playlist_wheel_zoom_and_ruler_set_the_song_position",
         "crates/limeshot-app/tests/ui.rs::playlist_clips_select_resize_and_move_with_shift_arrows",
         "limeshot-app tests/ui.rs::alt_wheel_zooms_vertically",
-        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers"
+        "crates/limeshot-app/tests/ui.rs::playlist_menu_edit_select_zoom_and_markers",
+        "crates/limeshot-app/tests/ui.rs::timeline_zoom_extends_to_tick_detail_and_whole_arrangements"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2375,7 +2378,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height. Session 16: the quick-zoom levels are LimeShot's."
+      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height. Session 16: the quick-zoom levels are LimeShot's. 2026-10-25: Horizontal zoom now spans 0.25–16,384 pixels per beat, through menu, tool and wheel paths. Vertical track heights span 12–640 pixels."
     },
     {
       "id": "PL-009",
@@ -2494,7 +2497,8 @@
       "tests": [
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
         "crates/limeshot-app/tests/ui.rs::channel_and_playlist_mute_locks_preserve_state_when_soloing",
-        "limeshot-core tests/playlist_tracks.rs (clip remapping, clone metadata, undo and lock persistence)"
+        "limeshot-core tests/playlist_tracks.rs (clip remapping, clone metadata, undo and lock persistence)",
+        "crates/limeshot-app/tests/ui.rs::locked_rack_and_playlist_tracks_allow_explicit_on_off_clicks"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2503,7 +2507,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 17: Track header context menu: rename, color, auto name, reset, mute, solo, mute lock, select clips, merge patterns, mute/unmute clips, clone linked clips, reorder, insert, delete. Shift-click mute locks its state. + Track is below the last track. FL features not yet supported by LimeShot are disabled in this menu."
+      "notes": "Session 17: Track header context menu: rename, color, auto name, reset, mute, solo, mute lock, select clips, merge patterns, mute/unmute clips, clone linked clips, reorder, insert, delete. Shift-click mute locks its state. + Track is below the last track. FL features not yet supported by LimeShot are disabled in this menu. 2026-10-25: Locked tracks retain their state during another track’s solo/unmute operation but accept explicit on/off clicks. A colored padlock replaces the LED while locked."
     },
     {
       "id": "PL-013",
@@ -3002,7 +3006,7 @@
       "name": "Mute and solo",
       "description": "Silence/isolate tracks.",
       "fl_reference": "Left-click mute; right/Ctrl-click solo.",
-      "limeshot_behavior": "M and S buttons; right-click/Cmd+click on M solos; master never solo-muted.",
+      "limeshot_behavior": "On buttons activate/deactivate inserts; right-click/Cmd+click solos, S solos, Shift-click locks mute state against other inserts’ solo operations. Locked inserts still accept direct On clicks. Master is never solo-muted.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -3017,7 +3021,8 @@
       ],
       "tests": [
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
-        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master"
+        "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
+        "crates/limeshot-app/tests/ui.rs::mixer_on_buttons_keep_locked_inserts_audible_and_allow_direct_toggles"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3026,7 +3031,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-25: On buttons toggle insert activation. Shift-click toggles an undoable, saved mute lock; locked active inserts remain audible during other inserts’ solo operations. Direct clicks still work."
     },
     {
       "id": "MIX-005",
@@ -3697,7 +3702,9 @@
       "tests": [
         "limeshot-dsp tests/formats.rs::aiff_and_flac_decode_sample_for_sample",
         "limeshot-dsp tests/formats.rs::audio_extensions_and_bad_files",
-        "crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play"
+        "crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play",
+        "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
+        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3707,7 +3714,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the existing 4 million stereo-frame limit remains, with a specific import error."
     },
     {
       "id": "INS-009",
@@ -4980,7 +4987,10 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
-        "crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one"
+        "crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one",
+        "crates/limeshot-app/tests/ui.rs::external_files_drop_on_rack_without_creating_a_playlist_clip",
+        "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
+        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4989,7 +4999,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-25: External audio files can be dropped on the rack; internal Browser samples can replace a Lime Sampler through its wrapper. Explicit imports report decoder and sampler size/rate errors before creating a broken channel."
     },
     {
       "id": "BR-004",
@@ -5178,7 +5188,8 @@
       ],
       "tests": [
         "limeshot-app tests/ui.rs::samples_become_audio_clips_that_trim_from_the_left_edge",
-        "limeshot-app tests/ui.rs::a_sample_dragged_over_the_playlist_shows_where_it_lands"
+        "limeshot-app tests/ui.rs::a_sample_dragged_over_the_playlist_shows_where_it_lands",
+        "crates/limeshot-app/tests/ui.rs::external_files_drop_on_playlist_at_the_pointer_and_undo"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5187,7 +5198,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": "Session 11 (owner's list item 12). Differs from FL: FL 2026.1.1 labels the pointer with the file name and highlights the target grid cell; LimeShot draws the whole clip ghost."
+      "notes": "Session 11 (owner's list item 12). Differs from FL: FL 2026.1.1 labels the pointer with the file name and highlights the target grid cell; LimeShot draws the whole clip ghost. 2026-10-25: External OS file drops are routed to the visible Playlist grid at the snapped pointer time/track; multiple files use successive tracks. Normal Browser drops remain supported."
     },
     {
       "id": "PLG-001",
@@ -5372,7 +5383,7 @@
       "name": "Plugin editor windows",
       "description": "A plugin's own editor (its native view) in a wrapper window, with the host's settings for that channel or insert on a second page.",
       "fl_reference": "Fruity Wrapper (observed live, session 12): one floating window per plugin titled 'Plugin (mixer target)'; opened by a click on the channel button or the insert slot (a second click closes it); the gear shows a page strip with Plugin editor, Plugin options and (channels) Miscellaneous functions = channel settings, plus ON/PAN/VOL/PITCH/TRACK (effects: ON/MIX LEVEL); the window resizes to the page and follows the plugin's own resizing (no wrapper resize handle); position, size and page are kept when it is closed and reopened; title bar: menu, gear, keyboard-focus toggle, Presets ◀ ▶, captionize, close. Details: docs/research/fl-studio-analysis.md §17.",
-      "limeshot_behavior": "Each plugin channel and plugin insert has one plugin window, its own OS window titled like FL's (\"Vital (Bass)\", \"OTT (Lead)\"), floating above the main window and hidden while another application is active. A click on a plugin channel's button (FL) or a plugin insert's name in the insert chain opens it and a second click closes it; the Editor button in Channel Settings and the insert card opens it too, and the channel menu's Channel Settings opens it on the Settings tab. A tab row at the top: Plugin shows the plugin's own editor (VST3 IPlugView, attached below the tabs on macOS); Settings shows LimeShot's Channel Settings for the channel (name, mixer target, root key, plugin info, parameter list) or the insert's card. On the Plugin tab the window is the editor's size plus the tab row and follows the editor when the plugin resizes itself (IPlugFrame::resizeView); the Settings tab is resizable. The window reopens where it was and on the tab it was on; each window's position, tab, Settings size, keyboard toggle and whether it is open are saved in the .lime with its plugin (not an edit, like the plugin state), and windows that were open reopen with the project (FL does both). On the right of the tab row, as in FL's title bar: the presets menu (PLG-008), Presets ◀ ▶ (channels only, as in FL) and the keyboard toggle (FL: 'Allow the plugin to handle keystrokes before the host does'): when on, characters typed in the window go to the plugin's editor first (IPlugView::onKeyDown) and LimeShot's shortcuts act only on keys the plugin did not take. Edits made in the editor reach the audio thread, are not undo steps and mark the project modified (performEdit, restartComponent, and a state comparison when the window closes); the state is saved in the .lime as before. A plugin without an editor (or where the platform cannot show one: Windows and Linux so far, headless backends) gets the parameter list on the Plugin tab. Differs from FL: two tabs instead of FL's three pages (FL's Plugin options page is left out; format and latency are on Settings), no title-bar ▸ menu or captionize, and FL's page strip with ON/PAN/VOL/PITCH/TRACK is not there (those are in the Channel Rack and Mixer).",
+      "limeshot_behavior": "Plugin editors use internal LimeShot workspace windows with the shared title bar (minimize, pin, close; no maximize). Plugin and Settings tabs share one wrapper. Native macOS views negotiate resizing in both directions; fixed-size plugins keep their natural size. Host presets use an AppKit menu above native macOS views so the editor stays visible, with an egui fallback for parameter/headless wrappers. Settings, presets, keyboard forwarding and saved window places remain supported. Windows/Linux/headless backends show parameters when native embedding is unavailable. Native and third-party interaction verification remains pending.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -5395,7 +5406,10 @@
         "crates/limeshot-app/tests/ui.rs::a_plugin_insert_with_an_editor_opens_its_window_from_the_slot",
         "crates/limeshot-app/tests/ui.rs::plugin_window_presets_step_and_the_window_place_is_saved_in_the_project",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_window_round_trips_and_bad_values_are_dropped",
-        "docs/development/lime-vst3-host-validation.md"
+        "docs/development/lime-vst3-host-validation.md",
+        "crates/limeshot-app/tests/ui.rs::plugin_wrapper_title_controls_minimize_pin_restore_and_close",
+        "crates/limeshot-plugins/src/graphics.rs::tests::teardown_suspends_and_restores_the_callers_gl_context",
+        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5412,7 +5426,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md."
+      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md. 2026-10-25: wrappers share workspace title styling and have minimize, pin and close, with no maximize/detach. Native resize requests resize the wrapper; wrapper resizes negotiate native constraints. Native macOS editors use an AppKit preset menu above their NSView, so the editor stays visible; parameter/headless wrappers use an egui menu. Native views temporarily hide for host sample drags. Host GL context is protected during teardown; native backend also binds its own context before deleting GL objects. Live third-party resize and native interaction verification remain separate."
     },
     {
       "id": "PLG-007",
@@ -7296,7 +7310,8 @@
       ],
       "tests": [
         "limeshot-app tests/ui.rs::samples_are_picked_and_drawn_in_the_playlist_like_patterns",
-        "crates/limeshot-app/tests/ui.rs::picker_entries_drag_into_the_playlist"
+        "crates/limeshot-app/tests/ui.rs::picker_entries_drag_into_the_playlist",
+        "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7305,7 +7320,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'. Session 17: Picker patterns, audio and automation can be dragged onto the Playlist using their remembered length."
+      "notes": "Session 11 (owner's list item 1). Differs from FL: FL's audio clip channels are a special Audio Clip generator; LimeShot uses Sampler channels (one-shot off), so 'adding a sample always creates a sampler channel with that sample loaded'. Session 17: Picker patterns, audio and automation can be dragged onto the Playlist using their remembered length. 2026-10-25: Every loaded sampler is available in the audio picker, including ordinary Channel Rack instruments, without requiring an Audio group or a placed clip."
     },
     {
       "id": "PL-028",
@@ -8397,7 +8412,8 @@
         "crates/limeshot-core/tests/plugins.rs::a_converted_disabled_effect_can_be_enabled",
         "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport",
         "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
-        "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling"
+        "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
+        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8407,7 +8423,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open."
+      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects."
     },
     {
       "id": "WF-009",

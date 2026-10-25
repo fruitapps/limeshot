@@ -97,10 +97,10 @@ hands-on compatibility with every DAW/version.
 
 ## Sampler and presets
 
-Use Load or drop a WAV file to load it. Hold the waveform or keyboard to audition; right-click a key to set
-the root note. Drag the colored waveform handles to trim the playable region. PCM WAV formats supported by LimeShot are supported here. Samples
+Use Load or drop a WAV, MP3, FLAC, Ogg Vorbis or AIFF file to load it. Hold the waveform or keyboard to audition; right-click a key to set
+the root note. Drag the colored waveform handles to trim the playable region. The shared LimeShot audio decoder is used here. Samples
 are limited to **4 million stereo frames** (about 83 seconds at 48 kHz) to keep embedded host state below 64 MiB.
-The plugin saves decoded audio inside host state; moving/deleting the source WAV does not break a saved session.
+The plugin saves decoded audio inside host state; moving/deleting the source file does not break a saved session.
 Loading happens during non-realtime state restoration/activation and resets sounding notes. No disk access,
 allocation or locking occurs during audio processing. An invalid embedded sample becomes an empty, silent sampler.
 
@@ -125,3 +125,8 @@ See [THIRD_PARTY.md](THIRD_PARTY.md) for dependencies and licenses.
 LimeShot clip playback, additive channel/note pan and native metering use versioned noncommercial SysEx extensions.
 Other VST3 hosts continue to use ordinary MIDI, note expressions and the standard stereo key bus.
 Lime EQ appends hidden track-mode controls for the host inline EQ; existing insert parameter IDs/ranges stay stable.
+
+
+The local egui-baseview 0.9.0 patch in `vendor/egui-baseview` binds its renderer’s GL context before
+destroying the painter. This prevents editor closure from deleting another host/editor’s GL objects.
+Upstream licenses and patch rationale are retained alongside the source.

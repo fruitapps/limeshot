@@ -32,3 +32,9 @@ Sample decoding (2026-10-22) adds `symphonia` 0.5 (MPL-2.0, unmodified, from cra
 The macOS bundle includes this file, LimeShot's licence texts and all font licence texts in
 `Contents/Resources/licenses/fonts`. Aggregation of third-party Rust source licence notices into distribution
 packages remains open; the dependency overview above is not a complete set of redistribution notices.
+
+## Vendored editor backend
+
+| Source | Authors | License | Use |
+|---|---|---|---|
+| `native-plugins/vendor/egui-baseview` | egui-baseview 0.9.0, RustAudio contributors | MIT OR Apache-2.0; license texts retained | Locally patched renderer teardown; see `LIMESHOT-PATCH.md` in that directory |

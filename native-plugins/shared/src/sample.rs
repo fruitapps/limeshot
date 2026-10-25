@@ -25,23 +25,23 @@ pub enum SampleError {
     Invalid,
     #[error("{0}")]
     Decode(#[from] limeshot_dsp::SampleError),
-    #[error("{0}")]
-    Wav(#[from] hound::Error),
 }
 
 impl EmbeddedSample {
-    /// Read a WAV into embedded stereo PCM, keeping its filename for display.
+    /// Read supported audio into embedded stereo PCM, keeping its filename for display.
     /// Mono is duplicated; extra channels are discarded and non-finite values become zero.
     ///
     /// # Errors
-    /// Returns `TooLong` above 4 million frames, `Wav` for errors opening or reading the
-    /// WAV header, or `Decode` for errors propagated by the shared WAV loader.
+    /// Returns `TooLong` above 4 million frames, or `Decode` for errors from the shared
+    /// WAV/MP3/FLAC/Ogg/AIFF decoder.
     pub fn load(path: &Path) -> Result<Self, SampleError> {
-        let reader = hound::WavReader::open(path)?;
-        if reader.duration() as usize > MAX_FRAMES {
+        let sample = limeshot_dsp::load_audio(path)?;
+        if sample.data.len() / 2 > MAX_FRAMES {
             return Err(SampleError::TooLong);
         }
-        let sample = limeshot_dsp::load_wav(path)?;
+        if sample.frames() < 2 || !(8_000..=384_000).contains(&sample.sample_rate) {
+            return Err(SampleError::Invalid);
+        }
         let bytes: Vec<u8> = sample.data.iter().flat_map(|f| f.to_le_bytes()).collect();
         Ok(Self {
             name: path
@@ -157,5 +157,27 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
         F: Fn(&EmbeddedSample) -> R,
     {
         f(&self.state.read().0)
+    }
+}
+
+#[cfg(test)]
+mod format_tests {
+    use super::*;
+    #[test]
+    fn mp3_and_flac_import_into_portable_sampler_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let mp3 = dir.path().join("silence.mp3");
+        let mut frame = vec![0; 417];
+        frame[..4].copy_from_slice(&[0xff, 0xfb, 0x90, 0x00]);
+        std::fs::write(&mp3, frame.repeat(8)).unwrap();
+        let flac = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/limeshot-dsp/tests/fixtures/sine.flac");
+        for path in [mp3, flac] {
+            let original = limeshot_dsp::load_audio(&path).unwrap();
+            let embedded = EmbeddedSample::load(&path).unwrap();
+            let restored = embedded.decode().unwrap().unwrap();
+            assert_eq!(restored.sample_rate, original.sample_rate);
+            assert_eq!(restored.data, original.data);
+            assert!(!embedded.pcm.is_empty());
+        }
     }
 }

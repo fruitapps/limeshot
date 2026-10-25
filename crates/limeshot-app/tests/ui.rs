@@ -3067,7 +3067,7 @@ fn alt_wheel_zooms_vertically() {
     assert!(h.state().ui.piano.key_h > kh, "taller keys");
     assert_eq!(h.state().ui.piano.zoom_x, zx, "time zoom unchanged");
     assert_ne!(h.state().ui.piano.scroll.y, sy, "zoomed around the pointer");
-    wheel_at(&mut h, p, -400.0, Modifiers::ALT);
+    wheel_at(&mut h, p, -800.0, Modifiers::ALT);
     assert_eq!(
         h.state().ui.piano.key_h,
         limeshot_ui::piano_roll::KEY_H.0,
@@ -3818,7 +3818,7 @@ fn samples_are_picked_and_drawn_in_the_playlist_like_patterns() {
     let n = h.state().project().channels.len();
     let ch = limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick).expect("added");
     h.step();
-    assert_eq!(h.state().project().channels.len(), n + 1);
+    assert_eq!(h.state().project().channels.len(), n);
     let sampler =
         lime::sampler_params(&h.state().project().channel(ch).expect("channel").instrument).expect("Lime sampler");
     assert_eq!(
@@ -3846,7 +3846,7 @@ fn samples_are_picked_and_drawn_in_the_playlist_like_patterns() {
     assert_eq!(limeshot_ui::playlist::add_audio_source(h.state_mut(), &kick), Some(ch));
     let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &kick, tr, 6 * bar).expect("placed");
     assert_eq!(h.state().project().clip(id).and_then(Clip::audio_channel), Some(ch));
-    assert_eq!(h.state().project().channels.len(), n + 1);
+    assert_eq!(h.state().project().channels.len(), n);
 
     // The tabs switch the list; picking a pattern places patterns again.
     h.step();
@@ -6392,4 +6392,271 @@ fn missing_sample_error_can_reload_after_its_in_project_source_is_restored() {
         h.state().project().plugin(target).unwrap().extra["lime-sample-pending"],
         true
     );
+}
+
+#[derive(Debug)]
+struct ExternalAudioFile(std::path::PathBuf);
+impl egui::DroppedFile for ExternalAudioFile {
+    fn path(&self) -> &std::path::Path {
+        &self.0
+    }
+    fn bytes(&self) -> Result<Vec<u8>, String> {
+        std::fs::read(&self.0).map_err(|e| e.to_string())
+    }
+}
+
+fn silent_mp3(path: &std::path::Path) {
+    // Synthetic MPEG-1 Layer III silence: 128 kb/s, 44.1 kHz, no bit reservoir or coded spectrum.
+    let mut frame = vec![0; 417];
+    frame[..4].copy_from_slice(&[0xff, 0xfb, 0x90, 0x00]);
+    std::fs::write(path, frame.repeat(8)).unwrap();
+}
+
+#[test]
+fn mp3_samples_embed_and_join_the_playlist_picker_from_the_rack() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("silence.mp3");
+    silent_mp3(&source);
+    let decoded = limeshot_dsp::load_audio(&source).unwrap();
+    assert_eq!(decoded.sample_rate, 44_100);
+    assert!(decoded.frames() > 0);
+    let mut h = harness(false);
+    let id = limeshot_ui::browser::new_sampler_channel(h.state_mut(), &source).unwrap();
+    let plugin = h.state().project().plugin(PluginTarget::Channel(id)).unwrap();
+    assert!(plugin.extra.get("lime-sample-pending").is_none());
+    assert!(limeshot_ui::playlist::audio_channels(h.state().project()).contains(&id));
+    assert_ne!(h.state().project().channel(id).unwrap().group.as_deref(), Some("Audio"));
+    h.state_mut().sync_engine();
+    assert!(h.state().sampler_source(id).is_some());
+    std::fs::remove_file(source).unwrap();
+    h.state_mut().sync_engine();
+    assert!(
+        h.state().sampler_source(id).is_some(),
+        "embedded playback survives source removal"
+    );
+}
+
+#[test]
+fn external_files_drop_on_playlist_at_the_pointer_and_undo() {
+    let mut h = playlist_harness();
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("external.mp3");
+    silent_mp3(&source);
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let position = g.pos(4 * PPQ, 2);
+    h.event(Event::PointerMoved(position));
+    h.step();
+    let before = h.state().project().playlist.clips.len();
+    h.input_mut()
+        .dropped_files
+        .push(std::sync::Arc::new(ExternalAudioFile(source)));
+    h.step();
+    let clips = &h.state().project().playlist.clips;
+    assert_eq!(clips.len(), before + 1);
+    let clip = clips.last().unwrap();
+    assert_eq!(clip.track, 2);
+    assert_eq!(clip.start, 4 * PPQ);
+    assert!(matches!(clip.source, ClipSource::Audio(_)));
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project().playlist.clips.len(), before);
+}
+
+#[test]
+fn external_files_drop_on_rack_without_creating_a_playlist_clip() {
+    let mut h = harness(false);
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("external.mp3");
+    silent_mp3(&source);
+    let rack = window_rect(&h, Win::ChannelRack);
+    h.event(Event::PointerMoved(rack.center()));
+    h.step();
+    let before = h.state().project().channels.len();
+    h.input_mut()
+        .dropped_files
+        .push(std::sync::Arc::new(ExternalAudioFile(source)));
+    h.step();
+    assert_eq!(h.state().project().channels.len(), before + 1);
+    assert!(h.state().project().playlist.clips.is_empty());
+    let id = h.state().project().channels.last().unwrap().id;
+    assert!(limeshot_ui::playlist::audio_channels(h.state().project()).contains(&id));
+}
+
+#[test]
+fn mixer_on_buttons_keep_locked_inserts_audible_and_allow_direct_toggles() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.step();
+    h.step();
+    let on = h
+        .state()
+        .ui
+        .mixer
+        .on_buttons
+        .iter()
+        .find(|(i, _)| *i == 1)
+        .unwrap()
+        .1
+        .center();
+    click_with(&mut h, on, PointerButton::Primary, Modifiers::SHIFT);
+    assert!(h.state().project().mixer.tracks[1].mute_locked);
+    h.state_mut().exec(Command::SetMixerSolo { track: 2, solo: true });
+    h.state_mut().sync_engine();
+    assert!(h.state().snapshot().mixer[1].audible);
+    click(&mut h, on, PointerButton::Primary);
+    h.state_mut().sync_engine();
+    assert!(h.state().project().mixer.tracks[1].muted);
+    assert!(!h.state().snapshot().mixer[1].audible);
+    click(&mut h, on, PointerButton::Primary);
+    h.state_mut().sync_engine();
+    assert!(h.state().snapshot().mixer[1].audible);
+    let saved: Project = serde_json::from_str(&serde_json::to_string(h.state().project()).unwrap()).unwrap();
+    assert!(saved.mixer.tracks[1].mute_locked);
+}
+
+#[test]
+fn locked_rack_and_playlist_tracks_allow_explicit_on_off_clicks() {
+    let mut h = harness(true);
+    let channel = h.state().project().channels[0].id;
+    let step = h.state().ui.rack.step_pos(channel, 0).unwrap();
+    let rack = window_rect(&h, Win::ChannelRack);
+    let on = egui::pos2(rack.left() + 14.0, step.y);
+    click_with(&mut h, on, PointerButton::Primary, Modifiers::SHIFT);
+    click(&mut h, on, PointerButton::Primary);
+    assert!(h.state().project().channel(channel).unwrap().muted);
+    click(&mut h, on, PointerButton::Primary);
+    assert!(!h.state().project().channel(channel).unwrap().muted);
+    assert!(h.state().project().channel(channel).unwrap().mute_locked);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let on = egui::pos2(g.grid.left() - 14.0, g.pos(0, 0).y);
+    click_with(&mut h, on, PointerButton::Primary, Modifiers::SHIFT);
+    click(&mut h, on, PointerButton::Primary);
+    assert!(h.state().project().playlist.tracks[0].muted);
+    click(&mut h, on, PointerButton::Primary);
+    assert!(!h.state().project().playlist.tracks[0].muted);
+    assert!(h.state().project().playlist.tracks[0].mute_locked);
+}
+
+#[test]
+fn timeline_zoom_extends_to_tick_detail_and_whole_arrangements() {
+    use limeshot_ui::{piano_menu, playlist_menu};
+    let (mut h, _, _) = melody_piano_roll();
+    for _ in 0..50 {
+        piano_menu::run(h.state_mut(), piano_menu::Act::ZoomIn);
+    }
+    assert_eq!(h.state().ui.piano.zoom_x, piano_menu::MAX_ZOOM);
+    assert!(h.state().ui.piano.zoom_x / PPQ as f32 > 10.0);
+    for _ in 0..100 {
+        piano_menu::run(h.state_mut(), piano_menu::Act::ZoomOut);
+    }
+    assert_eq!(h.state().ui.piano.zoom_x, piano_menu::MIN_ZOOM);
+    h.step();
+    for _ in 0..100 {
+        playlist_menu::run(h.state_mut(), playlist_menu::Act::ZoomIn);
+    }
+    assert_eq!(h.state().ui.playlist.zoom_x, playlist_menu::MAX_ZOOM);
+    for _ in 0..100 {
+        playlist_menu::run(h.state_mut(), playlist_menu::Act::ZoomOut);
+    }
+    assert_eq!(h.state().ui.playlist.zoom_x, playlist_menu::MIN_ZOOM);
+}
+
+#[test]
+fn plugin_wrapper_title_controls_minimize_pin_restore_and_close() {
+    use limeshot_ui::plugins::Target;
+    let mut h = harness(false);
+    h.state_mut().plugins.add_builtin_test_plugins();
+    h.step();
+    menu_path(&mut h, &["+ Add channel", "Plugins", "LimeShot", "Lime Test Tone"]);
+    let channel = h.state().project().channels.last().unwrap().id;
+    let target = Target::Channel(channel);
+    h.state_mut().plugins.open_window(target, None);
+    h.step();
+    h.step();
+    let rect = h.state().plugins.window(target).unwrap().rect().unwrap();
+    // Shared title bar: X, minimize and pin, with no maximize or detach button.
+    click(
+        &mut h,
+        egui::pos2(rect.right() - 59.0, rect.top() + 14.0),
+        PointerButton::Primary,
+    );
+    assert!(h.state().plugins.window(target).unwrap().is_pinned());
+    click(
+        &mut h,
+        egui::pos2(rect.right() - 37.0, rect.top() + 14.0),
+        PointerButton::Primary,
+    );
+    assert!(h.state().plugins.window(target).unwrap().is_minimized());
+    h.step();
+    let small = h.state().plugins.window(target).unwrap().rect().unwrap();
+    assert!(small.height() < 40.0, "{small:?}");
+    click(
+        &mut h,
+        egui::pos2(small.right() - 37.0, small.top() + 14.0),
+        PointerButton::Primary,
+    );
+    h.step();
+    h.step();
+    let restored = h.state().plugins.window(target).unwrap().rect().unwrap();
+    assert!(restored.height() > 150.0, "{restored:?}");
+    assert!(
+        h.state()
+            .plugins
+            .window_place(target)
+            .unwrap()
+            .settings_size
+            .unwrap()
+            .iter()
+            .all(|v| v.is_finite())
+    );
+    click(
+        &mut h,
+        egui::pos2(restored.right() - 15.0, restored.top() + 14.0),
+        PointerButton::Primary,
+    );
+    assert!(!h.state().plugins.is_window_open(target));
+}
+
+#[test]
+fn sampler_wrapper_accepts_browser_payload_and_external_sample_replacement() {
+    use limeshot_ui::plugin_window::Tab;
+    use limeshot_ui::plugins::Target;
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.wav");
+    let second = dir.path().join("second.mp3");
+    limeshot_dsp::write_wav(&first, 44_100, &[0.2; 128], limeshot_dsp::BitDepth::Float32).unwrap();
+    silent_mp3(&second);
+    let mut h = harness(false);
+    let id = limeshot_ui::browser::new_sampler_channel(h.state_mut(), &first).unwrap();
+    h.step();
+    let target = Target::Channel(id);
+    assert!(h.state().plugins.is_loaded(target));
+    h.state_mut().plugins.open_window(target, Some(Tab::Settings));
+    h.step();
+    h.step();
+    let rect = h.state().plugins.window(target).unwrap().rect().unwrap();
+    let position = rect.center();
+    h.event(Event::PointerMoved(position));
+    press(&mut h, position, PointerButton::Primary, true);
+    egui::DragAndDrop::set_payload(&h.ctx, limeshot_ui::browser::DraggedSample(second.clone()));
+    press(&mut h, position, PointerButton::Primary, false);
+    h.step();
+    let source = |h: &Harness<'static, LimeShotApp>| {
+        lime::sampler_params(&h.state().project().channel(id).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path
+    };
+    assert_eq!(source(&h), second.to_string_lossy());
+    h.event(Event::PointerMoved(position));
+    h.input_mut()
+        .dropped_files
+        .push(std::sync::Arc::new(ExternalAudioFile(first.clone())));
+    h.step();
+    assert_eq!(source(&h), first.to_string_lossy());
+    assert!(limeshot_ui::playlist::audio_channels(h.state().project()).contains(&id));
 }

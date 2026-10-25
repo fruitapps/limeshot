@@ -415,8 +415,8 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
     }
 }
 
-pub const MIN_ZOOM: f32 = 12.0;
-pub const MAX_ZOOM: f32 = 800.0;
+pub const MIN_ZOOM: f32 = 0.25;
+pub const MAX_ZOOM: f32 = 16_384.0;
 
 /// Fit the ticks `from..to` into the grid's width.
 fn fit(app: &mut LimeShotApp, from: Tick, to: Tick) {

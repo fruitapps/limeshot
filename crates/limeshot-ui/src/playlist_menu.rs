@@ -329,8 +329,8 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
     }
 }
 
-pub const MIN_ZOOM: f32 = 3.0;
-pub const MAX_ZOOM: f32 = 400.0;
+pub const MIN_ZOOM: f32 = 0.25;
+pub const MAX_ZOOM: f32 = 16_384.0;
 
 fn fit(app: &mut LimeShotApp, from: Tick, to: Tick) {
     let Some(g) = app.ui.playlist.geometry else { return };

@@ -96,6 +96,10 @@ pub fn file_label(p: &Path) -> String {
 
 /// Load `path` into `channel` (making it a sampler) and name the channel after the file.
 pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
+    if let Err(error) = validate_sample(path) {
+        app.toast_error(error);
+        return;
+    }
     let Some(ch) = app.project().channel(channel) else {
         return;
     };
@@ -118,8 +122,29 @@ pub fn assign_sample(app: &mut LimeShotApp, channel: ChannelId, path: &Path) {
     ]));
 }
 
+pub(crate) fn validate_sample(path: &Path) -> Result<(), String> {
+    let audio = limeshot_dsp::load_audio(path).map_err(|e| e.to_string())?;
+    if audio.frames() < 2 {
+        return Err("Sample must contain at least two audio frames".into());
+    }
+    if !(8_000..=384_000).contains(&audio.sample_rate) {
+        return Err(format!(
+            "Unsupported sample rate: {} Hz (Lime Sampler supports 8–384 kHz)",
+            audio.sample_rate
+        ));
+    }
+    if audio.data.len() / 2 > limeshot_core::lime::MAX_EMBEDDED_FRAMES {
+        return Err("Sample exceeds Lime Sampler’s 4 million frame limit; choose a shorter source".into());
+    }
+    Ok(())
+}
+
 /// A new sampler channel playing `path`.
 pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<ChannelId> {
+    if let Err(error) = validate_sample(path) {
+        app.toast_error(error);
+        return None;
+    }
     app.samples.request_path(path.to_path_buf());
     let params = SamplerParams {
         sample: Some(SampleRef {

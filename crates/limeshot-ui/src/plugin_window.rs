@@ -110,6 +110,10 @@ impl Preset {
 /// An open plugin window.
 pub struct Wrapper {
     pub tab: Tab,
+    pinned: bool,
+    minimized: bool,
+    pub(crate) rect: Option<egui::Rect>,
+    resize_to: Option<Vec2>,
     raise: bool,
     // Declared before `native`: the editor leaves the window before LimeShot lets go of it.
     editor: Option<Vst3Editor>,
@@ -143,6 +147,10 @@ impl Wrapper {
         let m = memory.unwrap_or_default();
         Self {
             tab: m.tab,
+            pinned: false,
+            minimized: false,
+            rect: None,
+            resize_to: None,
             raise: true,
             editor: None,
             native: None,
@@ -167,6 +175,19 @@ impl Wrapper {
             settings_size: self.settings_size,
             keyboard_to_plugin: self.keyboard_to_plugin,
         }
+    }
+
+    /// The wrapper’s current outer bounds, including its shared title bar.
+    pub fn rect(&self) -> Option<egui::Rect> {
+        self.rect
+    }
+
+    pub fn is_minimized(&self) -> bool {
+        self.minimized
+    }
+
+    pub fn is_pinned(&self) -> bool {
+        self.pinned
     }
 
     /// The presets menu's entries (empty until the window's first frame).
@@ -206,6 +227,7 @@ impl PluginHost {
         let memory = self.window_memory.get(&target).copied();
         let w = self.windows.entry(target).or_insert_with(|| Wrapper::new(memory));
         w.raise = true;
+        w.minimized = false;
         if let Some(tab) = tab {
             w.tab = tab;
         }
@@ -407,6 +429,10 @@ pub fn toggle(app: &mut LimeShotApp, target: Target) {
     }
 }
 
+pub(crate) fn window_id(target: Target) -> egui::Id {
+    egui::Id::new(("limeshot-plugin", order(&target)))
+}
+
 fn order(t: &Target) -> (u8, u32, u32) {
     match *t {
         Target::Channel(c) => (0, c.0, 0),
@@ -434,7 +460,7 @@ fn titles(app: &LimeShotApp, targets: &[Target]) -> Vec<String> {
 /// Show every open plugin window. Called once per frame from the main window.
 pub fn show_all(app: &mut LimeShotApp, ctx: &Context) {
     let mut targets: Vec<Target> = app.plugins.windows.keys().copied().collect();
-    targets.sort_by_key(order);
+    targets.sort_by_key(|target| (app.plugins.windows.get(target).is_some_and(|w| w.pinned), order(target)));
     let titles = titles(app, &targets);
     for (target, title) in targets.into_iter().zip(titles) {
         show(app, ctx, target, &title);
@@ -467,12 +493,26 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
         .filter(|_| !w.fallback && w.tab == Tab::Editor)
         .map(|e| e.size());
     let size = editor_size.map_or(w.settings_size, |s| {
-        vec2(s.width as f32 / zoom, s.height as f32 / zoom + HEADER)
+        vec2(
+            s.width as f32 / zoom,
+            s.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
+        )
     });
-    let id = egui::Id::new(("limeshot-plugin", order(&target)));
+    let id = window_id(target);
+    let pinned = w.pinned;
+    let minimized = w.minimized;
+    let native_tab = editor_size.is_some();
+    let t = Theme::current();
     let mut window = egui::Window::new(title)
+        .title_bar(false)
+        .frame(
+            egui::Frame::new()
+                .fill(t.surface)
+                .stroke(egui::Stroke::new(1.0, t.border))
+                .corner_radius(t.radius + 1),
+        )
         .id(id)
-        .resizable(true)
+        .resizable(!minimized && w.editor.as_ref().is_none_or(|e| !native_tab || e.can_resize()))
         .collapsible(false)
         .min_size(
             w.editor
@@ -481,8 +521,8 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 .map_or(vec2(320.0, 200.0), |e| {
                     let size = e.size();
                     vec2(
-                        size.width as f32 / zoom + 24.0,
-                        size.height as f32 / zoom + HEADER + 72.0,
+                        size.width as f32 / zoom,
+                        size.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
                     )
                 }),
         )
@@ -495,10 +535,53 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     if let Some(p) = move_to {
         window = window.current_pos(p);
     }
+    if let Some(size) = app.plugins.windows.get_mut(&target).and_then(|w| w.resize_to.take()) {
+        window = window.fixed_size(size);
+    }
+    if minimized {
+        window = window.fixed_size(vec2(320.0, crate::workspace::TITLE_H));
+    }
     let mut open = true;
-    let response = window.open(&mut open).show(ctx, |ui| {
+    let response = window.show(ctx, |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        let actions = crate::workspace::title_bar(
+            ui,
+            title,
+            crate::workspace::WinState {
+                pinned,
+                ..Default::default()
+            },
+            false,
+            true,
+        );
+        open = !actions.close;
+        if let Some(w) = app.plugins.windows.get_mut(&target) {
+            if actions.pin {
+                w.pinned = !w.pinned;
+            }
+            if actions.minimize {
+                w.minimized = !w.minimized;
+                if !w.minimized {
+                    w.resize_to = Some(size);
+                }
+            }
+        }
+        if minimized {
+            return (None, egui::Rect::NOTHING);
+        }
         let tab = tabs(app, ui, target);
         let area = ui.available_rect_before_wrap();
+        if let Target::Channel(channel) = target
+            && app
+                .project()
+                .channel(channel)
+                .is_some_and(|c| limeshot_core::lime::sampler_params(&c.instrument).is_some())
+            && let Some(sample) = ui
+                .interact(area, ui.id().with("sampler-drop"), egui::Sense::hover())
+                .dnd_release_payload::<crate::browser::DraggedSample>()
+        {
+            crate::browser::assign_sample(app, channel, &sample.0);
+        }
         let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(area).layout(*ui.layout()));
         inner.set_clip_rect(area.intersect(ui.clip_rect()));
         body(app, &mut inner, target);
@@ -515,11 +598,14 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
     };
     let Some(response) = response else { return };
     w.position = Some(response.response.rect.min);
-    if std::mem::take(&mut w.raise) {
+    w.rect = Some(response.response.rect);
+    if std::mem::take(&mut w.raise) || w.pinned {
         ctx.move_to_top(response.response.layer_id);
     }
     if let Some((tab, area)) = response.inner {
-        w.settings_size = vec2(area.width(), area.height() + HEADER);
+        if !minimized && area.is_positive() {
+            w.settings_size = vec2(area.width(), area.height() + HEADER + crate::workspace::TITLE_H);
+        }
         if let Some(tab) = tab {
             w.tab = tab;
         }
@@ -544,7 +630,8 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
             let visible = w.tab == Tab::Editor
                 && !w.fallback
                 && app.dialog.is_none()
-                && !ctx.any_popup_open()
+                && !w.minimized
+                && !egui::DragAndDrop::has_payload_of_type::<crate::browser::DraggedSample>(ctx)
                 && [
                     area.shrink(3.0).left_top(),
                     area.shrink(3.0).right_top(),
@@ -553,9 +640,20 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                     area.center(),
                 ]
                 .iter()
-                .all(|p| ctx.layer_id_at(*p) == Some(response.response.layer_id));
+                .all(|p| {
+                    ctx.layer_id_at(*p)
+                        .is_none_or(|layer| layer == response.response.layer_id)
+                });
             editor.set_visible(visible);
-            if visible {
+            let requested = editor.take_resized();
+            if let Some(size) = requested {
+                w.resize_to = Some(vec2(
+                    size.width as f32 / zoom,
+                    size.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
+                ));
+                ctx.request_repaint();
+            }
+            if visible && requested.is_none() {
                 editor.layout_embedded(
                     f64::from(area.left() * zoom),
                     f64::from(area.top() * zoom),
@@ -563,7 +661,22 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                     f64::from(area.height() * zoom),
                 );
             }
-            if editor.take_resized().is_some() {
+            let actual = editor.size();
+            if visible
+                && requested.is_none()
+                && ((actual.width as f32 - area.width() * zoom).abs() > 2.0
+                    || (actual.height as f32 - area.height() * zoom).abs() > 2.0)
+            {
+                w.resize_to = Some(vec2(
+                    actual.width as f32 / zoom,
+                    actual.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
+                ));
+            }
+            if let Some(size) = editor.take_resized() {
+                w.resize_to = Some(vec2(
+                    size.width as f32 / zoom,
+                    size.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
+                ));
                 ctx.request_repaint();
             }
         }
@@ -579,7 +692,7 @@ pub(crate) fn handle_keys(app: &LimeShotApp, ctx: &Context) -> bool {
     }
     let top = ctx.memory(|m| m.areas().top_layer_id(egui::Order::Middle));
     app.plugins.windows.keys().copied().any(|target| {
-        let id = egui::Id::new(("limeshot-plugin", order(&target)));
+        let id = window_id(target);
         top.is_some_and(|layer| layer.id == id) && keys_to_plugin(app, ctx, target)
     })
 }
@@ -712,37 +825,68 @@ fn title_buttons(ui: &mut Ui, w: &Wrapper, target: Target, plugin_name: Option<&
         .or(plugin_name.map(str::to_owned))
         .unwrap_or_else(|| "Presets".into());
     let label = RichText::new(format!("{label} ⏷")).color(t.text_faint);
-    egui::containers::menu::MenuButton::new(label)
-        .ui(ui, |ui| {
-            ui.set_min_width(200.0);
-            ui.label(RichText::new("Presets").font(semibold(11.0)).color(t.text_faint));
-            if !has {
-                ui.add_enabled(false, egui::Button::new("No presets found"));
+    let button = ui.button(label);
+    if let Some(native) = w
+        .native
+        .as_ref()
+        .filter(|_| w.shows_native_editor() && w.tab == Tab::Editor)
+    {
+        if button.clicked() {
+            let mut labels: Vec<_> = w.presets().iter().map(Preset::name).collect();
+            labels.push("Save preset as…".into());
+            let zoom = ui.ctx().zoom_factor();
+            if let Some(index) = native.popup_menu(
+                &labels,
+                f64::from(button.rect.left() * zoom),
+                f64::from(button.rect.bottom() * zoom),
+            ) {
+                action = Some(if index < w.presets().len() {
+                    Action::Load(index)
+                } else {
+                    Action::SaveAs
+                });
             }
-            egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
-                let mut files = false;
-                for (i, p) in w.presets().iter().enumerate() {
-                    if matches!(p, Preset::File(_)) && !files {
-                        files = true;
-                        ui.separator();
-                    }
-                    if ui
-                        .add(egui::Button::new(p.name()).selected(w.preset == Some(i)))
-                        .clicked()
-                    {
-                        action = Some(Action::Load(i));
-                        ui.close();
-                    }
+        }
+        button.hint("The plugin's presets");
+        return action;
+    }
+    let wrapper = w.rect.unwrap_or(button.rect);
+    let screen = ui.ctx().content_rect();
+    let right = screen.right() - wrapper.right() >= 220.0;
+    let anchor = if right {
+        egui::pos2(wrapper.right(), button.rect.top())
+    } else {
+        egui::pos2(wrapper.left() - 220.0, button.rect.top())
+    };
+    egui::Popup::menu(&button).at_position(anchor).show(|ui| {
+        ui.set_min_width(200.0);
+        ui.label(RichText::new("Presets").font(semibold(11.0)).color(t.text_faint));
+        if !has {
+            ui.add_enabled(false, egui::Button::new("No presets found"));
+        }
+        egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+            let mut files = false;
+            for (i, p) in w.presets().iter().enumerate() {
+                if matches!(p, Preset::File(_)) && !files {
+                    files = true;
+                    ui.separator();
                 }
-            });
-            ui.separator();
-            if ui.button("Save preset as…").clicked() {
-                action = Some(Action::SaveAs);
-                ui.close();
+                if ui
+                    .add(egui::Button::new(p.name()).selected(w.preset == Some(i)))
+                    .clicked()
+                {
+                    action = Some(Action::Load(i));
+                    ui.close();
+                }
             }
-        })
-        .0
-        .hint("The plugin's presets");
+        });
+        ui.separator();
+        if ui.button("Save preset as…").clicked() {
+            action = Some(Action::SaveAs);
+            ui.close();
+        }
+    });
+    button.hint("The plugin's presets");
     action
 }
 

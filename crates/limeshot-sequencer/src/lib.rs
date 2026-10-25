@@ -288,7 +288,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
         .map(|(i, t)| MixerTrackState {
             gain: t.volume,
             pan: t.pan,
-            audible: !t.muted && (i == 0 || !any_insert_solo || t.solo),
+            audible: !t.muted && (i == 0 || !any_insert_solo || t.solo || t.mute_locked),
             effects: t
                 .effects
                 .iter()

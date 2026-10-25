@@ -1047,6 +1047,7 @@ impl LimeShotApp {
 
     /// Per-frame logic that is not drawing: theme, engine sync, window title, close requests.
     pub fn logic(&mut self, ctx: &Context) {
+        let _graphics = self.plugins.host_graphics.guard();
         if !self.themed {
             crate::theme::Theme::current().apply(ctx);
             self.themed = true;
@@ -1130,6 +1131,42 @@ impl LimeShotApp {
         self.toasts.retain(|t| t.until > Instant::now());
     }
 
+    fn external_sample_drops(&mut self, ctx: &Context) {
+        let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) else {
+            return;
+        };
+        let layer = ctx.layer_id_at(pos);
+        let sampler = self.plugins.windows.iter().find_map(|(target, window)| {
+            if layer.is_some_and(|l| l.id == crate::plugin_window::window_id(*target))
+                && window.rect.is_some_and(|r| r.contains(pos))
+                && let crate::plugins::Target::Channel(channel) = target
+            {
+                return self
+                    .project()
+                    .channel(*channel)
+                    .filter(|c| limeshot_core::lime::sampler_params(&c.instrument).is_some())
+                    .map(|_| *channel);
+            }
+            None
+        });
+        let rack = layer.is_some_and(|l| l.id == crate::workspace::Win::ChannelRack.id());
+        if sampler.is_none() && !rack {
+            return;
+        }
+        let files = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
+        for path in files
+            .into_iter()
+            .map(|f| f.path().to_path_buf())
+            .filter(|p| limeshot_dsp::is_audio_file(p))
+        {
+            if let Some(channel) = sampler {
+                crate::browser::assign_sample(self, channel, &path);
+            } else {
+                crate::browser::new_sampler_channel(self, &path);
+            }
+        }
+    }
+
     /// Draw the whole window.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let _graphics = self.plugins.host_graphics.guard();
@@ -1185,6 +1222,7 @@ impl LimeShotApp {
             .inner;
         crate::workspace::show(self, &ctx, area, window_body);
         crate::plugin_window::show_all(self, &ctx);
+        self.external_sample_drops(&ctx);
         // Last, when every control has described itself.
         toolbar::hint_panel(self, ui);
         crate::settings_window::show(self, &ctx);
