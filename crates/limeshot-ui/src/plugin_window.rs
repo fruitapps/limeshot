@@ -471,6 +471,14 @@ pub fn show_all(app: &mut LimeShotApp, ctx: &Context) {
     for (target, title) in targets.into_iter().zip(titles) {
         show(app, ctx, target, &title);
     }
+    if app
+        .plugins
+        .windows
+        .values()
+        .any(|w| w.editor.as_ref().is_some_and(Vst3Editor::is_attached))
+    {
+        limeshot_plugins::service_editors();
+    }
     let top = ctx.memory(|m| m.areas().top_layer_id(egui::Order::Middle));
     for (target, w) in &mut app.plugins.windows {
         w.frontmost = top.is_some_and(|l| l.id == window_id(*target));
@@ -508,6 +516,19 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
             s.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
         )
     });
+    if w.open_at.is_none() {
+        // As in FL Studio, a window without a remembered position opens in the middle of the
+        // workspace, each further one a title bar lower and to the right.
+        let area = app.ui.workspace.area;
+        let others = app.plugins.windows.values().filter(|o| o.open_at.is_some()).count();
+        let at = (area.center() - size / 2.0).max(area.min) + vec2(28.0, 28.0) * (others % 8) as f32;
+        if let Some(w) = app.plugins.windows.get_mut(&target) {
+            w.open_at = Some(at);
+        }
+    }
+    let Some(w) = app.plugins.windows.get(&target) else {
+        return;
+    };
     let id = window_id(target);
     let pinned = w.pinned;
     let minimized = w.minimized;
@@ -643,18 +664,38 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 && !w.minimized
                 && !minimized
                 && area.is_positive()
-                && [
-                    area.shrink(3.0).left_top(),
-                    area.shrink(3.0).right_top(),
-                    area.shrink(3.0).left_bottom(),
-                    area.shrink(3.0).right_bottom(),
-                    area.center(),
-                ]
-                .iter()
-                .all(|p| {
-                    ctx.layer_id_at(*p)
-                        .is_none_or(|layer| layer == response.response.layer_id || layer.order == egui::Order::Tooltip)
-                });
+                && if Vst3Editor::can_cut_out() {
+                    // Windows and menus above the editor are cut out of it, so the rest stays
+                    // visible; it hides only when nothing of it shows.
+                    let (cutouts, uncovered) = covering(ctx, area, response.response.layer_id);
+                    let units: Vec<_> = cutouts
+                        .iter()
+                        .map(|r| {
+                            (
+                                f64::from(r.left() * zoom),
+                                f64::from(r.top() * zoom),
+                                f64::from(r.width() * zoom),
+                                f64::from(r.height() * zoom),
+                            )
+                        })
+                        .collect();
+                    editor.set_cutouts(&units);
+                    uncovered
+                } else {
+                    [
+                        area.shrink(3.0).left_top(),
+                        area.shrink(3.0).right_top(),
+                        area.shrink(3.0).left_bottom(),
+                        area.shrink(3.0).right_bottom(),
+                        area.center(),
+                    ]
+                    .iter()
+                    .all(|p| {
+                        ctx.layer_id_at(*p).is_none_or(|layer| {
+                            layer == response.response.layer_id || layer.order == egui::Order::Tooltip
+                        })
+                    })
+                };
             editor.set_input_passthrough(
                 egui::DragAndDrop::has_any_payload(ctx) || ctx.input(|i| !i.raw.hovered_files.is_empty()),
             );
@@ -695,6 +736,42 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
             }
         }
     }
+}
+
+/// The parts of `area` that other layers (windows, menus, tooltips) cover, sampled on a grid, and
+/// whether any sample of it is uncovered.
+fn covering(ctx: &Context, area: egui::Rect, own: egui::LayerId) -> (Vec<egui::Rect>, bool) {
+    const STEP: f32 = 12.0;
+    let mut layers: Vec<egui::LayerId> = Vec::new();
+    let mut uncovered = false;
+    let inner = area.shrink(1.0);
+    let (columns, rows) = (
+        (inner.width() / STEP).ceil() as usize,
+        (inner.height() / STEP).ceil() as usize,
+    );
+    for row in 0..=rows {
+        for column in 0..=columns {
+            let p = egui::pos2(
+                (inner.left() + column as f32 * STEP).min(inner.right()),
+                (inner.top() + row as f32 * STEP).min(inner.bottom()),
+            );
+            match ctx.layer_id_at(p) {
+                Some(layer) if layer != own => {
+                    if !layers.contains(&layer) {
+                        layers.push(layer);
+                    }
+                }
+                _ => uncovered = true,
+            }
+        }
+    }
+    let rects = layers
+        .iter()
+        .filter_map(|layer| ctx.memory(|m| m.area_rect(layer.id)))
+        .map(|r| r.intersect(area))
+        .filter(|r| r.is_positive())
+        .collect();
+    (rects, uncovered)
 }
 
 /// Offer typed characters to the topmost plugin wrapper before global shortcuts.
@@ -901,7 +978,9 @@ fn title_buttons(ui: &mut Ui, w: &Wrapper, target: Target, plugin_name: Option<&
     } else {
         egui::pos2(wrapper.left() - 220.0, button.rect.top())
     };
-    egui::Popup::menu(&button).at_position(anchor).show(|ui| {
+    // The width the side was chosen for: without it the area starts as wide as the screen allows
+    // and, near the right edge, is pushed back over the wrapper.
+    egui::Popup::menu(&button).at_position(anchor).width(220.0).show(|ui| {
         ui.set_min_width(200.0);
         ui.label(RichText::new("Presets").font(semibold(11.0)).color(t.text_faint));
         if !has {

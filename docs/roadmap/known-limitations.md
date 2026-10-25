@@ -210,7 +210,7 @@ autosave-disabled live_check example; new sessions cannot overwrite an unclaimed
 * VST3 class ids are now hex in the SDK's portable order on every platform. Before this, Windows builds used COM
   byte order, so every Lime plugin (`lime:` references) failed with "the plugin has no class …". Lookups fall back to
   the raw order for plugin databases and projects saved by older Windows builds.
-* Native editors embed as child windows. At display scaling above 100 % the wrapper can be larger than a
+* Native editors sit in popup windows owned by the main window and kept over the wrapper. At display scaling above 100 % the wrapper can be larger than a
   fixed-size editor (plugin sizes are physical pixels, wrapper sizes logical points). Keyboard focus may stay in
   a clicked plugin view until the host window is clicked again.
 * Explorer drops use the Win32 cursor position. Release builds of `limeshot.exe` no longer open a console window;

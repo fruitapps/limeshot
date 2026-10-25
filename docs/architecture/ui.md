@@ -170,10 +170,13 @@ Manual test procedure for what automation does not cover: see `docs/development/
 **Plugin windows** (`plugin_window.rs`, D35) are resizable egui windows inside the workspace with Plugin /
 Settings tabs. On macOS, the plugin's native view is a child of the main NSWindow's content view;
 resize-capable plugins receive size negotiation, while fixed-size editors retain a minimum window size.
-Native editors hide when another window or popup covers them; final live rendering, resize, tab and keyboard
+Native editors hide when another window or popup covers them (on Windows, covering windows are cut out of the
+editor's window region instead, so the rest stays visible); final live rendering, resize, tab and keyboard
 verification is pending (PLG-006 is IMPLEMENTED). Window state lives beside the running instance
-and is saved in the project. On Windows the view is a child `HWND` (a `STATIC` container) of the main window, found by title on the UI
-thread; it is implemented but has not been run on Windows hardware. Linux shows the parameter list until its native
+and is saved in the project. On Windows the view goes into a borderless popup `HWND` owned by the main window (found by title on the UI
+thread), kept over the editor area, clipped to the client area and moved with the host through a window subclass
+(child windows are covered by the host's OpenGL surface); `service_editors` dispatches plugin timers and
+paints the popups each frame, which winit's message loop would otherwise starve; it is implemented but has not been run on Windows hardware. Linux shows the parameter list until its native
 embedding exists.
 
 Editor layouts can be explicitly saved/restored through View › Arrange windows; they are not automatically persisted. The Piano Roll has FL's tool strip

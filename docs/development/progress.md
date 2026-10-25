@@ -1526,3 +1526,39 @@ over the host's OpenGL surface that never reaches the screen. The container now 
 a dark background brush. Each attach logs the editor size, container and plugin child window (size, visibility,
 DPI scale) to help diagnose an editor that still does not appear. Checked with rustfmt and strict Clippy for
 Windows, macOS and Linux targets; not yet run on Windows.
+
+### Windows follow-up: editors in owned popups
+
+The next run was unchanged: the log showed the container and the plugin's window visible at the right sizes, yet
+not even the container's dark brush reached the screen. Common Windows OpenGL drivers present the host's surface
+over child windows, so nothing in a child `HWND` is ever seen. The container is now a borderless `WS_POPUP`
+(tool window) owned by the main window: owned popups stay above the host and minimise with it. It is placed in
+screen coordinates over the editor area, clipped to the host's client area with a window region, and a
+`SetWindowSubclass` hook on the host (`WM_WINDOWPOSCHANGED`) moves it with the window. Strict Clippy and the
+plugin crate's tests pass on Windows; not yet checked by hand with a plugin editor.
+
+### Windows follow-up: editors that never redraw, window placement
+
+With popups the editors appeared (Serum's dials worked), but Lime plugin dials looked dead, a sample dropped on
+the Lime Sampler only showed after reopening its window, Serum's keyboard did not light up, and windows opened in
+odd places. winit returns the host's pending `WM_PAINT` (the host asks for a frame every 16–50 ms) before any
+`WM_TIMER`, so editors that redraw from a timer (baseview, which the Lime plugins use) were starved.
+`limeshot_plugins::service_editors` now runs after the plugin windows each frame: it dispatches due `WM_TIMER`
+messages and paints the invalid parts of every editor popup (`RedrawWindow` with `RDW_UPDATENOW`). A popup
+stays hidden until it is first placed, rather than flashing at the main window's corner. Following FL Studio, a
+plugin window with no remembered position opens in the middle of the workspace, each further one a title bar lower
+and to the right. The presets menu now has a fixed width: its area had started as wide as the screen allowed and,
+for a wrapper right of centre, was pushed back over the wrapper's controls. Strict Clippy passes; the workspace
+tests pass except `samples_are_picked_and_drawn_in_the_playlist_like_patterns` and
+`the_draw_tool_reuses_the_length_of_the_last_clip`, which fail on the base commit too, and the intermittent
+`recording_turns_played_notes_into_pattern_notes`. Not yet checked by hand on Windows; Serum's keyboard may have a
+separate cause.
+
+### Windows follow-up: partly covered editors stay visible
+
+The owner confirmed the editors now work. A wrapper whose editor another window (or menu) partly covered still
+went blank until it was raised. On Windows the wrapper now samples its editor area on a 12-point grid
+(`ctx.layer_id_at`), collects the layers above it and passes their rectangles to `Vst3Editor::set_cutouts`; the
+popup's window region leaves them out (`CombineRgn` with `RGN_DIFF`), so the covering window shows through and the
+rest of the editor stays. The editor hides only when no sample of it is uncovered. macOS (`can_cut_out` false)
+keeps hiding a covered editor.

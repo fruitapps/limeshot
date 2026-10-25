@@ -6,10 +6,10 @@
 //! to the plugin. When the plugin asks for another size (`IPlugFrame::resizeView`), the container
 //! and the window are resized at once, so the window always fits the editor.
 //!
-//! Everything here runs on the main thread, as VST3 editors require. Only macOS (`NSView`) has a
-//! native implementation so far; on other platforms [`NativeWindow::find`] finds nothing and the
-//! host shows its own parameter list instead. The platform module is the only part to add for
-//! Windows (`HWND`, a child window) and Linux (`X11EmbedWindowID`, plus `IRunLoop` on the frame).
+//! Everything here runs on the main thread, as VST3 editors require. macOS (`NSView`) and Windows
+//! (`HWND`, an owned popup over the editor area) have native implementations; elsewhere
+//! [`NativeWindow::find`] finds nothing and the host shows its own parameter list instead. Linux
+//! needs only its platform module (`X11EmbedWindowID`, plus `IRunLoop` on the frame).
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -134,6 +134,15 @@ impl NativeWindow {
     pub fn make_tool_window(&self) {
         self.0.make_tool_window();
     }
+}
+
+/// Let the embedded editors catch up on timers and repaints. Call once per host frame, after the
+/// editors were placed, while the host's graphics context is guarded. On Windows a host that
+/// repaints every frame keeps its own `WM_PAINT` pending, which the message loop always returns
+/// before the lower-priority `WM_TIMER`, so editors that redraw on a timer (baseview, JUCE) would
+/// otherwise never update. Does nothing on other platforms.
+pub fn service_editors() {
+    platform::service();
 }
 
 /// A plugin's editor. Create it with [`Vst3Instance::create_editor`](crate::Vst3Instance::create_editor),
@@ -316,6 +325,22 @@ impl Vst3Editor {
         }
     }
 
+    /// Whether [`set_cutouts`](Self::set_cutouts) works here, so a partly covered editor can stay
+    /// visible. Otherwise the host should hide an editor that its own windows overlap.
+    pub fn can_cut_out() -> bool {
+        platform::CAN_CUT_OUT
+    }
+
+    /// Host content drawn above the editor: rectangles `(x, y, width, height)` in the units and
+    /// origin of [`layout_embedded`](Self::layout_embedded), left out of the editor's visible area.
+    pub fn set_cutouts(&self, rects: &[(f64, f64, f64, f64)]) {
+        if let Ok(s) = self.frame.state.try_borrow()
+            && let Some(c) = &s.container
+        {
+            c.set_cutouts(rects);
+        }
+    }
+
     /// Let host drags reach the underlying workspace without hiding the native editor.
     pub fn set_input_passthrough(&self, passthrough: bool) {
         if let Ok(s) = self.frame.state.try_borrow()
@@ -369,6 +394,11 @@ impl Drop for Vst3Editor {
 
 #[cfg(target_os = "macos")]
 mod platform {
+    /// AppKit runs timers and display on its own run loop.
+    pub(super) fn service() {}
+
+    pub(super) const CAN_CUT_OUT: bool = false;
+
     use super::EditorSize;
     use crate::PluginError;
     use objc2::rc::Retained;
@@ -596,6 +626,8 @@ mod platform {
         pub(super) fn set_hidden(&self, hidden: bool) {
             self.view.setHidden(hidden);
         }
+
+        pub(super) fn set_cutouts(&self, _rects: &[(f64, f64, f64, f64)]) {}
     }
 
     impl Drop for Container {
@@ -607,25 +639,31 @@ mod platform {
 
 #[cfg(target_os = "windows")]
 mod platform {
-    //! Plugin views as child windows (`HWND`) of the host's main window. Coordinates passed in
-    //! are logical points from the client area's top left; plugin sizes are physical pixels, as
-    //! VST3 uses on Windows.
+    //! Plugin views in popup windows (`HWND`) owned by the host's main window and kept over the
+    //! editor area. Coordinates passed in are logical points from the client area's top left;
+    //! plugin sizes are physical pixels, as VST3 uses on Windows.
     use super::EditorSize;
     use crate::PluginError;
+    use std::cell::{Cell, RefCell};
     use std::ffi::c_void;
     use std::sync::OnceLock;
     use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, CreateSolidBrush, ScreenToClient};
+    use windows_sys::Win32::Graphics::Gdi::{
+        ClientToScreen, CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, RDW_ALLCHILDREN, RDW_UPDATENOW,
+        RGN_DIFF, RedrawWindow, ScreenToClient, SetWindowRgn,
+    };
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::System::Threading::GetCurrentThreadId;
     use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
+    use windows_sys::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         AppendMenuW, CS_HREDRAW, CS_VREDRAW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu,
-        DestroyWindow, EnumThreadWindows, GW_CHILD, GetClientRect, GetCursorPos, GetWindow, GetWindowTextW, HWND_TOP,
-        IsWindowVisible, MF_STRING, RegisterClassW, SW_HIDE, SW_SHOWNA, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER,
-        SetForegroundWindow, SetWindowPos, ShowWindow, TPM_NONOTIFY, TPM_RETURNCMD, TrackPopupMenu, WNDCLASSW,
-        WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_VISIBLE,
+        DestroyWindow, DispatchMessageW, EnumThreadWindows, GW_CHILD, GetClassNameW, GetClientRect, GetCursorPos,
+        GetWindow, GetWindowTextW, IsWindowVisible, MF_STRING, MSG, PM_REMOVE, PeekMessageW, RegisterClassW, SW_HIDE,
+        SW_SHOWNA, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER, SetForegroundWindow, SetWindowPos, ShowWindow,
+        TPM_NONOTIFY, TPM_RETURNCMD, TrackPopupMenu, WM_NCDESTROY, WM_TIMER, WM_WINDOWPOSCHANGED, WNDCLASSW,
+        WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_TOOLWINDOW, WS_POPUP,
     };
 
     fn wide(s: &str) -> Vec<u16> {
@@ -734,9 +772,52 @@ mod platform {
         unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
     }
 
-    /// The container's window class, registered once. The system `STATIC` class paints through
-    /// its parent's device context (`CS_PARENTDC`), which never reaches the screen over the
-    /// host's OpenGL surface; this class paints its own dark background.
+    pub(super) const CAN_CUT_OUT: bool = true;
+
+    /// Dispatch the thread's due timers, then paint whatever the editors invalidated.
+    pub(super) fn service() {
+        // SAFETY: an all-zero `MSG` is valid; `PeekMessageW` fills it before it is dispatched.
+        let mut msg: MSG = unsafe { std::mem::zeroed() };
+        // A timer posts again only after its next period, so this ends; the bound is a guard.
+        for _ in 0..64 {
+            // SAFETY: standard message retrieval and dispatch on the UI thread.
+            unsafe {
+                if PeekMessageW(&mut msg, std::ptr::null_mut(), WM_TIMER, WM_TIMER, PM_REMOVE) == 0 {
+                    break;
+                }
+                DispatchMessageW(&msg);
+            }
+        }
+        // SAFETY: the callback only queries and repaints windows from the synchronous enumeration.
+        unsafe { EnumThreadWindows(GetCurrentThreadId(), Some(repaint_container), 0) };
+    }
+
+    unsafe extern "system" fn repaint_container(hwnd: HWND, _: LPARAM) -> BOOL {
+        let Some(class) = container_class() else {
+            return 0;
+        };
+        let mut buf = [0u16; 64];
+        // SAFETY: the buffer and its length match; a window from the enumeration is valid.
+        let n = unsafe { GetClassNameW(hwnd, buf.as_mut_ptr(), buf.len() as i32) };
+        // SAFETY: as above.
+        if usize::try_from(n).is_ok_and(|n| buf[..n] == class[..class.len() - 1])
+            && unsafe { IsWindowVisible(hwnd) } != 0
+        {
+            // SAFETY: paints the pending update regions of our popup and the plugin's windows in it.
+            unsafe {
+                RedrawWindow(
+                    hwnd,
+                    std::ptr::null(),
+                    std::ptr::null_mut(),
+                    RDW_UPDATENOW | RDW_ALLCHILDREN,
+                )
+            };
+        }
+        1
+    }
+
+    /// The container's window class, registered once, with a dark background for the moment
+    /// before the plugin paints.
     fn container_class() -> Option<&'static [u16]> {
         static CLASS: OnceLock<Option<Vec<u16>>> = OnceLock::new();
         CLASS
@@ -765,23 +846,134 @@ mod platform {
             .as_deref()
     }
 
-    /// A plain child window of the host's window that the plugin's view goes into.
-    pub(super) struct Container {
+    /// Where the container sits in the host's client area, in physical pixels. Shared with the
+    /// host window's subclass procedure, which moves the container along with the host.
+    struct Placement {
+        popup: HWND,
+        /// Left, top, width, height.
+        rect: Cell<(i32, i32, i32, i32)>,
+        /// Host content above the editor (left, top, right, bottom in client pixels).
+        cutouts: RefCell<Vec<(i32, i32, i32, i32)>>,
+        /// The last window region set, relative to the container: the part inside the client
+        /// area, then the cutouts that overlap it. `None` is the whole window.
+        region: RefCell<Option<Vec<(i32, i32, i32, i32)>>>,
+    }
+
+    impl Placement {
+        /// Move the container over its place in the host's client area and clip it to that area.
+        fn apply(&self, host: HWND) {
+            let (x, y, w, h) = self.rect.get();
+            let mut origin = POINT { x, y };
+            let mut client = RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            // SAFETY: plain queries of the live host window writing into locals.
+            if unsafe { ClientToScreen(host, &mut origin) } == 0 || unsafe { GetClientRect(host, &mut client) } == 0 {
+                return;
+            }
+            // SAFETY: moves and sizes our own popup without changing its z-order or activation.
+            unsafe {
+                SetWindowPos(
+                    self.popup,
+                    std::ptr::null_mut(),
+                    origin.x,
+                    origin.y,
+                    w,
+                    h,
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
+                );
+            }
+            let visible = (
+                (client.left - x).max(0),
+                (client.top - y).max(0),
+                (client.right - x).min(w).max(0),
+                (client.bottom - y).min(h).max(0),
+            );
+            let (Ok(cutouts), Ok(mut last)) = (self.cutouts.try_borrow(), self.region.try_borrow_mut()) else {
+                return;
+            };
+            let mut parts = vec![visible];
+            parts.extend(
+                cutouts
+                    .iter()
+                    .map(|&(l, t, r, b)| (l - x, t - y, r - x, b - y))
+                    .filter(|&(l, t, r, b)| l < visible.2 && r > visible.0 && t < visible.3 && b > visible.1),
+            );
+            let region = (parts != [(0, 0, w, h)]).then_some(parts);
+            if region == *last {
+                return;
+            }
+            // SAFETY: regions made here are combined and then owned by the system once passed to
+            // `SetWindowRgn` (the cutouts are deleted after use); a null region removes it.
+            unsafe {
+                let handle = match &region {
+                    Some(parts) => {
+                        let (l, t, r, b) = parts[0];
+                        let handle = CreateRectRgn(l, t, r, b);
+                        for &(l, t, r, b) in &parts[1..] {
+                            let cut = CreateRectRgn(l, t, r, b);
+                            CombineRgn(handle, handle, cut, RGN_DIFF);
+                            DeleteObject(cut);
+                        }
+                        handle
+                    }
+                    None => std::ptr::null_mut(),
+                };
+                SetWindowRgn(self.popup, handle, 1);
+            }
+            *last = region;
+        }
+    }
+
+    /// The host's window procedure, extended: when the host moves, its containers follow.
+    unsafe extern "system" fn follow_host(
         hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        id: usize,
+        data: usize,
+    ) -> LRESULT {
+        if msg == WM_WINDOWPOSCHANGED {
+            // SAFETY: `data` is the container's boxed `Placement`, which outlives the subclass:
+            // the container removes it before dropping the box.
+            unsafe { (*(data as *const Placement)).apply(hwnd) };
+        } else if msg == WM_NCDESTROY {
+            // SAFETY: removes our own subclass from the window being destroyed.
+            unsafe { RemoveWindowSubclass(hwnd, Some(follow_host), id) };
+        }
+        // SAFETY: the rest of the host's own handling.
+        unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+    }
+
+    /// The window the plugin's view goes into: a borderless popup owned by the host's window and
+    /// kept over the editor area. A child window would be simpler, but common Windows OpenGL
+    /// drivers present the host's surface over child windows, so a plugin view in one never
+    /// reaches the screen. Owned popups stay above the host, minimise with it and stay off the
+    /// taskbar.
+    pub(super) struct Container {
         host: HWND,
-        embedded: std::cell::Cell<bool>,
+        placement: Box<Placement>,
+        embedded: Cell<bool>,
+        /// Not shown before it is first placed, so it never flashes at the window's corner.
+        placed: Cell<bool>,
+        hidden: Cell<bool>,
     }
 
     impl Container {
-        pub(super) fn new(window: &Window, size: EditorSize, top_inset: f64) -> Result<Self, PluginError> {
+        pub(super) fn new(window: &Window, size: EditorSize, _top_inset: f64) -> Result<Self, PluginError> {
             let class = container_class().ok_or(PluginError::Call("register the editor container class"))?;
-            // SAFETY: creates a child of the live host window with our registered class; destroyed in Drop.
-            let hwnd = unsafe {
+            // SAFETY: creates a popup owned by the live host window with our registered class;
+            // destroyed in Drop.
+            let popup = unsafe {
                 CreateWindowExW(
-                    0,
+                    WS_EX_TOOLWINDOW,
                     class.as_ptr(),
                     std::ptr::null(),
-                    WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+                    WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
                     0,
                     0,
                     size.width as i32,
@@ -792,36 +984,49 @@ mod platform {
                     std::ptr::null(),
                 )
             };
-            if hwnd.is_null() {
-                return Err(PluginError::Call("create a child window for its editor"));
+            if popup.is_null() {
+                return Err(PluginError::Call("create a window for its editor"));
             }
             let c = Self {
-                hwnd,
                 host: window.0,
-                embedded: std::cell::Cell::new(false),
+                placement: Box::new(Placement {
+                    popup,
+                    rect: Cell::new((0, 0, size.width as i32, size.height as i32)),
+                    cutouts: RefCell::new(Vec::new()),
+                    region: RefCell::new(None),
+                }),
+                embedded: Cell::new(false),
+                placed: Cell::new(false),
+                hidden: Cell::new(false),
             };
-            c.place(size, top_inset);
+            let data = &*c.placement as *const Placement as usize;
+            // SAFETY: the subclass reads the boxed placement, which stays at this address until
+            // Drop removes the subclass. Its id (the same address) is unique per container.
+            unsafe { SetWindowSubclass(c.host, Some(follow_host), data, data) };
             Ok(c)
         }
 
         pub(super) fn parent(&self) -> *mut c_void {
-            self.hwnd
+            self.placement.popup
         }
 
         fn set_rect(&self, x: f64, y: f64, size: EditorSize) {
             let s = scale(self.host);
-            // SAFETY: moves our own child window.
-            unsafe {
-                SetWindowPos(
-                    self.hwnd,
-                    HWND_TOP,
-                    (x * s).round() as i32,
-                    (y * s).round() as i32,
-                    size.width as i32,
-                    size.height as i32,
-                    SWP_NOZORDER | SWP_NOACTIVATE,
-                );
-            }
+            self.placement.rect.set((
+                (x * s).round() as i32,
+                (y * s).round() as i32,
+                size.width as i32,
+                size.height as i32,
+            ));
+            self.placement.apply(self.host);
+            self.placed.set(true);
+            self.show();
+        }
+
+        fn show(&self) {
+            let show = self.placed.get() && !self.hidden.get();
+            // SAFETY: shows or hides our own popup without activating it.
+            unsafe { ShowWindow(self.placement.popup, if show { SW_SHOWNA } else { SW_HIDE }) };
         }
 
         pub(super) fn place(&self, size: EditorSize, top_inset: f64) {
@@ -835,18 +1040,9 @@ mod platform {
                 self.place(size, top_inset);
                 return;
             }
-            // SAFETY: resizes our own child window.
-            unsafe {
-                SetWindowPos(
-                    self.hwnd,
-                    HWND_TOP,
-                    0,
-                    0,
-                    size.width as i32,
-                    size.height as i32,
-                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
-                );
-            }
+            let (x, y, _, _) = self.placement.rect.get();
+            self.placement.rect.set((x, y, size.width as i32, size.height as i32));
+            self.placement.apply(self.host);
         }
 
         pub(super) fn embed(&self) {
@@ -869,17 +1065,18 @@ mod platform {
                 let state = if ok && visible { "" } else { " (hidden)" };
                 format!("{}x{}{state}", r.right - r.left, r.bottom - r.top)
             };
+            let popup = self.placement.popup;
             // SAFETY: a plain query of our own window's first child.
-            let child = unsafe { GetWindow(self.hwnd, GW_CHILD) };
+            let child = unsafe { GetWindow(popup, GW_CHILD) };
             let plugin = if child.is_null() {
                 "missing".to_owned()
             } else {
                 format!("{child:?} {}", rect(child))
             };
+            let (x, y, _, _) = self.placement.rect.get();
             format!(
-                "container {:?} {} at scale {:.2}; plugin window {plugin}",
-                self.hwnd,
-                rect(self.hwnd),
+                "container {popup:?} {} at {x},{y} px, scale {:.2}; plugin window {plugin}",
+                rect(popup),
                 scale(self.host)
             )
         }
@@ -890,27 +1087,54 @@ mod platform {
         }
 
         pub(super) fn set_hidden(&self, hidden: bool) {
-            // SAFETY: shows or hides our own child window without activating it.
-            unsafe { ShowWindow(self.hwnd, if hidden { SW_HIDE } else { SW_SHOWNA }) };
+            self.hidden.set(hidden);
+            self.show();
         }
 
-        /// A disabled child is skipped by hit testing, so drags reach the host window.
+        pub(super) fn set_cutouts(&self, rects: &[(f64, f64, f64, f64)]) {
+            let s = scale(self.host);
+            let px = |v: f64| (v * s).round() as i32;
+            let cutouts: Vec<_> = rects
+                .iter()
+                .map(|&(x, y, w, h)| (px(x), px(y), px(x + w), px(y + h)))
+                .collect();
+            let Ok(mut current) = self.placement.cutouts.try_borrow_mut() else {
+                return;
+            };
+            if *current != cutouts {
+                *current = cutouts;
+                drop(current);
+                self.placement.apply(self.host);
+            }
+        }
+
+        /// A disabled window is skipped by hit testing (`WindowFromPoint`), so drags reach the
+        /// host window.
         pub(super) fn set_input_passthrough(&self, passthrough: bool) {
-            // SAFETY: enables or disables our own child window.
-            unsafe { EnableWindow(self.hwnd, BOOL::from(!passthrough)) };
+            // SAFETY: enables or disables our own popup.
+            unsafe { EnableWindow(self.placement.popup, BOOL::from(!passthrough)) };
         }
     }
 
     impl Drop for Container {
         fn drop(&mut self) {
-            // SAFETY: our own child window; the plugin's view was removed before this.
-            unsafe { DestroyWindow(self.hwnd) };
+            let data = &*self.placement as *const Placement as usize;
+            // SAFETY: removes our subclass before the placement it reads is dropped, then
+            // destroys our own popup; the plugin's view was removed before this.
+            unsafe {
+                RemoveWindowSubclass(self.host, Some(follow_host), data);
+                DestroyWindow(self.placement.popup);
+            }
         }
     }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform {
+    pub(super) fn service() {}
+
+    pub(super) const CAN_CUT_OUT: bool = false;
+
     use super::EditorSize;
     use crate::PluginError;
 
@@ -949,6 +1173,7 @@ mod platform {
         /// Do nothing on platforms without native editor embedding.
         pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}
+        pub(super) fn set_cutouts(&self, _rects: &[(f64, f64, f64, f64)]) {}
         pub(super) fn set_input_passthrough(&self, _passthrough: bool) {}
     }
 }

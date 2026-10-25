@@ -43,7 +43,7 @@ pub mod scan;
 pub mod testing;
 mod util;
 
-pub use editor::{EditorSize, NativeWindow, Vst3Editor};
+pub use editor::{EditorSize, NativeWindow, Vst3Editor, service_editors};
 pub use graphics::{HostGraphicsContext, HostGraphicsGuard};
 pub use hosted::{PluginInstance, PluginProcessor};
 pub use instance::{NoteEvent, NoteEventKind, ParamInfo, Transport, Vst3Instance, Vst3Processor};
