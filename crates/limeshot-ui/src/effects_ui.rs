@@ -4,7 +4,7 @@ use crate::app::LimeShotApp;
 use crate::theme::Theme;
 use crate::widgets::Hint as _;
 use crate::widgets::{section, toggle_label};
-use egui::{CornerRadius, Rect, RichText, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
+use egui::{CornerRadius, CursorIcon, Rect, RichText, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use limeshot_core::{Command, EffectSlot, MAX_EFFECTS};
 
 /// Draw a mixer track's insert chain with controls for adding, editing, bypassing, and reordering effects.
@@ -55,6 +55,58 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
         let target = crate::plugins::Target::Effect { track, effect: e.id };
         let row = ui
             .horizontal(|ui| {
+                // The drag handle: grab it to move the insert up or down the chain.
+                let (g, grip) = ui.allocate_exact_size(vec2(12.0, 24.0), Sense::drag());
+                let dragging = grip.dragged();
+                let dots = if grip.hovered() || dragging {
+                    t.text
+                } else {
+                    t.text_faint
+                };
+                for (dx, dy) in [
+                    (-2.5, -5.0),
+                    (2.5, -5.0),
+                    (-2.5, 0.0),
+                    (2.5, 0.0),
+                    (-2.5, 5.0),
+                    (2.5, 5.0),
+                ] {
+                    ui.painter().circle_filled(g.center() + vec2(dx, dy), 1.3, dots);
+                }
+                if grip.hovered() || dragging {
+                    ui.ctx().set_cursor_icon(if dragging {
+                        CursorIcon::Grabbing
+                    } else {
+                        CursorIcon::Grab
+                    });
+                }
+                grip.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::WidgetType::Other, true, format!("Reorder {}", pos + 1))
+                });
+                grip.dnd_set_drag_payload(InsertDrag { track, pos });
+                let grip = grip.hint("Drag to reorder");
+                if grip.dragged()
+                    && let Some(at) = ui.ctx().pointer_interact_pos()
+                {
+                    // A floating copy of the slot follows the pointer.
+                    let layer = egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("insert-drag"));
+                    let painter = ui.ctx().layer_painter(layer);
+                    let ghost = Rect::from_min_size(at + vec2(8.0, -12.0), vec2(160.0, 24.0));
+                    painter.rect_filled(ghost, CornerRadius::same(t.radius_sm), t.raised_hover);
+                    painter.rect_stroke(
+                        ghost,
+                        CornerRadius::same(t.radius_sm),
+                        Stroke::new(1.0, t.accent),
+                        StrokeKind::Inside,
+                    );
+                    painter.text(
+                        pos2(ghost.left() + 10.0, ghost.center().y),
+                        egui::Align2::LEFT_CENTER,
+                        e.name(),
+                        egui::FontId::proportional(12.0),
+                        t.text,
+                    );
+                }
                 let on = toggle_label(
                     ui,
                     e.enabled,
@@ -70,11 +122,11 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                         enabled: !e.enabled,
                     });
                 }
-                // A boxed slot like the Channel Rack's channel buttons: click opens, drag reorders.
-                let width = (ui.available_width() - 30.0 - 22.0 - 2.0 * ui.spacing().item_spacing.x).max(60.0);
-                let (r, slot) = ui.allocate_exact_size(vec2(width, 24.0), Sense::click_and_drag());
+                // A boxed slot like the Channel Rack's channel buttons: a click opens the plugin.
+                let width = (ui.available_width() - 22.0 - ui.spacing().item_spacing.x).max(60.0);
+                let (r, slot) = ui.allocate_exact_size(vec2(width, 24.0), Sense::click());
                 let open = app.plugins.is_window_open(target);
-                let fill = if slot.hovered() || slot.dragged() {
+                let fill = if slot.hovered() || dragging {
                     t.raised_hover
                 } else {
                     t.raised
@@ -104,35 +156,7 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                 if slot.clicked() {
                     crate::plugin_window::toggle(app, target);
                 }
-                slot.dnd_set_drag_payload(InsertDrag { track, pos });
-                if let Some(from) = slot.dnd_release_payload::<InsertDrag>()
-                    && from.track == track
-                    && from.pos != pos
-                {
-                    moved = Some((from.pos, pos));
-                }
-                if let Some(from) = slot.dnd_hover_payload::<InsertDrag>()
-                    && from.track == track
-                    && from.pos != pos
-                {
-                    let y = if from.pos < pos { r.bottom() } else { r.top() };
-                    ui.painter().hline(r.x_range(), y, Stroke::new(2.0, t.accent));
-                }
-                slot.hint("Click to open or close the plugin · drag to reorder");
-                ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = 0.0;
-                    for (label, to, enabled, tip) in [
-                        ("▲", pos.wrapping_sub(1), pos > 0, "Move up"),
-                        ("▼", pos + 1, pos + 1 < effects.len(), "Move down"),
-                    ] {
-                        let b = egui::Button::new(RichText::new(label).size(8.0))
-                            .min_size(vec2(18.0, 12.0))
-                            .frame(false);
-                        if ui.add_enabled(enabled, b).hint(tip).clicked() {
-                            moved = Some((pos, to));
-                        }
-                    }
-                });
+                slot.hint("Click to open or close the plugin");
                 let mut mix = e.mix;
                 let r = crate::widgets::knob(ui, &mut mix, 0.0, 1.0, 1.0, 22.0, false, |v| {
                     format!("Mix: {:.0}%", v * 100.0)
@@ -145,6 +169,24 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                 app.exec_gesture(&r, command);
             })
             .response;
+        // The whole row is the drop target; a line shows where the insert will land.
+        if let Some(from) = row.dnd_hover_payload::<InsertDrag>()
+            && from.track == track
+            && from.pos != pos
+        {
+            let y = if from.pos < pos {
+                row.rect.bottom()
+            } else {
+                row.rect.top()
+            };
+            ui.painter().hline(row.rect.x_range(), y, Stroke::new(2.0, t.accent));
+        }
+        if let Some(from) = row.dnd_release_payload::<InsertDrag>()
+            && from.track == track
+            && from.pos != pos
+        {
+            moved = Some((from.pos, pos));
+        }
         row.context_menu(|ui| {
             if ui.button("Open plugin").clicked() {
                 app.plugins.open_window(target, None);

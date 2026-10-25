@@ -3021,7 +3021,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::insert_slots_reorder_with_arrows_and_drag",
+        "crates/limeshot-app/tests/ui.rs::insert_slots_reorder_by_dragging_their_handle",
         "limeshot-sequencer tests::muted_tracks_and_clips_are_skipped_and_solo_resolves",
         "limeshot-engine tests/audio.rs::mixer_volume_pan_and_mute_route_to_master",
         "crates/limeshot-app/tests/ui.rs::mixer_on_buttons_keep_locked_inserts_audible_and_allow_direct_toggles"
@@ -3033,7 +3033,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "2026-10-25: On buttons toggle insert activation. Shift-click toggles an undoable, saved mute lock; locked active inserts remain audible during other inserts’ solo operations. Direct clicks still work. 2026-10-25 sampler/mixer workflow: insert slots show only On and a host Mix knob (saved, undoable, latency-aligned dry path); plugin parameters and presets moved to the plugin window, which also has an On switch. Adding a plugin opens its window. Insert slots are boxed like Channel Rack buttons and reorder with ▲/▼, drag or the context menu."
+      "notes": "2026-10-25: On buttons toggle insert activation. Shift-click toggles an undoable, saved mute lock; locked active inserts remain audible during other inserts’ solo operations. Direct clicks still work. 2026-10-25 sampler/mixer workflow: insert slots show only On and a host Mix knob (saved, undoable, latency-aligned dry path); plugin parameters and presets moved to the plugin window, which also has an On switch. Adding a plugin opens its window. Insert slots are boxed like Channel Rack buttons and reorder by dragging their grip handle (or Move up/down in the context menu)."
     },
     {
       "id": "MIX-005",

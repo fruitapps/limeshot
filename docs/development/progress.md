@@ -1465,7 +1465,7 @@ Done:
   value (FL Studio's point menu); the curve modes and Reset tension moved to the tension handles.
 * Mixer inserts are a plain list with On and a host Mix knob (saved, undoable, latency-aligned dry path). Plugin
   parameters, presets and an On switch live in the plugin window, which opens when a plugin is added. Slots are boxed like Channel Rack
-  buttons and reorder with ▲/▼ arrows, dragging or the context menu (owner follow-up). The track
+  buttons and reorder by dragging a grip handle or from the context menu (owner follow-up). The track
   panel is name, Input, Output, Inserts, Equalizer.
 * Tool cursors are smaller and flat (no outline).
 * CodeRabbit PR #11: live_check no longer saves preferences; locked inserts stay audible through intermediate

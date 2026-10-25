@@ -6870,7 +6870,7 @@ fn long_rack_horizontal_scrolling_does_not_grow_the_window() {
 }
 
 #[test]
-fn insert_slots_reorder_with_arrows_and_drag() {
+fn insert_slots_reorder_by_dragging_their_handle() {
     let mut h = harness(true);
     h.state_mut().ui.workspace.close(Win::ChannelRack);
     h.state_mut().show_window(Win::Mixer);
@@ -6900,24 +6900,15 @@ fn insert_slots_reorder_with_arrows_and_drag() {
     };
     let before = order(&h);
     assert_eq!(before.len(), 2);
-    h.get_all_by_label("▼").next().expect("move down").click();
-    h.step();
+    assert!(h.query_by_label("▼").is_none(), "no arrow buttons");
+    // Drag the first slot's handle onto the second row, then back.
+    let grip = |h: &Harness<'static, LimeShotApp>, n: usize| h.get_by_label(&format!("Reorder {n}")).rect().center();
+    let (first, second) = (grip(&h, 1), grip(&h, 2));
+    drag_with(&mut h, first, second, Modifiers::NONE);
     h.step();
     assert_eq!(order(&h), vec![before[1], before[0]]);
-    // Drag the (now) second slot onto the first.
-    let label = |h: &Harness<'static, LimeShotApp>, n: usize| {
-        let id = order(h)[n];
-        let e = h.state().project().mixer.tracks[3]
-            .effects
-            .iter()
-            .find(|e| e.id == id)
-            .unwrap()
-            .name();
-        format!("{}. {e}", n + 1)
-    };
-    let first = h.get_by_label(&label(&h, 0)).rect().center();
-    let second = h.get_by_label(&label(&h, 1)).rect().center();
     drag_with(&mut h, second, first, Modifiers::NONE);
+    h.step();
     assert_eq!(order(&h), before);
     h.state_mut().doc.undo();
     assert_eq!(order(&h), vec![before[1], before[0]]);
