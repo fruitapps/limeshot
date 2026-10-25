@@ -9,8 +9,8 @@ hardware recording or native plugin embedding in a DAW.
 
 | Images | Source commit | Renderer |
 | --- | --- | --- |
-| `current/*.png` | PR #7 rewrite review, based on `68259aa` plus the review fixes | `crates/limeshot-app/examples/ui_shot.rs`, 1440 × 900 |
-| `current/native/*.png` | PR #7 rewrite review, based on `68259aa` plus the review fixes | `native-plugins/shared/examples/ui_shot.rs`, each editor's default dimensions |
+| `current/*.png` | `68259aa` plus the PR #7 review fixes (2026-10-23); `mixer.png` and `mixer-eq.png` predate the On + Mix insert slots | `crates/limeshot-app/examples/ui_shot.rs`, 1440 × 900 |
+| `current/native/*.png` | `68259aa` plus the PR #7 review fixes (2026-10-23) | `native-plugins/shared/examples/ui_shot.rs`, each editor's default dimensions |
 
 Build the twelve bundles first (`python3 native-plugins/build.py --debug`) and set
 `LIMESHOT_LIME_PLUGINS` to the absolute `native-plugins/target/debug-bundled` directory.

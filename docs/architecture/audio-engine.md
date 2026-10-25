@@ -2,14 +2,14 @@
 
 This document describes the code as it is. Source: `crates/limeshot-engine`, `crates/limeshot-audio`, `crates/limeshot-sequencer`.
 
-## Native-only instruments and inserts (D39)
+## Hosted instruments and inserts (D39)
 
-Production `InstrumentState` is Plugin or Silent. Unconverted legacy synth/sampler values have no engine fallback.
-The document normalizer and CLI convert before playback/save. The engine contains no effect factory or in-process track EQ;
-only the host supplies insert processors. `limeshot-dsp::voice` is shared native-plugin DSP, also used for host browser
-previews/metronome. `tests/support` contains the reference adapters used by engine/equivalence tests, never linked
-into the application. Native plugins no longer depend on the DAW engine/sequencer. Unsupported legacy settings
-remain saved with warnings; see [known limitations](../roadmap/known-limitations.md).
+`InstrumentState` is Plugin or Silent: every instrument and insert is a hosted VST3 (normally a Lime Native bundle),
+and the engine has no effect factory or in-process track EQ. Projects from before the switch are converted by the
+document normalizer and the CLI before playback or saving. `limeshot-dsp::voice` is shared native-plugin DSP, also
+used for Browser previews and the metronome. `tests/support` holds the reference adapters used by engine and
+equivalence tests; they are never linked into the application. The native plugins do not depend on the engine or
+sequencer.
 
 ## Data flow
 
@@ -230,15 +230,15 @@ previews use `Msg::NoteFor`: the renderer computes an absolute off sample from t
 the message. That deadline runs while transport is stopped, for preview/metronome voices and hosted instruments alike;
 UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.
 
-## Hosted parity protocol
+## Host protocol for Lime plugins
 
 Clip windows/chase/fades and additive channel pan use bounded versioned SysEx; per-note pan uses standard VST3
 expressions. Native processors report block telemetry through output SysEx, copied during addEvent. The host supplies
 stereo auxiliary key audio to routed Comp instances. All buffers are preallocated. The optional bridge serializes
 the same data but retains its existing blocking-I/O limitations. Track EQ is a dedicated hosted Lime EQ after ten
-inserts; its saved bands drive appended hidden native controls. See D39 and the current hosted-parity handoff.
+inserts; its saved bands drive appended hidden native controls. See D39.
 
-## PR #7 review follow-up
+## Transport, sample hand-off and retiming
 
 Insert processors receive the same block-start transport as hosted instruments, captured after the first tempo
 automation update. Tempo-synced delays therefore follow project tempo and Song tempo automation at plugin block

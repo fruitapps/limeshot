@@ -1,9 +1,8 @@
 # Live plugin checks — 2026-10-25
 
-Continuation of PR #11 on its existing managed worktree/branch, at the owner’s request. Screen Recording and
-Accessibility both returned true for the current execution host. No new feature session or automatic merge.
-Used the locally rebuilt debug application/plugins, a disposable demo project with a Serum 2 channel, and
-computer-use native app controls. Native sampler Load initially crashed; it was repaired and retested below.
+macOS Apple Silicon, during PR #11. Screen Recording and Accessibility were granted. Used locally rebuilt debug
+application and plugins, a disposable demo project with a Serum 2 channel, and computer-use app controls. Native
+sampler Load initially crashed; it was repaired and retested below.
 
 ## Observed results
 
@@ -21,8 +20,8 @@ computer-use native app controls. Native sampler Load initially crashed; it was 
 | Mixer On/solo | Direct On and right-click solo changed visible states. Modifier-click locking was inconclusive: the driver’s Shift-click produced no padlock. Headless lock coverage remains passing. |
 | External OS drops, native keyboard forwarding, pin/occlusion stress, host-edge resize | NOT VERIFIED by this pass. No upgrade of PLG-006/PLG-012 to VERIFIED. |
 
-The MP3 fixture is eight synthetic MPEG-1 Layer III silence frames, rather than a private source recording.
-The existing 4 million stereo-frame sampler bound is unchanged; this does not establish long-MP3 support. (Later raised to 6 million stereo frames, about 125 seconds at 48 kHz, by the sampler/mixer workflow pass.)
+The MP3 fixture is eight synthetic MPEG-1 Layer III silence frames, rather than a private source recording; it
+does not establish long-MP3 support.
 
 ## Crash and repair
 
@@ -56,7 +55,3 @@ Use this harness and a disposable project for future live checks; the instructio
 * [Native sampler after MP3 import](../research/evidence/screenshots/live-2026-10-25-native-mp3-loaded.png)
 * [Native limiter open](../research/evidence/screenshots/live-2026-10-25-limiter-native-open.png)
 * [Host after limiter close](../research/evidence/screenshots/live-2026-10-25-limiter-closed-host-visible.png)
-
-Every future development session retains NEW codex/ branch, NEW managed worktree and NEW attached draft PR,
-based on the latest unmerged continuation after checking merge state; preserve older checkouts, validate,
-document, commit and push, never merge automatically, and create further sessions only when the owner asks.

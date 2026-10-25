@@ -9,7 +9,7 @@ Project
 ├── title, info, tempo (milli-BPM), time_signature, swing, next_id, extra{}
 ├── channels: [Channel]            — the Channel Rack, shared by every pattern (order = rack order)
 │     id, name, color, instrument, volume, pan, muted, solo, mute_locked, mixer_track, root_key, extra{}
-│     instrument = Plugin(PluginRef)  — active playback; legacy import/preset variants follow
+│     instrument = Plugin(PluginRef)  — active playback; pre-VST3 variants are kept only for conversion
 │                | Sampler{sample?, gain_db, pitch, start, end, reverse, attack_ms, decay_ms, sustain, release_ms, one_shot,
 │                           looping, loop_start, loop_end, cutoff_hz, resonance}
 │                | Synth{waveform, attack/decay/release ms, sustain, gain_db, octave, detune_cents,
@@ -103,7 +103,7 @@ UTF-8 JSON:
 ```
 
 * `from_json` checks `format` and refuses newer `version`s (`ProjectError::TooNew`), so a file is never half-read.
-  Older versions go through `migrate(version, value)`. Version 2 accepts version-1 envelopes; document normalization converts preserved legacy instruments/effects into hosted Lime state after resolving sample paths.
+  Older versions go through `migrate(version, value)`. Version 2 accepts version-1 envelopes; document normalization converts their in-process instruments and effects into hosted Lime state after resolving sample paths.
 * `#[serde(flatten)] extra` on the project, channels, patterns, clips and mixer tracks keeps unknown fields, and
   `Instrument::Unsupported` keeps unknown instrument objects. A file from a newer minor feature set round-trips.
 * After parsing, `Project::sanitize` repairs hostile values. It clamps ranges, replaces NaN, drops notes for missing
@@ -124,11 +124,13 @@ UTF-8 JSON:
 clips and Make unique, step toggling, note editing, sanitising, unknown-field round trips, version refusal and
 save/reload equality. `limeshot-app/tests/mvp_workflow.rs` saves, reopens and compares a complete composition.
 
-## VST3 default format (D39)
+## Lime VST3 references (D39)
 
-Format 2 accepts version-1 envelopes and preserves legacy instrument/effect fields and unknown data. The host
-resolves relative sample paths before normalization embeds audio and replaces legacy sources with Lime VST3 state.
-All ten legacy effect kinds have hosted replacements, including Gate/Drive/Chorus. Slot enabled state is authoritative for converted bypass. Legacy track-EQ bands drive a dedicated marked Lime EQ after the ten ordinary insert slots. Hosted compressor sidechain indices and key-enable state follow mixer track edits. See PLG-013…029.
+Instruments and effects are `PluginRef`s to Lime bundles (`lime:<bundle>`). Format 2 reads version-1 files, keeping
+their instrument/effect fields and unknown data; the host resolves relative sample paths, embeds the audio and
+replaces those sources with Lime VST3 state. Slot enabled state is the bypass. Track-EQ bands drive a dedicated
+marked Lime EQ after the ten insert slots. Compressor sidechain indices and key-enable state follow mixer track
+edits. See PLG-013…029.
 
 
 ## Sample migration boundaries

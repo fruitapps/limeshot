@@ -29,11 +29,12 @@ The MVP is a functional music-production foundation: a user can create a short c
 | 21 | Verify export | — | MVP test reads the WAV back: rate, length, no clipping, kick onsets on every beat, melody only in bar 2 |
 
 **Result:** the workflow passes as an automated test (`crates/limeshot-app/tests/mvp_workflow.rs`) through the same
-commands the UI issues, and the individual UI interactions have their own headless UI tests. On macOS the GUI and
-realtime audio were exercised. A full hands-on run by a person is still to be recorded (`docs/development/progress.md`).
+commands the UI issues, and the individual UI interactions have their own headless UI tests, which CI runs on
+Windows, Linux and macOS. On macOS the GUI and realtime audio were exercised by hand; a full hands-on run of all 21
+steps is still to be recorded ([progress log](../development/progress.md)).
 
-**MVP status: functionally complete on macOS. Not yet verified on Windows or Linux** (PF-003, PF-004 IN_PROGRESS). By
-START.md's definition of done, the MVP is not finished until those platforms are verified.
+**MVP status: complete on macOS and shipped in v0.1.0-alpha.1. Hands-on GUI/audio verification on Windows and Linux
+is open** (PF-003, PF-004). By START.md's definition of done, the MVP is finished once those platforms are verified.
 
 ## Mandatory components (§13.1)
 

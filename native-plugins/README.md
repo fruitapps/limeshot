@@ -32,13 +32,16 @@ Drag knobs vertically; Shift gives fine adjustment, double-click resets, wheel a
 numeric value or named choice. Parameter changes use host automation gestures and smoothing. The ON/BYPASS button
 controls host bypass (effects pass input unchanged; instruments become silent while notes keep their timing).
 
-## Ready-to-use bundles and installation
+## Installation
 
-`dist/` contains the generated plugins and a ZIP package for the platform/architecture used to build them. The development Mac's
-bundles are **macOS Apple Silicon (arm64)** and are ad-hoc signed, not notarized. They are not Windows/Linux binaries
-or Intel/universal Mac binaries. The source/build workflow supports those targets; runtime validation there is pending.
+The [LimeShot release packages](https://github.com/fruitapps/limeshot/releases) install all twelve bundles into the
+system VST3 folder, where other DAWs find them too: the Windows installer (`Common Files\VST3`), the macOS PKG
+(`/Library/Audio/Plug-Ins/VST3`) and the Linux `.deb` (`/usr/lib/vst3`) or `install.sh` (`/usr/local/lib/vst3`, or
+`~/.vst3` with `--user`). The Windows portable ZIP, the macOS DMG app and the Linux tarball carry their own copy for
+LimeShot only. macOS bundles are signed ad hoc, not notarised.
 
-Copy the individual `.vst3` bundles, preserving their contents, to your user plugin directory, then rescan in your DAW:
+To install bundles you built yourself (`dist/` holds them and a ZIP for the build platform), copy each `.vst3`
+bundle, preserving its contents, to a plugin directory and rescan in your DAW:
 
 - macOS: `~/Library/Audio/Plug-Ins/VST3/`
 - Windows: `C:\Program Files\Common Files\VST3\` (or a custom VST3 folder supported by your DAW)
@@ -46,7 +49,7 @@ Copy the individual `.vst3` bundles, preserving their contents, to your user plu
 
 FL Studio, REAPER, Cubase, Ableton Live and Bitwig support VST3. Logic Pro requires AU and cannot load these VST3
 bundles directly. VST2/AU/CLAP export is not included in this suite. The build script never installs plugins or
-changes your DAW's settings automatically.
+changes your DAW's settings.
 
 ## Build
 
@@ -81,7 +84,7 @@ cargo run --manifest-path native-plugins/Cargo.toml -p lime-native --example ui_
 
 The `verify` program loads the **exported binaries** through LimeShot's VST3 host, checking actual ABI loading,
 parameter/state recall, editor creation, timestamped MIDI onset and automation at 44.1/48/96 kHz and buffer sizes
-1/64/333/1024. DSP tests compare all seven effects against the DAW's processors at multiple buffer sizes and rates;
+1/64/333/1024. DSP tests compare all ten effects against the DAW's processors at multiple buffer sizes and rates;
 test sustain, repeated-key polyphony/stealing/choke, held-note automation, sample recall after file deletion,
 sidechain ducking, delay tempo sync and limiter ceiling/bypass. Debug plugins enable realtime allocation assertions.
 
@@ -116,7 +119,7 @@ limits sample peaks; it does not provide true-peak oversampling or lookahead.
 ## Source layout
 
 `lime-*/` are small VST3 entry points with stable class IDs. `shared/` implements parameters, MIDI, editor and the
-adapter to `../crates/limeshot-{dsp,engine,sequencer,core,project}`. `xtask/` bundles native binaries with nice-plug;
+adapter to `../crates/limeshot-{dsp,core,project}`. `xtask/` bundles native binaries with nice-plug;
 `build.py` collects them into `dist/`. No DSP is copied from another plugin or proprietary application. Keep the
 parameter array order and class IDs stable: hosts identify existing automation and sessions with them.
 
