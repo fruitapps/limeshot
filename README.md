@@ -136,7 +136,7 @@ and platform build tools):
 python3 native-plugins/build.py
 ```
 
-The script collects bundles and a ZIP in `native-plugins/dist/`; it does not install them. Copy the `.vst3` bundles
+The script collects bundles and a ZIP in `native-plugins/dist/`; it does not install them (the LimeShot installers do). Copy the `.vst3` bundles
 to your host's plugin directory and rescan. Current macOS Apple Silicon release/debug builds pass exported ABI checks for all twelve bundles. The historical
 nine-bundle baseline passed pluginval 1.0.4 strictness 5; pluginval is unavailable for the current binaries. Hands-on DAW checks, Windows/Linux/Intel runtime
 validation and notarization remain pending. Local macOS bundles are arm64 and ad-hoc signed. Generated binaries
@@ -178,8 +178,10 @@ Press **Space** to play, **L** to switch between Pattern and Song mode, **F5/F6/
 every shortcut. Enable typing-keyboard notes in the toolbar to play the selected Channel Rack instrument;
 Cmd+T toggles this outside the Playlist (where it adds a marker).
 
-On macOS, `bash scripts/package-macos.sh` builds an app and DMG in `dist/`. These are ad-hoc signed development
-packages; Developer ID signing and notarization are pending. Windows/Linux installers are not yet provided.
+Installers that put LimeShot and the Lime VST3 suite in place are built by `scripts/package-windows.ps1` (Inno
+Setup installer and portable ZIP), `scripts/package-macos.sh` (app, DMG and PKG) and `scripts/package-linux.sh`
+(tarball with `install.sh`, and a `.deb`); a `v*` tag builds them all in the release workflow. They are unsigned or
+ad-hoc signed alpha packages. See [release packaging](docs/development/release-packaging.md).
 
 <details>
 <summary><strong>Headless CLI</strong></summary>

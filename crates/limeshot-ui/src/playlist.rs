@@ -134,7 +134,7 @@ pub struct State {
     pub point_menu: Option<(AutomationId, usize, Pos2, u64)>,
     pub point_menu_curve: bool,
     /// Waveform overviews of audio clip samples, by sample source path (read by tests).
-    pub peaks:std::collections::HashMap<String, std::sync::Arc<Peaks>>,
+    pub peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
     /// The tool whose cursor was drawn over the grid in the last frame (for tests).

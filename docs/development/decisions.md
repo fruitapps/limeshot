@@ -288,3 +288,18 @@ validated track-EQ slot. No runtime built-in instrument/effect factory returns.
 Channel Rack/Settings/Playlist previews cache the embedded sampler PCM under a content key and require no source
 file or temporary file. Known Lime numeric parameters use the existing unit-value menu and named automation.
 Native/platform GUI validation, pluginval and billing-blocked remote CI remain separate from local test evidence.
+
+### D40. Installers place the Lime VST3 suite in the shared VST3 folders (2026-10-25)
+
+Owner request: an alpha release whose installers install both LimeShot and the Lime VST3 suite. D38 kept
+`build.py` free of installation; the installers now do it, and only on the user's explicit install. The suite is
+installed once, in the platform's standard VST3 folder, which LimeShot already searches (D39), so other hosts can
+load the same bundles and no 140 MB second copy is shipped inside the app. Self-contained layouts remain for the
+cases without a system install: the portable Windows ZIP and the Linux tarball keep `plugins/` beside the binary,
+and the macOS DMG app keeps `Contents/PlugIns`. The Windows installer's VST3 component can be unticked, which puts
+the bundles in the app's private `plugins` folder instead (LimeShot needs them either way); the Linux `install.sh`
+offers the same through `--private-plugins`. The macOS PKG installs both parts with no choice, because a pkg
+choice cannot redirect the bundles into the app. Inno Setup builds the Windows installer (one script, components,
+per-user or per-machine install, no WiX/.NET toolchain); Linux ships a tarball with an install script and a `.deb`.
+AppImage, MSI and Flatpak are not provided: they add tooling without changing what is installed. Packages are
+unsigned or signed ad hoc until signing identities exist.

@@ -1,0 +1,116 @@
+name: Release packages
+
+# Builds the installers for every platform (PF-006). A pushed tag `v*` (e.g. v0.1.0-alpha.1) also creates a
+# DRAFT GitHub release with the packages attached; publishing it stays a manual step. workflow_dispatch builds
+# the same packages as workflow artifacts only, with an optional version override.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version (default: Cargo.toml workspace version)"
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+  LIMESHOT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows x86-64, os: windows-latest }
+          - { name: macOS Apple Silicon, os: macos-latest }
+          - { name: macOS Intel, os: macos-15-intel }
+          # The oldest supported Ubuntu runner keeps the glibc requirement low.
+          - { name: Linux x86-64, os: ubuntu-22.04 }
+          - { name: Linux ARM64, os: ubuntu-22.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            native-plugins -> target
+      - name: Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+      - name: Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: scripts/package-macos.sh
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          scripts/package-linux.sh
+          # Development builds also search the checkout's native-plugins/dist; hide it so the checks below
+          # prove that the installed copies are found.
+          mv native-plugins/dist native-plugins/dist.checked
+          # The .deb must install and uninstall cleanly; the installed CLI must find the shared VST3s.
+          sudo apt-get install -y ./dist/limeshot_*.deb
+          limeshot-cli demo /tmp/demo.lime --render /tmp/demo.wav | tee /tmp/render.txt
+          if grep -q 'peak -inf' /tmp/render.txt; then echo "silent render after installing the .deb"; exit 1; fi
+          sudo apt-get remove -y limeshot
+          # The tarball's --user install must work and uninstall completely.
+          mkdir -p /tmp/tar && tar -C /tmp/tar -xzf dist/limeshot-*.tar.gz
+          /tmp/tar/limeshot-*/install.sh --user
+          ~/.local/bin/limeshot-cli demo /tmp/demo2.lime --render /tmp/demo2.wav | tee /tmp/render2.txt
+          if grep -q 'peak -inf' /tmp/render2.txt; then echo "silent render after install.sh --user"; exit 1; fi
+          ~/.local/opt/limeshot/uninstall.sh
+          test ! -e ~/.local/opt/limeshot && test ! -e ~/.vst3/LimeSynth.vst3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LimeShot-${{ runner.os }}-${{ runner.arch }}
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.pkg
+            dist/*.tar.gz
+            dist/*.deb
+
+  release:
+    name: Draft GitHub release
+    if: github.ref_type == 'tag'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+          merge-multiple: true
+      - name: Checksums
+        run: cd packages && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: packages/*

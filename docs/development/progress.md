@@ -1562,3 +1562,54 @@ went blank until it was raised. On Windows the wrapper now samples its editor ar
 popup's window region leaves them out (`CombineRgn` with `RGN_DIFF`), so the covering window shows through and the
 rest of the editor stays. The editor hides only when no sample of it is uncovered. macOS (`can_cut_out` false)
 keeps hiding a covered editor.
+
+
+## 2026-10-25 — Project integrity audit and alpha release installers (Windows, macOS, Linux)
+
+New managed worktree (`D:\Programming\rust\limeshot-alpha-installers`) and branch `codex/alpha-installers`, based on
+`main` at `12f6542` after PR #13 merged; no open PRs existed at session start. Older checkouts remain intact.
+
+### Project integrity check
+* Fixed the single `rustfmt` violation on `main` (`crates/limeshot-ui/src/playlist.rs` line 137).
+* `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings` pass in both the root
+  workspace and `native-plugins/`.
+* All 428 root workspace tests (including all 156 headless UI tests in `limeshot-app/tests/ui.rs`) and all 19
+  `native-plugins` tests pass (`samples_are_picked_and_drawn_in_the_playlist_like_patterns` and
+  `the_draw_tool_reuses_the_length_of_the_last_clip` pass after PR #13).
+* `python scripts/features.py check`, `python scripts/check_repository.py` and `python scripts/test_check_repository.py`
+  pass with 0 errors.
+* Deterministic `limeshot-cli` demo render and re-render produce bit-identical WAV output (`peak -3.7 dBFS`).
+
+### Cross-platform build and installers (PF-006, D40)
+* Extended `crates/limeshot-app/examples/make_icon.rs` to write a multi-resolution PNG-compressed Windows `.ico`
+  (16…256 px) and a 256 px Linux `.png` alongside the macOS `.iconset`, from the same `limeshot_app::icon_rgba`
+  painter code.
+* **Windows (`scripts/package-windows.ps1`, `packaging/windows/limeshot.iss`, `packaging/windows/README.txt`):**
+  builds the release binaries and all twelve release Lime Native VST3 bundles, runs a smoke render through the staged
+  bundles, normalizes pre-1980 crate licence timestamps, and produces `dist/LimeShot-<version>-windows-x64-portable.zip`
+  (47.95 MB) and `dist/LimeShot-<version>-windows-x64-setup.exe` (33.81 MB, Inno Setup 6). Supports per-machine
+  (`Program Files\LimeShot` + `Common Files\VST3`) or per-user (`%LOCALAPPDATA%\Programs\LimeShot` +
+  `%LOCALAPPDATA%\Programs\Common\VST3`) installation, optional private-only VST3 placement (`<app>\plugins`),
+  `.lime` file association and clean uninstallation. Verified locally on Windows 11 x64 in both shared-VST3 and
+  private-plugin modes, including rendering the demo with the installed `limeshot-cli.exe` while `native-plugins/dist`
+  was hidden.
+* **macOS (`scripts/package-macos.sh`):** builds `dist/LimeShot.app` (with the twelve Lime VST3 bundles in
+  `Contents/PlugIns` and plugin/font licences in `Contents/Resources/licenses`), signs each bundle and the app ad hoc,
+  verifies the demo render, builds `dist/LimeShot-<version>-macos-<arch>.dmg`, and builds a `pkgbuild`/`productbuild`
+  installer `dist/LimeShot-<version>-macos-<arch>.pkg` that installs `LimeShot.app` into `/Applications` and the
+  twelve Lime Native VST3 bundles into `/Library/Audio/Plug-Ins/VST3`.
+* **Linux (`scripts/package-linux.sh`, `packaging/linux/{install.sh,uninstall.sh,limeshot.desktop,limeshot-mime.xml,README.txt}`):**
+  stages a runnable directory, verifies the demo render, packs `dist/limeshot-<version>-linux-<arch>.tar.gz` with
+  `install.sh`/`uninstall.sh` (system-wide `/opt/limeshot` + `/usr/local/lib/vst3`, `--user` in
+  `~/.local/opt/limeshot` + `~/.vst3`, or `--private-plugins`), and builds `dist/limeshot_<debversion>_<debarch>.deb`
+  (`/opt/limeshot`, `/usr/bin` symlinks, `/usr/lib/vst3` bundles, desktop entry, icon and `.lime` MIME type).
+  Verified `install.sh` (`--user` and `--private-plugins`) and `uninstall.sh` in an isolated temp root.
+* **Release workflow (`.github/workflows/release.yml`) and documentation (`docs/development/release-packaging.md`):**
+  builds Windows x64, macOS Apple Silicon & Intel, and Ubuntu 22.04 x64 & ARM64 packages, tests the Linux `.deb` and
+  tarball installs on the runner, and attaches all artifacts plus `SHA256SUMS.txt` to a draft GitHub release on `v*`
+  tags.
+
+Every future development session must create a NEW `codex/` branch, a NEW separate managed worktree and a NEW attached
+draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact, carry
+work through implementation, validation, documentation, commit and push, never merge automatically, and create further
+sessions only when the owner asks.
