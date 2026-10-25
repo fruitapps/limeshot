@@ -4,7 +4,7 @@
 # Output (dist/):
 #   linux/limeshot-<version>-linux-<arch>/          staged, runnable folder (Lime VST3s in plugins/ beside the binary)
 #   limeshot-<version>-linux-<arch>.tar.gz          that folder; ./install.sh installs it (system or --user)
-#   limeshot_<debversion>_<debarch>.deb             when dpkg-deb is available: /opt/limeshot, VST3s in /usr/lib/vst3
+#   limeshot_<version>_<debarch>.deb             when dpkg-deb is available: /opt/limeshot, VST3s in /usr/lib/vst3
 # The version defaults to $LIMESHOT_VERSION, then to the workspace version in Cargo.toml.
 # Before packaging, the staged limeshot-cli renders the demo through the staged Lime VST3s; a silent render fails.
 set -euo pipefail
@@ -101,7 +101,9 @@ Description: Pattern-based digital audio workstation (alpha)
  VST3 hosts can load them.
 CONTROL
 find "$deb" -type d -exec chmod 755 {} +
-debfile="$dist/limeshot_${debversion}_${debarch}.deb"
+# Keep Debian's prerelease tilde inside control metadata only: GitHub rewrites tildes in asset
+# names to dots, which would make the uploaded filenames disagree with SHA256SUMS.txt.
+debfile="$dist/limeshot_${version}_${debarch}.deb"
 dpkg-deb --root-owner-group --build "$deb" "$debfile"
 rm -rf "$deb"
 echo "built $debfile"

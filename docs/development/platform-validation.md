@@ -41,5 +41,21 @@ Fresh platform checks are required before declaring the observed Linux crashes r
 
 [Alpha packaging run 40211718081](https://github.com/fruitapps/limeshot/actions/runs/40211718081) targets
 `v0.1.0-alpha.1` at `5ab09c9`. Windows, Apple Silicon and both Linux packaging/install checks pass;
-Intel packaging and draft-release assembly were still running at inspection. No published release was present.
+all five packaging jobs and draft-release assembly have now passed. The prerelease remains a draft.
 The tag and its packages predate this repair; passing packaging alone does not establish workspace-test health.
+
+
+All ten original draft assets were downloaded and their SHA-256 bytes verified. GitHub had renamed the Debian
+filenames from `0.1.0~alpha.1` to `0.1.0.alpha.1`, but the generated manifest kept the former names: unmodified
+`shasum -c` failed for both Debian packages. Corrected the draft's `SHA256SUMS.txt` to the actual uploaded names,
+verified all ten entries, uploaded only the corrected manifest and downloaded it again to confirm the replacement.
+Future Debian artifact filenames use the original `0.1.0-alpha.1` version; control metadata keeps `0.1.0~alpha.1`.
+Both macOS DMGs pass `hdiutil verify`; the Windows portable ZIP passes CRC checks; both Linux tarballs contain
+all twelve VST3 bundles, CLI and install/uninstall scripts. No tag was moved and no release was published.
+
+Repair validation: [CI 40214027778](https://github.com/fruitapps/limeshot/actions/runs/40214027778),
+[native 40214027805](https://github.com/fruitapps/limeshot/actions/runs/40214027805), and
+[packaging 40214064487](https://github.com/fruitapps/limeshot/actions/runs/40214064487) run the initial source fix
+`ee55b76`. The filename repair follows separately; final results are recorded in PR #15. Local verification:
+427 workspace tests including 157 UI tests, strict all-target Clippy/build, formatting, inventories, references,
+five repository-checker tests, 25 independent rack-drop runs, and byte-identical hosted demo/reload WAVs (-3.7 dBFS).

@@ -1627,11 +1627,17 @@ with process-lifetime strong retention (D41), preventing unload of framework cal
 teardown/reload. A real-bundle regression checks retention without clients and identity across concurrent loads.
 No UI appearance or audio scheduling changes. Updated architecture, platform evidence, feature notes and limits.
 
-Local workspace tests pass using the existing native debug bundles and build cache from the plugin-workflow
-worktree. Inventories, repository-reference checks, five repository-checker tests and formatting pass.
-Strict all-target Clippy/build and fresh remote platform results are being checked; no Linux fix pass is claimed yet.
-Alpha tag `v0.1.0-alpha.1` points to the pre-fix main commit. Four packaging jobs passed at inspection; Intel and
-release assembly were still running. See [platform validation](platform-validation.md) for source runs.
+Local verification passes: 427 workspace tests (157 UI), strict all-target Clippy/build, formatting, inventories,
+repository references, five repository-checker tests, 25 independent rack-drop runs and byte-identical hosted
+demo/reload WAVs (-3.7 dBFS). Reused the existing plugin-workflow build cache and native debug bundles.
+Fresh remote runs are linked in [platform validation](platform-validation.md); final outcomes are recorded in PR #15.
+
+All five original alpha packaging jobs and draft-release assembly pass. Downloaded and verified all ten package
+hashes, both DMGs, ZIP CRCs and Linux tarball plugin/install contents. Found and repaired the draft checksum manifest:
+GitHub rewrote Debian filename tildes to dots, leaving two manifest paths nonexistent. Replaced only SHA256SUMS.txt
+with the verified actual filenames and downloaded it again to confirm. Future Debian filenames keep the original
+version while control metadata keeps the prerelease tilde. The alpha tag remains at pre-fix `5ab09c9`; release remains
+a draft. A manual repaired-source packaging run creates artifacts only, without moving tags or publishing.
 
 Every future development session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached
 draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact,

@@ -7036,7 +7036,8 @@
       "tests": [
         "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.",
         "Windows 11 x64 (2026-10-25): scripts/package-windows.ps1 builds LimeShot-0.1.0-alpha.1-windows-x64-portable.zip and LimeShot-0.1.0-alpha.1-windows-x64-setup.exe; silent /CURRENTUSER install places limeshot.exe, samples and all 12 Lime VST3 bundles in %LOCALAPPDATA%\\Programs\\Common\\VST3, installed limeshot-cli renders demo (-3.7 dBFS) with checkout dist hidden, /TYPE=app installs private plugins, and unins000.exe removes everything cleanly.",
-        "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root."
+        "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root.",
+        "2026-10-25: release run 40211718081 passes all five packaging jobs; all ten downloaded assets match SHA-256 after draft manifest filename repair, both DMGs pass hdiutil verify, Windows ZIP CRCs pass, Linux tarballs contain 12 VST3s and installers. See docs/development/platform-validation.md."
       ],
       "reference": {
         "application": "FL Studio",
@@ -7045,7 +7046,7 @@
           "START.md §14"
         ]
       },
-      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification. 2026-10-25: all five alpha packaging jobs pass at 5ab09c9. GitHub rewrote Debian asset tildes to dots and broke manifest filenames; package filenames now keep the original version while Debian control metadata retains the prerelease tilde. All ten downloaded hashes pass after correcting the existing draft manifest to the actual uploaded names; repaired-source packages are checked separately."
     },
     {
       "id": "PL-025",
