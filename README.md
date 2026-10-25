@@ -91,7 +91,7 @@ use the canonical feature record and its latest progress evidence to resolve tho
 Still missing or limited: CLAP/AU, stems, templates, remappable shortcuts, automatic workspace
 layout persistence, time stretching and several advanced editor actions. Hardware MIDI and audio recording need
 hands-on checks; audio recording has no input monitoring or latency compensation. Native macOS VST3 embedding
-needs another live resize/tab/keyboard pass; Windows/Linux currently expose plugin parameters. The process bridge
+needs another live resize/tab/keyboard pass; Windows embeds editors as child windows (untested on real hardware); Linux exposes plugin parameters. The process bridge
 is opt-in and has no native editor. `.flp` import omits plugin state, mixer effects/routing and automation curves;
 unsupported generators become LimeSynth. Integer WAV export has no dither; Gate/Drive/Chorus use their standalone Lime VST3 replacements.
 

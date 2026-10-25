@@ -37,8 +37,8 @@ The plan, the current architecture and the list of lost capabilities are in
    GitHub annotations report account billing/spending limits. No current platform CI pass is claimed.
    Native GUI/audio-device validation stays separate from headless CI.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
-   compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows/Linux native
-   embedding needs `HWND` / `X11EmbedWindowID` and Linux `IRunLoop` support.
+   compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows `HWND` embedding
+   is implemented but untested on hardware; Linux needs `X11EmbedWindowID` and `IRunLoop` support.
 4. **Hands-on interaction regression.** Repeat the owner's note drawing, sampler previews/dragging, waveform drops,
    rack multiselection and bounded scrolling, mixer selection, track mute locks, window raising and typing-keyboard
    workflows. Automated coverage and offscreen layout review exist; they do not replace audible/native checks.
@@ -97,7 +97,7 @@ automatically, and create further sessions only when the owner asks.
 menus, GL teardown, sampler compressed loading/drops, track locks and extended zoom have local automated
 coverage. Repeat live Serum resizing, native preset selection and close/reopen checks when the execution
 host has Screen Recording and Accessibility. Sampler sources are bounded to 6 million stereo frames
-(about 125 seconds at 48 kHz); longer sources still need trimming. Native Windows/Linux embedding remains pending.
+(about 125 seconds at 48 kHz); longer sources still need trimming. Native Linux embedding remains pending (Windows: see below).
 
 Future sessions retain NEW codex/ branch, NEW managed worktree and NEW attached draft PR; preserve older
 checkouts, inspect unmerged continuations, validate/document/commit/push and never merge automatically.
@@ -125,8 +125,9 @@ Both PRs merged on 2026-10-25 together with two CodeRabbit follow-up commits (`a
    the Piano Roll range, which now has no effect. Either restore a Pattern-mode loop for the Piano Roll range
    only, or stop sending it and document the FL behaviour.
 3. **Refresh the README Mixer screenshots** (`mixer.png`, `mixer-eq.png`); they predate the insert-slot redesign.
-4. **Windows/Linux:** native embedding, OS drop positions (AppKit-only today) and platform CI remain open; GitHub
-   Actions was last blocked by account billing.
+4. **Windows/Linux:** the Windows fixes (class ids, `HWND` embedding, Explorer drop position, no console) need a
+   pass on Windows hardware; Linux embedding and drop positions and platform CI remain open. GitHub Actions was
+   last blocked by account billing.
 
 Future sessions keep the standing policy above: a NEW `codex/` branch, a NEW managed worktree and a NEW attached
 draft PR, stacked on the latest unmerged continuation; never merge automatically.

@@ -172,7 +172,9 @@ Settings tabs. On macOS, the plugin's native view is a child of the main NSWindo
 resize-capable plugins receive size negotiation, while fixed-size editors retain a minimum window size.
 Native editors hide when another window or popup covers them; final live rendering, resize, tab and keyboard
 verification is pending (PLG-006 is IMPLEMENTED). Window state lives beside the running instance
-and is saved in the project. Windows and Linux show the parameter list until their native embedding exists.
+and is saved in the project. On Windows the view is a child `HWND` (a `STATIC` container) of the main window, found by title on the UI
+thread; it is implemented but has not been run on Windows hardware. Linux shows the parameter list until its native
+embedding exists.
 
 Editor layouts can be explicitly saved/restored through View › Arrange windows; they are not automatically persisted. The Piano Roll has FL's tool strip
 (`piano_roll::Tool`, keys P B D T C E Z Y); the Playlist has nine tools; right-click deletes in editors (as in FL), so menus live on the ▾ clip marker and channel buttons;
@@ -199,8 +201,8 @@ view stays visible but passes hit-testing through to the host (AppKit `hitTest:`
 egui’s release event and assigns the source through commands. Minimized wrappers hide their native view.
 Plugin buttons toggle like other windows: they close a frontmost or pinned plugin window and otherwise raise it.
 External filesystem drops route to visible Playlist/rack/sampler targets through the deferred loader. On macOS the
-drop position comes from AppKit (`NativeWindow::pointer_position`); elsewhere it falls back to egui's last hover
-position, which is unverified on Windows/Linux.
+drop position comes from AppKit (`NativeWindow::pointer_position`), on Windows from the Win32 cursor; Linux
+falls back to egui's last hover position. Neither Windows nor Linux drops are verified yet.
 
 Native egui-baseview teardown binds its own retained GL context before deleting painter resources.
 The host additionally suspends its current GL context during editor removal and restores its context

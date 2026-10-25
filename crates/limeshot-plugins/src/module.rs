@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex, Weak};
 use vst3::Steinberg::*;
 use vst3::{ComPtr, Interface};
 
-use crate::util::{from_cstr, hex_to_tuid, tuid_to_hex};
+use crate::util::{from_cstr, hex_to_tuid, raw_hex_to_tuid, tuid_to_hex};
 use crate::{PluginError, PluginInfo, PluginKind};
 
 type GetFactory = unsafe extern "system" fn() -> *mut IPluginFactory;
@@ -139,7 +139,11 @@ impl Vst3Module {
     /// Create an object of class `class_id` (hex) and return its interface `I`.
     pub(crate) fn create<I: Interface>(&self, class_id: &str) -> Option<ComPtr<I>> {
         let cid = hex_to_tuid(class_id)?;
-        self.create_tuid(&cid)
+        self.create_tuid(&cid).or_else(|| {
+            // Plugin databases and projects from older Windows builds hold the raw COM byte order.
+            let raw = raw_hex_to_tuid(class_id).filter(|raw| *raw != cid)?;
+            self.create_tuid(&raw)
+        })
     }
 
     pub(crate) fn create_tuid<I: Interface>(&self, cid: &TUID) -> Option<ComPtr<I>> {

@@ -100,7 +100,7 @@ Current as of 2026-10-25 (sampler/mixer workflow merged). Everything here is eit
   how many). Test files were saved by FL 26.1.1 only; older versions are covered by FL's shipped demos importing
   without errors, not by checked values. Note properties other than key, position, length and velocity are ignored.
   LimeShot cannot write `.flp`.
-* VST3 plugins: native plugin editor embedding is implemented for macOS only and awaits final live verification (on Windows and Linux the Plugin tab lists the
+* VST3 plugins: native plugin editor embedding is implemented for macOS and Windows and awaits final live verification (on Linux the Plugin tab lists the
   parameters); the internal windows have minimize/pin/close but no ▸ menu or wrapper options page (FL's). Fixed-size plugins
   retain a minimum wrapper size; resizable plugins negotiate their editor size. Native views hide completely
   when another window or popup covers them (partial native-view occlusion is not implemented). Host presets use an AppKit menu above
@@ -198,9 +198,20 @@ autosave-disabled live_check example; new sessions cannot overwrite an unclaimed
 
 * Live native checks for this pass were not completed: sampler drag passthrough, plugin-button toggle/raise,
   OS drops onto the Playlist and Y scrubbing of audio clips have headless coverage only.
-* OS file-drop positions come from AppKit on macOS. Windows and Linux fall back to egui's last pointer position,
-  which has not been checked against a real drag from Explorer or a Linux file manager.
+* OS file-drop positions come from AppKit on macOS and the Win32 cursor on Windows (unverified). Linux falls back to
+  egui's last pointer position, which has not been checked against a real drag from a file manager.
 * Mixer insert slots expose only On and a host Mix knob; plugin parameters and presets are only in the plugin window.
 * Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not loop
   Pattern playback.
 * Samples longer than 6 million stereo frames must be trimmed; streaming from disk is not implemented.
+
+### Windows fixes, 2026-10-25 (owner report; not yet run on Windows)
+
+* VST3 class ids are now hex in the SDK's portable order on every platform. Before this, Windows builds used COM
+  byte order, so every Lime plugin (`lime:` references) failed with "the plugin has no class …". Lookups fall back to
+  the raw order for plugin databases and projects saved by older Windows builds.
+* Native editors embed as child windows. At display scaling above 100 % the wrapper can be larger than a
+  fixed-size editor (plugin sizes are physical pixels, wrapper sizes logical points). Keyboard focus may stay in
+  a clicked plugin view until the host window is clicked again.
+* Explorer drops use the Win32 cursor position. Release builds of `limeshot.exe` no longer open a console window;
+  debug builds keep it for logs.

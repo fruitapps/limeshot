@@ -6,6 +6,10 @@
 //! useful for demos and for checking detached windows). An FL Studio `.flp` is imported as a new
 //! unsaved project.
 
+// A Windows GUI app: no console window opens with it. Debug builds keep the console for logs;
+// `limeshot-cli` stays a console program.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use limeshot_ui::workspace::Win;
 use limeshot_ui::{LimeShotApp, Settings};
 

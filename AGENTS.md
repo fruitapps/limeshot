@@ -91,7 +91,8 @@ features as records.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
   a partial live macOS pass is recorded in `docs/development/live-plugin-checks-2026-10-25.md`; keyboard, OS drops,
-  pin/occlusion and host-edge resizing remain open. Windows/Linux use parameters.
+  pin/occlusion and host-edge resizing remain open. Windows embeds editors as child `HWND`s (IMPLEMENTED,
+  never run on Windows hardware); Linux uses parameters. VST3 class ids are portable hex (`util::tuid_to_hex`).
 * Samples (WAV/MP3/FLAC/Ogg/AIFF) are bounded to 6 million stereo frames (about 125 s at 48 kHz) and decode once on
   the loader thread.
 * The latest recorded run is 420 host tests and 19 native tests (`docs/development/progress.md`). Feature, shortcut,

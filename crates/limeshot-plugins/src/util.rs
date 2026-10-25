@@ -40,19 +40,49 @@ pub(crate) fn copy_wstr(src: &str, dst: &mut [TChar]) {
     }
 }
 
+/// A class id as 32 hex digits in the SDK's portable order (`FUID::toString`), the same on
+/// every platform and in `.vstpreset` files. On Windows a `TUID` holds a COM GUID, whose first
+/// three fields are stored little-endian, so those eight bytes are reordered.
 pub(crate) fn tuid_to_hex(id: &TUID) -> String {
-    id.iter().map(|b| format!("{:02X}", *b as u8)).collect()
+    com_order(raw_bytes(id)).iter().map(|b| format!("{b:02X}")).collect()
 }
 
+/// The platform `TUID` for a portable hex class id (see [`tuid_to_hex`]).
 pub(crate) fn hex_to_tuid(hex: &str) -> Option<TUID> {
+    Some(com_order(hex_bytes(hex)?).map(|b| b as c_char))
+}
+
+/// The hex digits taken as the `TUID`'s bytes in memory order. Windows builds before the
+/// portable order stored class ids this way, so lookups fall back to it.
+pub(crate) fn raw_hex_to_tuid(hex: &str) -> Option<TUID> {
+    Some(hex_bytes(hex)?.map(|b| b as c_char))
+}
+
+fn raw_bytes(id: &TUID) -> [u8; 16] {
+    id.map(|b| b as u8)
+}
+
+fn hex_bytes(hex: &str) -> Option<[u8; 16]> {
     if hex.len() != 32 || !hex.is_ascii() {
         return None;
     }
-    let mut id: TUID = [0; 16];
+    let mut id = [0u8; 16];
     for (i, b) in id.iter_mut().enumerate() {
-        *b = u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).ok()? as c_char;
+        *b = u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).ok()?;
     }
     Some(id)
+}
+
+/// Swap between portable and COM GUID byte order (its own inverse). Only Windows uses COM order.
+fn com_order(id: [u8; 16]) -> [u8; 16] {
+    if !cfg!(target_os = "windows") {
+        return id;
+    }
+    let mut out = id;
+    out[..4].reverse();
+    out[4..6].reverse();
+    out[6..8].reverse();
+    out
 }
 
 /// The interface id of `I` as a `TUID`, for comparing with ids a plugin passes in.
@@ -81,5 +111,14 @@ mod tests {
         assert_eq!(hex.len(), 32);
         assert_eq!(hex_to_tuid(&hex), Some(id));
         assert_eq!(hex_to_tuid("zz"), None);
+    }
+
+    #[test]
+    fn class_ids_use_the_portable_order_on_every_platform() {
+        // `vst3::uid` lays the bytes out as this platform's SDK does (COM order on Windows).
+        let id = vst3::uid(0x12345678, 0x9ABCDEF0, 0x0F1E2D3C, 0x4B5A6978);
+        assert_eq!(tuid_to_hex(&id), "123456789ABCDEF00F1E2D3C4B5A6978");
+        let raw = raw_hex_to_tuid(&tuid_to_hex(&id)).unwrap();
+        assert_eq!(raw == id, !cfg!(target_os = "windows"));
     }
 }

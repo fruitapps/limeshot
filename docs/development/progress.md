@@ -1497,3 +1497,23 @@ On + Mix insert slots with drag reordering, Mixer mute locks, Browser double-cli
 native drag passthrough and the merged PR state. Older handoffs that cite the 4 million-frame bound carry a note.
 No code changed and nothing was run for this refresh; test counts quoted elsewhere are the latest recorded ones
 (420 host, 19 native).
+
+## 2026-10-25 — Windows fixes from the owner's first Windows run
+
+The owner reported on Windows: every Lime plugin failed with "the plugin has no class 4C494D45…", third-party
+plugin editors did not appear, Explorer drops did nothing and `limeshot.exe` opened a console window.
+
+* **Class ids.** On Windows a VST3 `TUID` is a COM GUID whose first eight bytes are little-endian; nice-plug
+  registers Lime classes that way, while LimeShot's `lime:` references and `.vstpreset` files use the portable
+  (`FUID::toString`) order. `util::tuid_to_hex` / `hex_to_tuid` now convert, so class-id strings are identical on
+  every platform; `Vst3Module::create` falls back to the raw order for ids saved by older Windows builds.
+* **Editors.** New Windows `platform` module in `editor.rs`: the main window is found by title among the UI
+  thread's windows, plugin views go into a `STATIC` child `HWND`, hidden/disabled for occlusion and drag
+  passthrough, and preset menus use `TrackPopupMenu`. `graphics.rs` saves and restores the host's WGL context
+  around editor callbacks and teardown, as on macOS.
+* **Explorer drops.** `NativeWindow::pointer_position` reads the Win32 cursor (winit reports no pointer during OS
+  drags), so Playlist, rack and sampler drops get a position.
+* **Console.** Release builds of the GUI use the Windows subsystem.
+
+Validation: rustfmt; strict Clippy for the workspace on `x86_64-pc-windows-msvc` and for the plugin/app crates on
+Linux. Tests were not run and nothing has been run on Windows; the owner's next Windows pass verifies these.

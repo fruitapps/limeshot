@@ -119,7 +119,8 @@ impl NativeWindow {
 
     /// Show a host menu above native plugin views. Coordinates are from the content layout’s
     /// top left, in platform points. Returns the chosen entry, or None on cancel/unavailable.
-    /// Current pointer from AppKit, including OS drags which do not send ordinary mouse moves.
+    /// Current pointer from the OS (AppKit, Win32), including OS drags which do not send ordinary
+    /// mouse moves.
     pub fn pointer_position(&self) -> Option<(f64, f64)> {
         self.0.pointer_position()
     }
@@ -599,7 +600,241 @@ mod platform {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+mod platform {
+    //! Plugin views as child windows (`HWND`) of the host's main window. Coordinates passed in
+    //! are logical points from the client area's top left; plugin sizes are physical pixels, as
+    //! VST3 uses on Windows.
+    use super::EditorSize;
+    use crate::PluginError;
+    use std::ffi::c_void;
+    use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, POINT};
+    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, ScreenToClient};
+    use windows_sys::Win32::System::Threading::GetCurrentThreadId;
+    use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        AppendMenuW, CreatePopupMenu, CreateWindowExW, DestroyMenu, DestroyWindow, EnumThreadWindows, GetCursorPos,
+        GetWindowTextW, HWND_TOP, IsWindowVisible, MF_STRING, SW_HIDE, SW_SHOWNA, SWP_NOACTIVATE, SWP_NOMOVE,
+        SWP_NOZORDER, SetForegroundWindow, SetWindowPos, ShowWindow, TPM_NONOTIFY, TPM_RETURNCMD, TrackPopupMenu,
+        WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_VISIBLE,
+    };
+
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// Physical pixels per logical point for `hwnd` (1.0 when the DPI is unknown).
+    fn scale(hwnd: HWND) -> f64 {
+        // SAFETY: a plain query; an invalid window yields 0.
+        match unsafe { GetDpiForWindow(hwnd) } {
+            0 => 1.0,
+            dpi => f64::from(dpi) / 96.0,
+        }
+    }
+
+    pub(super) struct Window(HWND);
+
+    struct Search {
+        title: Vec<u16>,
+        found: HWND,
+    }
+
+    unsafe extern "system" fn match_title(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        // SAFETY: `lparam` is the `Search` that `find` passes for the duration of the enumeration.
+        let search = unsafe { &mut *(lparam as *mut Search) };
+        let mut buf = [0u16; 512];
+        // SAFETY: the buffer and its length match; a window from the enumeration is valid.
+        let n = unsafe { GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32) };
+        // SAFETY: as above.
+        let visible = unsafe { IsWindowVisible(hwnd) } != 0;
+        if visible && usize::try_from(n).is_ok_and(|n| buf[..n] == search.title[..search.title.len() - 1]) {
+            search.found = hwnd;
+            return 0;
+        }
+        1
+    }
+
+    impl Window {
+        pub(super) fn pointer_position(&self) -> Option<(f64, f64)> {
+            let mut p = POINT { x: 0, y: 0 };
+            // SAFETY: plain queries writing into `p`.
+            if unsafe { GetCursorPos(&mut p) } == 0 || unsafe { ScreenToClient(self.0, &mut p) } == 0 {
+                return None;
+            }
+            let s = scale(self.0);
+            Some((f64::from(p.x) / s, f64::from(p.y) / s))
+        }
+
+        pub(super) fn popup_menu(&self, labels: &[String], x: f64, y: f64) -> Option<usize> {
+            let s = scale(self.0);
+            let mut p = POINT {
+                x: (x * s).round() as i32,
+                y: (y * s).round() as i32,
+            };
+            // SAFETY: a menu created, shown and destroyed within this call, owned by our window.
+            unsafe {
+                if ClientToScreen(self.0, &mut p) == 0 {
+                    return None;
+                }
+                let menu = CreatePopupMenu();
+                if menu.is_null() {
+                    return None;
+                }
+                for (index, label) in labels.iter().enumerate() {
+                    let text = wide(label);
+                    AppendMenuW(menu, MF_STRING, index + 1, text.as_ptr());
+                }
+                SetForegroundWindow(self.0);
+                let chosen = TrackPopupMenu(
+                    menu,
+                    TPM_RETURNCMD | TPM_NONOTIFY,
+                    p.x,
+                    p.y,
+                    0,
+                    self.0,
+                    std::ptr::null(),
+                );
+                DestroyMenu(menu);
+                usize::try_from(chosen).ok()?.checked_sub(1)
+            }
+        }
+
+        pub(super) fn make_tool_window(&self) {}
+
+        /// A visible top-level window of this (the UI) thread titled `title`.
+        pub(super) fn find(title: &str) -> Option<Self> {
+            let mut search = Search {
+                title: wide(title),
+                found: std::ptr::null_mut(),
+            };
+            // SAFETY: the callback only reads window text and writes into `search`, which
+            // outlives the synchronous enumeration.
+            unsafe {
+                EnumThreadWindows(
+                    GetCurrentThreadId(),
+                    Some(match_title),
+                    &mut search as *mut Search as LPARAM,
+                );
+            }
+            (!search.found.is_null()).then_some(Self(search.found))
+        }
+    }
+
+    /// A plain child window of the host's window that the plugin's view goes into.
+    pub(super) struct Container {
+        hwnd: HWND,
+        host: HWND,
+        embedded: std::cell::Cell<bool>,
+    }
+
+    impl Container {
+        pub(super) fn new(window: &Window, size: EditorSize, top_inset: f64) -> Result<Self, PluginError> {
+            let class = wide("STATIC");
+            // SAFETY: creates a child of the live host window with a system class; destroyed in Drop.
+            let hwnd = unsafe {
+                CreateWindowExW(
+                    0,
+                    class.as_ptr(),
+                    std::ptr::null(),
+                    WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+                    0,
+                    0,
+                    size.width as i32,
+                    size.height as i32,
+                    window.0,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null(),
+                )
+            };
+            if hwnd.is_null() {
+                return Err(PluginError::Call("create a child window for its editor"));
+            }
+            let c = Self {
+                hwnd,
+                host: window.0,
+                embedded: std::cell::Cell::new(false),
+            };
+            c.place(size, top_inset);
+            Ok(c)
+        }
+
+        pub(super) fn parent(&self) -> *mut c_void {
+            self.hwnd
+        }
+
+        fn set_rect(&self, x: f64, y: f64, size: EditorSize) {
+            let s = scale(self.host);
+            // SAFETY: moves our own child window.
+            unsafe {
+                SetWindowPos(
+                    self.hwnd,
+                    HWND_TOP,
+                    (x * s).round() as i32,
+                    (y * s).round() as i32,
+                    size.width as i32,
+                    size.height as i32,
+                    SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+            }
+        }
+
+        pub(super) fn place(&self, size: EditorSize, top_inset: f64) {
+            self.set_rect(0.0, top_inset, size);
+        }
+
+        /// Follow the editor's new size. The host window keeps its size; an embedded container
+        /// also keeps its position until the next `place_rect`.
+        pub(super) fn resize(&self, size: EditorSize, top_inset: f64) {
+            if !self.embedded.get() {
+                self.place(size, top_inset);
+                return;
+            }
+            // SAFETY: resizes our own child window.
+            unsafe {
+                SetWindowPos(
+                    self.hwnd,
+                    HWND_TOP,
+                    0,
+                    0,
+                    size.width as i32,
+                    size.height as i32,
+                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+            }
+        }
+
+        pub(super) fn embed(&self) {
+            self.embedded.set(true);
+        }
+
+        /// Place the child at `(x, y)` points from the client area's top left at its natural size.
+        pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
+            self.set_rect(x, y, natural);
+        }
+
+        pub(super) fn set_hidden(&self, hidden: bool) {
+            // SAFETY: shows or hides our own child window without activating it.
+            unsafe { ShowWindow(self.hwnd, if hidden { SW_HIDE } else { SW_SHOWNA }) };
+        }
+
+        /// A disabled child is skipped by hit testing, so drags reach the host window.
+        pub(super) fn set_input_passthrough(&self, passthrough: bool) {
+            // SAFETY: enables or disables our own child window.
+            unsafe { EnableWindow(self.hwnd, BOOL::from(!passthrough)) };
+        }
+    }
+
+    impl Drop for Container {
+        fn drop(&mut self) {
+            // SAFETY: our own child window; the plugin's view was removed before this.
+            unsafe { DestroyWindow(self.hwnd) };
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform {
     use super::EditorSize;
     use crate::PluginError;

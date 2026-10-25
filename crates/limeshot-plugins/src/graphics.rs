@@ -4,6 +4,7 @@
 //! surface check only compares the context's bound view, so eframe may skip making its
 //! context current again. Capture the host context before the first editor attaches and
 //! restore it around every host frame; plugin contexts are never substituted for it.
+//! On Windows, OpenGL editors call `wglMakeCurrent` on the host's UI thread in the same way.
 #![cfg_attr(
     target_os = "macos",
     expect(deprecated, reason = "The host and plugin editors use macOS OpenGL")
@@ -13,12 +14,27 @@
 use objc2::{MainThreadMarker, rc::Retained};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::NSOpenGLContext;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::Graphics::{
+    Gdi::HDC,
+    OpenGL::{HGLRC, wglGetCurrentContext, wglGetCurrentDC, wglMakeCurrent},
+};
+
+/// The thread's current WGL device context and rendering context, if any.
+#[cfg(target_os = "windows")]
+fn current_wgl() -> Option<(HDC, HGLRC)> {
+    // SAFETY: plain queries of this thread's current context.
+    let (dc, rc) = unsafe { (wglGetCurrentDC(), wglGetCurrentContext()) };
+    (!rc.is_null()).then_some((dc, rc))
+}
 
 /// The main host viewport's context. Main-thread use only; a no-op on other platforms.
 #[derive(Default)]
 pub struct HostGraphicsContext {
     #[cfg(target_os = "macos")]
     context: Option<Retained<NSOpenGLContext>>,
+    #[cfg(target_os = "windows")]
+    context: Option<(HDC, HGLRC)>,
 }
 
 /// Restores the host context after UI code that may attach or invoke a native editor.
@@ -26,6 +42,8 @@ pub struct HostGraphicsContext {
 pub struct HostGraphicsGuard {
     #[cfg(target_os = "macos")]
     context: Option<Retained<NSOpenGLContext>>,
+    #[cfg(target_os = "windows")]
+    context: Option<(HDC, HGLRC)>,
 }
 
 impl HostGraphicsContext {
@@ -45,7 +63,16 @@ impl HostGraphicsContext {
             guard.restore();
             guard
         }
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(target_os = "windows")]
+        {
+            if self.context.is_none() {
+                self.context = current_wgl();
+            }
+            let guard = HostGraphicsGuard { context: self.context };
+            guard.restore();
+            guard
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         HostGraphicsGuard {}
     }
 }
@@ -60,7 +87,16 @@ impl HostGraphicsGuard {
             NSOpenGLContext::clearCurrentContext();
             Self { context }
         }
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(target_os = "windows")]
+        {
+            let context = current_wgl();
+            if context.is_some() {
+                // SAFETY: releases this thread's current context; `restore` makes it current again.
+                unsafe { wglMakeCurrent(std::ptr::null_mut(), std::ptr::null_mut()) };
+            }
+            Self { context }
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         Self {}
     }
 
@@ -69,6 +105,13 @@ impl HostGraphicsGuard {
         #[cfg(target_os = "macos")]
         if let Some(context) = &self.context {
             context.makeCurrentContext();
+        }
+        #[cfg(target_os = "windows")]
+        if let Some((dc, rc)) = self.context
+            && current_wgl().is_none_or(|(_, current)| current != rc)
+        {
+            // SAFETY: the host's own device and rendering contexts, captured on this thread.
+            unsafe { wglMakeCurrent(dc, rc) };
         }
     }
 }
