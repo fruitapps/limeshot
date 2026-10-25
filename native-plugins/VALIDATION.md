@@ -190,7 +190,7 @@ All twelve freshly rebuilt allocation-checked debug bundles pass `examples/verif
 blocks 1/64/333/1024. Native workspace: 19 tests; strict all-target Clippy and rustfmt pass. Host: 408 tests
 (including 149 UI); strict Clippy/build and inventories pass. Offscreen native layouts were inspected after
 removing title rows and moving presets/bypass to the footer. The sampler uses the shared WAV/MP3/FLAC/Ogg/AIFF
-decoder, with synthetic MP3 and exact FLAC state tests. The 4 million stereo-frame bound is retained.
+decoder, with synthetic MP3 and exact FLAC state tests. The 4 million stereo-frame bound is retained. (Later raised to 6 million stereo frames, about 125 seconds at 48 kHz, by the sampler/mixer workflow pass.)
 
 The local egui-baseview 0.9.0 renderer binds its retained context before deleting GL resources. Host GL
 suspension/restoration passes an offscreen context test. Screen Recording/Accessibility were both false;

@@ -37,7 +37,7 @@ The core composition loop has automated coverage in
 | **Channel Rack**<br>Program drums from samples on a step grid, with swing, fill, rotate and channel selection. | <a href="docs/screenshots/current/rack.png"><img src="docs/screenshots/current/rack.png" width="240" alt="Channel Rack and Playlist"></a> |
 | **Piano Roll**<br>Write notes for LimeSynth, the Sampler or a VST3 instrument. It has FL's eight tools, ghost notes, and velocity and pan lanes. | <a href="docs/screenshots/current/piano-roll.png"><img src="docs/screenshots/current/piano-roll.png" width="240" alt="Piano Roll"></a> |
 | **Playlist**<br>Arrange pattern, audio and automation clips. Slip, slice, audio clip fades, time selection, markers and a clip picker. | <a href="docs/screenshots/current/audio-clips.png"><img src="docs/screenshots/current/audio-clips.png" width="240" alt="Playlist audio waveforms, clip fades, markers and time selection"></a> |
-| **Mixer**<br>Route channels to inserts with volume, pan, a dedicated hosted EQ, sidechain compression and up to ten effects per track. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
+| **Mixer**<br>Route channels to inserts with volume, pan, a dedicated hosted EQ, sidechain compression and up to ten effects per track. Each effect slot has On and a Mix knob, and you reorder slots by dragging. | <a href="docs/screenshots/current/mixer.png"><img src="docs/screenshots/current/mixer.png" width="240" alt="Mixer"></a> |
 | **Workspace windows**<br>Move, resize, maximise and detach editors; F5/F6/F7/F9 toggle Playlist, Rack, Piano Roll and Mixer. | <a href="docs/screenshots/current/workspace.png"><img src="docs/screenshots/current/workspace.png" width="240" alt="Current workspace with floating Channel Rack"></a> |
 | **Automation**<br>Shape Song-mode pan automation with curves, stairs and waves. | <a href="docs/screenshots/current/automation.png"><img src="docs/screenshots/current/automation.png" width="240" alt="Playlist pan automation with curve, stairs and wave segments"></a> |
 | **Sampler**<br>Inspect the sample waveform and adjust playback, loop and filter settings. | <a href="docs/screenshots/current/sampler.png"><img src="docs/screenshots/current/sampler.png" width="240" alt="Sampler Channel Settings with waveform and playback controls"></a> |
@@ -49,7 +49,7 @@ The core composition loop has automated coverage in
 
 | Kind | What's included |
 | --- | --- |
-| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-pass filter, LFO) and a Sampler with ADSR, trim, reverse, loop points and a low-pass filter; bundled Lime samples and factory presets |
+| **Instruments** | LimeSynth (PolyBLEP oscillators, ADSR, low-/band-/high-pass filter, LFO) and Lime Sampler (ADSR, trim, reverse, loop points, low-pass filter; samples up to about 125 s at 48 kHz), both hosted as Lime Native VST3s; bundled Lime samples and factory presets |
 | **Effects** | Lime EQ, Filter, tempo-synced Delay, Room (reverb), Comp (with sidechain), Limiter, Gate, Drive, Chorus (chorus/flanger/phaser) and Utility |
 | **Plugins** | VST3 instruments and effects: scanning into a plugin database, state saved in the project, and an internal Plugin / Settings window (macOS native embedding awaits live verification) |
 | **Automation** | Song-mode clips for channel/mixer volume and pan, hosted VST3 parameters; point modes and visible automated controls |
@@ -63,16 +63,17 @@ coverage are still being established. Automated tests establish the behavior the
 compatibility with every audio device, plugin or host. README screenshots were freshly rendered on 2026-10-23
 from the source commits recorded in
 [the screenshot notes](docs/screenshots/README.md). They show production UI in offscreen demo scenarios; live native
-plugin embedding and device audio require separate checks.
+plugin embedding and device audio require separate checks. The Mixer screenshots predate the 2026-10-25 insert-slot
+redesign (On + Mix, drag handle).
 
-The inventory currently tracks **290 features: 144 VERIFIED, 49 IMPLEMENTED, 79 NOT_STARTED, 13 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-23). IMPLEMENTED means code exists; VERIFIED additionally
+The inventory currently tracks **291 features: 144 VERIFIED, 50 IMPLEMENTED, 78 NOT_STARTED, 14 IN_PROGRESS, 4 DEFERRED, 1 RESEARCHED** (2026-10-25). IMPLEMENTED means code exists; VERIFIED additionally
 requires listed tests or recorded manual evidence. These counts describe tracked features, not percentage parity
 with FL Studio or measured test coverage.
 
 | State tracker | What it records |
 | --- | --- |
 | [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, implementation states and verification evidence |
-| [Menu inventory](docs/roadmap/menus.md) | 731 menu/toolbar/editor entries and their implementation differences |
+| [Menu inventory](docs/roadmap/menus.md) | 737 menu/toolbar/editor entries and their implementation differences |
 | [Shortcut inventory](docs/roadmap/keybindings.md) | 143 bindings, including differences and unimplemented shortcuts |
 | [Settings inventory](docs/roadmap/settings.md) | 189 controls/settings and their current states |
 | [MVP acceptance](docs/roadmap/mvp.md) / [milestones](docs/roadmap/milestones.md) | End-to-end acceptance and delivery scope |
@@ -112,7 +113,7 @@ Previews of all twelve standalone editors (click to enlarge):
 | Plugin | Purpose |
 | --- | --- |
 | **LimeSynth** | Polyphonic oscillator synth with ADSR, resonant low-/band-/high-pass filter, key tracking and LFO |
-| **Lime Sampler** | Stereo WAV sampler with trim/reverse, root key, audition keyboard and embedded sample recall |
+| **Lime Sampler** | Stereo sampler (WAV, MP3, FLAC, Ogg Vorbis, AIFF) with trim/reverse, root key, audition keyboard and embedded sample recall |
 | **Lime Utility** | Gain, stereo width and polarity |
 | **Lime EQ** | Three-band EQ with draggable response nodes |
 | **Lime Filter** | Resonant low-, band- and high-pass filtering |

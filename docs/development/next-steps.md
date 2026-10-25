@@ -1,6 +1,7 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-25, plugin/workflow fixes following the merged PR #7/#10 work. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-25. PRs #7, #10, #11 (plugin/workflow fixes) and #12 (sampler/mixer workflow) are merged into
+main (`befb173`); no continuation PR is open. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -15,9 +16,9 @@ Repeat this policy in every future session handoff before these docs merge. Do n
 The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
 VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
 Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
-Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 have merged into PR #7, which targets main. Review PR #7 and repeat hands-on native/platform checks;
-current review fixes and evidence are in [the review handoff](handoff-pr7-rewrite-review.md) and
-[CodeRabbit disposition](coderabbit-pr7-followup.md).
+Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 merged into PR #7, which
+has since merged into main. Hands-on native/platform checks remain; the PR #7 review evidence is in
+[the review handoff](handoff-pr7-rewrite-review.md) and [CodeRabbit disposition](coderabbit-pr7-followup.md).
 The plan, the current architecture and the list of lost capabilities are in
 [handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
@@ -110,3 +111,22 @@ checks and the repaired modal-dialog crash. Do not treat all earlier permission-
 external OS drops, keyboard, pin/occlusion, host-edge sizing and native Browser-drop/modifier results remain open.
 Use `live_check` with a disposable project and shared autosave disabled. New sessions now preserve unclaimed
 recovery copies instead of overwriting them or deleting them on normal quit.
+
+
+## Latest state: sampler/mixer workflow merged (PR #12, then PR #11 into main)
+
+Both PRs merged on 2026-10-25 together with two CodeRabbit follow-up commits (`a7441e1`, `1c20d45`); see the
+[sampler/mixer handoff](handoff-sampler-mixer-workflow.md) and the latest progress entries. Open items:
+
+1. **Live checks** on the isolated `live_check` harness: native sampler drag passthrough, plugin-button
+   toggle/raise, OS file drops onto the Playlist, Y scrubbing of audio clips, insert drag-reordering and the Mix knob.
+2. **Decide on Piano Roll range looping.** The sampler/mixer pass made the Piano Roll time selection loop Pattern
+   playback; CodeRabbit's `1c20d45` made the renderer ignore every loop range in Pattern mode. The UI still sends
+   the Piano Roll range, which now has no effect. Either restore a Pattern-mode loop for the Piano Roll range
+   only, or stop sending it and document the FL behaviour.
+3. **Refresh the README Mixer screenshots** (`mixer.png`, `mixer-eq.png`); they predate the insert-slot redesign.
+4. **Windows/Linux:** native embedding, OS drop positions (AppKit-only today) and platform CI remain open; GitHub
+   Actions was last blocked by account billing.
+
+Future sessions keep the standing policy above: a NEW `codex/` branch, a NEW managed worktree and a NEW attached
+draft PR, stacked on the latest unmerged continuation; never merge automatically.

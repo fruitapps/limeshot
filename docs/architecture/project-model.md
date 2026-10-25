@@ -23,7 +23,8 @@ Project
 │     clips:  [{id, source, track, start, length, offset, muted, fade_in, fade_out, extra{}}]
 │     source = Pattern(id) | Audio(channel id) | Automation(id)
 ├── mixer.tracks: [MixerTrack]     — index 0 = Master, 1.. = inserts
-│     name, volume (linear, ≤ 2.0), pan, muted, solo, effects, eq: [EqBand; 3], routes, extra{}
+│     name, volume (linear, ≤ 2.0), pan, muted, solo, mute_locked, effects, eq: [EqBand; 3], routes, extra{}
+│     effects: up to 10 × {id, kind, enabled, mix (host dry/wet, default 1.0), params, plugin?, extra{}}
 └── automations: [Automation]      — FL Studio's automation clips
       id, name, color, target, points: [{tick, value 0–1, tension −1–1, mode}], length, extra{}
       target = Tempo | ChannelVolume(ch) | ChannelPan(ch) | MixerVolume(i) | MixerPan(i) | EffectParam{track, effect, index} | PluginParam{plugin, id}

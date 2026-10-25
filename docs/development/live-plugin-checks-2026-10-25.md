@@ -22,7 +22,7 @@ computer-use native app controls. Native sampler Load initially crashed; it was 
 | External OS drops, native keyboard forwarding, pin/occlusion stress, host-edge resize | NOT VERIFIED by this pass. No upgrade of PLG-006/PLG-012 to VERIFIED. |
 
 The MP3 fixture is eight synthetic MPEG-1 Layer III silence frames, rather than a private source recording.
-The existing 4 million stereo-frame sampler bound is unchanged; this does not establish long-MP3 support.
+The existing 4 million stereo-frame sampler bound is unchanged; this does not establish long-MP3 support. (Later raised to 6 million stereo frames, about 125 seconds at 48 kHz, by the sampler/mixer workflow pass.)
 
 ## Crash and repair
 

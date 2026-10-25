@@ -141,7 +141,7 @@ remain explicit. Preserve the control-thread/audio-thread ownership boundary.
 
 For Lime Native changes, keep VST3 class IDs, parameter identity/order and saved-state compatibility stable. Hosts
 use these to reconnect sessions and automation. Share DSP with the DAW instead of making independent copies. The
-suite's sampler embeds bounded WAV data in host state; `.limepreset` and host project state have different sample
+suite's sampler embeds bounded decoded audio (at most 6 million stereo frames) in host state; `.limepreset` and host project state have different sample
 recall behavior, documented in the suite README.
 
 From a checkout that contains the suite, run:

@@ -28,7 +28,7 @@ never merge automatically.
   tracks for multiple files; rack drops create channels; sampler-wrapper drops replace their source.
 * Native sample Load and file drops share the host WAV/MP3/FLAC/Ogg/AIFF decoder. Explicit imports report actual
   decode/size/rate failures before adding a broken channel. The existing 4 million stereo-frame / 8–384 kHz
-  bound is retained (about 83 seconds at 48 kHz), including MP3. Longer sources still require shorter files.
+  bound is retained (about 83 seconds at 48 kHz), including MP3. Longer sources still require shorter files. (Later raised to 6 million stereo frames, about 125 seconds at 48 kHz, by the sampler/mixer workflow pass.)
 * Redundant native plugin title rows are removed; preset/bypass controls move to the footer. Parameter IDs,
   state schema and editor dimensions are unchanged.
 * Playlist/Piano Roll horizontal zoom spans 0.25–16,384 pixels per beat across menus, tools and wheel paths.

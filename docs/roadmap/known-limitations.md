@@ -1,6 +1,6 @@
 # Known limitations
 
-Current as of 2026-10-23 (VST3 replacement). Everything here is either not implemented or not verified.
+Current as of 2026-10-25 (sampler/mixer workflow merged). Everything here is either not implemented or not verified.
 
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
@@ -28,7 +28,7 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
 * Factory/user `.limepreset` files remain supported. Host unit-value menus cover known Lime controls;
   arbitrary third-party controls retain the generic automation menu. Compressor key-track selection is discrete,
   and automation of the legacy sidechain selector still warns instead of converting to dynamic bus routing.
-* Embedded sampler state accepts at most four million stereo frames at 8–384 kHz. Conversion warns and retains
+* Embedded sampler state accepts at most 6 million stereo frames at 8–384 kHz (about 125 seconds at 48 kHz). Conversion warns and retains
   source-path metadata and pending state when audio cannot fit; reassign a supported sample or reopen/reload after fixing the source.
   Failed decodes are cached by source path, size and modification time so unrelated edits do not decode unchanged files again.
   Incomplete conversions fail export explicitly. Loading a .lime file, recovery or CLI FLP import does not automatically embed
@@ -192,3 +192,15 @@ Browser-to-native drops and modifier clicks were inconclusive under this automat
 keyboard forwarding, pin/occlusion stress and host-edge resize remain unverified. PLG-006/PLG-012 remain IMPLEMENTED.
 See [live results and evidence](../development/live-plugin-checks-2026-10-25.md). Future live tests use the
 autosave-disabled live_check example; new sessions cannot overwrite an unclaimed recovery copy.
+
+
+### Sampler/mixer workflow, 2026-10-25
+
+* Live native checks for this pass were not completed: sampler drag passthrough, plugin-button toggle/raise,
+  OS drops onto the Playlist and Y scrubbing of audio clips have headless coverage only.
+* OS file-drop positions come from AppKit on macOS. Windows and Linux fall back to egui's last pointer position,
+  which has not been checked against a real drag from Explorer or a Linux file manager.
+* Mixer insert slots expose only On and a host Mix knob; plugin parameters and presets are only in the plugin window.
+* Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not loop
+  Pattern playback.
+* Samples longer than 6 million stereo frames must be trimmed; streaming from disk is not implemented.

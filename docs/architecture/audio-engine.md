@@ -88,7 +88,9 @@ errors, not per buffer.
    gated notes. One-shot samples keep ringing across the loop. Song mode with loop off stops and sets `finished`.
    With a loop range (`Msg::LoopRange`, the Playlist's time selection) Song mode ends each pass at the range end and
    re-anchors at the range start with a chase, looping even when song loop is off; locating past the end lands at
-   the range start.
+   the range start. Pattern mode ignores the loop range (`Renderer::active_loop`): it always loops the whole
+   pattern. The UI still sends the Piano Roll's time selection in Pattern mode, but it currently has no audible
+   effect (test: `pattern_ignores_time_selection_at_any_block_size`).
 5. Note-offs: each sequenced voice stores `release_at` (an absolute sample) and is released at that exact frame inside
    the voice loop.
 
@@ -148,7 +150,10 @@ audible. The master is never solo-muted.
 
 Each mixer track (master included) has an insert chain of up to 10 effects (`limeshot_dsp::effects`: Utility, Lime EQ,
 Lime Filter, Lime Delay, Lime Room, Lime Comp, Lime Limiter, Lime Gate, Lime Drive and Lime Chorus). In `mix()`, each bus runs its chain after the voices are
-summed and before volume/pan.
+summed and before volume/pan. Each enabled slot blends its output with its input by the slot's host `mix` (1.0 = fully
+wet). For processors that report latency, `FxRack` delays the dry signal through a preallocated ring (up to 64
+such slots), so the blend stays aligned. The dry history is kept even at 100% wet, so turning Mix down never plays
+stale audio.
 
 Processors own delay lines, so they must be allocated off the audio thread:
 

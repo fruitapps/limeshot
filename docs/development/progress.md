@@ -1479,3 +1479,21 @@ repository checks. Offscreen mixer and plugin-window renders inspected. Live nat
 Future development sessions require a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR,
 stacked on the latest unmerged continuation after checking merge state. Preserve older checkouts; validate,
 document, commit and push, never merge automatically, and create further sessions only when the owner asks.
+
+## 2026-10-25 — Merges and documentation refresh
+
+PR #12 (`codex/sampler-mixer-workflow`) merged into PR #11 and PR #11 merged into main (`befb173`). Two CodeRabbit
+commits landed with them:
+* `a7441e1`: failed audio imports can be retried (`SampleCache::remove_failed`); new automation clips span from the
+  playhead to the song end (at least one bar); Duplicate keeps notes sorted; Mixer strips use the sequencer's
+  `mixer_audibility`, so locked inserts reached through buses show as audible; insert rows open their context menu.
+* `1c20d45`: Pattern mode ignores loop ranges again (`pattern_ignores_time_selection_at_any_block_size`), and
+  minimized plugin wrappers hide their native view. **Correction to the previous entry:** the Piano Roll time
+  selection no longer loops Pattern playback; see next-steps.md for the open decision.
+
+Documentation refresh (Claude Code, at the owner's request): README, AGENTS.md, CONTRIBUTING.md, the architecture
+docs, known limitations, next steps and the native-plugin README now describe the 6 million-frame sampler bound,
+On + Mix insert slots with drag reordering, Mixer mute locks, Browser double-click preview, ruler range duplication,
+native drag passthrough and the merged PR state. Older handoffs that cite the 4 million-frame bound carry a note.
+No code changed and nothing was run for this refresh; test counts quoted elsewhere are the latest recorded ones
+(420 host, 19 native).

@@ -81,14 +81,21 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (2026-10-23, hosted rewrite review)
+## Current state (2026-10-25, after PRs #11 and #12 merged)
 * The macOS MVP workflow passes automated tests; Windows/Linux runtime validation and Intel GUI/audio remain open.
 * Editors include Playlist tools, audio/automation clips, track mute locks and menus, Piano Roll stamps and scale
-  highlighting, Channel Rack selection gestures, and Mixer EQ/sidechain/pre-fader sends.
+  highlighting, Channel Rack selection gestures, ruler range selection with Cmd+B duplication, and Mixer
+  EQ/sidechain/pre-fader sends. Rack, Playlist and Mixer tracks all have Shift-click mute locks.
+* Mixer insert slots show only On and a host Mix knob and reorder by dragging a grip handle; plugin parameters,
+  presets and a second On switch live in the plugin window, which opens when a plugin is added.
 * VST3 hosting, scanning, saved state, parameter automation, delay compensation and an opt-in process bridge exist.
   Internal Plugin / Settings wrappers replace separate plugin OS windows. **PLG-006 is IMPLEMENTED, not VERIFIED**:
-  native macOS rendering, resizing, tabs, occlusion and keyboard input need another live pass. Windows/Linux use parameters.
-* The workspace has 139 headless UI tests. Feature, shortcut, setting and menu counts live in the generated inventories.
+  a partial live macOS pass is recorded in `docs/development/live-plugin-checks-2026-10-25.md`; keyboard, OS drops,
+  pin/occlusion and host-edge resizing remain open. Windows/Linux use parameters.
+* Samples (WAV/MP3/FLAC/Ogg/AIFF) are bounded to 6 million stereo frames (about 125 s at 48 kHz) and decode once on
+  the loader thread.
+* The latest recorded run is 420 host tests and 19 native tests (`docs/development/progress.md`). Feature, shortcut,
+  setting and menu counts live in the generated inventories.
 * Active instruments and effects use twelve Lime Native VST3 bundles; runtime built-in factories are deleted.
   Hosted clips, note pan, track EQ, Gate/Drive/Chorus, sidechains, source previews, value menus and telemetry are implemented.
   Native sample replacement uses bounded handoff/retirement queues; decoded audio is never freed in processing.

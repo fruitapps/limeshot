@@ -19,3 +19,6 @@ had passed rustfmt, Windows ARM64 cross-build and Linux ARM64 when inspected; ot
 New branch changes require another CI run.
 
 Live checks were deferred at the owner's request while the Mac was locked. PLG-006 stays IMPLEMENTED.
+
+No later platform CI pass is recorded: subsequent runs were blocked by GitHub account billing (see progress.md).
+PRs #7, #10, #11 and #12 have since merged into main, so main's current commit has no recorded CI evidence.

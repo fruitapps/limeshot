@@ -41,8 +41,11 @@ interaction; the ArtCraft apps only for the broad visual style (decision D24).
 * New projects open with FL Studio's layout: Playlist maximised, Channel Rack floating on top.
 * Clicking a channel button toggles the **Channel Settings** window for that channel (FL behaviour); its content is
   `inspector::show` (hosted instrument controls and Lime Sampler embedded-PCM/source-file preview).
-* The **Mixer** window shows strips on the left and, like FL, the selected track's panel on the right (level, routing,
-  the 10 insert slots via `effects_ui::chain`).
+* The **Mixer** window shows strips on the left and, like FL, the selected track's panel on the right (name, Input,
+  Output, the 10 insert slots via `effects_ui::chain`, Equalizer). Each slot is boxed like a Channel Rack button and
+  shows only On and a host Mix knob (saved, undoable, with a latency-aligned dry path). Slots reorder by dragging their
+  grip handle or with Move up/down in the context menu. Plugin parameters, presets and another On switch live in the
+  plugin window, which opens when a plugin is added. Strip audibility comes from `limeshot_sequencer::mixer_audibility`.
 * `toolbar::header`, `toolbar::show`, `toolbar::status_bar`; `browser::show` (docked left, resizable, as FL's Browser);
   `dialogs` and toasts.
 
@@ -68,9 +71,10 @@ Chosen after the FL Studio manual (see `docs/research/workflow-comparisons.md`):
 | Piano Roll | left on empty adds a note (snapped) and keeps dragging it; drag a note moves; drag right edge resizes; right-click/drag deletes with a red cursor; right-click on empty deselects; Cmd+click toggles selection; Cmd+drag rectangle; double-click a note selects its pitch row; Alt bypasses snap |
 | Piano keys | click/drag auditions |
 | Velocity lane | click/drag sets the nearest stem (and the whole selection if that note is selected) |
-| Playlist | left on empty places the current pattern and keeps dragging it; drag moves (time and track); right edge resizes; right-click/drag deletes; ▾ on a clip opens its menu (Make unique, Edit, Rename, Mute, Fit, Duplicate, Delete); double-click opens the pattern in the Piano Roll; ruler click/drag sets the song position |
+| Playlist | left on empty places the current pattern and keeps dragging it; drag moves (time and track); right edge resizes; right-click/drag deletes; ▾ on a clip opens its menu (Make unique, Edit, Rename, Mute, Fit, Duplicate, Delete); double-click opens the pattern in the Piano Roll (an audio clip opens its sampler window); ruler click/drag sets the song position; Cmd+drag on the ruler selects a time range and Cmd+B duplicates its contents to the range end; Y (Playback tool) scrubs audio clips with their offsets and fades |
+| Browser | click previews; double-click also previews only (it no longer loads into the selected sampler); drag onto the rack, Playlist or a sampler window |
 | Knobs and faders | drag vertically, Shift for fine control, wheel steps, double-click resets; a small marker lights at the default |
-| Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack and Playlist mute state |
+| Mute LEDs/buttons | left-click mutes; right-click or Cmd+click solos; Shift+click locks Channel Rack, Playlist and Mixer mute state; locked items still accept direct clicks |
 | Scrolling | wheel vertical, Shift+wheel horizontal, Cmd+wheel zooms time around the pointer |
 
 Right-click channel/mixer volume or pan, or known hosted Lime controls, for Reset, Copy/Paste value,
@@ -151,8 +155,12 @@ docked layout, small upper-case headers, saturated clips with solid title strips
   and that opening windows never edits the project. Pointer positions come from geometry the editors record while drawing
   (`channel_rack::State::step_pos`, `piano_roll::Geometry::pos`, `playlist::Geometry::pos`), so layout changes do not
   break them.
-* `cargo run -p limeshot-app --example ui_shot -- out.png [--piano] [--mixer] [--fx] [--settings] [--melody] [--empty] [--plugin --plugin-window] [--dialog=export|quit|marker] [--tapper]` renders
-  the window offscreen with wgpu. It is used to review layout without a display or screen-recording permission
+* `cargo run -p limeshot-app --example ui_shot -- out.png [flags]` renders
+  the window offscreen. Flags include `--piano --mixer --fx --eq --sidechain --settings --synth --melody --scale
+  --note-pan --empty --audio --automation --markers --graph --zip --auto-zip --record --scrub --tools --tool=…
+  --menu=… --prefs=… --plugin --plugin-window --detach --missing-sample --auto-scroll --tapper --dialog=export|quit|marker`;
+  the example's source is the full reference. It
+  uses wgpu and is used to review layout without a display or screen-recording permission
   (`docs/screenshots/`).
 
 Manual test procedure for what automation does not cover: see `docs/development/progress.md` › "Manual checks".
@@ -186,9 +194,13 @@ Plugin wrappers reuse the workspace title painter with minimize/pin/close and no
 The native editor’s resize requests become wrapper content sizes before old layout can overwrite them;
 host resizing applies the plugin’s constraints and reconciles the wrapper to the accepted dimensions.
 Native fixed-size editors retain their natural dimensions. Host preset menus use AppKit above native macOS views, with an egui fallback for parameter/headless wrappers,
-rather than blanket-hiding native views whenever a popup opens. During Browser sample drags the native
-view temporarily hides so the wrapper can receive egui’s release event and assign the source through commands.
-External filesystem drops route to visible Playlist/rack/sampler targets.
+rather than blanket-hiding native views whenever a popup opens. During host drags (Browser samples) the native
+view stays visible but passes hit-testing through to the host (AppKit `hitTest:` passthrough), so the wrapper receives
+egui’s release event and assigns the source through commands. Minimized wrappers hide their native view.
+Plugin buttons toggle like other windows: they close a frontmost or pinned plugin window and otherwise raise it.
+External filesystem drops route to visible Playlist/rack/sampler targets through the deferred loader. On macOS the
+drop position comes from AppKit (`NativeWindow::pointer_position`); elsewhere it falls back to egui's last hover
+position, which is unverified on Windows/Linux.
 
 Native egui-baseview teardown binds its own retained GL context before deleting painter resources.
 The host additionally suspends its current GL context during editor removal and restores its context

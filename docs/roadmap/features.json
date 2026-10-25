@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-23 (Piano Roll controls)",
+  "updated": "2026-10-25 (documentation refresh)",
   "features": [
     {
       "id": "APP-001",
@@ -3099,7 +3099,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels. Session 16: from FL 2026.1.1's Mixer menu (menus.json). Plugins on moved tracks restart from their stored state. Session 17: Clicking strip whitespace or meters selects a Mixer track; dragging controls leaves the selection alone. Presets and reorder arrows occupy their own row."
+      "notes": "Session 9: names are typed in place (double-click a strip's name, click the track panel's), at the owner's request; Enter or clicking elsewhere keeps, Esc cancels. Session 16: from FL 2026.1.1's Mixer menu (menus.json). Plugins on moved tracks restart from their stored state. Session 17: Clicking strip whitespace or meters selects a Mixer track; dragging controls leaves the selection alone. Presets and reorder arrows occupy their own row. 2026-10-25: superseded — presets moved to the plugin window and insert slots reorder by dragging a grip handle."
     },
     {
       "id": "MIX-007",
