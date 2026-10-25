@@ -207,7 +207,7 @@ pub(crate) fn parse_value(app: &LimeShotApp, target: AutomationTarget, text: &st
 }
 
 /// Create an automation clip for `target` on the first Playlist track that is free for the
-/// length of the song, and show it.
+/// remaining length of the song (at least one bar), and show it.
 pub fn create(app: &mut LimeShotApp, target: AutomationTarget) -> Option<ClipId> {
     create_with(app, target, None, None)
 }
@@ -221,8 +221,13 @@ pub fn create_with(
     name: Option<String>,
 ) -> Option<ClipId> {
     let sig = app.project().time_signature;
-    let length = app.project().playlist.song_length(sig).max(sig.ticks_per_bar());
     let start = app.player.status().position();
+    let length = app
+        .project()
+        .playlist
+        .song_length(sig)
+        .saturating_sub(start)
+        .max(sig.ticks_per_bar());
     let playlist = &app.project().playlist;
     let free = (0..playlist.tracks.len() as u32).find(|t| {
         !playlist

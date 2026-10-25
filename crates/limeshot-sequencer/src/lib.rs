@@ -257,12 +257,17 @@ pub fn swing_offset(start: Tick, swing: f32) -> Tick {
     (f64::from(swing.min(1.0)) * (STEP_TICKS / 2) as f64).round() as Tick
 }
 
-/// Build the playback snapshot. `current_pattern` is what Pattern mode loops; an unknown id falls
-/// back to the first pattern.
-pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn SampleLookup) -> Snapshot {
-    let sig = project.time_signature;
-    let any_solo = project.channels.iter().any(|c| c.solo);
-    let tracks = project.mixer.tracks.len().max(1);
+/// Mixer audibility before and after following positive-level routes.
+pub struct MixerAudibility {
+    /// Tracks whose own channels may sound under the current mute/solo state.
+    pub direct: Vec<bool>,
+    /// Tracks that may also carry audio from an audible upstream track.
+    pub routed: Vec<bool>,
+}
+
+/// Resolve mute/solo once for the engine and Mixer UI. Muted tracks stop route propagation;
+/// zero-level sidechain routes do not make a destination audible.
+pub fn mixer_audibility(project: &Project) -> MixerAudibility {
     let any_insert_solo = project.mixer.tracks.iter().skip(1).any(|t| t.solo);
     let direct: Vec<bool> = project
         .mixer
@@ -286,6 +291,16 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
             }
         }
     }
+    MixerAudibility { direct, routed }
+}
+
+/// Build the playback snapshot. `current_pattern` is what Pattern mode loops; an unknown id falls
+/// back to the first pattern.
+pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn SampleLookup) -> Snapshot {
+    let sig = project.time_signature;
+    let any_solo = project.channels.iter().any(|c| c.solo);
+    let tracks = project.mixer.tracks.len().max(1);
+    let MixerAudibility { direct, routed } = mixer_audibility(project);
     let channels = project
         .channels
         .iter()
@@ -706,6 +721,37 @@ mod tests {
         assert!(snap.mixer[0].audible, "master is never solo-muted");
         assert!(!snap.mixer[1].audible);
         assert!(snap.mixer[2].audible);
+    }
+
+    #[test]
+    fn solo_routes_keep_downstream_buses_audible_without_enabling_their_channels() {
+        let (mut d, _, _, pat) = setup();
+        for (from, to, level) in [(1, 2, 1.0), (2, 3, 0.5), (1, 4, 0.0)] {
+            d.execute(Command::SetRoute {
+                from,
+                to,
+                level: Some(level),
+            })
+            .unwrap();
+        }
+        d.execute(Command::SetMixerSolo { track: 1, solo: true }).unwrap();
+        let resolved = mixer_audibility(d.project());
+        let snap = compile(d.project(), pat, &NoSamples);
+        assert!(resolved.direct[1]);
+        assert!(!resolved.direct[2]);
+        assert!(!snap.channels[1].audible, "bus channels remain solo-muted");
+        for i in [0, 1, 2, 3] {
+            assert!(resolved.routed[i]);
+            assert!(snap.mixer[i].audible);
+        }
+        assert!(
+            !resolved.routed[4],
+            "a zero-level sidechain does not enable its destination"
+        );
+        d.execute(Command::SetMixerMute { track: 2, muted: true }).unwrap();
+        let resolved = mixer_audibility(d.project());
+        assert!(!resolved.routed[2]);
+        assert!(!resolved.routed[3], "a muted bus stops propagation");
     }
 
     #[test]

@@ -123,6 +123,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let ui = &mut strips_ui;
     // A thin bar in its own gutter under the strips, so it never covers their colour bars.
     ui.spacing_mut().scroll = crate::theme::gutter_scroll_style();
+    let audibility = limeshot_sequencer::mixer_audibility(app.project());
     egui::ScrollArea::horizontal()
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -131,8 +132,8 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.horizontal_top(|ui| {
                 ui.add_space(8.0);
                 ui.spacing_mut().item_spacing.x = 4.0;
-                for i in 0..n {
-                    strip(app, ui, i as u16, height);
+                for (i, audible) in audibility.routed.iter().copied().enumerate() {
+                    strip(app, ui, i as u16, height, audible);
                     if i == 0 {
                         ui.add_space(8.0);
                     }
@@ -160,13 +161,11 @@ fn routed(app: &LimeShotApp, i: u16) -> Vec<(String, egui::Color32)> {
 
 /// Draw a mixer strip with meters, routing, and undoable controls; ignore a missing track.
 /// Clicks on its background select it without making control drags change the selection.
-fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32) {
+fn strip(app: &mut LimeShotApp, ui: &mut Ui, i: u16, height: f32, audible: bool) {
     let t = Theme::current();
     let Some(track) = app.project().mixer.tracks.get(usize::from(i)).cloned() else {
         return;
     };
-    let any_solo = app.project().mixer.tracks.iter().skip(1).any(|t| t.solo);
-    let audible = !track.muted && (i == 0 || !any_solo || track.solo || track.mute_locked);
     let selected = app.ui.mixer.selected == i;
     let routed = routed(app, i);
     let color = track

@@ -168,7 +168,8 @@ pub fn chain(app: &mut LimeShotApp, ui: &mut Ui, track: u16) {
                 });
                 app.exec_gesture(&r, command);
             })
-            .response;
+            .response
+            .interact(Sense::click());
         // The whole row is the drop target; a line shows where the insert will land.
         if let Some(from) = row.dnd_hover_payload::<InsertDrag>()
             && from.track == track

@@ -1167,6 +1167,7 @@ impl Command {
                     n.start = n.start.saturating_add(ticks);
                     pattern(p, pid)?.notes.push(n);
                 }
+                sort_notes(pattern(p, pid)?);
             }
             DuplicateClipsBy { clips, ticks } => {
                 let selected: Vec<_> = p

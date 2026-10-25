@@ -114,6 +114,7 @@ pub(crate) fn import_audio(
         Some(SampleStatus::Ready(sample)) => Some(sample),
         Some(SampleStatus::Failed(error)) => {
             app.toast_error(error);
+            app.samples.remove_failed(path);
             None
         }
         _ => {
@@ -129,7 +130,11 @@ pub(crate) fn import_audio(
 pub(crate) fn poll_imports(app: &mut LimeShotApp) {
     let pending = std::mem::take(&mut app.ui.browser.pending_imports);
     for (path, target) in pending {
-        if matches!(app.samples.status_of_path(&path), None | Some(SampleStatus::Loading)) {
+        let Some(status) = app.samples.status_of_path(&path) else {
+            // Another target for this path already reported and removed the failed load.
+            continue;
+        };
+        if matches!(status, SampleStatus::Loading) {
             app.ui.browser.pending_imports.push((path, target));
             continue;
         }

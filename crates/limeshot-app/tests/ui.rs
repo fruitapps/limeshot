@@ -6754,6 +6754,12 @@ fn ruler_ranges_select_contents_and_duplicate_by_the_range_length() {
                     && copy.key == n.key)
         );
     }
+    let notes = &h.state().project().pattern(pid).unwrap().notes;
+    assert!(
+        notes
+            .windows(2)
+            .all(|pair| { (pair[0].start, pair[0].key, pair[0].id) <= (pair[1].start, pair[1].key, pair[1].id) })
+    );
     assert_eq!(h.state().ui.piano.time_sel, Some((2 * PPQ, 4 * PPQ)));
     let mut h = playlist_harness();
     let g = h.state().ui.playlist.geometry.unwrap();
@@ -6793,13 +6799,32 @@ fn ruler_ranges_select_contents_and_duplicate_by_the_range_length() {
 
 #[test]
 fn automation_creation_uses_current_playhead_even_with_an_old_range() {
-    let mut h = playlist_harness();
-    let at = 3 * PPQ + 120;
-    h.state_mut().locate(at);
-    wait_for(&mut h, "locate", |a| a.player.status().position() == at);
-    h.state_mut().ui.playlist.time_sel = Some((0, PPQ));
-    let id = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerPan(1)).unwrap();
-    assert_eq!(h.state().project().clip(id).unwrap().start, at);
+    for case in 0..4 {
+        let mut h = playlist_harness();
+        // Pattern mode can seek past the song end only when its pattern is longer.
+        let pattern = h.state().current_pattern();
+        h.state_mut().exec(Command::SetPatternLength {
+            pattern,
+            steps: Some(512),
+        });
+        h.state_mut().sync_engine();
+        let sig = h.state().project().time_signature;
+        let end = h.state().project().playlist.song_length(sig);
+        let bar = sig.ticks_per_bar();
+        let (at, length) = [
+            (0, end),
+            (3 * PPQ + 120, end - 3 * PPQ - 120),
+            (end - bar / 2, bar),
+            (end + bar, bar),
+        ][case];
+        h.state_mut().locate(at);
+        wait_for(&mut h, "locate", |a| a.player.status().position() == at);
+        h.state_mut().ui.playlist.time_sel = Some((0, PPQ));
+        let id = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerPan(1)).unwrap();
+        let clip = h.state().project().clip(id).unwrap();
+        assert_eq!(clip.start, at);
+        assert_eq!(clip.length, length);
+    }
 }
 
 #[test]
@@ -6912,4 +6937,93 @@ fn insert_slots_reorder_by_dragging_their_handle() {
     assert_eq!(order(&h), before);
     h.state_mut().doc.undo();
     assert_eq!(order(&h), vec![before[1], before[0]]);
+    h.step();
+    // The gap beside the plugin button belongs to the row, not to a child control.
+    for (row, action, expected) in [
+        (1, "Move down", before.clone()),
+        (2, "Move up", vec![before[1], before[0]]),
+        (1, "Remove", vec![before[0]]),
+    ] {
+        let label = format!("{row}. {}", names[1].name());
+        let slot = h.get_by_label(&label).rect();
+        click(
+            &mut h,
+            egui::pos2(slot.left() - 2.0, slot.center().y),
+            PointerButton::Secondary,
+        );
+        let button = h.get_by_label(action).rect().center();
+        click(&mut h, button, PointerButton::Primary);
+        assert_eq!(order(&h), expected, "{action}");
+    }
+    assert!(h.state_mut().doc.undo());
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+}
+
+#[test]
+fn mixer_bus_on_buttons_match_routed_engine_audibility() {
+    let mut h = mixer_harness(1);
+    for (from, to, level) in [(1, 2, 1.0), (2, 3, 0.5), (1, 4, 0.0)] {
+        h.state_mut().exec(Command::SetRoute {
+            from,
+            to,
+            level: Some(level),
+        });
+    }
+    h.state_mut().exec(Command::SetMixerSolo { track: 1, solo: true });
+    for muted in [false, true, false] {
+        h.state_mut().exec(Command::SetMixerMute { track: 2, muted });
+        h.step();
+        h.step();
+        for (track, audible) in [(1, true), (2, !muted), (3, !muted), (4, false)] {
+            assert_eq!(h.state().snapshot().mixer[track].audible, audible);
+            let rect = h
+                .state()
+                .ui
+                .mixer
+                .on_buttons
+                .iter()
+                .find(|(i, _)| usize::from(*i) == track)
+                .unwrap()
+                .1;
+            let fill = h
+                .output()
+                .shapes
+                .iter()
+                .find_map(|s| match &s.shape {
+                    egui::Shape::Rect(r) if r.rect == rect => Some(r.fill),
+                    _ => None,
+                })
+                .expect("ON button painted");
+            assert_eq!(
+                fill == limeshot_ui::theme::Theme::current().accent,
+                audible,
+                "track {track}"
+            );
+        }
+    }
+}
+
+#[test]
+fn failed_audio_import_can_be_requested_again_after_repairing_the_file() {
+    let mut h = playlist_harness();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("retry.wav");
+    let before = h.state().project().playlist.clips.len();
+    assert!(limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 4, 0).is_none());
+    assert!(limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 5, 0).is_none());
+    wait_for(&mut h, "failed import to be reported and forgotten", |a| {
+        a.samples.status_of_path(&path).is_none()
+    });
+    assert_eq!(h.state().project().playlist.clips.len(), before);
+    limeshot_dsp::write_wav(&path, 48_000, &[0.1; 256], limeshot_dsp::BitDepth::Float32).unwrap();
+    limeshot_ui::playlist::add_audio_clip(h.state_mut(), &path, 4, 0);
+    wait_for(&mut h, "repaired audio import", |a| {
+        a.project().playlist.clips.len() == before + 1
+    });
+    assert!(matches!(
+        h.state().samples.status_of_path(&path),
+        Some(limeshot_audio::assets::SampleStatus::Ready(_))
+    ));
+    h.run_steps(3);
+    assert_eq!(h.state().project().playlist.clips.len(), before + 1);
 }
