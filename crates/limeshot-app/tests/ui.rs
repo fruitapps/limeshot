@@ -6868,3 +6868,57 @@ fn long_rack_horizontal_scrolling_does_not_grow_the_window() {
     h.run_steps(3);
     assert!((window_rect(&h, Win::ChannelRack).width() - before.width()).abs() < 1.0);
 }
+
+#[test]
+fn insert_slots_reorder_with_arrows_and_drag() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().show_window(Win::Mixer);
+    h.state_mut().ui.workspace.state_mut(Win::Mixer).maximized = true;
+    h.state_mut().ui.mixer.selected = 3;
+    let names: Vec<_> = limeshot_core::LimePlugin::ALL
+        .into_iter()
+        .filter(|p| !p.is_instrument())
+        .take(2)
+        .collect();
+    for p in &names {
+        h.state_mut().exec(Command::AddPluginEffect {
+            track: 3,
+            plugin: p.plugin_ref(),
+        });
+    }
+    for _ in 0..3 {
+        h.step();
+    }
+    let order = |h: &Harness<'static, LimeShotApp>| -> Vec<u32> {
+        h.state().project().mixer.tracks[3]
+            .effects
+            .iter()
+            .filter(|e| !limeshot_core::lime::is_track_eq(e))
+            .map(|e| e.id)
+            .collect()
+    };
+    let before = order(&h);
+    assert_eq!(before.len(), 2);
+    h.get_all_by_label("▼").next().expect("move down").click();
+    h.step();
+    h.step();
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+    // Drag the (now) second slot onto the first.
+    let label = |h: &Harness<'static, LimeShotApp>, n: usize| {
+        let id = order(h)[n];
+        let e = h.state().project().mixer.tracks[3]
+            .effects
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap()
+            .name();
+        format!("{}. {e}", n + 1)
+    };
+    let first = h.get_by_label(&label(&h, 0)).rect().center();
+    let second = h.get_by_label(&label(&h, 1)).rect().center();
+    drag_with(&mut h, second, first, Modifiers::NONE);
+    assert_eq!(order(&h), before);
+    h.state_mut().doc.undo();
+    assert_eq!(order(&h), vec![before[1], before[0]]);
+}

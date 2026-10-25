@@ -1464,14 +1464,15 @@ Done:
 * New automation clips start at the playhead. Right-clicking a point offers Delete, Copy/Paste value and Type in
   value (FL Studio's point menu); the curve modes and Reset tension moved to the tension handles.
 * Mixer inserts are a plain list with On and a host Mix knob (saved, undoable, latency-aligned dry path). Plugin
-  parameters, presets and an On switch live in the plugin window, which opens when a plugin is added. The track
+  parameters, presets and an On switch live in the plugin window, which opens when a plugin is added. Slots are boxed like Channel Rack
+  buttons and reorder with ▲/▼ arrows, dragging or the context menu (owner follow-up). The track
   panel is name, Input, Output, Inserts, Equalizer.
 * Tool cursors are smaller and flat (no outline).
 * CodeRabbit PR #11: live_check no longer saves preferences; locked inserts stay audible through intermediate
   buses; autosave retries after a partial write; no repeated UI-thread decoding; distinct tracks for multi-file
   drops; clip titles stay inside 12 px tracks; leading spaces removed from feature notes.
 
-Validation: 419 host tests, 19 native tests, strict Clippy in both workspaces, rustfmt, feature/inventory and
+Validation: 420 host tests, 19 native tests, strict Clippy in both workspaces, rustfmt, feature/inventory and
 repository checks. Offscreen mixer and plugin-window renders inspected. Live native interaction for this pass
 (drag passthrough, window toggling, OS drops) was not completed and remains unverified.
 
