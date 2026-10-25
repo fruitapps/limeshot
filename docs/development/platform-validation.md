@@ -22,3 +22,56 @@ Live checks were deferred at the owner's request while the Mac was locked. PLG-0
 
 No later platform CI pass is recorded: subsequent runs were blocked by GitHub account billing (see progress.md).
 PRs #7, #10, #11 and #12 have since merged into main, so main's current commit has no recorded CI evidence.
+
+
+## 2026-10-25 CI/release repair
+
+PRs #7 and #10…#14 are merged; main is `5ab09c9`. Billing no longer blocks execution.
+[CI 40211683423](https://github.com/fruitapps/limeshot/actions/runs/40211683423) passes Windows x86-64 and
+Windows ARM64 cross-compilation. Both Linux architectures pass Clippy/build/bundle generation, then SIGSEGV in
+`demo_song_renders_and_reloads_identically` while the concurrent MVP test finishes. Apple Silicon fails
+`dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one`: the channel is still named Kick because the
+background import has not committed after one synthetic frame. The fix waits for the actual edit through the
+existing bounded `wait_for` helper and keeps all resulting channel assertions.
+
+[Native run 40205510432](https://github.com/fruitapps/limeshot/actions/runs/40205510432) passes macOS and Windows;
+Linux's release bundle build lacks `wayland-client.pc`. Add `libwayland-dev` to its dependency installation.
+VST3 modules now remain strongly cached for the process lifetime (D41), with a concurrent reload regression.
+Fresh platform checks are required before declaring the observed Linux crashes resolved.
+
+[Alpha packaging run 40211718081](https://github.com/fruitapps/limeshot/actions/runs/40211718081) targets
+`v0.1.0-alpha.1` at `5ab09c9`. Windows, Apple Silicon and both Linux packaging/install checks pass;
+all five packaging jobs and draft-release assembly have now passed. The prerelease remains a draft.
+The tag and its packages predate this repair; passing packaging alone does not establish workspace-test health.
+
+
+All ten original draft assets were downloaded and their SHA-256 bytes verified. GitHub had renamed the Debian
+filenames from `0.1.0~alpha.1` to `0.1.0.alpha.1`, but the generated manifest kept the former names: unmodified
+`shasum -c` failed for both Debian packages. Corrected the draft's `SHA256SUMS.txt` to the actual uploaded names,
+verified all ten entries, uploaded only the corrected manifest and downloaded it again to confirm the replacement.
+Future Debian artifact filenames use the original `0.1.0-alpha.1` version; control metadata keeps `0.1.0~alpha.1`.
+Both macOS DMGs pass `hdiutil verify`; the Windows portable ZIP passes CRC checks; both Linux tarballs contain
+all twelve VST3 bundles, CLI and install/uninstall scripts. No tag was moved and no release was published.
+
+Repair validation: [CI 40214027778](https://github.com/fruitapps/limeshot/actions/runs/40214027778),
+[native 40214027805](https://github.com/fruitapps/limeshot/actions/runs/40214027805), and
+[packaging 40214064487](https://github.com/fruitapps/limeshot/actions/runs/40214064487) run the initial source fix
+`ee55b76`. The filename repair follows separately; final results are recorded in PR #15. Local verification:
+427 workspace tests with `CI=1` (mandatory bundles), including 157 UI tests, strict all-target Clippy/build,
+formatting, inventories, references,
+five repository-checker tests, 25 independent rack-drop runs, and byte-identical hosted demo/reload WAVs (-3.7 dBFS).
+
+The module regression passes with the corrected portable bundle URI and fails against the original weak cache
+at the residency assertion. Windows CI caught the earlier URI typo; the final test follow-up fixes only that URI.
+
+Linux ARM64 at `3a28f7d` now passes both concurrent MVP tests (including the formerly crashing demo render) and
+all 157 UI tests. That run's only failure is the new module regression's bundle URI typo, corrected in the follow-up.
+The complete final run is still required; this is targeted evidence that the observed MVP crash no longer occurs.
+
+At `d6f3d17`, all platform jobs except Apple Silicon pass completely, and native validation
+[40215397199](https://github.com/fruitapps/limeshot/actions/runs/40215397199) passes on all three operating systems.
+Apple Silicon exposes an independent hosted-slider reset race: a prior queued parameter value can overwrite a
+reset when document state synchronization is skipped for an unchanged saved value. Waiting alone still fails
+4/100 local stress runs; explicitly queueing committed/reset values passes 100/100. The full 427-test workspace
+with mandatory bundles and strict Clippy pass after that fix; the settings render was inspected. No new per-frame
+state serialization or audio-thread allocation was added. Final CI results are recorded in PR #15.

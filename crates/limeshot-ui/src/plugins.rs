@@ -1166,10 +1166,12 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
     }
     for (id, value, response) in changes {
         let command = value.and_then(|value| {
+            // Deliver the final value too: restoring an unchanged document state may skip sync,
+            // and an older queued drag value must not overwrite the reset on the audio thread.
+            app.plugins.set_param(target, id, value);
+            app.plugins.last_tweaked = Some((target, id));
             // Audition drags directly; serialize embedded state only once at release.
             if response.dragged() {
-                app.plugins.set_param(target, id, value);
-                app.plugins.last_tweaked = Some((target, id));
                 return None;
             }
             if let Some(state) = app
@@ -1177,11 +1179,8 @@ pub(crate) fn params(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                 .plugin(target)
                 .and_then(|plugin| limeshot_core::lime::edited_param_state(plugin, id, value))
             {
-                app.plugins.last_tweaked = Some((target, id));
                 return Some(Command::SetPluginState { plugin: target, state });
             }
-            app.plugins.set_param(target, id, value);
-            app.plugins.last_tweaked = Some((target, id));
             app.doc.mark_unsaved();
             None
         });

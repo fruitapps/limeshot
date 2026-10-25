@@ -9,7 +9,7 @@ How the alpha packages are built, what they install and how they were checked. D
 | --- | --- | --- | --- |
 | Windows x64 | `powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1` | `LimeShot-<v>-windows-x64-setup.exe`, `LimeShot-<v>-windows-x64-portable.zip` | App in `Program Files\LimeShot` (or `%LOCALAPPDATA%\Programs\LimeShot` for "me only"); VST3s in `Common Files\VST3` (or `%LOCALAPPDATA%\Programs\Common\VST3`), or privately in `<app>\plugins` when the VST3 component is unticked |
 | macOS (per arch) | `scripts/package-macos.sh` | `LimeShot.app`, `LimeShot-<v>-macos-<arch>.dmg`, `LimeShot-<v>-macos-<arch>.pkg` | PKG: `/Applications/LimeShot.app` and `/Library/Audio/Plug-Ins/VST3`. DMG: a self-contained app with `Contents/PlugIns` |
-| Linux (per arch) | `scripts/package-linux.sh` | `limeshot-<v>-linux-<arch>.tar.gz`, `limeshot_<debv>_<debarch>.deb` | `.deb`: `/opt/limeshot`, `/usr/bin` links, VST3s in `/usr/lib/vst3`, desktop entry, icon and `.lime` MIME type. Tarball: runs in place; `install.sh` installs to `/opt/limeshot` + `/usr/local/lib/vst3`, or with `--user` to `~/.local/opt/limeshot` + `~/.vst3` |
+| Linux (per arch) | `scripts/package-linux.sh` | `limeshot-<v>-linux-<arch>.tar.gz`, `limeshot_<v>_<debarch>.deb` | `.deb`: `/opt/limeshot`, `/usr/bin` links, VST3s in `/usr/lib/vst3`, desktop entry, icon and `.lime` MIME type. Tarball: runs in place; `install.sh` installs to `/opt/limeshot` + `/usr/local/lib/vst3`, or with `--user` to `~/.local/opt/limeshot` + `~/.vst3` |
 
 Every package contains `limeshot`, `limeshot-cli`, the bundled samples, the twelve Lime Native VST3 bundles, the
 icon (drawn by `make_icon` from the same code as the window icon) and the licence texts (LimeShot, fonts and the
@@ -18,7 +18,8 @@ plugins' dependencies). LimeShot finds the Lime VST3s through `limeshot_plugins:
 
 The version comes from `LIMESHOT_VERSION` (a leading `v` is dropped), else from the workspace `Cargo.toml`.
 Numeric-only fields use the part before `-`: Windows file versions and macOS bundle versions become `0.1.0` for
-`0.1.0-alpha.1`, and the `.deb` version becomes `0.1.0~alpha.1` so the final release sorts after it.
+`0.1.0-alpha.1`, and the `.deb` version becomes `0.1.0~alpha.1` so the final release sorts after it. The Debian filename keeps the original `0.1.0-alpha.1` version;
+using a tilde in the filename lets GitHub rename the asset and breaks checksum-manifest lookup.
 
 Each script builds the release binaries and the release VST3 bundles (`native-plugins/build.py`) and then renders
 the demo song with the staged `limeshot-cli` through the staged bundles; a silent render stops the build.

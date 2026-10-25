@@ -2966,7 +2966,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 9: inserts default to 0 dB (FL Studio's insert default; it was 0.8 linear = −1.9 dB), so the fader's 0 dB tick is its default; double-click resets every fader, knob and slider."
+      "notes": "Session 9: inserts default to 0 dB (FL Studio's insert default; it was 0.8 linear = −1.9 dB), so the fader's 0 dB tick is its default; double-click resets every fader, knob and slider. 2026-10-25: hosted sliders also queue committed/reset values so old queued auditions cannot overwrite resets to unchanged saved state. Existing reset regression waits for the bounded handoff; 100/100 local stress runs pass (wait-only baseline failed 4/100). See docs/development/platform-validation.md."
     },
     {
       "id": "MIX-003",
@@ -6975,7 +6975,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "PF-005",
@@ -7009,7 +7009,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "PF-006",
@@ -7036,7 +7036,8 @@
       "tests": [
         "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.",
         "Windows 11 x64 (2026-10-25): scripts/package-windows.ps1 builds LimeShot-0.1.0-alpha.1-windows-x64-portable.zip and LimeShot-0.1.0-alpha.1-windows-x64-setup.exe; silent /CURRENTUSER install places limeshot.exe, samples and all 12 Lime VST3 bundles in %LOCALAPPDATA%\\Programs\\Common\\VST3, installed limeshot-cli renders demo (-3.7 dBFS) with checkout dist hidden, /TYPE=app installs private plugins, and unins000.exe removes everything cleanly.",
-        "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root."
+        "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root.",
+        "2026-10-25: release run 40211718081 passes all five packaging jobs; all ten downloaded assets match SHA-256 after draft manifest filename repair, both DMGs pass hdiutil verify, Windows ZIP CRCs pass, Linux tarballs contain 12 VST3s and installers. See docs/development/platform-validation.md."
       ],
       "reference": {
         "application": "FL Studio",
@@ -7045,7 +7046,7 @@
           "START.md §14"
         ]
       },
-      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification. 2026-10-25: all five alpha packaging jobs pass at 5ab09c9. GitHub rewrote Debian asset tildes to dots and broke manifest filenames; package filenames now keep the original version while Debian control metadata retains the prerelease tilde. All ten downloaded hashes pass after correcting the existing draft manifest to the actual uploaded names; repaired-source packages are checked separately."
     },
     {
       "id": "PL-025",
@@ -8425,7 +8426,8 @@
         "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
         "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
-        "docs/development/live-plugin-checks-2026-10-25.md"
+        "docs/development/live-plugin-checks-2026-10-25.md",
+        "limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8435,7 +8437,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
+      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "WF-009",

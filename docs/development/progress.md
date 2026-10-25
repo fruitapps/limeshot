@@ -1613,3 +1613,45 @@ Every future development session must create a NEW `codex/` branch, a NEW separa
 draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact, carry
 work through implementation, validation, documentation, commit and push, never merge automatically, and create further
 sessions only when the owner asks.
+
+
+## 2026-10-25 — CI and alpha release audit
+
+Started a new managed worktree and `codex/ci-release-fixes` from main `5ab09c9`, after confirming every prior
+continuation through PR #14 had merged. The original main checkout is clean and remains at `3e2fd64`;
+older worktrees are intact. Main's current CI executes again, so old billing-blocked notes are historical.
+
+Repaired the Browser-to-rack test's asynchronous sample-import assertions with bounded completion waits.
+Added the missing Wayland development package to native-plugin Linux CI. Replaced the weak VST3 module cache
+with process-lifetime strong retention (D41), preventing unload of framework callbacks and overlapping module
+teardown/reload. A real-bundle regression checks retention without clients and identity across concurrent loads.
+No UI appearance or audio scheduling changes. Updated architecture, platform evidence, feature notes and limits.
+
+Local verification with `CI=1` (mandatory bundles) passes: 427 workspace tests (157 UI), strict all-target
+Clippy/build, formatting, inventories,
+repository references, five repository-checker tests, 25 independent rack-drop runs and byte-identical hosted
+demo/reload WAVs (-3.7 dBFS). The module regression also fails against the original weak cache at its intended
+residency assertion. Corrected its portable bundle URI after Windows CI exposed an optional-local skip.
+Reused the existing plugin-workflow build cache and native debug bundles.
+Fresh remote runs are linked in [platform validation](platform-validation.md); final outcomes are recorded in PR #15.
+Linux ARM64 now passes both formerly crashing concurrent MVP tests and all 157 UI tests; its only failure in
+`3a28f7d` is the new test's corrected bundle URI. Final complete CI remains separate from that targeted evidence.
+
+All five original alpha packaging jobs and draft-release assembly pass. Downloaded and verified all ten package
+hashes, both DMGs, ZIP CRCs and Linux tarball plugin/install contents. Found and repaired the draft checksum manifest:
+GitHub rewrote Debian filename tildes to dots, leaving two manifest paths nonexistent. Replaced only SHA256SUMS.txt
+with the verified actual filenames and downloaded it again to confirm. Future Debian filenames keep the original
+version while control metadata keeps the prerelease tilde. The alpha tag remains at pre-fix `5ab09c9`; release remains
+a draft. A manual repaired-source packaging run creates artifacts only, without moving tags or publishing.
+
+Final native validation passes on all three OSes (`40215397199`); both Linux architectures, Windows and Intel
+macOS pass full CI at `d6f3d17`. Apple Silicon exposed a further hosted-slider reset race: 8/100 local stress runs
+failed immediately and 4/100 still failed with a bounded wait. Committed/reset values now also enter the existing
+parameter queue, so an older queued drag cannot restore the wrong value when the saved document state is unchanged.
+The test waits for the final handoff while retaining its value assertion. After the fix: 100/100 stress runs,
+427 mandatory-bundle workspace tests, strict Clippy and a visually inspected settings render pass. Embedded plugin
+state is still serialized once at release. Re-run final CI; current results are recorded in PR #15.
+
+Every future development session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact,
+validate/document/commit/push, never merge automatically, and create further sessions only when the owner asks.
