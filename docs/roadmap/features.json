@@ -3032,7 +3032,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": " 2026-10-25: On buttons toggle insert activation. Shift-click toggles an undoable, saved mute lock; locked active inserts remain audible during other inserts’ solo operations. Direct clicks still work."
+      "notes": "2026-10-25: On buttons toggle insert activation. Shift-click toggles an undoable, saved mute lock; locked active inserts remain audible during other inserts’ solo operations. Direct clicks still work. 2026-10-25 sampler/mixer workflow: insert slots show only On and a host Mix knob (saved, undoable, latency-aligned dry path); plugin parameters and presets moved to the plugin window, which also has an On switch. Adding a plugin opens its window."
     },
     {
       "id": "MIX-005",
@@ -3716,7 +3716,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the existing 4 million stereo-frame limit remains, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the existing 4 million stereo-frame limit remains, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25 sampler/mixer workflow: the embedded limit is 6 million stereo frames (about 125 s at 48 kHz); imports decode once on the loader thread with a bounded decoder, and the owner’s 119 s 48 kHz MP3 imports into a sampler and a Playlist clip."
     },
     {
       "id": "INS-009",
@@ -4957,7 +4957,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "crates/limeshot-app/tests/ui.rs::browser_click_and_double_click_only_preview_samples",
         "limeshot-app tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
       ],
       "reference": {
@@ -4975,7 +4975,7 @@
       "name": "Load sample into channel / new channel",
       "description": "Use samples.",
       "fl_reference": "Drag to rack; Enter replaces channel.",
-      "limeshot_behavior": "Double-click loads into the selected sampler (or creates one); context menu; drag onto the rack or a channel name.",
+      "limeshot_behavior": "The row context menu loads into the selected sampler (or creates one); drag onto the rack, a channel name or a sampler window. Double-click only previews.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -4988,7 +4988,7 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "crates/limeshot-app/tests/ui.rs::browser_click_and_double_click_only_preview_samples",
         "crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one",
         "crates/limeshot-app/tests/ui.rs::external_files_drop_on_rack_without_creating_a_playlist_clip",
         "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
@@ -5002,7 +5002,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": " 2026-10-25: External audio files can be dropped on the rack; internal Browser samples can replace a Lime Sampler through its wrapper. Explicit imports report decoder and sampler size/rate errors before creating a broken channel."
+      "notes": "2026-10-25: External audio files can be dropped on the rack; internal Browser samples can replace a Lime Sampler through its wrapper. Explicit imports report decoder and sampler size/rate errors before creating a broken channel. 2026-10-25 sampler/mixer workflow: double-click only previews; Browser rows label sampler channels as Samples."
     },
     {
       "id": "BR-004",
@@ -9168,7 +9168,7 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::embedded_sampler_previews_without_the_source_file",
-        "crates/limeshot-app/tests/ui.rs::browser_click_previews_and_double_click_loads_a_sample",
+        "crates/limeshot-app/tests/ui.rs::browser_click_and_double_click_only_preview_samples",
         "crates/limeshot-app/tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
       ],
       "reference": {

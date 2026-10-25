@@ -53,6 +53,11 @@ pub enum Dialog {
         semitones: i32,
     },
     /// Type a control value in its displayed units, committed once on OK.
+    AutomationPointValue {
+        automation: limeshot_core::AutomationId,
+        tick: u64,
+        text: String,
+    },
     ControlValue {
         target: limeshot_core::AutomationTarget,
         text: String,
@@ -420,6 +425,41 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         keep = false;
                     }
                 });
+            });
+        }
+        Dialog::AutomationPointValue { automation, tick, text } => {
+            modal(ctx, "Type in value", |ui| {
+                ui.label("Point value (0–1)");
+                let r = ui.add(egui::TextEdit::singleline(text).desired_width(180.0));
+                if !r.has_focus() && !ui.memory(|m| m.had_focus_last_frame(r.id)) {
+                    r.request_focus();
+                }
+                let value = text
+                    .trim()
+                    .parse::<f32>()
+                    .ok()
+                    .filter(|v| v.is_finite() && (0.0..=1.0).contains(v));
+                if value.is_none() {
+                    ui.colored_label(Theme::current().danger, "Enter a number between 0 and 1.");
+                }
+                if (ui.add_enabled(value.is_some(), egui::Button::new("OK")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Enter)))
+                    && let Some(value) = value
+                {
+                    if let Some(mut points) = app.project().automation(*automation).map(|a| a.points.clone())
+                        && let Some(point) = points.iter_mut().find(|p| p.tick == *tick)
+                    {
+                        point.value = value;
+                        app.exec(Command::SetAutomationPoints {
+                            automation: *automation,
+                            points,
+                        });
+                    }
+                    keep = false;
+                }
+                if ui.button("Cancel").clicked() {
+                    keep = false;
+                }
             });
         }
         Dialog::ControlValue { target, text } => {

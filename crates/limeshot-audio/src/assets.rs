@@ -4,7 +4,16 @@
 //! project folder and decodes it on a worker thread. Decoded samples stay cached for the life of
 //! the cache, which also guarantees the audio thread never drops the last reference to a buffer.
 
-use limeshot_dsp::{SampleData, load_audio};
+use limeshot_dsp::SampleData;
+
+fn load_audio(path: &Path) -> Result<SampleData, String> {
+    let sample =
+        limeshot_dsp::load_audio_bounded(path, limeshot_core::lime::MAX_EMBEDDED_FRAMES).map_err(|e| e.to_string())?;
+    if sample.frames() < 2 || !(8_000..=384_000).contains(&sample.sample_rate) {
+        return Err("Sample must have at least two frames at 8–384 kHz".into());
+    }
+    Ok(sample)
+}
 use limeshot_sequencer::SampleLookup;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -91,9 +100,8 @@ impl SampleCache {
                 self.entries.insert(path, SampleStatus::Loading);
             }
             _ => {
-                // No loader thread: decode here.
-                let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
-                self.entries.insert(path, status(r));
+                self.entries
+                    .insert(path, SampleStatus::Failed("Sample loader is unavailable".into()));
             }
         }
     }

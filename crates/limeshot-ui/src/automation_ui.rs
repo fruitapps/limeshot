@@ -222,20 +222,29 @@ pub fn create_with(
 ) -> Option<ClipId> {
     let sig = app.project().time_signature;
     let length = app.project().playlist.song_length(sig).max(sig.ticks_per_bar());
+    let start = app.player.status().position();
     let playlist = &app.project().playlist;
-    let free =
-        (0..playlist.tracks.len() as u32).find(|t| !playlist.clips.iter().any(|c| c.track == *t && c.start < length));
+    let free = (0..playlist.tracks.len() as u32).find(|t| {
+        !playlist
+            .clips
+            .iter()
+            .any(|c| c.track == *t && c.start < start.saturating_add(length) && c.end() > start)
+    });
     let track = match free {
         Some(t) => t,
         None => {
-            app.exec(Command::AddPlaylistTrack)?;
+            let before = app.project().playlist.tracks.len();
+            app.exec(Command::AddPlaylistTrack);
+            if app.project().playlist.tracks.len() == before {
+                return None;
+            }
             app.project().playlist.tracks.len() as u32 - 1
         }
     };
     let id = ClipId(app.exec(Command::AddAutomationClip {
         target,
         track,
-        start: 0,
+        start,
         length,
         value,
         name,

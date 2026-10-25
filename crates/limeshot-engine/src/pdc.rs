@@ -28,7 +28,7 @@ const RINGS: usize = 64;
 const TRACKS: usize = Mixer::MAX_TRACKS;
 const NONE: u16 = u16::MAX;
 
-struct Ring {
+pub(crate) struct Ring {
     buf: Vec<f32>,
     /// Next frame to write.
     pos: usize,
@@ -37,19 +37,19 @@ struct Ring {
 impl Ring {
     const FRAMES: usize = MAX_PDC + MAX_BLOCK;
 
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             buf: vec![0.0; 2 * Self::FRAMES],
             pos: 0,
         }
     }
 
-    fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.buf.fill(0.0);
         self.pos = 0;
     }
 
-    fn write(&mut self, src: &[f32]) {
+    pub(crate) fn write(&mut self, src: &[f32]) {
         for f in src.as_chunks::<2>().0 {
             self.buf[2 * self.pos] = f[0];
             self.buf[2 * self.pos + 1] = f[1];
@@ -58,7 +58,7 @@ impl Ring {
     }
 
     /// The `dst.len() / 2` frames written just now, as they were `delay` frames earlier.
-    fn read(&self, delay: usize, dst: &mut [f32]) {
+    pub(crate) fn read(&self, delay: usize, dst: &mut [f32]) {
         let n = dst.len() / 2;
         let mut at = (self.pos + 2 * Self::FRAMES - n - delay.min(MAX_PDC)) % Self::FRAMES;
         for f in dst.as_chunks_mut::<2>().0 {

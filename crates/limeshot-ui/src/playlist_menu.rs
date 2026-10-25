@@ -157,16 +157,29 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
         Act::Cut => crate::playlist::clipboard(app, ClipOp::Cut),
         Act::Copy => crate::playlist::clipboard(app, ClipOp::Copy),
         Act::Paste => crate::playlist::clipboard(app, ClipOp::Paste),
-        Act::Duplicate if !sel.is_empty() => {
+        Act::Duplicate => {
+            let sel = if sel.is_empty() && app.ui.playlist.time_sel.is_none() {
+                clip_ids(app)
+            } else {
+                sel
+            };
             let before = clip_ids(app);
-            app.exec(Command::DuplicateClips(sel));
+            if let Some((from, to)) = app.ui.playlist.time_sel.filter(|(a, b)| b > a) {
+                app.exec(Command::DuplicateClipsBy {
+                    clips: sel,
+                    ticks: to - from,
+                });
+                app.ui.playlist.time_sel = Some((to, to.saturating_add(to - from)));
+            } else {
+                app.exec(Command::DuplicateClips(sel));
+            }
             select_new(app, &before);
         }
         Act::Delete if !sel.is_empty() => {
             app.exec(Command::RemoveClips(sel));
             app.ui.playlist.selection.clear();
         }
-        Act::Duplicate | Act::Delete => {}
+        Act::Delete => {}
         Act::ShiftLeft => mv(app, -snap, 0),
         Act::ShiftRight => mv(app, snap, 0),
         Act::ShiftUp => mv(app, 0, -1),

@@ -115,6 +115,7 @@ pub struct Wrapper {
     pub(crate) rect: Option<egui::Rect>,
     resize_to: Option<Vec2>,
     raise: bool,
+    frontmost: bool,
     // Declared before `native`: the editor leaves the window before LimeShot lets go of it.
     editor: Option<Vst3Editor>,
     native: Option<NativeWindow>,
@@ -152,6 +153,7 @@ impl Wrapper {
             rect: None,
             resize_to: None,
             raise: true,
+            frontmost: false,
             editor: None,
             native: None,
             asked: false,
@@ -247,7 +249,11 @@ impl PluginHost {
 
     /// FL Studio: a click on the channel button (or insert slot) opens the window, the next closes it.
     pub fn toggle_window(&mut self, target: Target) -> bool {
-        if self.is_window_open(target) {
+        if self
+            .windows
+            .get(&target)
+            .is_some_and(|w| !w.minimized && (w.frontmost || w.pinned))
+        {
             self.close_window(target)
         } else {
             self.open_window(target, None);
@@ -465,6 +471,10 @@ pub fn show_all(app: &mut LimeShotApp, ctx: &Context) {
     for (target, title) in targets.into_iter().zip(titles) {
         show(app, ctx, target, &title);
     }
+    let top = ctx.memory(|m| m.areas().top_layer_id(egui::Order::Middle));
+    for (target, w) in &mut app.plugins.windows {
+        w.frontmost = top.is_some_and(|l| l.id == window_id(*target));
+    }
 }
 
 /// Draw a plugin wrapper and synchronize its embedded editor's layout and visibility.
@@ -631,7 +641,6 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 && !w.fallback
                 && app.dialog.is_none()
                 && !w.minimized
-                && !egui::DragAndDrop::has_payload_of_type::<crate::browser::DraggedSample>(ctx)
                 && [
                     area.shrink(3.0).left_top(),
                     area.shrink(3.0).right_top(),
@@ -642,8 +651,11 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 .iter()
                 .all(|p| {
                     ctx.layer_id_at(*p)
-                        .is_none_or(|layer| layer == response.response.layer_id)
+                        .is_none_or(|layer| layer == response.response.layer_id || layer.order == egui::Order::Tooltip)
                 });
+            editor.set_input_passthrough(
+                egui::DragAndDrop::has_any_payload(ctx) || ctx.input(|i| !i.raw.hovered_files.is_empty()),
+            );
             editor.set_visible(visible);
             let requested = editor.take_resized();
             if let Some(size) = requested {
@@ -746,6 +758,17 @@ fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
         }),
         Target::Effect { .. } => None,
     };
+    let enabled = match target {
+        Target::Effect { track, effect } => app
+            .project()
+            .mixer
+            .tracks
+            .get(usize::from(track))
+            .and_then(|t| t.effects.iter().find(|e| e.id == effect))
+            .map(|e| e.enabled),
+        _ => None,
+    };
+    let mut toggle_enabled = false;
     let mut pick = None;
     let mut act = None;
     let width = ui.available_width();
@@ -779,6 +802,17 @@ fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
                     pick = Some(tab);
                 }
             }
+            if let Some(enabled) = enabled {
+                toggle_enabled = crate::widgets::toggle_label(
+                    ui,
+                    enabled,
+                    if enabled { "ON" } else { "OFF" },
+                    t.accent,
+                    vec2(32.0, 20.0),
+                    "Enable / bypass effect",
+                )
+                .clicked();
+            }
             let mut action = None;
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_space(6.0);
@@ -787,6 +821,13 @@ fn tabs(app: &mut LimeShotApp, ui: &mut Ui, target: Target) -> Option<Tab> {
             act = action;
         },
     );
+    if toggle_enabled && let (Target::Effect { track, effect }, Some(enabled)) = (target, enabled) {
+        app.exec(limeshot_core::Command::SetEffectEnabled {
+            track,
+            effect,
+            enabled: !enabled,
+        });
+    }
     if let Some(a) = act {
         run(app, target, a);
     }
@@ -961,6 +1002,7 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui, target: Target) {
                     .and_then(|e| e.plugin.clone());
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     egui::Frame::new().inner_margin(egui::Margin::same(12)).show(ui, |ui| {
+                        crate::presets_ui::menu(app, ui, crate::presets_ui::Target::Effect { track, effect });
                         crate::plugins::effect_card(app, ui, track, effect, plugin.as_ref());
                     });
                 });

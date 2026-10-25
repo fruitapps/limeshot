@@ -17,6 +17,7 @@ fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let mut app = limeshot_ui::LimeShotApp::new(limeshot_ui::Settings::default(), limeshot_app::bundled_samples_dir());
     app.autosave.dir = None;
+    app.persist_settings = false;
     if let Some(path) = std::env::args_os().nth(1) {
         app.open_path(std::path::Path::new(&path));
     }

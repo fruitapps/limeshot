@@ -122,6 +122,7 @@ pub struct EffectState {
     pub id: u32,
     pub kind: limeshot_core::EffectKind,
     pub enabled: bool,
+    pub mix: f32,
     pub params: Vec<f32>,
 }
 
@@ -262,6 +263,29 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
     let sig = project.time_signature;
     let any_solo = project.channels.iter().any(|c| c.solo);
     let tracks = project.mixer.tracks.len().max(1);
+    let any_insert_solo = project.mixer.tracks.iter().skip(1).any(|t| t.solo);
+    let direct: Vec<bool> = project
+        .mixer
+        .tracks
+        .iter()
+        .enumerate()
+        .map(|(i, t)| !t.muted && (i == 0 || !any_insert_solo || t.solo || t.mute_locked))
+        .collect();
+    let mut routed = direct.clone();
+    let mut pending: Vec<usize> = direct
+        .iter()
+        .enumerate()
+        .filter_map(|(i, on)| on.then_some(i))
+        .collect();
+    while let Some(i) = pending.pop() {
+        for route in &project.mixer.tracks[i].routes {
+            let to = usize::from(route.to);
+            if route.level > 0.0 && to < routed.len() && !routed[to] && !project.mixer.tracks[to].muted {
+                routed[to] = true;
+                pending.push(to);
+            }
+        }
+    }
     let channels = project
         .channels
         .iter()
@@ -273,13 +297,14 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
             },
             volume: c.volume,
             pan: c.pan,
-            audible: !c.muted && (!any_solo || c.solo || c.mute_locked),
+            audible: !c.muted
+                && (!any_solo || c.solo || c.mute_locked)
+                && direct.get(usize::from(c.mixer_track)).copied().unwrap_or(true),
             mixer_track: usize::from(c.mixer_track).min(tracks - 1),
             root_key: c.root_key,
         })
         .collect();
 
-    let any_insert_solo = project.mixer.tracks.iter().skip(1).any(|t| t.solo);
     let mixer = project
         .mixer
         .tracks
@@ -288,7 +313,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
         .map(|(i, t)| MixerTrackState {
             gain: t.volume,
             pan: t.pan,
-            audible: !t.muted && (i == 0 || !any_insert_solo || t.solo || t.mute_locked),
+            audible: routed[i],
             effects: t
                 .effects
                 .iter()
@@ -296,6 +321,7 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
                     id: e.id,
                     kind: e.kind,
                     enabled: e.enabled,
+                    mix: e.mix,
                     params: e.resolved_params(project.tempo.bpm()),
                 })
                 .collect(),

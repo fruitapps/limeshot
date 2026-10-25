@@ -223,7 +223,7 @@ impl Renderer {
     }
 
     fn active_loop(&self) -> Option<(Tick, Tick)> {
-        self.loop_range.filter(|_| self.mode == PlayMode::Song)
+        self.loop_range
     }
 
     pub fn set_metronome(&mut self, on: bool) {
@@ -389,6 +389,30 @@ impl Renderer {
             let at = (0, self.now);
             self.instruments
                 .note_on(usize::from(channel), id, key, velocity, at, off_at, 0, false, 0.0, None);
+        }
+    }
+
+    /// Audition a Playlist source window through its hosted sampler, including offsets and fades.
+    pub fn preview_clip(&mut self, channel: u16, playback: limeshot_dsp::ClipPlayback) {
+        let Some(ch) = self.snapshot.channels.get(usize::from(channel)) else {
+            return;
+        };
+        if let limeshot_sequencer::InstrumentState::Plugin { channel: id } = ch.instrument {
+            let off_at = self
+                .now
+                .saturating_add((playback.remaining_secs.max(0.0) * f64::from(self.sample_rate)).round() as u64);
+            self.instruments.note_on(
+                usize::from(channel),
+                id,
+                ch.root_key,
+                1.0,
+                (0, self.now),
+                off_at,
+                0,
+                false,
+                0.0,
+                Some(playback),
+            );
         }
     }
 

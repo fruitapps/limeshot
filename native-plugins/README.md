@@ -99,7 +99,7 @@ hands-on compatibility with every DAW/version.
 
 Use Load or drop a WAV, MP3, FLAC, Ogg Vorbis or AIFF file to load it. Hold the waveform or keyboard to audition; right-click a key to set
 the root note. Drag the colored waveform handles to trim the playable region. The shared LimeShot audio decoder is used here. Samples
-are limited to **4 million stereo frames** (about 83 seconds at 48 kHz) to keep embedded host state below 64 MiB.
+are limited to **6 million stereo frames** (about 125 seconds at 48 kHz) to keep embedded host state below 64 MiB.
 The plugin saves decoded audio inside host state; moving/deleting the source file does not break a saved session.
 Loading happens during non-realtime state restoration/activation and resets sounding notes. No disk access,
 allocation or locking occurs during audio processing. An invalid embedded sample becomes an empty, silent sampler.

@@ -635,6 +635,7 @@ impl LimeShotApp {
     }
     pub fn sync_engine(&mut self) {
         let loaded = self.samples.poll();
+        crate::browser::poll_imports(self);
         let key = (self.doc.revision(), self.current_pattern());
         let resync = self.plugins.take_needs_sync();
         if !loaded && !resync && self.compiled == Some(key) {
@@ -1108,7 +1109,11 @@ impl LimeShotApp {
         if self.plugins.is_scanning() {
             ctx.request_repaint_after(Duration::from_millis(250));
         }
-        let range = self.ui.playlist.time_sel;
+        let range = if self.ui.mode == PlayMode::Song {
+            self.ui.playlist.time_sel
+        } else {
+            self.ui.piano.time_sel
+        };
         if self.loop_sent != Some(range) {
             self.send(Msg::LoopRange(range));
             self.loop_sent = Some(range);
@@ -1131,8 +1136,19 @@ impl LimeShotApp {
         self.toasts.retain(|t| t.until > Instant::now());
     }
 
+    /// Cocoa drag sessions can leave egui’s last ordinary mouse position stale.
+    pub(crate) fn external_drop_position(&self, ctx: &Context) -> Option<egui::Pos2> {
+        if ctx.input(|i| !i.raw.hovered_files.is_empty() || !i.raw.dropped_files.is_empty())
+            && let Some((x, y)) =
+                limeshot_plugins::NativeWindow::find(&self.window_title()).and_then(|w| w.pointer_position())
+        {
+            return Some(egui::pos2(x as f32, y as f32) / ctx.zoom_factor());
+        }
+        ctx.input(|i| i.pointer.hover_pos())
+    }
+
     fn external_sample_drops(&mut self, ctx: &Context) {
-        let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) else {
+        let Some(pos) = self.external_drop_position(ctx) else {
             return;
         };
         let layer = ctx.layer_id_at(pos);

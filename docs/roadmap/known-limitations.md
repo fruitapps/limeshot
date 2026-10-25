@@ -151,7 +151,7 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
   runtime and hands-on FL Studio/other-DAW editor checks remain pending; the development Mac was locked.
   Validator and actual VST3 ABI tests are recorded in `native-plugins/VALIDATION.md`.
 * Stereo layouts only. No VST2/AU/CLAP export (Logic Pro needs AU). Sampler accepts WAV, MP3, FLAC, Ogg Vorbis and AIFF and embeds at most
-  4 million stereo frames in host state. Loading a sample resets sounding notes. Sampler .limepreset files
+  6 million stereo frames (about 125 seconds at 48 kHz) in host state. Loading a sample resets sounding notes. Sampler .limepreset files
   preserve the sample/root key; host state saves both. Loop points are supported; no time stretching or multisampling.
 * Limiter is a zero-lookahead sample-peak limiter, without true-peak oversampling. The EQ graph shows the actual Eq3 frequency
   response; the filter graph is a response guide. Neither is a measured spectrum analyzer. Pitch bend is fixed at ±2 semitones; no MPE-specific expression controls.
@@ -178,8 +178,8 @@ Current as of 2026-10-23 (VST3 replacement). Everything here is either not imple
 Plugin resize/title/teardown changes require another live native pass, including Serum’s internal resize control,
 constrained wrappers, opening host presets, minimize/restore, and repeated native instrument/effect closing.
 Headless wrapper tests and offscreen native editor renders do not establish those native checks.
-The sampler’s existing 4 million stereo-frame / 8–384 kHz limit remains (about 83 seconds at 48 kHz), for every
-format including MP3; explicit imports now report it directly rather than creating a pending broken channel.
+The sampler’s limit is 6 million stereo frames / 8–384 kHz (about 125 seconds at 48 kHz, embedded state below 64 MiB),
+for every format including MP3. Imports decode on the loader thread and report failures before any channel or clip exists.
 External drops use filesystem audio paths; directories and unsupported extensions are ignored.
 
 
