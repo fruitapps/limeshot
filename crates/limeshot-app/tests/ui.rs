@@ -2935,9 +2935,21 @@ fn double_click_resets_sliders_and_knobs() {
     h.state_mut().plugins.set_param(target, id, 0.9);
     h.step();
     let rect = h.state().plugins.parameter_rect(target, id).unwrap();
+    let default = h
+        .state()
+        .plugins
+        .instance(target)
+        .unwrap()
+        .params()
+        .iter()
+        .find(|p| p.id == id)
+        .unwrap()
+        .default;
     double_click(&mut h, rect.center());
+    wait_for(&mut h, "hosted parameter reset", |a| {
+        (a.plugins.instance(target).unwrap().param(id) - default).abs() < 1e-6
+    });
     let inst = h.state().plugins.instance(target).unwrap();
-    let default = inst.params().iter().find(|p| p.id == id).unwrap().default;
     assert!(
         (inst.param(id) - default).abs() < 1e-6,
         "actual {}, default {}",

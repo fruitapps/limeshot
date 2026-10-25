@@ -1644,6 +1644,14 @@ with the verified actual filenames and downloaded it again to confirm. Future De
 version while control metadata keeps the prerelease tilde. The alpha tag remains at pre-fix `5ab09c9`; release remains
 a draft. A manual repaired-source packaging run creates artifacts only, without moving tags or publishing.
 
+Final native validation passes on all three OSes (`40215397199`); both Linux architectures, Windows and Intel
+macOS pass full CI at `d6f3d17`. Apple Silicon exposed a further hosted-slider reset race: 8/100 local stress runs
+failed immediately and 4/100 still failed with a bounded wait. Committed/reset values now also enter the existing
+parameter queue, so an older queued drag cannot restore the wrong value when the saved document state is unchanged.
+The test waits for the final handoff while retaining its value assertion. After the fix: 100/100 stress runs,
+427 mandatory-bundle workspace tests, strict Clippy and a visually inspected settings render pass. Embedded plugin
+state is still serialized once at release. Re-run final CI; current results are recorded in PR #15.
+
 Every future development session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached
 draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact,
 validate/document/commit/push, never merge automatically, and create further sessions only when the owner asks.

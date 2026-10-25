@@ -262,3 +262,10 @@ instance releases its controller, processor, sample state and DSP buffers, while
 Plugin frameworks can install global callbacks, thread-local destructors and native classes that outlive instances;
 a weak cache can also race last-client teardown against a new load. Module entry runs once per cached path.
 The tradeoff is retaining the code/factory for each visited bundle until LimeShot exits; updates require restarting.
+
+
+## Hosted parameter commits
+
+Host sliders queue the committed/reset value as well as drag auditions. A no-op document state edit can skip
+host synchronization, and a previously queued audition must not overwrite the final value on the next audio block.
+State serialization still occurs once at release; the existing bounded parameter ring carries the final update.

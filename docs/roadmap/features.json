@@ -2966,7 +2966,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 9: inserts default to 0 dB (FL Studio's insert default; it was 0.8 linear = −1.9 dB), so the fader's 0 dB tick is its default; double-click resets every fader, knob and slider."
+      "notes": "Session 9: inserts default to 0 dB (FL Studio's insert default; it was 0.8 linear = −1.9 dB), so the fader's 0 dB tick is its default; double-click resets every fader, knob and slider. 2026-10-25: hosted sliders also queue committed/reset values so old queued auditions cannot overwrite resets to unchanged saved state. Existing reset regression waits for the bounded handoff; 100/100 local stress runs pass (wait-only baseline failed 4/100). See docs/development/platform-validation.md."
     },
     {
       "id": "MIX-003",

@@ -67,3 +67,11 @@ at the residency assertion. Windows CI caught the earlier URI typo; the final te
 Linux ARM64 at `3a28f7d` now passes both concurrent MVP tests (including the formerly crashing demo render) and
 all 157 UI tests. That run's only failure is the new module regression's bundle URI typo, corrected in the follow-up.
 The complete final run is still required; this is targeted evidence that the observed MVP crash no longer occurs.
+
+At `d6f3d17`, all platform jobs except Apple Silicon pass completely, and native validation
+[40215397199](https://github.com/fruitapps/limeshot/actions/runs/40215397199) passes on all three operating systems.
+Apple Silicon exposes an independent hosted-slider reset race: a prior queued parameter value can overwrite a
+reset when document state synchronization is skipped for an unchanged saved value. Waiting alone still fails
+4/100 local stress runs; explicitly queueing committed/reset values passes 100/100. The full 427-test workspace
+with mandatory bundles and strict Clippy pass after that fix; the settings render was inspected. No new per-frame
+state serialization or audio-thread allocation was added. Final CI results are recorded in PR #15.
