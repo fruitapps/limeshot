@@ -136,9 +136,11 @@ Current as of 2026-10-25 (sampler/mixer workflow merged). Everything here is eit
   terminal helper reports `AXIsProcessTrusted() == false`, so activation and input could not be verified reliably.
   Repeat with Accessibility enabled for the Codex execution host; test Vital and a resize-capable plugin, both tabs,
   covering/pinning windows, typing keyboard input, and reopening saved wrappers before calling this VERIFIED.
-* The macOS package (`scripts/package-macos.sh`) is signed ad hoc: other Macs need a Developer ID signature and
-  notarisation. Double-clicking a .lime file in Finder starts LimeShot without opening the file. No Windows or Linux
-  packages yet.
+* Packages (PF-006, [release packaging](../development/release-packaging.md)) are unsigned (Windows: SmartScreen
+  warns) or signed ad hoc (macOS: other Macs need a Developer ID signature and notarisation).
+  Double-clicking a .lime file in Finder starts LimeShot without opening the file. The macOS and Linux packaging
+  scripts have run only in the release workflow, not on hardware; no AppImage, MSI, Flatpak or Windows ARM64 package
+  exists, and the Windows executables carry no embedded icon (shortcuts and the installer use `LimeShot.ico`).
 * Tempo automation steps every 64 frames and works in Song mode only; minutes:seconds displays and new audio clip
   lengths use the tempo playing now (no integrated tempo map), and audio clips do not stretch with the tempo.
 

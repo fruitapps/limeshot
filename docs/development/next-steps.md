@@ -1,7 +1,7 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-25. PRs #7, #10, #11 (plugin/workflow fixes) and #12 (sampler/mixer workflow) are merged into
-main (`befb173`); no continuation PR is open. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-25. PRs #7 and #10…#13 are merged into main (`12f6542`); the alpha-installer session's draft PR
+(`codex/alpha-installers`) is the open continuation. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -63,7 +63,9 @@ waiting for unlock. The latest integrity audit is [repository-audit.md](reposito
    latency compensation and count-in according to dependencies. Open an exported MIDI file in another application.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining inferred FL bindings, and automatic layout
    persistence. Detachable panels and explicitly saved custom layouts already exist.
-5. **Packaging (PF-006)** (macOS app/DMG exists; signing and Windows/Linux packages remain) and `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
+5. **Packaging (PF-006)**: installers for all three platforms exist ([release packaging](release-packaging.md)); run the
+   release workflow, try the macOS PKG/DMG and Linux `.deb`/tarball on hardware, and add Authenticode/Developer ID
+   signing and notarisation. `.flp` follow-ups (APP-022): automation curves, equivalent mixer effects/routing,
    further arrangements and value-checked fixtures from older FL versions.
 6. **Plugin formats and distribution.** CLAP (PLG-001) and AU (PLG-003); Lime Native's twelve standalone VST3 bundles now live in `native-plugins/` (PLG-012).
    Complete hands-on DAW/editor checks and validate Windows/Linux/Intel builds; see `native-plugins/VALIDATION.md`.

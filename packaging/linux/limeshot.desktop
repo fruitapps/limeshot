@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=LimeShot
+GenericName=Digital Audio Workstation
+Comment=Make music with patterns, a Piano Roll, a Playlist and a Mixer
+Exec=limeshot %f
+Icon=limeshot
+Terminal=false
+Categories=AudioVideo;Audio;Midi;Sequencer;Music;
+MimeType=application/x-limeshot-project;
+Keywords=DAW;music;sequencer;synthesizer;VST3;
+StartupWMClass=limeshot

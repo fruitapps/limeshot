@@ -32,7 +32,9 @@ cargo fmt --all
 python3 scripts/features.py check        # or `generate`; also checks keybindings.json and settings.json
 python3 scripts/check_repository.py      # offline local links, evidence and embedded assets
 cargo run -p limeshot-dsp --example make_samples   # regenerate bundled samples
-scripts/package-macos.sh                           # dist/LimeShot.app and a DMG (ad-hoc signed)
+scripts/package-macos.sh                           # dist/LimeShot.app, a DMG and a PKG (ad-hoc signed)
+scripts/package-linux.sh                           # tarball with install.sh, and a .deb
+powershell -File scripts/package-windows.ps1       # Inno Setup installer and portable ZIP (docs/development/release-packaging.md)
 ```
 **Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. Permissions depend on the execution host;
 verify Screen Recording and Accessibility before live automation.
@@ -95,7 +97,7 @@ features as records.
   never run on Windows hardware); Linux uses parameters. VST3 class ids are portable hex (`util::tuid_to_hex`).
 * Samples (WAV/MP3/FLAC/Ogg/AIFF) are bounded to 6 million stereo frames (about 125 s at 48 kHz) and decode once on
   the loader thread.
-* The latest recorded run is 420 host tests and 19 native tests (`docs/development/progress.md`). Feature, shortcut,
+* The latest recorded run is 428 host tests and 19 native tests (`docs/development/progress.md`). Feature, shortcut,
   setting and menu counts live in the generated inventories.
 * Active instruments and effects use twelve Lime Native VST3 bundles; runtime built-in factories are deleted.
   Hosted clips, note pan, track EQ, Gate/Drive/Chorus, sidechains, source previews, value menus and telemetry are implemented.

@@ -7017,20 +7017,26 @@
       "name": "Packaging (DMG, MSI, AppImage/deb)",
       "description": "Installers.",
       "fl_reference": "Installers per platform.",
-      "limeshot_behavior": "scripts/package-macos.sh builds dist/LimeShot.app (limeshot and limeshot-cli, the bundled samples in Resources, an icon drawn from the same code as the window icon, Info.plist with the .lime document type, ad-hoc signature) and a DMG with an Applications link. Windows (MSI) and Linux (AppImage/deb) packages wait for CI on those platforms.",
+      "limeshot_behavior": "scripts/package-windows.ps1 builds a portable ZIP and an Inno Setup installer (LimeShot and the twelve Lime Native VST3 bundles in the shared VST3 folder, or private in <app>/plugins; per-machine or per-user; .lime association; uninstaller). scripts/package-macos.sh builds dist/LimeShot.app (with the Lime VST3s in Contents/PlugIns), a DMG and a PKG installer (/Applications/LimeShot.app + /Library/Audio/Plug-Ins/VST3). scripts/package-linux.sh builds a tarball with install.sh/uninstall.sh (/opt/limeshot + /usr/local/lib/vst3, or --user in ~/.local/opt/limeshot + ~/.vst3, or --private-plugins) and a .deb (/opt/limeshot + /usr/lib/vst3). .github/workflows/release.yml builds all platforms and attaches them to a draft GitHub release on v* tags.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
       "modules": [
-        "limeshot-app"
+        "limeshot-app",
+        "scripts/package-windows.ps1",
+        "scripts/package-macos.sh",
+        "scripts/package-linux.sh",
+        ".github/workflows/release.yml"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on."
+        "Manual (session 16): codesign --verify, plutil -lint and hdiutil verify pass; the bundled limeshot-cli renders the demo with the bundled samples; the app launches from the bundle with its samples listed and audio on.",
+        "Windows 11 x64 (2026-10-25): scripts/package-windows.ps1 builds LimeShot-0.1.0-alpha.1-windows-x64-portable.zip and LimeShot-0.1.0-alpha.1-windows-x64-setup.exe; silent /CURRENTUSER install places limeshot.exe, samples and all 12 Lime VST3 bundles in %LOCALAPPDATA%\\Programs\\Common\\VST3, installed limeshot-cli renders demo (-3.7 dBFS) with checkout dist hidden, /TYPE=app installs private plugins, and unins000.exe removes everything cleanly.",
+        "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root."
       ],
       "reference": {
         "application": "FL Studio",
@@ -7039,7 +7045,7 @@
           "START.md §14"
         ]
       },
-      "notes": "Session 16 (next-steps Then 12). Not: Developer ID signing and notarisation (needs the owner's certificate), opening .lime files from Finder (macOS sends them as Apple Events, not arguments), MSI, AppImage/deb."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending); macOS PKG and Linux .deb/tarball build in .github/workflows/release.yml and await hardware verification."
     },
     {
       "id": "PL-025",
