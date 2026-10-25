@@ -1,26 +1,15 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-25. PRs #7 and #10…#14 are merged into main (`5ab09c9`).
-The CI/release repair session uses `codex/ci-release-fixes` in a new managed worktree. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-25. First Release 0.1.0-alpha.1 has been released.
+Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
 ## Standing session policy
 Every new development session must use a new isolated branch and create a NEW draft PR, rather than adding
-feature work to an earlier session’s PR. Inspect merge state and stack on the latest unmerged continuation.
-Finish implementation, validation, documentation, commit and push, attach the new PR, and do not merge automatically.
+feature work to an earlier session’s PR. Inspect merge state and stack on the latest unmerged continuation, but only if edits are based on another or in sequence.
+Finish implementation, validation, documentation, commit and push, attach the new PR.
 Repeat this policy in every future session handoff before these docs merge. Do not create further sessions unless asked.
-
-## Hosted rewrite: implemented; native/platform verification remains
-
-The owner decided that LimeShot will drop its built-in LimeSynth, Sampler and mixer effects and use the Lime Native
-VST3 plugins by default. Old projects are converted, and every capability lost in the rewrite becomes a P0 feature.
-Replacement is complete locally: active instruments/effects are hosted VST3s, and runtime built-in factories are deleted.
-Hosted parity for PLG-017…020, PLG-022 and PLG-024…029 is now implemented. PRs #8/#9 merged into PR #7, which
-has since merged into main. Hands-on native/platform checks remain; the PR #7 review evidence is in
-[the review handoff](handoff-pr7-rewrite-review.md) and [CodeRabbit disposition](coderabbit-pr7-followup.md).
-The plan, the current architecture and the list of lost capabilities are in
-[handoff-lime-vst3-replacement.md](handoff-lime-vst3-replacement.md). This comes before the items below.
 
 ## Immediate verification
 
