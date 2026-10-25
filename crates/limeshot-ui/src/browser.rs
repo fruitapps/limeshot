@@ -627,8 +627,7 @@ pub(crate) fn paint_sample_wave(
     if rect.width() < 1.0 || rect.height() < 1.0 {
         return;
     }
-    let stored = path.to_string_lossy().into_owned();
-    let Some(SampleStatus::Ready(sample)) = app.samples.status(&stored).cloned() else {
+    let Some(SampleStatus::Ready(sample)) = app.samples.status_of_path(path).cloned() else {
         return;
     };
     let peaks = app

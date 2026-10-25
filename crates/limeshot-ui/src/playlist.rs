@@ -133,8 +133,8 @@ pub struct State {
     /// where, and the frame it opened in.
     pub point_menu: Option<(AutomationId, usize, Pos2, u64)>,
     pub point_menu_curve: bool,
-    /// Waveform overviews of audio clip samples, by stored sample path.
-    peaks: std::collections::HashMap<String, std::sync::Arc<Peaks>>,
+    /// Waveform overviews of audio clip samples, by sample source path (read by tests).
+    pub peaks:std::collections::HashMap<String, std::sync::Arc<Peaks>>,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
     /// The tool whose cursor was drawn over the grid in the last frame (for tests).
@@ -1066,8 +1066,13 @@ fn clip_audio(
     ch: ChannelId,
 ) -> Option<(String, std::sync::Arc<limeshot_dsp::SampleData>, f64, f64)> {
     let sp = limeshot_core::lime::sampler_params(&app.project().channel(ch)?.instrument)?;
-    let stored = app.sampler_source(ch)?.to_string_lossy().into_owned();
-    let s = limeshot_sequencer::SampleLookup::sample(&app.samples, &stored)?;
+    // Look up the resolved source path as is: re-resolving it as a stored path breaks embedded
+    // sources (`/.limeshot-embedded/…` is not absolute on Windows).
+    let path = app.sampler_source(ch)?;
+    let Some(limeshot_audio::assets::SampleStatus::Ready(s)) = app.samples.status_of_path(&path).cloned() else {
+        return None;
+    };
+    let stored = path.to_string_lossy().into_owned();
     let secs_per_tick = 60.0 / (app.project().tempo.bpm() * PPQ as f64);
     let rate = 2f64.powf(f64::from(sp.pitch) / 12.0);
     let per_tick = secs_per_tick * f64::from(s.sample_rate) * rate;
