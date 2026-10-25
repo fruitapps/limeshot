@@ -6975,7 +6975,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "PF-005",
@@ -7009,7 +7009,7 @@
           "START.md §14"
         ]
       },
-      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits."
+      "notes": "2026-10-22: recorded runner evidence in docs/development/platform-validation.md. Passing headless CI does not establish GUI/audio-device verification or validate later commits. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "PF-006",
@@ -8425,7 +8425,8 @@
         "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
         "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
-        "docs/development/live-plugin-checks-2026-10-25.md"
+        "docs/development/live-plugin-checks-2026-10-25.md",
+        "limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8435,7 +8436,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
+      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25: main Linux hosted-test crashes and native CI Wayland dependency failure are tracked in docs/development/platform-validation.md; D41 retains loaded modules, with limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads regression. Fresh CI required."
     },
     {
       "id": "WF-009",

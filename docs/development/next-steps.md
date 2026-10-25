@@ -1,7 +1,7 @@
 # Next steps (prioritised)
 
-Current as of 2026-10-25. PRs #7 and #10…#13 are merged into main (`12f6542`); the alpha-installer session's draft PR
-(`codex/alpha-installers`) is the open continuation. Read the feature record and its dependencies before implementation.
+Current as of 2026-10-25. PRs #7 and #10…#14 are merged into main (`5ab09c9`).
+The CI/release repair session uses `codex/ci-release-fixes` in a new managed worktree. Read the feature record and its dependencies before implementation.
 Completed work and verification evidence are retained in [progress.md](progress.md); statuses are canonical in
 [features.json](../roadmap/features.json).
 
@@ -33,8 +33,9 @@ The plan, the current architecture and the list of lost capabilities are in
 2. **Platform CI (PF-002…PF-005).** Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64
    cross-build and Apple Silicon checks pass at the commits recorded in [platform-validation.md](platform-validation.md).
    The `macos-15-intel` replacement has now passed too (full run `39826217710`, commit `38d9a7b`). Check
-   the latest PR commit and fix actual failures. Current run `39924174258` at `68259aa` never started its jobs:
-   GitHub annotations report account billing/spending limits. No current platform CI pass is claimed.
+   the latest PR commit and fix actual failures. Billing no longer prevents jobs from executing. Main run
+   `40211683423` at `5ab09c9` passes Windows but exposes Linux hosted-plugin crashes and a macOS sample-import
+   test race. See [platform validation](platform-validation.md) for the repair and current evidence.
    Native GUI/audio-device validation stays separate from headless CI.
 3. **Real-plugin pass.** Exercise Find plugins…, factory and `.vstpreset` presets, parameter automation, delay
    compensation and the opt-in process bridge. Bridged native editors remain unavailable. Windows `HWND` embedding

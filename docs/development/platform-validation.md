@@ -22,3 +22,24 @@ Live checks were deferred at the owner's request while the Mac was locked. PLG-0
 
 No later platform CI pass is recorded: subsequent runs were blocked by GitHub account billing (see progress.md).
 PRs #7, #10, #11 and #12 have since merged into main, so main's current commit has no recorded CI evidence.
+
+
+## 2026-10-25 CI/release repair
+
+PRs #7 and #10…#14 are merged; main is `5ab09c9`. Billing no longer blocks execution.
+[CI 40211683423](https://github.com/fruitapps/limeshot/actions/runs/40211683423) passes Windows x86-64 and
+Windows ARM64 cross-compilation. Both Linux architectures pass Clippy/build/bundle generation, then SIGSEGV in
+`demo_song_renders_and_reloads_identically` while the concurrent MVP test finishes. Apple Silicon fails
+`dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one`: the channel is still named Kick because the
+background import has not committed after one synthetic frame. The fix waits for the actual edit through the
+existing bounded `wait_for` helper and keeps all resulting channel assertions.
+
+[Native run 40205510432](https://github.com/fruitapps/limeshot/actions/runs/40205510432) passes macOS and Windows;
+Linux's release bundle build lacks `wayland-client.pc`. Add `libwayland-dev` to its dependency installation.
+VST3 modules now remain strongly cached for the process lifetime (D41), with a concurrent reload regression.
+Fresh platform checks are required before declaring the observed Linux crashes resolved.
+
+[Alpha packaging run 40211718081](https://github.com/fruitapps/limeshot/actions/runs/40211718081) targets
+`v0.1.0-alpha.1` at `5ab09c9`. Windows, Apple Silicon and both Linux packaging/install checks pass;
+Intel packaging and draft-release assembly were still running at inspection. No published release was present.
+The tag and its packages predate this repair; passing packaging alone does not establish workspace-test health.

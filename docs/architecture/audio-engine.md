@@ -253,3 +253,12 @@ unprocessed event tick at the new origin. This preserves rounded onsets due at t
 ticks. A 3,840-note ramp regression checks note order/count and integrated duration at 1/64/333/1024 frames. Native
 sample persistence ignores unchanged name/rate/PCM before decoding or handoff, so control-only state recall does
 not interrupt held sampler notes. Mono auxiliary keys receive the average of stereo input, with absent frames zeroed.
+
+
+## Hosted module lifetime (D41)
+
+Successfully loaded VST3 modules and their factories stay in a process-lifetime strong cache. Closing the last
+instance releases its controller, processor, sample state and DSP buffers, while the module code remains resident.
+Plugin frameworks can install global callbacks, thread-local destructors and native classes that outlive instances;
+a weak cache can also race last-client teardown against a new load. Module entry runs once per cached path.
+The tradeoff is retaining the code/factory for each visited bundle until LimeShot exits; updates require restarting.

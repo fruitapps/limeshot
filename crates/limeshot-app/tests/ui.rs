@@ -1419,7 +1419,10 @@ fn dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one() {
     let button = h.state().ui.rack.step_pos(first, 0).expect("strip") - vec2(60.0, 0.0);
     let from = h.state().ui.browser.file_pos(&hat).expect("listed");
     drag(&mut h, from, button);
-    h.step();
+    // Browser imports commit after the background decoder completes, independently of frames.
+    wait_for(&mut h, "rack sample replacement", |a| {
+        a.project().channel(first).is_some_and(|c| c.name == "Lime Hat Open")
+    });
     assert_eq!(h.state().project().channels.len(), n);
     assert_eq!(h.state().project().channel(first).expect("ch").name, "Lime Hat Open");
     // Onto empty rack space below the rows: a new sampler channel.
@@ -1428,7 +1431,7 @@ fn dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one() {
     let x = strips[0].1.left() + 30.0;
     let from = h.state().ui.browser.file_pos(&hat).expect("listed");
     drag(&mut h, from, egui::pos2(x, below));
-    h.step();
+    wait_for(&mut h, "new rack sampler", |a| a.project().channels.len() == n + 1);
     assert_eq!(h.state().project().channels.len(), n + 1);
     assert_eq!(h.state().project().channels[n].name, "Lime Hat Open");
 }

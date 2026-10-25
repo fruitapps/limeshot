@@ -1,13 +1,12 @@
 //! Loading a VST3 module (a `.vst3` bundle) and reading its plugin factory.
 //!
-//! A module stays loaded while any [`Vst3Module`] handle or plugin made from it is alive; loading
-//! the same bundle twice shares one module. On macOS the executable is never unloaded: several
-//! plugin frameworks register Objective-C classes that crash the host when their code goes away,
-//! so mainstream hosts keep it loaded too.
+//! Successfully loaded modules stay resident until process exit; loading the same bundle twice
+//! shares one module. Plugin frameworks can register process-global callbacks, thread-local
+//! destructors and Objective-C classes whose code must outlive individual plugin instances.
 
 use std::ffi::{c_char, c_void};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 
 use vst3::Steinberg::*;
 use vst3::{ComPtr, Interface};
@@ -31,7 +30,9 @@ pub struct Vst3Module {
 unsafe impl Send for Vst3Module {}
 unsafe impl Sync for Vst3Module {}
 
-static LOADED: Mutex<Vec<(PathBuf, Weak<Vst3Module>)>> = Mutex::new(Vec::new());
+// Strong references keep plugin code and its module initialization alive after the last instance
+// closes. A weak cache allows teardown to race a new load and can unload callbacks still in use.
+static LOADED: Mutex<Vec<(PathBuf, Arc<Vst3Module>)>> = Mutex::new(Vec::new());
 
 impl Vst3Module {
     /// Load the bundle at `path`, or return the module already loaded from it.
@@ -40,9 +41,8 @@ impl Vst3Module {
             path: path.to_owned(),
             reason: "module table poisoned".into(),
         })?;
-        loaded.retain(|(_, m)| m.strong_count() > 0);
-        if let Some(m) = loaded.iter().find(|(p, _)| p == path).and_then(|(_, m)| m.upgrade()) {
-            return Ok(m);
+        if let Some((_, module)) = loaded.iter().find(|(p, _)| p == path) {
+            return Ok(module.clone());
         }
         let lib = platform::Library::open(path)?;
         let get = lib
@@ -51,7 +51,7 @@ impl Vst3Module {
         // SAFETY: `GetPluginFactory` has this signature in every VST3 module.
         let get: GetFactory = unsafe { std::mem::transmute::<*const c_void, GetFactory>(get) };
         let module = Arc::new(Self::with_factory(get, path, Some(lib))?);
-        loaded.push((path.to_owned(), Arc::downgrade(&module)));
+        loaded.push((path.to_owned(), module.clone()));
         Ok(module)
     }
 

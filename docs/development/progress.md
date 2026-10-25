@@ -1613,3 +1613,26 @@ Every future development session must create a NEW `codex/` branch, a NEW separa
 draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact, carry
 work through implementation, validation, documentation, commit and push, never merge automatically, and create further
 sessions only when the owner asks.
+
+
+## 2026-10-25 — CI and alpha release audit
+
+Started a new managed worktree and `codex/ci-release-fixes` from main `5ab09c9`, after confirming every prior
+continuation through PR #14 had merged. The original main checkout is clean and remains at `3e2fd64`;
+older worktrees are intact. Main's current CI executes again, so old billing-blocked notes are historical.
+
+Repaired the Browser-to-rack test's asynchronous sample-import assertions with bounded completion waits.
+Added the missing Wayland development package to native-plugin Linux CI. Replaced the weak VST3 module cache
+with process-lifetime strong retention (D41), preventing unload of framework callbacks and overlapping module
+teardown/reload. A real-bundle regression checks retention without clients and identity across concurrent loads.
+No UI appearance or audio scheduling changes. Updated architecture, platform evidence, feature notes and limits.
+
+Local workspace tests pass using the existing native debug bundles and build cache from the plugin-workflow
+worktree. Inventories, repository-reference checks, five repository-checker tests and formatting pass.
+Strict all-target Clippy/build and fresh remote platform results are being checked; no Linux fix pass is claimed yet.
+Alpha tag `v0.1.0-alpha.1` points to the pre-fix main commit. Four packaging jobs passed at inspection; Intel and
+release assembly were still running. See [platform validation](platform-validation.md) for source runs.
+
+Every future development session must create a NEW `codex/` branch, NEW separate managed worktree and NEW attached
+draft PR stacked on the latest unmerged continuation after inspecting merge state. Leave older checkouts intact,
+validate/document/commit/push, never merge automatically, and create further sessions only when the owner asks.

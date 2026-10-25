@@ -303,3 +303,14 @@ choice cannot redirect the bundles into the app. Inno Setup builds the Windows i
 per-user or per-machine install, no WiX/.NET toolchain); Linux ships a tarball with an install script and a `.deb`.
 AppImage, MSI and Flatpak are not provided: they add tooling without changing what is installed. Packages are
 unsigned or signed ad hoc until signing identities exist.
+
+
+### D41 — retain loaded VST3 modules for the process lifetime (2026-10-25)
+
+Both Linux architectures crash in concurrent hosted MVP tests on main `5ab09c9`. The old weak module cache permits
+last-client teardown to overlap a new load, and unloads libraries whose frameworks may leave process-global
+callbacks or thread-local destructors registered. Keep successful module/factory loads strongly cached on the
+control side, while still releasing instance DSP/state normally. This extends macOS's existing executable-retention
+policy consistently across platforms and prevents entry/exit races. The module-reload regression checks residency
+without clients and shared identity across concurrent reloads. Code/factory memory remains until process exit;
+plugin binary updates require restarting LimeShot. Platform CI must validate the observed Linux crash separately.

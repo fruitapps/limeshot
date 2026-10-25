@@ -5,11 +5,15 @@ Current as of 2026-10-25 (sampler/mixer workflow merged). Everything here is eit
 ## Platforms
 * Only macOS (Apple Silicon) has been fully exercised: build, tests, GUI and realtime audio. The macOS Intel build runs
   headless under Rosetta, but its GUI and audio were not exercised.
-* Windows x86-64 and Linux x86-64/ARM64 pass native headless CI; Windows ARM64 passes a cross-build.
+* Historical Windows x86-64 and Linux x86-64/ARM64 headless CI passes are commit-specific. Main `5ab09c9`
+  passes Windows checks, but Linux hosted tests crash and macOS Apple Silicon has a sample-import test race;
+  the repair branch needs fresh platform CI. Windows ARM64 passes a cross-build.
   Native GUI/audio-device checks remain open. Intel headless CI now passes on `macos-15-intel`.
   See [platform-validation.md](../development/platform-validation.md) for commit-specific evidence.
 
 ## Audio
+* Loaded VST3 module code/factories remain resident until process exit to preserve framework callbacks;
+  closing instances still releases their DSP/state. Restart LimeShot after updating a loaded plugin binary.
 * No ASIO, JACK or surround output (extra device channels are silent). Audio recording is implemented;
   real input-device validation remains open.
 * Switching output devices was tested only with the default device.

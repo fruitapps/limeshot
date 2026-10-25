@@ -794,3 +794,29 @@ fn missing_bundle_gate_skips_locally_and_fails_on_ci() {
         assert!(!result.unwrap());
     }
 }
+
+/// Closing the last instance must not unload callbacks registered by the plugin framework.
+#[test]
+fn loaded_modules_survive_last_client_and_concurrent_reloads() {
+    if !bundles_or_skip(&["LimeSynth"]) {
+        return;
+    }
+    let path = limeshot_plugins::lime::bundle_path("LimeSynth").unwrap();
+    let module = limeshot_plugins::Vst3Module::load(&path).unwrap();
+    let resident = Arc::downgrade(&module);
+    drop(module);
+    let resident = resident.upgrade().expect("module remains resident without clients");
+    assert!(!resident.classes().is_empty());
+    std::thread::scope(|scope| {
+        for _ in 0..8 {
+            let path = &path;
+            let resident = &resident;
+            scope.spawn(move || {
+                for _ in 0..32 {
+                    let loaded = limeshot_plugins::Vst3Module::load(path).unwrap();
+                    assert!(Arc::ptr_eq(resident, &loaded));
+                }
+            });
+        }
+    });
+}
