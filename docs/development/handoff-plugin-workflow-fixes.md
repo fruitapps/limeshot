@@ -49,3 +49,9 @@ Every future development session must create a NEW codex/ branch, NEW separate m
 draft PR based on the latest unmerged continuation after checking merge state. Preserve older checkouts, carry
 implementation through validation/documentation/commit/push, never merge automatically, and create further sessions
 only when the owner asks. Repeat this policy in every handoff.
+
+## Live follow-up
+
+The owner enabled permissions and requested live checks in this same PR session. See
+[live results](live-plugin-checks-2026-10-25.md), including the repaired modal re-entrancy abort, partial verification,
+remaining inconclusive interactions, isolated harness and recovery incident/prevention.

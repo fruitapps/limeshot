@@ -101,3 +101,12 @@ long MP3/audio files still need shorter sources. Native Windows/Linux embedding 
 Future sessions retain NEW codex/ branch, NEW managed worktree and NEW attached draft PR; preserve older
 checkouts, inspect unmerged continuations, validate/document/commit/push and never merge automatically.
 Create further sessions only when the owner asks.
+
+
+### Live follow-up to plugin/workflow fixes
+
+Current host permissions are enabled. [Live evidence](live-plugin-checks-2026-10-25.md) records partial native
+checks and the repaired modal-dialog crash. Do not treat all earlier permission-blocked items as verified:
+external OS drops, keyboard, pin/occlusion, host-edge sizing and native Browser-drop/modifier results remain open.
+Use `live_check` with a disposable project and shared autosave disabled. New sessions now preserve unclaimed
+recovery copies instead of overwriting them or deleting them on normal quit.

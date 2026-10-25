@@ -181,3 +181,14 @@ Headless wrapper tests and offscreen native editor renders do not establish thos
 The sampler’s existing 4 million stereo-frame / 8–384 kHz limit remains (about 83 seconds at 48 kHz), for every
 format including MP3; explicit imports now report it directly rather than creating a pending broken channel.
 External drops use filesystem audio paths; directories and unsupported extensions are ignored.
+
+
+### Live follow-up, 2026-10-25
+
+The execution host now has Screen Recording/Accessibility. Partial live rendering, tabs, preset visibility,
+Serum internal shrink/minimize-restore, native instrument/effect close-reopen and native MP3 Load checks pass.
+The Load dialog exposed a backend modal re-entrancy abort, now repaired and retested.
+Browser-to-native drops and modifier clicks were inconclusive under this automation driver; external OS drops,
+keyboard forwarding, pin/occlusion stress and host-edge resize remain unverified. PLG-006/PLG-012 remain IMPLEMENTED.
+See [live results and evidence](../development/live-plugin-checks-2026-10-25.md). Future live tests use the
+autosave-disabled live_check example; new sessions cannot overwrite an unclaimed recovery copy.

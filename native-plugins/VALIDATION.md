@@ -211,3 +211,28 @@ refer to earlier builds; this section records only current debug binaries. Broad
 | Lime Sampler.vst3 | `bb31ef8cce04e31bcadd2d8e1c52a411f875440c397d8892bef10bd44191e0fe` |
 | Lime Utility.vst3 | `9066ae006b59678f382307e2caec3d29015c21af381dd3219f7c38161df57cc8` |
 | LimeSynth.vst3 | `0b6a977ad9237fbba6ca963cac88ba5255f618554d5bd848ef03e0545e344715` |
+
+
+### 2026-10-25 live follow-up — modal re-entrancy repair
+
+Screen Recording and Accessibility are now enabled. Native sampler/limiter rendering and close-reopen,
+sampler tabs/preset visibility, Serum internal shrink/minimize-restore, and native MP3 Load have partial
+live evidence in docs/development/live-plugin-checks-2026-10-25.md. A native Load-panel RefCell abort was
+repaired by deferring re-entrant draw/resize and leaving modal input to AppKit. All twelve debug bundles
+were rebuilt again and pass three rates/four block sizes; native tests/strict Clippy pass. This is not
+full PLG-006 verification; the report lists unresolved/inconclusive input and sizing checks.
+
+| Final debug bundle | Executable SHA-256 |
+|---|---|
+| Lime Chorus.vst3 | `a62e850e4de2f75307186f0b12f2bd9cb84c24cc9ec2597dc91e4786a19331ca` |
+| Lime Comp.vst3 | `4fa1cac464b3e5be4918bc2e505064559052b5747c63795b68884692bb68697d` |
+| Lime Delay.vst3 | `c341cae4a256a2f5c61e4a47b8aab6e5257c8d605cfd76a069e1480e48d4e668` |
+| Lime Drive.vst3 | `20d81433031968d6ef8c5e42e1e9e6fcd7c2be375cd28ad24f56167160cffdf1` |
+| Lime EQ.vst3 | `7187ef61941457552cf4e6175bee583a5039864b4a38ed178b1fca77f127b35f` |
+| Lime Filter.vst3 | `9bc2c7b0922e75838508bf44044cde0ed8f05a626b5983713260a3a63360d9d8` |
+| Lime Gate.vst3 | `b2758375ff531638145acc251da66837c5a5875accc9dbe1b906290f98e891a9` |
+| Lime Limiter.vst3 | `6828afede6cb8898f912f8413692934c2d8d7301ca55d9814fb78fe454275de3` |
+| Lime Room.vst3 | `7ec43388371412b3bc403b2f9947c828e07795b66729404ea6d2b47351b9f170` |
+| Lime Sampler.vst3 | `e9cf91a329a5dba00747c9c33edc06951ac0fd5452f00e6ee42830a355b26a8b` |
+| Lime Utility.vst3 | `d933871e76d746c7db9056e03c1565f824123596e328465a67781b6d2cd26e0f` |
+| LimeSynth.vst3 | `f38ae1754c169f68a581489f17df9f5928f33179ed3239d6ddfcec248b915a53` |

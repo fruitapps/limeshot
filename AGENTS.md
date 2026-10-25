@@ -36,6 +36,8 @@ scripts/package-macos.sh                           # dist/LimeShot.app and a DMG
 ```
 **Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. Permissions depend on the execution host;
 verify Screen Recording and Accessibility before live automation.
+For live checks, use `cargo run -p limeshot-app --example live_check -- /tmp/check.lime` with a disposable project;
+this harness disables shared autosave/recovery and does not save preferences on exit.
 When granted, `screencapture -l <window id>` captures the live app and CoreGraphics events can drive it
 (keyboard layout is QWERTZ). The
 headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions from geometry the editors record.

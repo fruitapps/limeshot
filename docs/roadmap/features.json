@@ -502,7 +502,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved"
+        "limeshot-app tests/ui.rs::autosave_survives_a_crash_and_is_removed_once_saved",
+        "crates/limeshot-ui/src/autosave.rs::ownership_tests::a_new_session_cannot_overwrite_or_clear_an_unclaimed_recovery"
       ],
       "reference": {
         "application": "FL Studio",
@@ -512,7 +513,7 @@
           "docs/research/rea-findings.md"
         ]
       },
-      "notes": "One autosave slot per user: two LimeShot instances share it (the later write wins)."
+      "notes": "One autosave slot per user: two LimeShot instances share it (the later write wins). 2026-10-25: reject writes over another session’s unclaimed recovery and preserve it on normal quit. Explicit recovery adoption or Discard is required before taking over. Added after a live-test run overwrote the old shared recovery slot; live_check disables autosave/recovery for future checks."
     },
     {
       "id": "APP-017",
@@ -3704,7 +3705,8 @@
         "limeshot-dsp tests/formats.rs::audio_extensions_and_bad_files",
         "crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play",
         "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
-        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state"
+        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
+        "docs/development/live-plugin-checks-2026-10-25.md"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3714,7 +3716,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the existing 4 million stereo-frame limit remains, with a specific import error."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. D39: audible instruments/effects are hosted Lime VST3s; engine DSP tests use test-only reference processors. See PLG-013 and its P0 gaps. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the existing 4 million stereo-frame limit remains, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
     },
     {
       "id": "INS-009",
@@ -4990,7 +4992,8 @@
         "crates/limeshot-app/tests/ui.rs::dragging_a_sample_to_the_rack_makes_a_channel_or_replaces_one",
         "crates/limeshot-app/tests/ui.rs::external_files_drop_on_rack_without_creating_a_playlist_clip",
         "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
-        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement"
+        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement",
+        "crates/limeshot-app/tests/ui.rs::browser_file_drag_creates_a_rack_sampler_from_real_pointer_events"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5409,7 +5412,8 @@
         "docs/development/lime-vst3-host-validation.md",
         "crates/limeshot-app/tests/ui.rs::plugin_wrapper_title_controls_minimize_pin_restore_and_close",
         "crates/limeshot-plugins/src/graphics.rs::tests::teardown_suspends_and_restores_the_callers_gl_context",
-        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement"
+        "crates/limeshot-app/tests/ui.rs::sampler_wrapper_accepts_browser_payload_and_external_sample_replacement",
+        "docs/development/live-plugin-checks-2026-10-25.md"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5426,7 +5430,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md. 2026-10-25: wrappers share workspace title styling and have minimize, pin and close, with no maximize/detach. Native resize requests resize the wrapper; wrapper resizes negotiate native constraints. Native macOS editors use an AppKit preset menu above their NSView, so the editor stays visible; parameter/headless wrappers use an egui menu. Native views temporarily hide for host sample drags. Host GL context is protected during teardown; native backend also binds its own context before deleting GL objects. Live third-party resize and native interaction verification remain separate."
+      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md. 2026-10-25: wrappers share workspace title styling and have minimize, pin and close, with no maximize/detach. Native resize requests resize the wrapper; wrapper resizes negotiate native constraints. Native macOS editors use an AppKit preset menu above their NSView, so the editor stays visible; parameter/headless wrappers use an egui menu. Native views temporarily hide for host sample drags. Host GL context is protected during teardown; native backend also binds its own context before deleting GL objects. Live third-party resize and native interaction verification remain separate. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
     },
     {
       "id": "PLG-007",
@@ -8413,7 +8417,8 @@
         "crates/limeshot-engine/tests/plugins.rs::insert_effects_receive_current_and_automated_transport",
         "native-plugins/shared/src/processor.rs::tests::sampler_replacement_retires_audio_without_locks_or_destruction",
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
-        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state"
+        "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
+        "docs/development/live-plugin-checks-2026-10-25.md"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8423,7 +8428,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects."
+      "notes": "Twelve release and debug bundles passed actual-binary verification on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024 in the hosted parity session. Historical pluginval results apply only to the original nine-bundle baseline; pluginval is unavailable for current binaries. Gate/Drive/Chorus append IDs 9–11; original IDs and control order remain stable. Native editor geometry and sampler audio tests are automated. Current evidence: native-plugins/VALIDATION.md and docs/development/handoff-hosted-p0-parity.md. Broader native GUI, Windows/Linux/Intel runtime and billing-blocked remote CI remain open. 2026-10-25: redundant native title rows removed; preset/bypass controls move to the footer. Native sampler accepts the shared audio formats. Local egui-baseview patch binds its own GL context during painter destruction so closing a plugin cannot delete a host renderer’s GL objects. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
     },
     {
       "id": "WF-009",

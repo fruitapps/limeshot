@@ -95,6 +95,10 @@ impl Autosave {
 
     pub fn write(&mut self, project: &Project, original: Option<&Path>, revision: u64) -> Result<(), String> {
         let dir = self.dir.as_ref().ok_or("autosave is off")?;
+        // Dismissing recovery does not grant ownership of the previous session’s copy.
+        if !self.owned && dir.join(PROJECT_FILE).exists() {
+            return Err("An earlier recovery copy exists; recover or discard it before autosaving this session".into());
+        }
         std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
         limeshot_project::save(project, &dir.join(PROJECT_FILE)).map_err(|e| e.to_string())?;
         let info = SessionInfo {
@@ -108,6 +112,13 @@ impl Autosave {
         self.since = Some(Instant::now());
         self.owned = true;
         Ok(())
+    }
+
+    /// Normal saves/quits may remove only this session’s copy. Explicit Discard uses `clear`.
+    pub(crate) fn clear_if_owned(&mut self) {
+        if self.owned {
+            self.clear();
+        }
     }
 
     /// Remove the copy (the project was saved, replaced or LimeShot is quitting).
@@ -150,5 +161,29 @@ pub fn tick(app: &mut LimeShotApp) {
             // Try again after another interval rather than every frame.
             app.autosave.since = Some(Instant::now());
         }
+    }
+}
+
+#[cfg(test)]
+mod ownership_tests {
+    use super::*;
+
+    #[test]
+    fn a_new_session_cannot_overwrite_or_clear_an_unclaimed_recovery() {
+        let dir = tempfile::tempdir().unwrap();
+        let original = Project::default();
+        let mut old = Autosave::new(Some(dir.path().into()));
+        old.write(&original, None, 1).unwrap();
+        let mut new = Autosave::new(Some(dir.path().into()));
+        let mut replacement = original.clone();
+        replacement.title = "Disposable test".into();
+        assert!(new.write(&replacement, None, 2).is_err());
+        new.clear_if_owned();
+        assert_eq!(new.load().unwrap(), original);
+        new.adopt();
+        new.write(&replacement, None, 2).unwrap();
+        assert_eq!(new.load().unwrap(), replacement);
+        new.clear_if_owned();
+        assert!(new.find().is_none());
     }
 }

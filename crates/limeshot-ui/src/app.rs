@@ -1122,8 +1122,8 @@ impl LimeShotApp {
             self.dialog = Some(dialogs::Dialog::ConfirmDiscard(Pending::Quit));
         }
         if self.allow_close {
-            // A normal exit: nothing to recover next time.
-            self.autosave.clear();
+            // Preserve any earlier session’s unclaimed recovery copy.
+            self.autosave.clear_if_owned();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         // Meters and the playhead animate; keep frames coming at a modest rate.

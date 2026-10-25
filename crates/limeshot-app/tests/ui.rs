@@ -6660,3 +6660,29 @@ fn sampler_wrapper_accepts_browser_payload_and_external_sample_replacement() {
     assert_eq!(source(&h), first.to_string_lossy());
     assert!(limeshot_ui::playlist::audio_channels(h.state().project()).contains(&id));
 }
+
+#[test]
+fn browser_file_drag_creates_a_rack_sampler_from_real_pointer_events() {
+    let mut h = harness(false);
+    let path = bundled("Lime Clap.wav");
+    let from = h
+        .state()
+        .ui
+        .browser
+        .file_rects
+        .iter()
+        .find(|(p, _)| *p == path)
+        .unwrap()
+        .1
+        .center();
+    let rack = window_rect(&h, Win::ChannelRack);
+    let before = h.state().project().channels.len();
+    drag(&mut h, from, rack.center());
+    h.step();
+    assert_eq!(h.state().project().channels.len(), before + 1);
+    let channel = h.state().project().channels.last().unwrap();
+    assert_eq!(
+        lime::sampler_params(&channel.instrument).unwrap().sample.unwrap().path,
+        path.to_string_lossy()
+    );
+}

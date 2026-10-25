@@ -358,6 +358,7 @@ pub struct EguiWindow<A: App> {
 
     // Re-use the allocations from the previous output.
     full_output: RefCell<FullOutput>,
+    deferred_resize: Cell<Option<WindowSize>>,
 
     pub window: WindowContext,
 }
@@ -452,6 +453,7 @@ impl<A: App> EguiWindow<A> {
             repaint_notifier,
             modifiers: Cell::new(egui::Modifiers::default()),
             full_output: RefCell::new(FullOutput::default()),
+            deferred_resize: Cell::new(None),
             poll_repaint_timer_handle,
         })
     }
@@ -557,6 +559,18 @@ impl<A: App> WindowHandler for EguiWindow<A> {
     }
 
     fn draw(&self) -> Result<(), HandlerError> {
+        // Native modal dialogs run an AppKit event loop from inside user_app.ui().
+        // Defer nested drawing until the outer frame has released its state.
+        if self.inner.try_borrow_mut().is_err()
+            || self.egui_input.try_borrow_mut().is_err()
+            || self.full_output.try_borrow_mut().is_err()
+        {
+            self.window.request_redraw();
+            return Ok(());
+        }
+        if let Some(size) = self.deferred_resize.take() {
+            self.resized(size)?;
+        }
         let (egui_input, logical_size) = {
             let mut egui_input = self.egui_input.borrow_mut();
             egui_input.time = Some(self.start_time.elapsed().as_secs_f64());
@@ -713,6 +727,11 @@ impl<A: App> WindowHandler for EguiWindow<A> {
     }
 
     fn resized(&self, new_size: WindowSize) -> Result<(), HandlerError> {
+        if self.inner.try_borrow_mut().is_err() || self.egui_input.try_borrow_mut().is_err() {
+            self.deferred_resize.set(Some(new_size));
+            self.window.request_redraw();
+            return Ok(());
+        }
         let zoom_factor = self.inner.borrow().egui_ctx.zoom_factor();
 
         let total_scale_factor = new_size.scale_factor * zoom_factor as f64;
@@ -745,6 +764,12 @@ impl<A: App> WindowHandler for EguiWindow<A> {
     }
 
     fn on_event(&self, event: Event) -> EventStatus {
+        // The native modal panel owns input while the app is already drawing. In particular,
+        // querying egui's pointer capture here must not borrow the active UI frame again.
+        if self.inner.try_borrow_mut().is_err() || self.egui_input.try_borrow_mut().is_err() {
+            self.window.request_redraw();
+            return EventStatus::Ignored;
+        }
         let mut return_status = EventStatus::Captured;
 
         // Parent/embedded windows do not always gain keyboard focus

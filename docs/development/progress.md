@@ -1413,3 +1413,31 @@ PLG-006/PLG-012 stay IMPLEMENTED. The existing sampler limit remains 4 million s
 Every future session must create a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR
 based on the latest unmerged continuation after checking merge state. Preserve older checkouts, validate,
 document, commit and push; never merge automatically, and create further sessions only when the owner asks.
+
+
+### 2026-10-25 — requested live follow-up to PR #11
+
+Continued the existing PR #11 branch/worktree at the owner’s request. Both current host permissions report true.
+[Live results and evidence](live-plugin-checks-2026-10-25.md) separate observations from inconclusive checks.
+Sampler/limiter render and close/reopen without blacking out the host; sampler tabs and host preset visibility,
+Serum internal shrink with wrapper synchronization/minimize-restore, and native MP3 Load are observed.
+Live native drops/modifiers were inconclusive; keyboard, external OS drops, pin/occlusion and host-edge resizing
+remain unverified. PLG-006/PLG-012 remain IMPLEMENTED.
+
+Native Load exposed a real AppKit modal re-entrancy panic in egui-baseview. Added guards to defer nested drawing
+and resizing and leave modal input to AppKit; rebuilt and retested the native MP3 Open-panel import successfully.
+Added real Browser-row pointer-drag regression coverage. A new live_check example runs the production UI with
+shared autosave/recovery disabled and does not save preferences on exit.
+
+The first ordinary-app test run overwrote an older unclaimed Untitled recovery slot with its disposable project.
+The original could not be restored; the resulting test files are preserved locally. Added a disk-backed regression
+and production guards against overwriting or normal-quit deletion of an unclaimed recovery. Explicit adoption
+or Discard still resolves it. Future live-check instructions in AGENTS.md require the isolated harness.
+
+Validation: 410 host tests including 150 UI, 19 native tests; strict all-target Clippy in both workspaces;
+rustfmt/inventories/repository references; all twelve rebuilt debug binaries pass three rates/four buffer sizes.
+Updated native hashes and retained live screenshots. No merge or broader platform verification is claimed.
+
+Future development sessions require a NEW codex/ branch, NEW separate managed worktree and NEW attached draft PR,
+stacked on the latest unmerged continuation after checking merge state. Preserve older checkouts; validate,
+document, commit and push, never merge automatically, and create further sessions only when the owner asks.
