@@ -244,6 +244,7 @@ impl Vst3Editor {
         if unsafe { self.view.attached(container.parent(), PLATFORM_TYPE) } != kResultOk {
             return Err(PluginError::Call("open its embedded editor"));
         }
+        log::info!("embedded plugin editor {:?}: {}", self.size(), container.describe());
         if let Ok(mut state) = self.frame.state.try_borrow_mut() {
             state.container = Some(container);
         }
@@ -565,6 +566,10 @@ mod platform {
             self.embedded.set(true);
         }
 
+        pub(super) fn describe(&self) -> String {
+            format!("container {:?}", self.view.frame())
+        }
+
         /// Place the child at `(x, y)` points from the content layout area's top left.
         /// Use `natural` for its size; the requested width and height are ignored.
         pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
@@ -608,15 +613,18 @@ mod platform {
     use super::EditorSize;
     use crate::PluginError;
     use std::ffi::c_void;
-    use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, POINT};
-    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, ScreenToClient};
+    use std::sync::OnceLock;
+    use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, CreateSolidBrush, ScreenToClient};
+    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::System::Threading::GetCurrentThreadId;
     use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        AppendMenuW, CreatePopupMenu, CreateWindowExW, DestroyMenu, DestroyWindow, EnumThreadWindows, GetCursorPos,
-        GetWindowTextW, HWND_TOP, IsWindowVisible, MF_STRING, SW_HIDE, SW_SHOWNA, SWP_NOACTIVATE, SWP_NOMOVE,
-        SWP_NOZORDER, SetForegroundWindow, SetWindowPos, ShowWindow, TPM_NONOTIFY, TPM_RETURNCMD, TrackPopupMenu,
+        AppendMenuW, CS_HREDRAW, CS_VREDRAW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu,
+        DestroyWindow, EnumThreadWindows, GW_CHILD, GetClientRect, GetCursorPos, GetWindow, GetWindowTextW, HWND_TOP,
+        IsWindowVisible, MF_STRING, RegisterClassW, SW_HIDE, SW_SHOWNA, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER,
+        SetForegroundWindow, SetWindowPos, ShowWindow, TPM_NONOTIFY, TPM_RETURNCMD, TrackPopupMenu, WNDCLASSW,
         WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_VISIBLE,
     };
 
@@ -721,6 +729,42 @@ mod platform {
         }
     }
 
+    unsafe extern "system" fn container_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+        // SAFETY: default handling for our own window's messages.
+        unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+    }
+
+    /// The container's window class, registered once. The system `STATIC` class paints through
+    /// its parent's device context (`CS_PARENTDC`), which never reaches the screen over the
+    /// host's OpenGL surface; this class paints its own dark background.
+    fn container_class() -> Option<&'static [u16]> {
+        static CLASS: OnceLock<Option<Vec<u16>>> = OnceLock::new();
+        CLASS
+            .get_or_init(|| {
+                let name = wide("LimeShotPluginContainer");
+                // SAFETY: the class name lives in the static and the procedure is a function; the
+                // brush belongs to the class for the process's lifetime.
+                let atom = unsafe {
+                    let class = WNDCLASSW {
+                        style: CS_HREDRAW | CS_VREDRAW,
+                        lpfnWndProc: Some(container_proc),
+                        cbClsExtra: 0,
+                        cbWndExtra: 0,
+                        hInstance: GetModuleHandleW(std::ptr::null()),
+                        hIcon: std::ptr::null_mut(),
+                        hCursor: std::ptr::null_mut(),
+                        // Lime Dark surface, as COLORREF 0x00BBGGRR.
+                        hbrBackground: CreateSolidBrush(0x0022_1F1E),
+                        lpszMenuName: std::ptr::null(),
+                        lpszClassName: name.as_ptr(),
+                    };
+                    RegisterClassW(&class)
+                };
+                (atom != 0).then_some(name)
+            })
+            .as_deref()
+    }
+
     /// A plain child window of the host's window that the plugin's view goes into.
     pub(super) struct Container {
         hwnd: HWND,
@@ -730,8 +774,8 @@ mod platform {
 
     impl Container {
         pub(super) fn new(window: &Window, size: EditorSize, top_inset: f64) -> Result<Self, PluginError> {
-            let class = wide("STATIC");
-            // SAFETY: creates a child of the live host window with a system class; destroyed in Drop.
+            let class = container_class().ok_or(PluginError::Call("register the editor container class"))?;
+            // SAFETY: creates a child of the live host window with our registered class; destroyed in Drop.
             let hwnd = unsafe {
                 CreateWindowExW(
                     0,
@@ -744,7 +788,7 @@ mod platform {
                     size.height as i32,
                     window.0,
                     std::ptr::null_mut(),
-                    std::ptr::null_mut(),
+                    GetModuleHandleW(std::ptr::null()),
                     std::ptr::null(),
                 )
             };
@@ -809,6 +853,37 @@ mod platform {
             self.embedded.set(true);
         }
 
+        /// The container and the plugin's first child window, for the log.
+        pub(super) fn describe(&self) -> String {
+            let rect = |hwnd: HWND| {
+                let mut r = RECT {
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                };
+                // SAFETY: plain queries writing into `r`; a stale window only makes them fail.
+                let ok = unsafe { GetClientRect(hwnd, &mut r) } != 0;
+                // SAFETY: as above.
+                let visible = unsafe { IsWindowVisible(hwnd) } != 0;
+                let state = if ok && visible { "" } else { " (hidden)" };
+                format!("{}x{}{state}", r.right - r.left, r.bottom - r.top)
+            };
+            // SAFETY: a plain query of our own window's first child.
+            let child = unsafe { GetWindow(self.hwnd, GW_CHILD) };
+            let plugin = if child.is_null() {
+                "missing".to_owned()
+            } else {
+                format!("{child:?} {}", rect(child))
+            };
+            format!(
+                "container {:?} {} at scale {:.2}; plugin window {plugin}",
+                self.hwnd,
+                rect(self.hwnd),
+                scale(self.host)
+            )
+        }
+
         /// Place the child at `(x, y)` points from the client area's top left at its natural size.
         pub(super) fn place_rect(&self, x: f64, y: f64, _width: f64, _height: f64, natural: EditorSize) {
             self.set_rect(x, y, natural);
@@ -868,6 +943,9 @@ mod platform {
         pub(super) fn resize(&self, _size: EditorSize, _top_inset: f64) {}
         /// Do nothing on platforms without native editor embedding.
         pub(super) fn embed(&self) {}
+        pub(super) fn describe(&self) -> String {
+            String::new()
+        }
         /// Do nothing on platforms without native editor embedding.
         pub(super) fn place_rect(&self, _x: f64, _y: f64, _width: f64, _height: f64, _natural: EditorSize) {}
         pub(super) fn set_hidden(&self, _hidden: bool) {}

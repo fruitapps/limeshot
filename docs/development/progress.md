@@ -1517,3 +1517,12 @@ plugin editors did not appear, Explorer drops did nothing and `limeshot.exe` ope
 
 Validation: rustfmt; strict Clippy for the workspace on `x86_64-pc-windows-msvc` and for the plugin/app crates on
 Linux. Tests were not run and nothing has been run on Windows; the owner's next Windows pass verifies these.
+
+### Windows follow-up: blank, transparent plugin wrappers
+
+The owner's next run showed the wrapper's editor area unpainted (stale pixels that smeared while dragging).
+The container used the system `STATIC` class, which paints through its parent's device context (`CS_PARENTDC`);
+over the host's OpenGL surface that never reaches the screen. The container now has its own registered class with
+a dark background brush. Each attach logs the editor size, container and plugin child window (size, visibility,
+DPI scale) to help diagnose an editor that still does not appear. Checked with rustfmt and strict Clippy for
+Windows, macOS and Linux targets; not yet run on Windows.
