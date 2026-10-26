@@ -1405,7 +1405,59 @@ fn browser_folders_open_and_filter() {
     h.state_mut().ui.browser.filter = "clap".into();
     h.step();
     h.step();
+    wait_for(&mut h, "recursive Browser search", |a| {
+        a.ui.browser.file_pos(&sub.join("Snappy Clap.wav")).is_some()
+    });
     assert_eq!(listed(&h), ["Snappy Clap.wav"]);
+}
+
+#[test]
+fn browser_search_finds_closed_folders_and_long_names_preserve_width() {
+    let dir = tempfile::tempdir().unwrap();
+    let long = "Long folder name ".repeat(12);
+    let folder = dir.path().join(&long);
+    std::fs::create_dir(&folder).unwrap();
+    let file = folder.join(format!("{}needle.wav", "very long sample ".repeat(10)));
+    std::fs::copy(bundled("Lime Kick.wav"), &file).unwrap();
+    let mut h = harness(false);
+    h.state_mut().settings.browser_folders.push(dir.path().to_path_buf());
+    h.run_steps(3);
+    let width = h.state().ui.workspace.area.left();
+    let root = dir.path().file_name().unwrap().to_string_lossy();
+    h.get_by_label(root.as_ref()).click();
+    h.run_steps(3);
+    h.get_by_label(&long).click();
+    h.run_steps(3);
+    assert!(
+        (h.state().ui.workspace.area.left() - width).abs() < 1.0,
+        "folder and filenames cannot widen Browser"
+    );
+    h.get_by_label(&long).click();
+    h.run_steps(3);
+    assert!(h.state().ui.browser.file_pos(&file).is_none());
+    h.state_mut().ui.browser.filter = "needle".into();
+    h.step();
+    wait_for(&mut h, "search in closed folders", |a| {
+        a.ui.browser.file_pos(&file).is_some()
+    });
+    assert!(h.query_by_label("Search").is_some());
+    h.state_mut().ui.browser.filter.clear();
+    h.run_steps(3);
+    assert!(h.query_by_label("Search").is_none());
+}
+
+#[test]
+fn browser_preview_stop_cancels_audio_and_pending_preview() {
+    let mut h = harness(true);
+    let path = bundled("Lime Hat Open.wav");
+    h.run_steps(3);
+    let pos = h.state().ui.browser.file_pos(&path).unwrap();
+    click(&mut h, pos, PointerButton::Primary);
+    wait_for(&mut h, "preview begins", |a| a.ui.browser.preview_started.is_some());
+    h.get_by_label("Stop sample preview").click();
+    h.run_steps(2);
+    assert!(h.state().ui.browser.preview_started.is_none());
+    assert!(!h.state().ui.browser.preview_pending());
 }
 
 #[test]
@@ -5747,6 +5799,12 @@ fn audio_clip_fade_handles_set_the_fades() {
     h.state_mut().samples.load_blocking(&snare.to_string_lossy()).unwrap();
     let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &snare, 4, bar).expect("placed");
     h.state_mut().exec(Command::ResizeClip { clip: id, length: bar });
+    let second = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &snare, 5, bar).unwrap();
+    h.state_mut().exec(Command::ResizeClip {
+        clip: second,
+        length: bar,
+    });
+    h.state_mut().ui.playlist.selection = vec![id, second];
     h.step();
     h.step();
     let g = h.state().ui.playlist.geometry.expect("playlist drawn");
@@ -5780,6 +5838,20 @@ fn audio_clip_fade_handles_set_the_fades() {
         Some((bar, bar)),
         "the clip did not move"
     );
+    assert_eq!(
+        h.state().project().clip(second).map(|c| (c.fade_in, c.fade_out)),
+        Some((fi, fo)),
+        "fade lengths apply to all selected audio clips"
+    );
+    let before = h.state().doc.history().len();
+    let handle = egui::pos2(x(bar + fi / 2), top + (g.track_h + 19.0) / 2.0);
+    drag(&mut h, handle, handle - vec2(0.0, 30.0));
+    let first_curve = h.state().project().clip(id).unwrap().fade_curve(false);
+    assert!(first_curve > 0.2, "curve handle changes tension: {first_curve}");
+    assert_eq!(h.state().project().clip(second).unwrap().fade_curve(false), first_curve);
+    assert_eq!(h.state().doc.history().len(), before + 1);
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project().clip(id).unwrap().fade_curve(false), 0.0);
 }
 
 /// INS-008: a FLAC (or MP3, Ogg, AIFF) sample shows in the Browser and loads into a sampler
@@ -6818,8 +6890,15 @@ fn ruler_ranges_select_contents_and_duplicate_by_the_range_length() {
 fn automation_creation_uses_current_playhead_even_with_an_old_range() {
     for case in 0..4 {
         let mut h = playlist_harness();
-        // Pattern mode can seek past the song end only when its pattern is longer.
+        // Keep this arrangement fixed while lengthening the pattern for the locate cases.
         let pattern = h.state().current_pattern();
+        let clips = h.state().project().playlist.clips.clone();
+        for clip in clips.iter().filter(|c| c.pattern() == Some(pattern)) {
+            h.state_mut().exec(Command::ResizeClip {
+                clip: clip.id,
+                length: clip.length,
+            });
+        }
         h.state_mut().exec(Command::SetPatternLength {
             pattern,
             steps: Some(512),

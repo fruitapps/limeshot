@@ -351,7 +351,12 @@ impl Pattern {
             return Tick::from(steps.clamp(1, 512)) * STEP_TICKS;
         }
         let bar = sig.ticks_per_bar();
-        let last = self.notes.iter().map(|n| n.start + 1).max().unwrap_or(0);
+        let last = self
+            .notes
+            .iter()
+            .map(|n| n.start.saturating_add(n.length))
+            .max()
+            .unwrap_or(0);
         last.div_ceil(bar).max(1) * bar
     }
 
@@ -423,6 +428,16 @@ fn is_zero_tick(t: &Tick) -> bool {
 }
 
 impl Clip {
+    /// Saved fade tension; absent or invalid values retain the original linear ramp.
+    pub fn fade_curve(&self, out: bool) -> f32 {
+        self.extra
+            .get(if out { "fade-out-curve" } else { "fade-in-curve" })
+            .and_then(serde_json::Value::as_f64)
+            .filter(|v| v.is_finite())
+            .map(|v| (v.clamp(-1.0, 1.0) * 1000.0).round() / 1000.0)
+            .unwrap_or(0.0) as f32
+    }
+
     pub fn end(&self) -> Tick {
         self.start.saturating_add(self.length)
     }
@@ -1095,6 +1110,13 @@ mod tests {
             pan: 0.0,
         });
         assert_eq!(p.patterns[0].length(sig), 7680);
+        p.patterns[0].notes[0].start = 3600;
+        p.patterns[0].notes[0].length = 480;
+        assert_eq!(
+            p.patterns[0].length(sig),
+            7680,
+            "cover the note end, not only its start"
+        );
         p.patterns[0].length_steps = Some(8);
         assert_eq!(p.patterns[0].length(sig), 1920);
     }

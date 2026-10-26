@@ -268,10 +268,10 @@ impl InstrumentRack {
         }
     }
 
-    /// Release every sequenced note at the start of the next block (stop, locate, loop).
-    pub(crate) fn release_sequenced(&mut self) {
+    /// Release sequenced notes at the engine frame where stop, locate or loop occurs.
+    pub(crate) fn release_sequenced(&mut self, at: u64) {
         for h in self.held.iter_mut().filter(|h| h.sequenced) {
-            h.off_at = 0;
+            h.off_at = h.off_at.min(at);
         }
     }
 

@@ -15,6 +15,10 @@ pub struct EmbeddedSample {
     pub name: String,
     pub sample_rate: u32,
     pub pcm: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub keep_on_disk: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -35,7 +39,31 @@ impl EmbeddedSample {
     /// Returns `TooLong` above 6 million frames, or `Decode` for errors from the shared
     /// WAV/MP3/FLAC/Ogg/AIFF decoder.
     pub fn load(path: &Path) -> Result<Self, SampleError> {
-        let sample = limeshot_dsp::load_audio_bounded(path, MAX_FRAMES)?;
+        match limeshot_dsp::load_audio_bounded(path, MAX_FRAMES) {
+            Ok(sample) => Self::from_audio(path, &sample),
+            Err(limeshot_dsp::SampleError::TooLong { .. }) => Self::load_mode(path, true),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    pub fn load_mode(path: &Path, disk: bool) -> Result<Self, SampleError> {
+        if !disk {
+            return Self::from_audio(path, &limeshot_dsp::load_audio_bounded(path, MAX_FRAMES)?);
+        }
+        let sample = limeshot_dsp::disk::load_disk(path)?;
+        Ok(Self {
+            name: path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            sample_rate: sample.sample_rate,
+            pcm: String::new(),
+            source: Some(path.to_string_lossy().into_owned()),
+            keep_on_disk: true,
+        })
+    }
+
+    fn from_audio(path: &Path, sample: &SampleData) -> Result<Self, SampleError> {
         if sample.data.len() / 2 > MAX_FRAMES {
             return Err(SampleError::TooLong);
         }
@@ -50,6 +78,8 @@ impl EmbeddedSample {
                 .unwrap_or_default(),
             sample_rate: sample.sample_rate,
             pcm: STANDARD.encode(bytes),
+            source: Some(path.to_string_lossy().into_owned()),
+            keep_on_disk: false,
         })
     }
 
@@ -61,6 +91,10 @@ impl EmbeddedSample {
     /// for a rate outside 8,000–384,000 Hz, malformed base64, incomplete stereo frames,
     /// or fewer than two frames.
     fn decode(&self) -> Result<Option<Arc<SampleData>>, SampleError> {
+        if self.keep_on_disk {
+            let path = self.source.as_deref().ok_or(SampleError::Invalid)?;
+            return Ok(Some(Arc::new(limeshot_dsp::disk::load_disk(Path::new(path))?)));
+        }
         if self.pcm.is_empty() {
             return Ok(None);
         }
@@ -130,7 +164,12 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
     fn set(&self, sample: EmbeddedSample) {
         while self.retired.pop().is_some() {}
         let mut state = self.state.write();
-        if state.0.name == sample.name && state.0.sample_rate == sample.sample_rate && state.0.pcm == sample.pcm {
+        if state.0.name == sample.name
+            && state.0.sample_rate == sample.sample_rate
+            && state.0.pcm == sample.pcm
+            && state.0.source == sample.source
+            && state.0.keep_on_disk == sample.keep_on_disk
+        {
             return;
         }
         let (sample, audio) = match sample.decode() {

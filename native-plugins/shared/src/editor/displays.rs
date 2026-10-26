@@ -415,6 +415,10 @@ impl NativeEditor {
                 for (i, peak) in self.waveform.iter_mut().enumerate() {
                     let begin = i * audio.frames() / 256;
                     let end = ((i + 1) * audio.frames() / 256).max(begin + 1);
+                    if let Some((lo, hi)) = audio.overview_range(begin, end) {
+                        *peak = lo.abs().max(hi.abs()).min(1.0);
+                        continue;
+                    }
                     *peak = (begin..end)
                         .map(|f| {
                             let (l, r) = audio.frame(f);

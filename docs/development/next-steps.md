@@ -50,3 +50,16 @@ FL Studio is the behaviour reference; ArtCraft informs visual styling only. Conf
 before synthetic live input. Still to observe in FL: Alt+wheel vertical zoom, in-clip automation point dragging,
 STEP/SLIDE automation options and bindings marked INFERRED. Keep `menus.json`, `keybindings.json` and `settings.json`
 in step with the code and regenerate their Markdown views.
+
+
+## Alpha.1 follow-up (2026-10-26)
+
+Owner-requested interaction and disk-sampler fixes are in `codex/alpha1-polish`; see
+[research and design](../research/alpha1-sampler-and-fades.md). The macOS live pass covered native value typing and Serum internal-corner shrink/grow.
+Repeat host-edge resizing with other resizable plugins and long disk-backed playback/seek checks on Windows
+and Linux before promoting the native feature statuses. Disk cache misses and smooth fade/crossfade limits remain recorded.
+
+Every future development session must create a NEW codex/ branch, separate NEW managed worktree and NEW
+attached draft PR, stacked on the latest unmerged continuation. Leave older checkouts intact; carry work
+through implementation, validation, documentation, commit and push. Never merge automatically, and create
+further sessions only when the owner asks.

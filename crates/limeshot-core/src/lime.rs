@@ -811,6 +811,39 @@ pub fn parameter_value(plugin: &PluginRef, id: u32) -> Option<f32> {
 pub fn parameter_plain(spec: &ParamSpec, normalized: f32) -> f32 {
     spec.min + normalized.clamp(0.0, 1.0).powf(if spec.log { 4.0 } else { 1.0 }) * (spec.max - spec.min)
 }
+/// Source referenced by a Keep on disk sampler; no file is opened by the project model.
+pub fn disk_source(plugin: &PluginRef) -> Option<String> {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return None;
+    }
+    let component: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
+    let sample: Value = serde_json::from_str(component["fields"]["sample-v1"].as_str()?).ok()?;
+    if sample["keep_on_disk"].as_bool() != Some(true) {
+        return None;
+    }
+    sample["source"].as_str().map(str::to_owned)
+}
+
+/// Update a disk source without changing controls or other persisted plugin fields.
+pub fn set_disk_source(plugin: &mut PluginRef, source: &str) -> bool {
+    let Some(bytes) = component_state(&plugin.state) else {
+        return false;
+    };
+    let Ok(mut component) = serde_json::from_slice::<Value>(bytes) else {
+        return false;
+    };
+    let mut sample = component["fields"]["sample-v1"]
+        .as_str()
+        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .unwrap_or_else(|| json!({"name": "", "sample_rate": 48000, "pcm": ""}));
+    sample["source"] = json!(source);
+    sample["keep_on_disk"] = json!(true);
+    sample["pcm"] = json!("");
+    component["fields"]["sample-v1"] = Value::String(sample.to_string());
+    plugin.state = PluginState::new(host_state(component.to_string().as_bytes()));
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

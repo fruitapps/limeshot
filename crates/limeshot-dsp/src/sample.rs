@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 /// Samples longer than this are refused (10 minutes at 192 kHz stereo is ~880 MB of f32).
-pub const MAX_FRAMES: usize = 192_000 * 60 * 10;
+pub const MAX_FRAMES: usize = crate::disk::MAX_DISK_FRAMES;
 
 /// Stereo audio as interleaved f32 (`[l0, r0, l1, r1, …]`). Mono files are duplicated to both
 /// sides; files with more than two channels keep the first two.
@@ -12,6 +12,7 @@ pub const MAX_FRAMES: usize = 192_000 * 60 * 10;
 pub struct SampleData {
     pub sample_rate: u32,
     pub data: Vec<f32>,
+    pub disk: Option<std::sync::Arc<crate::disk::DiskSample>>,
     /// Where it was loaded from (for display), if anywhere.
     pub source: Option<PathBuf>,
 }
@@ -21,12 +22,13 @@ impl SampleData {
         Self {
             sample_rate: sample_rate.max(1),
             data,
+            disk: None,
             source: None,
         }
     }
 
     pub fn frames(&self) -> usize {
-        self.data.len() / 2
+        self.disk.as_ref().map_or(self.data.len() / 2, |d| d.frames)
     }
 
     pub fn duration_secs(&self) -> f64 {
@@ -36,6 +38,9 @@ impl SampleData {
     /// The stereo frame at `i`, or silence past the ends.
     #[inline]
     pub fn frame(&self, i: usize) -> (f32, f32) {
+        if let Some(disk) = &self.disk {
+            return disk.frame(i);
+        }
         match (self.data.get(2 * i), self.data.get(2 * i + 1)) {
             (Some(&l), Some(&r)) => (l, r),
             _ => (0.0, 0.0),
@@ -53,6 +58,18 @@ impl SampleData {
         let (l0, r0) = self.frame(i);
         let (l1, r1) = self.frame(i + 1);
         (l0 + (l1 - l0) * f, r0 + (r1 - r0) * f)
+    }
+
+    /// Prepared disk extrema; drawing never triggers page reads for a long sample.
+    pub fn overview_range(&self, a: usize, b: usize) -> Option<(f32, f32)> {
+        let disk = self.disk.as_ref()?;
+        let start = a / crate::disk::PEAK_BLOCK;
+        let end = (b / crate::disk::PEAK_BLOCK + 1).min(disk.peaks.len());
+        disk.peaks
+            .get(start..end)?
+            .iter()
+            .copied()
+            .reduce(|a, b| (a.0.min(b.0), a.1.max(b.1)))
     }
 
     /// The largest absolute sample value.
@@ -121,6 +138,7 @@ fn load_wav_bounded(path: &Path, max_frames: usize) -> Result<SampleData, Sample
         sample_rate: spec.sample_rate.max(1),
         data,
         source: Some(path.to_path_buf()),
+        disk: None,
     })
 }
 
@@ -152,6 +170,25 @@ pub fn load_audio_bounded(path: &Path, max_frames: usize) -> Result<SampleData, 
 }
 
 fn load_compressed(path: &Path, max_frames: usize) -> Result<SampleData, SampleError> {
+    let mut data = Vec::new();
+    let (sample_rate, _) = decode_to(path, max_frames, |_, left, right| {
+        data.push(left);
+        data.push(right);
+        Ok(())
+    })?;
+    Ok(SampleData {
+        sample_rate,
+        data,
+        source: Some(path.to_path_buf()),
+        disk: None,
+    })
+}
+
+pub(crate) fn decode_to(
+    path: &Path,
+    max_frames: usize,
+    mut emit: impl FnMut(u32, f32, f32) -> Result<(), SampleError>,
+) -> Result<(u32, usize), SampleError> {
     use symphonia::core::audio::SampleBuffer;
     use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
     use symphonia::core::errors::Error;
@@ -189,7 +226,7 @@ fn load_compressed(path: &Path, max_frames: usize) -> Result<SampleData, SampleE
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
         .map_err(|e| fail(e.to_string()))?;
-    let mut data: Vec<f32> = Vec::new();
+    let mut frames = 0usize;
     let mut buf: Option<SampleBuffer<f32>> = None;
     loop {
         let packet = match format.next_packet() {
@@ -207,7 +244,7 @@ fn load_compressed(path: &Path, max_frames: usize) -> Result<SampleData, SampleE
             Err(Error::DecodeError(_)) => continue,
             Err(e) => return Err(fail(e.to_string())),
         };
-        if data.len() / 2 + decoded.frames() > max_frames {
+        if frames + decoded.frames() > max_frames {
             return Err(SampleError::TooLong {
                 path: path.to_path_buf(),
                 max_frames,
@@ -229,18 +266,14 @@ fn load_compressed(path: &Path, max_frames: usize) -> Result<SampleData, SampleE
                 l
             };
             let clean = |v: f32| if v.is_finite() { v } else { 0.0 };
-            data.push(clean(l));
-            data.push(clean(r));
+            emit(sample_rate, clean(l), clean(r))?;
+            frames += 1;
         }
     }
-    if data.is_empty() {
+    if frames == 0 {
         return Err(fail("no audio in the file".into()));
     }
-    Ok(SampleData {
-        sample_rate: sample_rate.max(1),
-        data,
-        source: Some(path.to_path_buf()),
-    })
+    Ok((sample_rate.max(1), frames))
 }
 
 /// Output sample format for [`write_wav`].

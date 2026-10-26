@@ -413,6 +413,17 @@ fn general(app: &mut LimeShotApp, ui: &mut Ui) {
         );
     });
     section(ui, "Miscellaneous", |ui| {
+        let mut auto_disk = app.settings.auto_keep_long_audio_on_disk;
+        if ui.checkbox(&mut auto_disk, "Auto keep long audio on disk").changed() {
+            app.settings.auto_keep_long_audio_on_disk = auto_disk;
+            app.samples.auto_keep_long_audio_on_disk = auto_disk;
+            app.save_settings();
+        }
+        ui.label(
+            RichText::new("Long samples use a disk cache (up to 2 GB decoded stereo audio).")
+                .small()
+                .color(Theme::current().text_faint),
+        );
         let mut auto_zip = app.settings.auto_zip_empty_channels;
         if ui.checkbox(&mut auto_zip, "Auto zip empty channels").changed() {
             app.settings.auto_zip_empty_channels = auto_zip;

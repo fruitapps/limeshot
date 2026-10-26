@@ -30,7 +30,8 @@ pub fn restrict_loaded_sources(project: &mut Project, directory: Option<&Path>) 
         let source = match &channel.instrument {
             limeshot_core::Instrument::Sampler(p) => p.sample.as_ref().map(|s| s.path.as_str()),
             limeshot_core::Instrument::Plugin(p)
-                if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true) =>
+                if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true)
+                    || lime::disk_source(p).is_some() =>
             {
                 p.extra.get("lime-sample-path").and_then(serde_json::Value::as_str)
             }
@@ -50,6 +51,14 @@ pub fn restrict_loaded_sources(project: &mut Project, directory: Option<&Path>) 
                 channel
                     .extra
                     .insert("lime-external-source".into(), serde_json::json!(true));
+            }
+            if !inside
+                && let limeshot_core::Instrument::Plugin(plugin) = &mut channel.instrument
+                && lime::disk_source(plugin).is_some()
+            {
+                plugin
+                    .extra
+                    .insert("lime-disk-unapproved".into(), serde_json::json!(true));
             }
         }
     }
@@ -117,8 +126,13 @@ pub fn cache_embedded_sample(
     }
     let sample: serde_json::Value = serde_json::from_str(text).ok()?;
     let rate = u32::try_from(sample["sample_rate"].as_u64()?).ok()?;
+    if sample["keep_on_disk"].as_bool() == Some(true) {
+        let source = std::path::PathBuf::from(sample["source"].as_str()?);
+        cache.request_disk_path(source.clone());
+        return Some(source);
+    }
     let pcm = sample["pcm"].as_str()?;
-    if !(8000..=384000).contains(&rate) || pcm.len() > (4_000_000usize * 8).div_ceil(3) * 4 {
+    if !(8000..=384000).contains(&rate) || pcm.len() > (lime::MAX_EMBEDDED_FRAMES * 8).div_ceil(3) * 4 {
         return None;
     }
     let bytes = limeshot_core::plugin::base64_decode(pcm)?;

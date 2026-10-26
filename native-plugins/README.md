@@ -7,7 +7,7 @@ LimeShot project or companion application is needed.
 | Plugin | What it does |
 | --- | --- |
 | **LimeSynth** | 128 voices; sine, square, saw and triangle; detune/octave, ADSR, resonant low-/band-/high-pass with key tracking, filter envelope, LFO/vibrato |
-| **Lime Sampler** | Stereo playback of WAV, MP3, FLAC, Ogg Vorbis and AIFF (up to 6 million frames, about 125 s at 48 kHz), embedded sample recall, transpose/root key, trim, reverse, gated/one-shot, attack/decay/sustain/release, low-pass filter, loop |
+| **Lime Sampler** | Stereo playback of WAV, MP3, FLAC, Ogg Vorbis and AIFF (short embedded samples; Keep on disk up to 2 GB decoded audio), embedded or linked-source recall, transpose/root key, trim, reverse, gated/one-shot, attack/decay/sustain/release, low-pass filter, loop |
 | **Lime Utility** | Gain, stereo width and polarity |
 | **Lime EQ** | Low shelf, parametric mid and high shelf |
 | **Lime Filter** | Resonant low-, band- and high-pass, wet/dry mix |
@@ -102,10 +102,17 @@ hands-on compatibility with every DAW/version.
 
 Use Load or drop a WAV, MP3, FLAC, Ogg Vorbis or AIFF file to load it. Hold the waveform or keyboard to audition; right-click a key to set
 the root note. Drag the colored waveform handles to trim the playable region. The shared LimeShot audio decoder is used here. Samples
-are limited to **6 million stereo frames** (about 125 seconds at 48 kHz) to keep embedded host state below 64 MiB.
-The plugin saves decoded audio inside host state; moving/deleting the source file does not break a saved session.
-Loading happens during non-realtime state restoration/activation and resets sounding notes. No disk access,
-allocation or locking occurs during audio processing. An invalid embedded sample becomes an empty, silent sampler.
+are embedded up to **6 million stereo frames** (about 125 seconds at 48 kHz), keeping host state below 64 MiB.
+Long samples use **Keep on disk**, with a **2 GB decoded stereo float limit**. Compressed formats prepare a
+seekable WAV cache and extrema in the background. The fixed audio page cache uses 1 MiB per reader; extrema
+use under 2 MB even at the limit. Realtime misses return silence and an underrun counter rather than blocking;
+new uncached seeks and highly scattered voices can underrun. Offline mode waits for pages. The editor reports
+missed frames and disk errors. Keep linked source files with the project; temporary caches can be regenerated.
+Short embedded sessions still survive deletion of their source. Loading from the editor runs on a worker,
+then swaps samples through the existing bounded retirement queues. Invalid samples are rejected before adoption.
+
+Click a displayed numeric value to type; Enter or focus loss applies and Escape cancels. Drag adjusts controls,
+Shift is fine, and double-click resets. Sample loading can be cancelled with Clear.
 
 Factory and `.limepreset` presets share LimeShot's existing preset implementation. Sampler `.limepreset` files
 change playback settings, preserving the loaded sample and root key; host projects/presets save all parameters

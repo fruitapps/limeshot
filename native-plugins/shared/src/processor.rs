@@ -97,6 +97,8 @@ pub struct LimePlugin<const ID: u8> {
     notifier: RepaintNotifier,
     effect: Option<Box<dyn Effect>>,
     sample: Option<Arc<SampleData>>,
+    active_end: usize,
+    offline: bool,
     /// Defensive overflow retention: never release the last sample reference in process().
     retired_sample: Option<Arc<SampleData>>,
     voices: [Slot; 128],
@@ -125,6 +127,8 @@ impl<const ID: u8> Default for LimePlugin<ID> {
             notifier: RepaintNotifier::new(),
             effect: None,
             sample: None,
+            active_end: 0,
+            offline: false,
             retired_sample: None,
             voices: std::array::from_fn(|_| Slot::default()),
             bend: [0.0; 16],
@@ -210,6 +214,9 @@ impl<const ID: u8> LimePlugin<ID> {
         }
         if let Some(audio) = self.params.sample.take_audio() {
             self.clear();
+            if let Some(disk) = audio.as_ref().and_then(|s| s.disk.as_ref()) {
+                disk.set_offline(self.offline);
+            }
             if let Some(old) = std::mem::replace(&mut self.sample, audio)
                 && let Err(old) = self.params.sample.retire_audio(old)
             {
@@ -221,6 +228,7 @@ impl<const ID: u8> LimePlugin<ID> {
     /// Stop voices and audition, clear pedal/bend state, and reset DSP and meters.
     /// Retains the prepared sample, output rate, and parameters.
     fn clear(&mut self) {
+        self.active_end = 0;
         self.preview_note = 0;
         self.meters.preview_note.store(0, Ordering::Relaxed);
         for v in &mut self.voices {
@@ -307,7 +315,7 @@ impl<const ID: u8> LimePlugin<ID> {
     fn update_voices(&mut self, p: &[f32; MAX_CONTROLS]) {
         let state = self.instrument(p);
         let root = if ID == 1 { p[7].round() as u8 } else { 60 };
-        for v in &mut self.voices {
+        for v in &mut self.voices[..self.active_end] {
             if v.voice.is_active() {
                 v.voice.update_instrument(
                     &state,
@@ -356,6 +364,7 @@ impl<const ID: u8> LimePlugin<ID> {
                             .map_or(0, |(i, _)| i)
                     });
                 self.serial = self.serial.wrapping_add(1);
+                self.active_end = self.active_end.max(index + 1);
                 self.voices[index] = Slot {
                     voice,
                     id: voice_id.id(),
@@ -392,10 +401,12 @@ impl<const ID: u8> LimePlugin<ID> {
                     slot.voice
                         .skip(playback.offset_secs + playback.elapsed_secs, self.sample_rate);
                     slot.voice.fade = Some(limeshot_dsp::voice::ClipFade {
-                        in_len: playback.fade_in_secs * self.sample_rate,
-                        pos: (playback.elapsed_secs * f64::from(self.sample_rate)) as f32,
-                        out_len: playback.fade_out_secs * self.sample_rate,
-                        left: (playback.remaining_secs * f64::from(self.sample_rate)) as f32,
+                        in_curve: playback.fade_in_curve,
+                        out_curve: playback.fade_out_curve,
+                        in_len: f64::from(playback.fade_in_secs) * f64::from(self.sample_rate),
+                        pos: playback.elapsed_secs * f64::from(self.sample_rate),
+                        out_len: f64::from(playback.fade_out_secs) * f64::from(self.sample_rate),
+                        left: playback.remaining_secs * f64::from(self.sample_rate),
                     });
                 }
             }
@@ -513,13 +524,16 @@ impl<const ID: u8> LimePlugin<ID> {
                 self.last_values = *p;
             }
             let mut sum = [0.0; 2];
-            for s in &mut self.voices {
+            for s in &mut self.voices[..self.active_end] {
                 if s.voice.is_active() {
                     let (l, r) = s.voice.next_frame();
                     let (gl, gr) = limeshot_dsp::pan_gains((s.pan + self.channel_pan).clamp(-1.0, 1.0));
                     sum[0] += l * gl;
                     sum[1] += r * gr;
                 }
+            }
+            while self.active_end > 0 && !self.voices[self.active_end - 1].voice.is_active() {
+                self.active_end -= 1;
             }
             sum
         } else {
@@ -646,7 +660,11 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         if !config.sample_rate.is_finite() || config.sample_rate < 8000.0 || config.sample_rate > 384000.0 {
             return false;
         }
+        self.offline = config.process_mode == ProcessMode::Offline;
         self.prepare(config.sample_rate);
+        if let Some(disk) = self.sample.as_ref().and_then(|s| s.disk.as_ref()) {
+            disk.set_offline(self.offline);
+        }
         true
     }
     fn reset(&mut self) {
@@ -696,7 +714,10 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
         let _ = context.try_send_event(NoteEvent::MidiSysEx {
             timing: 0,
             message: ClipSysEx::Telemetry(limeshot_dsp::PluginTelemetry {
-                voices: self.voices.iter().filter(|s| s.voice.is_active()).count() as u32,
+                voices: self.voices[..self.active_end]
+                    .iter()
+                    .filter(|s| s.voice.is_active())
+                    .count() as u32,
                 reduction_db: if self.params.bypass.value() {
                     0.0
                 } else {
@@ -704,7 +725,7 @@ impl<const ID: u8> Plugin for LimePlugin<ID> {
                 },
             }),
         });
-        self.notifier.request_repaint();
+        // The editor polls telemetry at its bounded repaint interval.
         // Reverb/delay and releasing voices must continue to receive silent blocks.
         ProcessStatus::KeepAlive
     }
@@ -758,6 +779,54 @@ mod tests {
             channel: 0,
             cc,
             value,
+        }
+    }
+
+    #[test]
+    fn disk_sampler_state_matches_embedded_pcm_across_blocks_and_seeks() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("disk.wav");
+        let data: Vec<f32> = (0..180_000).flat_map(|i| [(i as f32 * 0.023).sin() * 0.4; 2]).collect();
+        limeshot_dsp::write_wav(&source, 48_000, &data, limeshot_dsp::BitDepth::Float32).unwrap();
+        let state = EmbeddedSample::load_mode(&source, true).unwrap();
+        assert!(state.keep_on_disk && state.pcm.is_empty());
+        for block in [1, 64, 333, 1024] {
+            let mut disk = LimePlugin::<1>::default();
+            disk.params.sample.set(state.clone());
+            let fields = disk.params.serialize_fields();
+            disk.params.deserialize_fields(&fields);
+            disk.prepare(48_000.0);
+            assert!(disk.sample.as_ref().unwrap().data.is_empty());
+            let mut memory = LimePlugin::<1>::default();
+            memory
+                .params
+                .sample
+                .set(EmbeddedSample::load_mode(&source, false).unwrap());
+            memory.prepare(48_000.0);
+            let values = memory.params.values();
+            disk.event(on(1, 60), &values);
+            memory.event(on(1, 60), &values);
+            // The first pages are primed: realtime processing neither waits nor allocates.
+            nice_assert_no_alloc::assert_no_alloc(|| {
+                for _ in 0..1024 {
+                    assert_eq!(
+                        disk.frame([0.0; 2], None, &values, 120.0),
+                        memory.frame([0.0; 2], None, &values, 120.0)
+                    );
+                }
+            });
+            disk.sample.as_ref().unwrap().disk.as_ref().unwrap().set_offline(true);
+            for slot in [&mut disk, &mut memory] {
+                slot.voices[0].voice.skip(2.5, 48_000.0);
+            }
+            for start in (0..20_000).step_by(block) {
+                for _ in start..(start + block).min(20_000) {
+                    assert_eq!(
+                        disk.frame([0.0; 2], None, &values, 120.0),
+                        memory.frame([0.0; 2], None, &values, 120.0)
+                    );
+                }
+            }
         }
     }
 

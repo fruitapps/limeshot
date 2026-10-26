@@ -543,7 +543,7 @@ fn output(app: &mut LimeShotApp, ui: &mut Ui) {
     );
     let resp = resp
         .interact(Sense::click())
-        .hint("Audio load: time spent rendering per buffer; right-click for options");
+        .hint("Audio processing load: render time / buffer deadline (not total app CPU); right-click for options");
     // FL Studio's CPU panel menu.
     resp.context_menu(|ui| {
         ui.label(RichText::new("Refresh").small().color(t.text_faint));

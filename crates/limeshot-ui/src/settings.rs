@@ -18,6 +18,7 @@ pub struct Settings {
     pub ui_scale: f32,
     /// Options / toolbar: keep the active editor's playhead visible while playing.
     pub auto_scroll: bool,
+    pub auto_keep_long_audio_on_disk: bool,
     /// Collapse channels without note data when switching patterns.
     pub auto_zip_empty_channels: bool,
     /// Minutes between autosaves of unsaved changes; 0 turns autosave off.
@@ -43,6 +44,7 @@ impl Default for Settings {
             browser_folders: Vec::new(),
             ui_scale: 1.0,
             auto_scroll: false,
+            auto_keep_long_audio_on_disk: true,
             auto_zip_empty_channels: false,
             autosave_minutes: 5,
             confirm_channel_delete: true,

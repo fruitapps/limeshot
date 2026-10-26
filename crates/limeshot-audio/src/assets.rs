@@ -6,9 +6,14 @@
 
 use limeshot_dsp::SampleData;
 
-fn load_audio(path: &Path) -> Result<SampleData, String> {
-    let sample =
-        limeshot_dsp::load_audio_bounded(path, limeshot_core::lime::MAX_EMBEDDED_FRAMES).map_err(|e| e.to_string())?;
+fn load_audio(path: &Path, auto_disk: bool) -> Result<SampleData, String> {
+    let sample = match limeshot_dsp::load_audio_bounded(path, limeshot_core::lime::MAX_EMBEDDED_FRAMES) {
+        Ok(sample) => sample,
+        Err(limeshot_dsp::SampleError::TooLong { .. }) if auto_disk => {
+            limeshot_dsp::disk::load_disk(path).map_err(|e| e.to_string())?
+        }
+        Err(error) => return Err(error.to_string()),
+    };
     if sample.frames() < 2 || !(8_000..=384_000).contains(&sample.sample_rate) {
         return Err("Sample must have at least two frames at 8–384 kHz".into());
     }
@@ -32,7 +37,9 @@ type LoadResult = (PathBuf, Result<Arc<SampleData>, String>);
 pub struct SampleCache {
     project_dir: Option<PathBuf>,
     entries: HashMap<PathBuf, SampleStatus>,
-    jobs: Option<Sender<PathBuf>>,
+    explicit_disk: std::collections::HashSet<PathBuf>,
+    jobs: Option<Sender<(PathBuf, bool)>>,
+    pub auto_keep_long_audio_on_disk: bool,
     results: Receiver<LoadResult>,
 }
 
@@ -45,13 +52,13 @@ impl Default for SampleCache {
 impl SampleCache {
     /// A cache with its own loader thread.
     pub fn new() -> Self {
-        let (job_tx, job_rx) = channel::<PathBuf>();
+        let (job_tx, job_rx) = channel::<(PathBuf, bool)>();
         let (res_tx, res_rx) = channel::<LoadResult>();
         let spawned = std::thread::Builder::new()
             .name("limeshot-sample-loader".into())
             .spawn(move || {
-                while let Ok(path) = job_rx.recv() {
-                    let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
+                while let Ok((path, auto_disk)) = job_rx.recv() {
+                    let r = load_audio(&path, auto_disk).map(Arc::new).map_err(|e| e.to_string());
                     if res_tx.send((path, r)).is_err() {
                         break;
                     }
@@ -67,7 +74,9 @@ impl SampleCache {
         Self {
             project_dir: None,
             entries: HashMap::new(),
+            explicit_disk: Default::default(),
             jobs,
+            auto_keep_long_audio_on_disk: true,
             results: res_rx,
         }
     }
@@ -95,8 +104,23 @@ impl SampleCache {
         if self.entries.contains_key(&path) {
             return;
         }
+        self.queue_path(path, self.auto_keep_long_audio_on_disk);
+    }
+
+    /// A persisted per-sampler Keep on disk choice overrides the automatic-import preference.
+    pub fn request_disk_path(&mut self, path: PathBuf) {
+        if matches!(self.entries.get(&path), Some(SampleStatus::Ready(_))) {
+            return;
+        }
+        if !self.explicit_disk.insert(path.clone()) {
+            return;
+        }
+        self.queue_path(path, true);
+    }
+
+    fn queue_path(&mut self, path: PathBuf, auto_disk: bool) {
         match &self.jobs {
-            Some(tx) if tx.send(path.clone()).is_ok() => {
+            Some(tx) if tx.send((path.clone(), auto_disk)).is_ok() => {
                 self.entries.insert(path, SampleStatus::Loading);
             }
             _ => {
@@ -112,7 +136,9 @@ impl SampleCache {
         if let Some(SampleStatus::Ready(s)) = self.entries.get(&path) {
             return Ok(s.clone());
         }
-        let r = load_audio(&path).map(Arc::new).map_err(|e| e.to_string());
+        let r = load_audio(&path, self.auto_keep_long_audio_on_disk)
+            .map(Arc::new)
+            .map_err(|e| e.to_string());
         self.entries.insert(path, status(r.clone()));
         r
     }
@@ -154,6 +180,7 @@ impl SampleCache {
     pub fn remove_failed(&mut self, path: &Path) -> bool {
         if matches!(self.entries.get(path), Some(SampleStatus::Failed(_))) {
             self.entries.remove(path);
+            self.explicit_disk.remove(path);
             true
         } else {
             false

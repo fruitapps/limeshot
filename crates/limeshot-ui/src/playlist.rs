@@ -60,6 +60,12 @@ enum Drag {
     Fade {
         id: ClipId,
         out: bool,
+        originals: Vec<Clip>,
+    },
+    FadeCurve {
+        out: bool,
+        originals: Vec<Clip>,
+        grab_y: f32,
     },
     /// Dragging point `index` of an automation shown by `clip`.
     AutoPoint {
@@ -778,25 +784,101 @@ pub fn add_audio_source(app: &mut LimeShotApp, path: &std::path::Path) -> Option
     Some(ch)
 }
 
+/// A scrollbar controls the same pixel offset as wheel navigation.
+fn scrollbar(ui: &mut Ui, name: &str, rect: Rect, offset: &mut f32, visible: f32, total: f32, vertical: bool) {
+    let t = Theme::current();
+    let axis = |p: Pos2| if vertical { p.y } else { p.x };
+    let length = if vertical { rect.height() } else { rect.width() };
+    let thumb_len = (length * visible / total.max(visible)).clamp(18.0_f32.min(length), length);
+    let max = (total - visible).max(0.0);
+    *offset = offset.clamp(0.0, max);
+    let travel = (length - thumb_len).max(0.0);
+    let start = axis(rect.min) + if max > 0.0 { *offset / max * travel } else { 0.0 };
+    let thumb = if vertical {
+        Rect::from_min_size(pos2(rect.left(), start), vec2(rect.width(), thumb_len))
+    } else {
+        Rect::from_min_size(pos2(start, rect.top()), vec2(thumb_len, rect.height()))
+    };
+    let response = ui.interact(rect, ui.id().with(name), Sense::click_and_drag());
+    ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(name), rect));
+    if (response.drag_started() || response.clicked())
+        && let Some(pointer) = response.interact_pointer_pos()
+    {
+        let grab = if thumb.contains(pointer) {
+            axis(pointer) - start
+        } else {
+            thumb_len / 2.0
+        };
+        ui.ctx().data_mut(|d| d.insert_temp(response.id.with("grab"), grab));
+    }
+    if (response.dragged() || response.clicked())
+        && let Some(pointer) = response.interact_pointer_pos()
+    {
+        let grab = ui
+            .ctx()
+            .data(|d| d.get_temp::<f32>(response.id.with("grab")))
+            .unwrap_or(thumb_len / 2.0);
+        *offset = ((axis(pointer) - axis(rect.min) - grab) / travel.max(1.0)).clamp(0.0, 1.0) * max;
+    }
+    ui.painter().rect_filled(rect, 0.0, t.sunken);
+    ui.painter().rect_filled(
+        thumb.shrink(2.0),
+        3.0,
+        if response.hovered() || response.dragged() {
+            t.text_dim
+        } else {
+            t.border
+        },
+    );
+}
+
 /// Draw the arrangement, ruler, and track headers, then handle edits, drops, and scrolling.
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.available_rect_before_wrap();
     let (full, _) = ui.allocate_exact_size(full.size(), Sense::hover());
+    let content = Rect::from_min_max(full.min, full.max - vec2(12.0, 12.0));
     let ruler = Rect::from_min_max(
-        pos2(full.left() + HEADER_W, full.top()),
-        pos2(full.right(), full.top() + RULER_H),
+        pos2(content.left() + HEADER_W, content.top()),
+        pos2(content.right(), content.top() + RULER_H),
     );
     let headers = Rect::from_min_max(
-        pos2(full.left(), full.top() + RULER_H),
-        pos2(full.left() + HEADER_W, full.bottom()),
+        pos2(content.left(), content.top() + RULER_H),
+        pos2(content.left() + HEADER_W, content.bottom()),
     );
-    let grid = Rect::from_min_max(pos2(full.left() + HEADER_W, full.top() + RULER_H), full.right_bottom());
+    let grid = Rect::from_min_max(
+        pos2(content.left() + HEADER_W, content.top() + RULER_H),
+        content.right_bottom(),
+    );
 
     let tracks = app.project().playlist.tracks.len() as u32;
     let follow = app.settings.auto_scroll && app.is_playing() && app.ui.mode == limeshot_engine::PlayMode::Song;
     let position = app.player.status().position();
+    let song_pixels =
+        app.project().playlist.song_length(app.project().time_signature) as f32 * app.ui.playlist.zoom_x / PPQ as f32;
     let st = &mut app.ui.playlist;
+    let horizontal_extent = (song_pixels + grid.width()).max(st.scroll.x + grid.width());
+    scrollbar(
+        ui,
+        "playlist-horizontal",
+        Rect::from_min_max(
+            pos2(grid.left(), content.bottom()),
+            pos2(content.right(), full.bottom()),
+        ),
+        &mut st.scroll.x,
+        grid.width(),
+        horizontal_extent,
+        false,
+    );
+    scrollbar(
+        ui,
+        "playlist-vertical",
+        Rect::from_min_max(pos2(content.right(), grid.top()), pos2(full.right(), content.bottom())),
+        &mut st.scroll.y,
+        grid.height(),
+        (tracks as f32 + 1.0) * st.track_h,
+        true,
+    );
     let max_y = ((tracks as f32 + 1.0) * st.track_h - grid.height()).max(0.0);
     st.scroll.y = st.scroll.y.clamp(0.0, max_y);
     st.scroll.x = st.scroll.x.max(0.0);
@@ -1022,6 +1104,7 @@ fn clip_label(p: &Project, c: &Clip) -> Option<(String, Rgb)> {
 /// Min/max of the mono signal per block of `Peaks::BLOCK` frames.
 pub struct Peaks {
     blocks: Vec<(f32, f32)>,
+    block: usize,
 }
 
 impl Peaks {
@@ -1029,6 +1112,12 @@ impl Peaks {
 
     /// Cache mono extrema in 256-frame blocks, including zero in each block's range.
     pub(crate) fn of(s: &limeshot_dsp::SampleData) -> Self {
+        if let Some(disk) = &s.disk {
+            return Self {
+                blocks: disk.peaks.clone(),
+                block: limeshot_dsp::disk::PEAK_BLOCK,
+            };
+        }
         let blocks = (0..s.frames().div_ceil(Self::BLOCK))
             .map(|b| {
                 let (mut lo, mut hi) = (0.0f32, 0.0f32);
@@ -1041,14 +1130,17 @@ impl Peaks {
                 (lo, hi)
             })
             .collect();
-        Self { blocks }
+        Self {
+            blocks,
+            block: Self::BLOCK,
+        }
     }
 
     /// Return cached extrema for the blocks containing frame positions `a` through `b`, inclusive.
     /// Negative positions clamp to zero; return `None` if the cache is empty or `a` is beyond it.
     pub(crate) fn range(&self, a: f64, b: f64) -> Option<(f32, f32)> {
-        let i = (a.max(0.0) as usize) / Self::BLOCK;
-        let j = ((b.max(0.0) as usize) / Self::BLOCK)
+        let i = (a.max(0.0) as usize) / self.block;
+        let j = ((b.max(0.0) as usize) / self.block)
             .max(i)
             .min(self.blocks.len().checked_sub(1)?);
         self.blocks
@@ -1263,16 +1355,55 @@ pub fn add_audio_clip(app: &mut LimeShotApp, path: &std::path::Path, track: u32,
 /// An audio clip's fade lines (from the corners to the handles) and the handles themselves.
 fn draw_fades(painter: &egui::Painter, view: &View, c: &Clip, body: Rect, color: Color32) {
     let Some((a, b)) = fade_handles(view, c) else { return };
-    let line = Stroke::new(1.2, color.gamma_multiply(0.8));
-    if c.fade_in > 0 {
-        painter.line_segment([pos2(body.left(), body.bottom()), a], line);
+    let line = Stroke::new(1.2, color.gamma_multiply(0.85));
+    for (out, end) in [(false, a), (true, b)] {
+        let length = if out { c.fade_out } else { c.fade_in };
+        if length > 0 {
+            let points = (0..=32)
+                .map(|i| {
+                    let u = i as f32 / 32.0;
+                    let gain = limeshot_dsp::voice::fade_curve(if out { 1.0 - u } else { u }, c.fade_curve(out));
+                    let x = if out {
+                        egui::lerp(end.x..=body.right(), u)
+                    } else {
+                        egui::lerp(body.left()..=end.x, u)
+                    };
+                    pos2(x, egui::lerp(body.bottom()..=end.y, gain))
+                })
+                .collect();
+            painter.add(egui::Shape::line(points, line));
+            if let Some(handle) = fade_curve_handle(view, c, out) {
+                painter.circle(handle, 3.0, Theme::current().surface, line);
+            }
+        }
+        let direction = if out { -1.0 } else { 1.0 };
+        painter.add(egui::Shape::convex_polygon(
+            vec![
+                end + vec2(-4.0 * direction, -3.0),
+                end + vec2(5.0 * direction, -3.0),
+                end + vec2(-4.0 * direction, 5.0),
+            ],
+            color,
+            Stroke::NONE,
+        ));
     }
-    if c.fade_out > 0 {
-        painter.line_segment([b, pos2(body.right(), body.bottom())], line);
+}
+
+fn fade_curve_handle(view: &View, clip: &Clip, out: bool) -> Option<Pos2> {
+    let (a, b) = fade_handles(view, clip)?;
+    let length = if out { clip.fade_out } else { clip.fade_in };
+    if length == 0 {
+        return None;
     }
-    for h in [a, b] {
-        painter.rect_filled(Rect::from_center_size(h, vec2(6.0, 6.0)), 1.0, color);
-    }
+    let rect = view.clip_rect(clip);
+    let end = if out { b } else { a };
+    let x = if out {
+        (end.x + rect.right()) / 2.0
+    } else {
+        (end.x + rect.left()) / 2.0
+    };
+    let gain = limeshot_dsp::voice::fade_curve(0.5, clip.fade_curve(out));
+    Some(pos2(x, egui::lerp((rect.bottom() - 2.0)..=end.y, gain)))
 }
 
 /// Where an automation clip draws its curve: below the title strip.
@@ -1822,6 +1953,8 @@ enum Part {
     RightEdge,
     Menu,
     /// An audio clip's fade-in / fade-out handle (FL Studio's fade handles).
+    FadeCurveIn,
+    FadeCurveOut,
     FadeIn,
     FadeOut,
 }
@@ -1847,7 +1980,11 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
         r.contains(p).then(|| {
             let edge = EDGE.min(r.width() * 0.3);
             let fades = fade_handles(view, c);
-            let part = if fades.is_some_and(|(a, _)| a.distance(p) <= 5.0) {
+            let part = if fade_curve_handle(view, c, false).is_some_and(|h| h.distance(p) <= 6.0) {
+                Part::FadeCurveIn
+            } else if fade_curve_handle(view, c, true).is_some_and(|h| h.distance(p) <= 6.0) {
+                Part::FadeCurveOut
+            } else if fades.is_some_and(|(a, _)| a.distance(p) <= 5.0) {
                 Part::FadeIn
             } else if fades.is_some_and(|(_, b)| b.distance(p) <= 5.0) {
                 Part::FadeOut
@@ -1927,6 +2064,8 @@ fn scrub_audio(app: &mut LimeShotApp, clips: &[Clip], tick: Option<Tick>) {
                 remaining_secs: (c.end() - tick) as f64 * seconds_per_tick,
                 fade_in_secs: (c.fade_in as f64 * seconds_per_tick) as f32,
                 fade_out_secs: (c.fade_out as f64 * seconds_per_tick) as f32,
+                fade_in_curve: 0.0,
+                fade_out_curve: 0.0,
             },
         });
         app.ui.playlist.scrub_audio.push((channel, key));
@@ -2200,7 +2339,12 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     focus_source(app, &c);
                     // Shift+drag moves copies and leaves the originals (FL Studio).
                     let duplicate = mods.shift && part == Part::Body;
-                    if duplicate {
+                    if duplicate
+                        || matches!(
+                            part,
+                            Part::FadeIn | Part::FadeOut | Part::FadeCurveIn | Part::FadeCurveOut
+                        )
+                    {
                         app.doc.begin_compound_gesture();
                     } else {
                         app.doc.begin_gesture();
@@ -2211,9 +2355,30 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                             start: c.start,
                         },
                         Part::LeftEdge => Drag::ResizeStart { id: c.id },
+                        Part::FadeCurveIn | Part::FadeCurveOut => Drag::FadeCurve {
+                            out: part == Part::FadeCurveOut,
+                            grab_y: p.y,
+                            originals: clips
+                                .iter()
+                                .filter(|clip| {
+                                    clip.audio_channel().is_some() && app.ui.playlist.selection.contains(&clip.id)
+                                })
+                                .cloned()
+                                .collect(),
+                        },
                         Part::FadeIn | Part::FadeOut => Drag::Fade {
                             id: c.id,
                             out: part == Part::FadeOut,
+                            originals: clips
+                                .iter()
+                                .filter(|clip| {
+                                    clip.audio_channel().is_some()
+                                        && (clip.id == c.id
+                                            || (app.ui.playlist.selection.contains(&c.id)
+                                                && app.ui.playlist.selection.contains(&clip.id)))
+                                })
+                                .cloned()
+                                .collect(),
                         },
                         _ => Drag::Move {
                             ids,
@@ -2398,27 +2563,47 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     ));
                 }
             }
-            Some(Drag::Fade { id, out }) => {
-                // Fades are free (no snap), as FL Studio's handles.
-                if let Some(c) = app.project().clip(*id).cloned() {
-                    let t = view.tick_at(p.x).clamp(c.start as i64, c.end() as i64) as Tick;
-                    let (fade_in, fade_out) = if *out {
-                        (c.fade_in.min(t - c.start), c.end() - t)
-                    } else {
-                        (t - c.start, c.fade_out.min(c.end() - t))
-                    };
-                    if (fade_in, fade_out) != (c.fade_in, c.fade_out) {
-                        app.exec(Command::SetClipFades {
-                            clip: *id,
-                            fade_in,
-                            fade_out,
-                        });
+            Some(Drag::FadeCurve { out, originals, grab_y }) => {
+                for clip in originals {
+                    let tension = (clip.fade_curve(*out) + (*grab_y - p.y) / 80.0).clamp(-1.0, 1.0);
+                    app.exec(Command::SetClipFadeCurve {
+                        clip: clip.id,
+                        out: *out,
+                        tension,
+                    });
+                }
+            }
+            Some(Drag::Fade { id, out, originals }) => {
+                if let Some(anchor) = originals.iter().find(|c| c.id == *id) {
+                    let tick = view.tick_at(p.x).clamp(anchor.start as i64, anchor.end() as i64) as Tick;
+                    let length = if *out { anchor.end() - tick } else { tick - anchor.start };
+                    let previous = if *out { anchor.fade_out } else { anchor.fade_in };
+                    let delta = length as i64 - previous as i64;
+                    let commands: Vec<_> = originals
+                        .iter()
+                        .filter_map(|original| {
+                            let c = app.project().clip(original.id)?;
+                            let (fade_in, fade_out) = if *out {
+                                let fade_out = (original.fade_out as i64 + delta).clamp(0, c.length as i64) as Tick;
+                                (original.fade_in.min(c.length - fade_out), fade_out)
+                            } else {
+                                let fade_in = (original.fade_in as i64 + delta).clamp(0, c.length as i64) as Tick;
+                                (fade_in, original.fade_out.min(c.length - fade_in))
+                            };
+                            ((fade_in, fade_out) != (c.fade_in, c.fade_out)).then_some(Command::SetClipFades {
+                                clip: c.id,
+                                fade_in,
+                                fade_out,
+                            })
+                        })
+                        .collect();
+                    for command in commands {
+                        app.exec(command);
                     }
-                    let secs = |ticks: Tick| ticks as f64 * 60.0 / app.project().tempo.bpm() / PPQ as f64;
                     app.hint(format!(
-                        "Fade in {:.2} s · fade out {:.2} s",
-                        secs(fade_in),
-                        secs(fade_out)
+                        "Fade {}: {:.2} s",
+                        if *out { "out" } else { "in" },
+                        length as f64 * 60.0 / app.project().tempo.bpm() / PPQ as f64
                     ));
                 }
             }

@@ -146,10 +146,12 @@ impl limeshot_dsp::Instrument for Reference {
                         if let Some(mut voice) = Voice::for_instrument(&self.cfg, self.root, key, velocity, self.rate) {
                             voice.skip(playback.offset_secs + playback.elapsed_secs, self.rate);
                             voice.fade = Some(limeshot_dsp::voice::ClipFade {
-                                in_len: playback.fade_in_secs * self.rate,
-                                pos: playback.elapsed_secs as f32 * self.rate,
-                                out_len: playback.fade_out_secs * self.rate,
-                                left: playback.remaining_secs as f32 * self.rate,
+                                in_curve: playback.fade_in_curve,
+                                out_curve: playback.fade_out_curve,
+                                in_len: f64::from(playback.fade_in_secs) * f64::from(self.rate),
+                                pos: playback.elapsed_secs * f64::from(self.rate),
+                                out_len: f64::from(playback.fade_out_secs) * f64::from(self.rate),
+                                left: playback.remaining_secs * f64::from(self.rate),
                             });
                             if let Some(slot) = self.slots.iter_mut().find(|(_, v)| !v.is_active()) {
                                 *slot = (id, voice);

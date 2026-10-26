@@ -204,10 +204,23 @@ pub struct Voice {
 /// to its end.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ClipFade {
-    pub in_len: f32,
-    pub pos: f32,
-    pub out_len: f32,
-    pub left: f32,
+    pub in_curve: f32,
+    pub out_curve: f32,
+    pub in_len: f64,
+    pub pos: f64,
+    pub out_len: f64,
+    pub left: f64,
+}
+
+/// Monotonic quartic fade blend. Zero tension preserves linear gain exactly.
+pub fn fade_curve(value: f32, tension: f32) -> f32 {
+    let t = value.clamp(0.0, 1.0);
+    let bend = if tension >= 0.0 {
+        1.0 - (1.0 - t).powi(4)
+    } else {
+        t.powi(4)
+    };
+    t + tension.abs().min(1.0) * (bend - t)
 }
 
 impl ClipFade {
@@ -225,7 +238,7 @@ impl ClipFade {
         };
         self.pos += 1.0;
         self.left -= 1.0;
-        g_in * g_out
+        fade_curve(g_in as f32, self.in_curve) * fade_curve(g_out as f32, self.out_curve)
     }
 }
 
@@ -624,5 +637,26 @@ impl Voice {
             self.source = Source::Off;
         }
         (l * e, r * e)
+    }
+}
+
+#[cfg(test)]
+mod fade_tests {
+    #[test]
+    fn fade_tension_is_monotonic_and_keeps_endpoints() {
+        for tension in [-1.0, -0.5, 0.0, 0.5, 1.0] {
+            assert_eq!(super::fade_curve(0.0, tension), 0.0);
+            assert_eq!(super::fade_curve(1.0, tension), 1.0);
+            let mut previous = 0.0;
+            for i in 0..=1000 {
+                let t = i as f32 / 1000.0;
+                let value = super::fade_curve(t, tension);
+                assert!(value >= previous && value <= 1.0);
+                if tension == 0.0 {
+                    assert_eq!(value, t);
+                }
+                previous = value;
+            }
+        }
     }
 }

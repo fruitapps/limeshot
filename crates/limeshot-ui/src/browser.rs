@@ -27,6 +27,11 @@ pub struct State {
     pending_imports: Vec<(PathBuf, ImportTarget)>,
     /// Put the keyboard in the search field on the next frame (Tools › Browser find…).
     pub focus_search: bool,
+    search_roots: Vec<PathBuf>,
+    search_index: Vec<PathBuf>,
+    search_rx: Option<std::sync::mpsc::Receiver<Vec<PathBuf>>>,
+    search_query: String,
+    search_results: Vec<PathBuf>,
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
     drag_peaks: HashMap<PathBuf, std::sync::Arc<crate::playlist::Peaks>>,
     pending_preview: Option<PathBuf>,
@@ -81,6 +86,8 @@ impl State {
 
     pub fn refresh(&mut self) {
         self.listings.clear();
+        self.search_roots.clear();
+        self.search_query.clear();
     }
 }
 
@@ -158,6 +165,20 @@ pub(crate) fn sampler_with_audio(
     root_key: u8,
     sample: &limeshot_dsp::SampleData,
 ) -> limeshot_core::PluginRef {
+    if sample.disk.is_some() {
+        let mut plugin = limeshot_core::LimePlugin::SAMPLER.with_values(
+            &limeshot_core::lime::sampler_values(params, root_key),
+            false,
+            None,
+        );
+        if let Some(source) = &params.sample {
+            limeshot_core::lime::set_disk_source(&mut plugin, &source.path);
+            plugin
+                .extra
+                .insert("lime-sample-path".into(), serde_json::json!(source.path));
+        }
+        return plugin;
+    }
     let audio = limeshot_core::EmbeddedAudio {
         name: sample
             .source
@@ -248,7 +269,7 @@ pub fn poll_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
                 app.toast_error(e);
                 app.ui.browser.pending_preview = None;
             }
-            _ => ctx.request_repaint(),
+            _ => ctx.request_repaint_after(std::time::Duration::from_millis(33)),
         }
     }
 }
@@ -272,7 +293,12 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         if icon_button(ui, Icon::Play, false, 20.0, "Play the sample").clicked() {
             preview(app, &path);
         }
-        ui.label(RichText::new(file_label(&path)).font(semibold(11.0)).color(t.text));
+        if icon_button(ui, Icon::Stop, false, 20.0, "Stop sample preview").clicked() {
+            app.ui.browser.cancel_preview();
+            app.ui.browser.preview_started = None;
+            app.send(Msg::StopPreview);
+        }
+        ui.add(egui::Label::new(RichText::new(file_label(&path)).font(semibold(11.0)).color(t.text)).truncate());
         if let Some(s) = &sample {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(
@@ -316,6 +342,9 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         let peaks = (0..cols)
             .map(|x| {
                 let (a, b) = (x * frames / cols, ((x + 1) * frames / cols).max(x * frames / cols + 1));
+                if let Some(range) = s.overview_range(a, b.min(frames)) {
+                    return range;
+                }
                 (a..b.min(frames))
                     .step_by(((b - a) / 64).max(1))
                     .map(|i| {
@@ -349,7 +378,7 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         if k < 1.0 {
             let x = r.left() + k as f32 * r.width();
             painter.line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, t.accent));
-            ui.ctx().request_repaint();
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
         }
     }
     if resp.clicked() {
@@ -396,43 +425,61 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
                 r.request_focus();
             }
         });
+    let mut roots: Vec<(String, PathBuf, bool)> = Vec::new();
+    if let Some(b) = &app.bundled_samples {
+        roots.push(("LIMESHOT SAMPLES".into(), b.clone(), false));
+    }
+    for f in &app.settings.browser_folders {
+        roots.push((
+            f.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| f.display().to_string()),
+            f.clone(),
+            true,
+        ));
+    }
+    let searching = !app.ui.browser.filter.trim().is_empty();
+    if searching {
+        ui.horizontal(|ui| {
+            ui.selectable_label(true, "Search")
+                .on_hover_text("Results in all sample folders");
+            if ui.small_button("×").on_hover_text("Dismiss search").clicked() {
+                app.ui.browser.filter.clear();
+            }
+        });
+        search(app, ui, &roots);
+        return;
+    }
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         ui.spacing_mut().indent = 12.0;
+        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
         CollapsingHeader::new(RichText::new("CHANNELS").font(semibold(10.5)).color(t.text_dim))
             .default_open(true)
             .show(ui, |ui| project_tree(app, ui));
-        let mut roots: Vec<(String, PathBuf, bool)> = Vec::new();
-        if let Some(b) = &app.bundled_samples {
-            roots.push(("LIMESHOT SAMPLES".into(), b.clone(), false));
-        }
-        for f in &app.settings.browser_folders {
-            roots.push((
-                f.file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| f.display().to_string()),
-                f.clone(),
-                true,
-            ));
-        }
         let mut remove = None;
-        for (name, dir, user) in roots {
-            let header = CollapsingHeader::new(RichText::new(name).font(semibold(10.5)).color(if user {
-                t.accent
-            } else {
-                t.text_dim
-            }))
-            .id_salt(&dir)
-            .default_open(!user)
-            .show(ui, |ui| folder(app, ui, &dir, 0));
-            if user {
-                header.header_response.context_menu(|ui| {
-                    if ui.button("Remove from Browser").clicked() {
-                        remove = Some(dir.clone());
-                        ui.close();
+        CollapsingHeader::new(RichText::new("FILES").font(semibold(10.5)).color(t.text_dim))
+            .default_open(true)
+            .show(ui, |ui| {
+                for (name, dir, user) in roots {
+                    let header = folder_header(
+                        ui,
+                        RichText::new(name)
+                            .font(semibold(10.5))
+                            .color(if user { t.accent } else { t.text_dim }),
+                    )
+                    .id_salt(&dir)
+                    .default_open(!user)
+                    .show(ui, |ui| folder(app, ui, &dir, 0));
+                    if user {
+                        header.header_response.context_menu(|ui| {
+                            if ui.button("Remove from Browser").clicked() {
+                                remove = Some(dir.clone());
+                                ui.close();
+                            }
+                        });
                     }
-                });
-            }
-        }
+                }
+            });
         if let Some(d) = remove {
             app.settings.browser_folders.retain(|f| f != &d);
             app.save_settings();
@@ -443,6 +490,16 @@ pub fn show(app: &mut LimeShotApp, ui: &mut Ui) {
 /// Show the project's channels with selection, drag payloads, and channel context actions.
 /// Double-click opens a loaded plugin's wrapper or the channel's settings; sampler drags carry
 /// the sample path when assigned, and other channel drags carry the channel id.
+fn folder_header(ui: &Ui, title: impl Into<egui::WidgetText>) -> CollapsingHeader {
+    let galley = title.into().into_galley(
+        ui,
+        Some(egui::TextWrapMode::Truncate),
+        (ui.available_width() - 28.0).max(1.0),
+        egui::TextStyle::Button,
+    );
+    CollapsingHeader::new(egui::WidgetText::Galley(galley))
+}
+
 fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let sel = app.selected_channel();
@@ -494,20 +551,28 @@ fn project_tree(app: &mut LimeShotApp, ui: &mut Ui) {
             CornerRadius::same(2),
             crate::theme::rgb(color),
         );
-        ui.painter().text(
-            r.left_center() + vec2(22.0, 0.0),
-            egui::Align2::LEFT_CENTER,
-            &name,
-            crate::theme::prop(12.0),
+        let kind_width = if r.width() >= 140.0 { 58.0 } else { 0.0 };
+        let text_rect = Rect::from_min_max(r.min + vec2(22.0, 0.0), r.max - vec2(kind_width + 6.0, 0.0));
+        let mut job = egui::text::LayoutJob::simple_singleline(name, crate::theme::prop(12.0), t.text);
+        // Reserve space for the type before laying out the channel name.
+        job.wrap.max_width = text_rect.width().max(0.0);
+        job.wrap.max_rows = 1;
+        job.wrap.break_anywhere = true;
+        let galley = ui.fonts_mut(|f| f.layout_job(job));
+        ui.painter().with_clip_rect(text_rect).galley(
+            text_rect.left_center() - vec2(0.0, galley.size().y / 2.0),
+            galley,
             t.text,
         );
-        ui.painter().text(
-            r.right_center() - vec2(6.0, 0.0),
-            egui::Align2::RIGHT_CENTER,
-            kind,
-            crate::theme::prop(10.5),
-            t.text_faint,
-        );
+        if kind_width > 0.0 {
+            ui.painter().text(
+                r.right_center() - vec2(6.0, 0.0),
+                egui::Align2::RIGHT_CENTER,
+                kind,
+                crate::theme::prop(10.5),
+                t.text_faint,
+            );
+        }
         if resp.clicked() || resp.secondary_clicked() {
             app.select_channel(id);
         }
@@ -540,7 +605,7 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
     }
     for (path, is_dir) in entries {
         if is_dir {
-            CollapsingHeader::new(file_label(&path))
+            folder_header(ui, file_label(&path))
                 .id_salt(&path)
                 .show(ui, |ui| folder(app, ui, &path, depth + 1));
             continue;
@@ -549,52 +614,131 @@ fn folder(app: &mut LimeShotApp, ui: &mut Ui, dir: &Path, depth: usize) {
         if !filter.is_empty() && !name.to_lowercase().contains(&filter) {
             continue;
         }
-        let selected = app.ui.browser.selected.as_deref() == Some(path.as_path());
-        let id = egui::Id::new(("browser-file", &path));
-        let resp = ui
-            .dnd_drag_source(id, DraggedSample(path.clone()), |ui| {
-                ui.horizontal(|ui| {
-                    let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-                    icons::paint(
-                        ui.painter(),
-                        r,
-                        Icon::Wave,
-                        if selected { t.accent } else { t.text_dim },
-                    );
-                    ui.add(
-                        egui::Label::new(RichText::new(&name).color(if selected { t.accent } else { t.text }))
-                            .selectable(false),
-                    );
-                });
-            })
-            .response;
-        let resp = ui.interact(resp.rect, id.with("click"), Sense::click());
-        app.ui.browser.file_rects.push((path.clone(), resp.rect));
-        if resp.clicked() {
-            app.ui.browser.selected = Some(path.clone());
+        sample_row(app, ui, &path);
+    }
+}
+
+fn sample_row(app: &mut LimeShotApp, ui: &mut Ui, path: &Path) {
+    let path = path.to_path_buf();
+    let name = file_label(&path);
+    let t = Theme::current();
+    let selected = app.ui.browser.selected.as_deref() == Some(path.as_path());
+    let id = egui::Id::new(("browser-file", &path));
+    let resp = ui
+        .dnd_drag_source(id, DraggedSample(path.clone()), |ui| {
+            ui.horizontal(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                icons::paint(
+                    ui.painter(),
+                    r,
+                    Icon::Wave,
+                    if selected { t.accent } else { t.text_dim },
+                );
+                ui.add(
+                    egui::Label::new(RichText::new(&name).color(if selected { t.accent } else { t.text }))
+                        .truncate()
+                        .selectable(false),
+                );
+            });
+        })
+        .response;
+    let resp = ui.interact(resp.rect, id.with("click"), Sense::click());
+    app.ui.browser.file_rects.push((path.clone(), resp.rect));
+    if resp.clicked() {
+        app.ui.browser.selected = Some(path.clone());
+        preview(app, &path);
+    }
+    if resp.hovered() {
+        app.hint(format!(
+            "{} — click or double-click to preview, drag to the Channel Rack",
+            path.display()
+        ));
+    }
+    resp.context_menu(|ui| {
+        if ui.button("Preview").clicked() {
             preview(app, &path);
+            ui.close();
         }
-        if resp.hovered() {
-            app.hint(format!(
-                "{} — click or double-click to preview, drag to the Channel Rack",
-                path.display()
-            ));
+        if ui.button("Load into selected channel").clicked() {
+            load_into_selected(app, &path);
+            ui.close();
         }
-        resp.context_menu(|ui| {
-            if ui.button("Preview").clicked() {
-                preview(app, &path);
-                ui.close();
+        if ui.button("New sampler channel").clicked() {
+            new_sampler_channel(app, &path);
+            ui.close();
+        }
+    });
+}
+
+/// Index on a worker so a search through closed folders never blocks a UI frame.
+fn search(app: &mut LimeShotApp, ui: &mut Ui, roots: &[(String, PathBuf, bool)]) {
+    let paths: Vec<_> = roots.iter().map(|(_, p, _)| p.clone()).collect();
+    let state = &mut app.ui.browser;
+    if state.search_roots != paths {
+        state.search_roots = paths.clone();
+        state.search_index.clear();
+        state.search_query.clear();
+        let (tx, rx) = std::sync::mpsc::channel();
+        state.search_rx = Some(rx);
+        let repaint = ui.ctx().clone();
+        std::thread::spawn(move || {
+            let mut pending = paths;
+            let mut files = Vec::new();
+            let mut seen = std::collections::HashSet::new();
+            while let Some(dir) = pending.pop() {
+                let Ok(canonical) = dir.canonicalize() else { continue };
+                if !seen.insert(canonical) {
+                    continue;
+                }
+                let Ok(entries) = std::fs::read_dir(dir) else { continue };
+                for entry in entries.filter_map(Result::ok) {
+                    if entry.file_name().to_string_lossy().starts_with('.') {
+                        continue;
+                    }
+                    let Ok(kind) = entry.file_type() else { continue };
+                    if kind.is_dir() || (kind.is_symlink() && entry.path().is_dir()) {
+                        pending.push(entry.path());
+                    } else if (kind.is_file() || kind.is_symlink()) && is_sample(&entry.path()) {
+                        files.push(entry.path());
+                    }
+                }
             }
-            if ui.button("Load into selected channel").clicked() {
-                load_into_selected(app, &path);
-                ui.close();
-            }
-            if ui.button("New sampler channel").clicked() {
-                new_sampler_channel(app, &path);
-                ui.close();
-            }
+            files.sort();
+            files.dedup();
+            let _ = tx.send(files);
+            repaint.request_repaint();
         });
     }
+    if let Some(files) = state.search_rx.as_ref().and_then(|rx| rx.try_recv().ok()) {
+        state.search_index = files;
+        state.search_rx = None;
+        state.search_query.clear();
+    }
+    let query = state.filter.trim().to_lowercase();
+    if state.search_query != query {
+        state.search_results = state
+            .search_index
+            .iter()
+            .filter(|p| file_label(p).to_lowercase().contains(&query))
+            .cloned()
+            .collect();
+        state.search_query = query;
+    }
+    if state.search_rx.is_some() {
+        ui.label("Searching folders…");
+    } else if state.search_results.is_empty() {
+        ui.label("No samples found");
+    }
+    // Only paint the visible results, even with very large libraries.
+    let count = state.search_results.len();
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show_rows(ui, 22.0, count, |ui, range| {
+            for i in range {
+                let path = app.ui.browser.search_results[i].clone();
+                sample_row(app, ui, &path);
+            }
+        });
 }
 
 fn load_into_selected(app: &mut LimeShotApp, path: &Path) {

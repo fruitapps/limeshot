@@ -45,6 +45,8 @@ pub struct NoteEvent {
     /// An audio clip's fade-in and fade-out, in seconds (0: none).
     pub fade_in_secs: f32,
     pub fade_out_secs: f32,
+    pub fade_in_curve: f32,
+    pub fade_out_curve: f32,
 }
 
 impl NoteEvent {
@@ -60,6 +62,8 @@ impl NoteEvent {
             clip: false,
             fade_in_secs: 0.0,
             fade_out_secs: 0.0,
+            fade_in_curve: 0.0,
+            fade_out_curve: 0.0,
         }
     }
 
@@ -399,6 +403,8 @@ pub fn compile(project: &Project, current_pattern: PatternId, _samples: &dyn Sam
                         clip: true,
                         fade_in_secs: (secs_per_tick * clip.fade_in as f64) as f32,
                         fade_out_secs: (secs_per_tick * clip.fade_out as f64) as f32,
+                        fade_in_curve: clip.fade_curve(false),
+                        fade_out_curve: clip.fade_curve(true),
                         ..NoteEvent::note(clip.start, clip.length, channel, c.root_key, 1.0)
                     });
                 }

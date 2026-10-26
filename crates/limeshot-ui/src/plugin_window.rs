@@ -552,13 +552,18 @@ fn show(app: &mut LimeShotApp, ctx: &Context, target: Target, title: &str) {
                 .map_or(vec2(320.0, 200.0), |e| {
                     let size = e.size();
                     vec2(
-                        size.width as f32 / zoom,
-                        size.height as f32 / zoom + HEADER + crate::workspace::TITLE_H,
+                        (size.width as f32 / zoom).max(320.0),
+                        (size.height as f32 / zoom + HEADER + crate::workspace::TITLE_H).max(200.0),
                     )
                 }),
         )
         .default_size(size)
         .constrain_to(app.ui.workspace.area);
+    if native_tab && w.editor.as_ref().is_some_and(|e| !e.can_resize()) {
+        // Editors such as Serum resize through their own corner while rejecting host-edge
+        // resizing. Follow their current size, not egui's previous desired wrapper dimensions.
+        window = window.fixed_size(size);
+    }
     if let Some(p) = w.open_at {
         window = window.default_pos(p);
     }

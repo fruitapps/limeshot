@@ -31,10 +31,13 @@ Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not impleme
 * Clip playback is a Lime Sampler extension (bounded, versioned SysEx); third-party samplers do not understand it.
   Clip fades and offsets use output time; changing the tempo does not stretch source audio.
 * The Mixer track EQ is a dedicated hosted Lime EQ after all ten inserts, driven by the inline bands.
-* Lime Sampler embeds at most 6 million stereo frames at 8–384 kHz (about 125 seconds at 48 kHz, state below
-  64 MiB); longer samples must be trimmed (no streaming from disk). Projects grow with their samples. Imports decode
-  on the loader thread and report failures before any channel or clip exists; failed decodes are cached by path,
-  size and modification time.
+* Lime Sampler embeds up to six million stereo frames (64 MiB plugin state). Longer samples use Keep on disk,
+  with a 2 GB decoded stereo float cap, bounded page reads and prepared waveforms. Disk sources must travel with
+  the project; an evicted temporary cache is reconstructed from the original file. New uncached seeks or many
+  scattered concurrent offsets may underrun; the native editor reports missed frames. Live disk stress and
+  platform checks remain open. See [implementation and FL research](../research/alpha1-sampler-and-fades.md).
+* Fades support independent single curves, with selected-clip length/tension gestures. Smooth S curves and
+  automatic crossfades remain open; the new native bundles are required for curved fade playback.
 * Opening a `.lime` file, a recovery copy or an `.flp` does not embed audio from outside the project folder
   (symlinks included): choose the source in the GUI, or pass `--allow-external-samples` to the CLI.
 * Plugins receive tempo at block boundaries; a tempo change inside a block reaches synced effects in the next block.

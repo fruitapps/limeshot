@@ -96,6 +96,8 @@ pub struct NativeEditor {
     status: String,
     preset_name: String,
     entry: String,
+    editing: Option<usize>,
+    sample_loading: Option<std::sync::mpsc::Receiver<Result<String, String>>>,
     sample_name: String,
     sample: Option<Arc<limeshot_dsp::SampleData>>,
     waveform: [f32; 256],
@@ -115,6 +117,8 @@ impl NativeEditor {
             status: String::new(),
             preset_name: "Init".into(),
             entry: String::new(),
+            editing: None,
+            sample_loading: None,
             sample_name: String::new(),
             sample: None,
             waveform: [0.0; 256],
@@ -150,6 +154,27 @@ impl NativeEditor {
     /// File actions may open dialogs and perform I/O; failures appear in the status text.
     /// Host parameter/state edits require an attached context. Requests a repaint after 33 ms.
     pub fn draw(&mut self, ui: &mut Ui) {
+        if let Some(result) = self.sample_loading.as_ref().and_then(|rx| rx.try_recv().ok()) {
+            self.sample_loading = None;
+            match result {
+                Ok(sample) => {
+                    if let Some(context) = &self.context {
+                        let mut state = context.get_state();
+                        state.fields.insert("sample-v1".into(), sample);
+                        context.set_state(state);
+                        self.status = "Sample loaded".into();
+                    }
+                }
+                Err(error) => self.status = error,
+            }
+        }
+        if let Some(disk) = self.params.sample.audio().as_ref().and_then(|s| s.disk.clone()) {
+            if disk.failed() {
+                self.status = "Disk sample read failed; reload its source".into();
+            } else if disk.underruns() > 0 {
+                self.status = format!("Disk read-ahead missed {} frames; reduce disk load", disk.underruns());
+            }
+        }
         let t = Theme::for_plugin(self.id);
         let params = self.params.clone();
         let context = self.context.clone();
@@ -196,7 +221,7 @@ impl NativeEditor {
         };
         self.paint_plugin(ui, body, &t);
         let status = if self.status.is_empty() {
-            "Drag: adjust   ·   Shift: fine   ·   Double-click: reset   ·   Right-click: type value"
+            "Drag: adjust   ·   Shift: fine   ·   Double-click: reset   ·   Click value: type"
         } else {
             &self.status
         };
@@ -284,20 +309,27 @@ impl NativeEditor {
     /// Load supported audio into the host's embedded-sample state, preserving other state fields.
     /// Load or serialization errors become status text. Does nothing without a host context.
     fn load_sample(&mut self, path: &std::path::Path) {
-        let Some(context) = &self.context else {
+        self.load_sample_mode(path, None);
+    }
+
+    fn load_sample_mode(&mut self, path: &std::path::Path, disk: Option<bool>) {
+        if self.context.is_none() {
             return;
-        };
-        match EmbeddedSample::load(path)
-            .and_then(|sample| serde_json::to_string(&sample).map_err(|_| crate::sample::SampleError::Invalid))
-        {
-            Ok(sample) => {
-                let mut state = context.get_state();
-                state.fields.insert("sample-v1".into(), sample);
-                context.set_state(state);
-                self.status = "Sample loaded and included in host project state".into();
-            }
-            Err(e) => self.status = e.to_string(),
         }
+        let path = path.to_path_buf();
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.sample_loading = Some(rx);
+        self.status = "Preparing sample…".into();
+        std::thread::spawn(move || {
+            let sample = match disk {
+                Some(mode) => EmbeddedSample::load_mode(&path, mode),
+                None => EmbeddedSample::load(&path),
+            };
+            let result = sample
+                .map_err(|e| e.to_string())
+                .and_then(|sample| serde_json::to_string(&sample).map_err(|e| e.to_string()));
+            let _ = tx.send(result);
+        });
     }
 }
 
@@ -526,6 +558,54 @@ mod layout_tests {
 mod interaction_tests {
     use super::*;
     use std::sync::atomic::Ordering;
+
+    #[test]
+    fn numeric_value_click_selects_text_and_accepts_direct_input() {
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(vec2(850.0, 600.0))
+            .build_ui_state(
+                |ui, (editor, initialized)| {
+                    if !*initialized {
+                        install_theme(ui.ctx());
+                        *initialized = true;
+                        return;
+                    }
+                    editor.draw(ui);
+                },
+                (NativeEditor::preview(0), false),
+            );
+        harness.run_steps(3);
+        let position = harness
+            .ctx
+            .data(|d| d.get_temp::<Rect>(Id::unique(("native-value", "Octave"))))
+            .unwrap()
+            .center();
+        harness.input_mut().events.push(Event::PointerMoved(position));
+        harness.step();
+        for pressed in [true, false] {
+            harness.input_mut().events.push(Event::PointerButton {
+                pos: position,
+                button: PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+            harness.step();
+        }
+        assert_eq!(harness.state().0.editing, Some(1));
+        harness.input_mut().events.push(Event::Text("-2".into()));
+        harness.step();
+        assert_eq!(harness.state().0.entry, "-2", "typing replaces the selected readout");
+        harness.input_mut().events.push(Event::Key {
+            key: Key::Enter,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        harness.step();
+        assert_eq!(harness.state().0.editing, None);
+        assert!(harness.state().0.status.is_empty());
+    }
 
     #[test]
     fn waveform_and_keyboard_send_audition_and_release_requests() {

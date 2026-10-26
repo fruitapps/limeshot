@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **189** — IMPLEMENTED 23, IN_PROGRESS 1, NOT_STARTED 150, NOT_PLANNED 15
+Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
 
 ## MIDI
 
@@ -115,7 +115,7 @@ Tracked: **189** — IMPLEMENTED 23, IN_PROGRESS 1, NOT_STARTED 150, NOT_PLANNED
 | SET-106 | Miscellaneous | Startup project | dropdown | Default template | Options › General settings › Miscellaneous › Startup project | OBSERVED | — | NOT_STARTED | APP-015 |  |
 | SET-107 | Advanced | Don't limit windows to screen | switch | off | Options › General settings › Advanced › Don't limit windows to screen | OBSERVED | — | NOT_STARTED | UI-007 |  |
 | SET-108 | Advanced | Fast sample preview | switch | on | Options › General settings › Advanced › Fast sample preview | OBSERVED | — | NOT_STARTED | BR-002 |  |
-| SET-109 | Advanced | Auto keep long audio on disk | switch | on | Options › General settings › Advanced › Auto keep long audio on disk | OBSERVED | — | NOT_STARTED | PL-014 |  |
+| SET-109 | Advanced | Auto keep long audio on disk | switch | on | Options › General settings › Advanced › Auto keep long audio on disk | OBSERVED | `settings.auto_keep_long_audio_on_disk` | IMPLEMENTED | INS-016 | Default on. Long host imports/previews use a bounded disk cache up to 2 GB decoded stereo float audio; native Sampler also offers per-source Keep on disk. |
 | SET-110 | Advanced | Read sample tempo information | switch | on | Options › General settings › Advanced › Read sample tempo information | OBSERVED | — | NOT_STARTED | INS-001 |  |
 | SET-111 | Advanced | Read sample root note | switch | on | Options › General settings › Advanced › Read sample root note | OBSERVED | — | NOT_STARTED | INS-001 |  |
 | SET-112 | Advanced | Initialize controls automatically | switch | on | Options › General settings › Advanced › Initialize controls automatically | OBSERVED | — | NOT_STARTED | AUT-011 |  |

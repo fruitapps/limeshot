@@ -28,3 +28,5 @@ See `vendor/egui-baseview/LIMESHOT-PATCH.md`.
 
 The same egui-baseview patch also defers native-modal re-entrant draw/resize callbacks and lets the modal
 panel handle nested input, preventing an active-frame RefCell borrow abort.
+
+Local patch: `vendor/nice-plug` retains nice-plug 0.4.2 under ISC and fixes the VST3 activation processing mode; see its `LIMESHOT-PATCH.md`.

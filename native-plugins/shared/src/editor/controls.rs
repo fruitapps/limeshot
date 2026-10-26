@@ -31,11 +31,20 @@ impl NativeEditor {
             let setter = context.param_setter();
             if response.drag_started() {
                 setter.begin_set_parameter(p);
+                ui.ctx()
+                    .data_mut(|d| d.insert_temp(response.id.with("drag-value"), p.unmodulated_normalized_value()));
             }
             if response.dragged() {
                 let normalized = absolute.unwrap_or_else(|| {
                     let step = if ui.input(|i| i.modifiers.shift) { 0.0005 } else { 0.005 };
-                    p.unmodulated_normalized_value() - ui.input(|i| i.pointer.delta().y) * step
+                    let id = response.id.with("drag-value");
+                    let previous = ui
+                        .ctx()
+                        .data(|d| d.get_temp::<f32>(id))
+                        .unwrap_or_else(|| p.unmodulated_normalized_value());
+                    let next = (previous - ui.input(|i| i.pointer.delta().y) * step).clamp(0.0, 1.0);
+                    ui.ctx().data_mut(|d| d.insert_temp(id, next));
+                    next
                 });
                 setter.set_parameter(p, p.preview_plain(normalized.clamp(0.0, 1.0)));
             }
@@ -51,7 +60,16 @@ impl NativeEditor {
                 set(&setter, p, p.default_plain_value());
             }
             let wheel = if response.hovered() {
-                ui.input(|i| i.smooth_scroll_delta.y)
+                ui.input(|i| {
+                    i.raw
+                        .events
+                        .iter()
+                        .filter_map(|event| match event {
+                            Event::MouseWheel { delta, .. } => Some(delta.y),
+                            _ => None,
+                        })
+                        .sum()
+                })
             } else {
                 0.0
             };
@@ -59,25 +77,76 @@ impl NativeEditor {
                 set(
                     &setter,
                     p,
-                    p.preview_plain((p.unmodulated_normalized_value() + wheel * 0.001).clamp(0.0, 1.0)),
+                    if p.step_count().is_some() {
+                        if wheel > 0.0 {
+                            p.next_step(p.value(), false)
+                        } else {
+                            p.previous_step(p.value(), false)
+                        }
+                    } else {
+                        p.preview_plain((p.unmodulated_normalized_value() + wheel * 0.001).clamp(0.0, 1.0))
+                    },
                 );
             }
-            response.context_menu(|ui| {
-                ui.label(p.name());
-                ui.add(TextEdit::singleline(&mut self.entry).hint_text("Value or choice"));
-                if ui.button("Apply").clicked()
-                    && let Some(v) = p.string_to_normalized_value(&self.entry)
-                {
-                    set(&setter, p, p.preview_plain(v));
-                    ui.close();
-                }
-                if ui.button("Reset").clicked() {
-                    set(&setter, p, p.default_plain_value());
-                    ui.close();
-                }
-            });
         }
         response
+    }
+    fn value_field(&mut self, ui: &mut Ui, rect: Rect, index: usize, color: Color32, font: FontId) {
+        let param = &self.params.controls[index].value;
+        let id = ui.scope_id().with(("value-entry", index));
+        ui.ctx()
+            .data_mut(|d| d.insert_temp(Id::unique(("native-value", param.name())), rect));
+        let mut focus = false;
+        if self.editing != Some(index) {
+            let response = ui
+                .interact(rect, id, Sense::click())
+                .on_hover_text("Click to type a value; Enter applies, Escape cancels");
+            ui.painter().text(
+                rect.center(),
+                Align2::CENTER_CENTER,
+                readout(param),
+                font.clone(),
+                color,
+            );
+            if !response.clicked() {
+                return;
+            }
+            self.entry = param.normalized_value_to_string(param.unmodulated_normalized_value(), false);
+            self.editing = Some(index);
+            focus = true;
+        }
+        let response = ui.put(
+            rect,
+            TextEdit::singleline(&mut self.entry)
+                .id(id.with("text"))
+                .font(font)
+                .align(Align2::CENTER_CENTER)
+                .margin(vec2(1.0, 0.0)),
+        );
+        if focus {
+            response.request_focus();
+            let mut state = TextEdit::load_state(ui.ctx(), response.id).unwrap_or_default();
+            state
+                .cursor
+                .set_char_range(Some(text::CCursorRange::select_all_str(&self.entry)));
+            state.store(ui.ctx(), response.id);
+        }
+        if ui.input(|i| i.key_pressed(Key::Escape)) {
+            self.editing = None;
+            response.surrender_focus();
+        } else if ui.input(|i| i.key_pressed(Key::Enter)) || (!focus && response.lost_focus()) {
+            if let Some(value) = param.string_to_normalized_value(&self.entry) {
+                if let Some(context) = &self.context {
+                    set(&context.param_setter(), param, param.preview_plain(value));
+                }
+                self.status.clear();
+                self.editing = None;
+                response.surrender_focus();
+            } else {
+                self.status = format!("Invalid value for {}", param.name());
+                response.request_focus();
+            }
+        }
     }
     pub(super) fn knob(
         &mut self,
@@ -89,7 +158,12 @@ impl NativeEditor {
         color: Color32,
         t: &Theme,
     ) {
-        self.control_response(ui, rect, index, None);
+        self.control_response(
+            ui,
+            Rect::from_min_max(rect.min, rect.max - vec2(0.0, 34.0 * c.s)),
+            index,
+            None,
+        );
         let param = &self.params.controls[index].value;
         let radius = (rect.width() * 0.36)
             .min((rect.height() - 38.0 * c.s) * 0.5)
@@ -109,12 +183,15 @@ impl NativeEditor {
             t,
             c.s,
         );
-        ui.painter().text(
-            pos2(rect.center().x, rect.bottom() - 24.0 * c.s),
-            Align2::CENTER_CENTER,
-            readout(param),
-            FontId::monospace(11.0 * c.s),
+        self.value_field(
+            ui,
+            Rect::from_center_size(
+                pos2(rect.center().x, rect.bottom() - 24.0 * c.s),
+                vec2(rect.width(), 20.0 * c.s),
+            ),
+            index,
             color,
+            FontId::monospace(11.0 * c.s),
         );
         ui.painter().text(
             pos2(rect.center().x, rect.bottom() - 8.0 * c.s),
@@ -134,7 +211,12 @@ impl NativeEditor {
         color: Color32,
         t: &Theme,
     ) {
-        let response = self.control_response(ui, r, index, None);
+        let response = self.control_response(
+            ui,
+            Rect::from_min_size(r.min, vec2(68.0 * c.s, r.height())),
+            index,
+            None,
+        );
         let p = ui.painter();
         p.rect_filled(
             r,
@@ -164,12 +246,12 @@ impl NativeEditor {
             FontId::proportional(11.0 * c.s),
             t.dim,
         );
-        p.text(
-            r.min + vec2(80.0, 49.0) * c.s,
-            Align2::LEFT_CENTER,
-            readout(param),
-            FontId::monospace(13.0 * c.s),
+        self.value_field(
+            ui,
+            Rect::from_min_size(r.min + vec2(72.0, 37.0) * c.s, vec2(r.width() - 76.0 * c.s, 24.0 * c.s)),
+            index,
             color,
+            FontId::monospace(13.0 * c.s),
         );
     }
     pub(super) fn fader(
@@ -189,7 +271,7 @@ impl NativeEditor {
         let absolute = ui
             .input(|i| i.pointer.interact_pos())
             .map(|p| (rail.bottom() - p.y) / rail.height());
-        self.control_response(ui, r, index, absolute);
+        self.control_response(ui, rail.expand(12.0 * c.s), index, absolute);
         let p = ui.painter();
         let param = &self.params.controls[index].value;
         let value = param.unmodulated_normalized_value();
@@ -222,12 +304,12 @@ impl NativeEditor {
             ],
             Stroke::new(2.0 * c.s, color),
         );
-        p.text(
-            pos2(r.center().x, r.bottom() - 24.0 * c.s),
-            Align2::CENTER_CENTER,
-            readout(param),
-            FontId::monospace(10.0 * c.s),
+        self.value_field(
+            ui,
+            Rect::from_center_size(pos2(r.center().x, r.bottom() - 24.0 * c.s), vec2(r.width(), 20.0 * c.s)),
+            index,
             color,
+            FontId::monospace(10.0 * c.s),
         );
     }
     pub(super) fn slider(&mut self, ui: &mut Ui, c: Canvas, r: Rect, index: usize, label: &str, t: &Theme) {
@@ -235,7 +317,7 @@ impl NativeEditor {
         let absolute = ui
             .input(|i| i.pointer.interact_pos())
             .map(|p| (p.x - rail.left()) / rail.width());
-        self.control_response(ui, r, index, absolute);
+        self.control_response(ui, rail.expand(8.0 * c.s), index, absolute);
         let param = &self.params.controls[index].value;
         let p = ui.painter();
         p.text(
@@ -257,12 +339,12 @@ impl NativeEditor {
             1,
             t.accent,
         );
-        p.text(
-            r.right_center() - vec2(8.0, 0.0) * c.s,
-            Align2::RIGHT_CENTER,
-            readout(param),
-            FontId::monospace(10.0 * c.s),
+        self.value_field(
+            ui,
+            Rect::from_min_max(pos2(r.right() - 80.0 * c.s, r.top()), r.max),
+            index,
             t.text,
+            FontId::monospace(10.0 * c.s),
         );
     }
     pub(super) fn choices(

@@ -634,6 +634,7 @@ impl LimeShotApp {
             })
     }
     pub fn sync_engine(&mut self) {
+        self.samples.auto_keep_long_audio_on_disk = self.settings.auto_keep_long_audio_on_disk;
         let loaded = self.samples.poll();
         crate::browser::poll_imports(self);
         let key = (self.doc.revision(), self.current_pattern());
@@ -642,8 +643,35 @@ impl LimeShotApp {
             return;
         }
         if self.compiled.map(|k| k.0) != Some(key.0) {
+            let disk_sources: Vec<_> = self
+                .project()
+                .channels
+                .iter()
+                .filter_map(|c| {
+                    let limeshot_core::Instrument::Plugin(plugin) = &c.instrument else {
+                        return None;
+                    };
+                    if plugin
+                        .extra
+                        .get("lime-disk-unapproved")
+                        .and_then(serde_json::Value::as_bool)
+                        == Some(true)
+                    {
+                        return None;
+                    }
+                    limeshot_core::lime::disk_source(plugin)
+                })
+                .collect();
+            for source in disk_sources {
+                self.samples.request_disk_path(self.samples.resolve(&source));
+            }
             let mut refs: Vec<String> = self.project().sample_refs().map(|r| r.path.clone()).collect();
             refs.extend(self.project().channels.iter().filter_map(|c| {
+                if let limeshot_core::Instrument::Plugin(p) = &c.instrument
+                    && p.extra.get("lime-disk-unapproved").and_then(serde_json::Value::as_bool) == Some(true)
+                {
+                    return None;
+                }
                 limeshot_core::lime::sampler_params(&c.instrument)?
                     .sample
                     .map(|s| s.path)
@@ -660,8 +688,13 @@ impl LimeShotApp {
                 let limeshot_core::Instrument::Plugin(plugin) = &c.instrument else {
                     return None;
                 };
-                (limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER))
-                    .then(|| (c.id, plugin.state.clone()))
+                (limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
+                    && plugin
+                        .extra
+                        .get("lime-disk-unapproved")
+                        .and_then(serde_json::Value::as_bool)
+                        != Some(true))
+                .then(|| (c.id, plugin.state.clone()))
             })
             .collect();
         self.sampler_sources
@@ -1132,7 +1165,13 @@ impl LimeShotApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         // Meters and the playhead animate; keep frames coming at a modest rate.
-        ctx.request_repaint_after(Duration::from_millis(if self.is_playing() { 16 } else { 50 }));
+        ctx.request_repaint_after(Duration::from_millis(if self.is_playing() {
+            16
+        } else if self.player.status().voices() > 0 {
+            33
+        } else {
+            200
+        }));
         self.toasts.retain(|t| t.until > Instant::now());
     }
 

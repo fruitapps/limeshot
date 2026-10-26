@@ -269,3 +269,15 @@ The tradeoff is retaining the code/factory for each visited bundle until LimeSho
 Host sliders queue the committed/reset value as well as drag auditions. A no-op document state edit can skip
 host synchronization, and a previously queued audition must not overwrite the final value on the next audio block.
 State serialization still occurs once at release; the existing bounded parameter ring carries the final update.
+
+
+## Alpha.1 disk sampler and performance follow-up (2026-10-26)
+
+Long sampler sources use a bounded worker-owned WAV cache, atomic page reads and prepared extrema;
+short sources retain embedded PCM. Realtime cache misses return silence and count underruns, while actual
+VST3 offline mode waits for pages. Disk sources retain relative project paths and require source approval
+on project opening. The decoded stereo float cap is 2,000,000,000 bytes. See the complete
+[design and research](../research/alpha1-sampler-and-fades.md), including memory bounds and seek limits.
+Native instruments process only their occupied voice prefix while retaining the full 128-voice pool.
+Fade counters are f64 and the bounded clip protocol carries curve tensions. Audio callback load remains
+render time / deadline; it does not measure total application CPU.
