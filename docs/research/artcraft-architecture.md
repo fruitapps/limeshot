@@ -51,7 +51,7 @@ The `storytold` org listing (GitHub API, same date) also has older Unreal/Bevy e
 | SoundCraft pattern | LimeShot decision | Reason |
 |---|---|---|
 | Commands dispatched by string id with JSON params (`engine.execute("track.new", json)`) | A Rust `enum Command` with typed fields, which is also `serde`-serializable | Compile-time checking for a smaller codebase; serialization still allows scripting from the CLI. |
-| TCP JSON-lines control channel + MCP server for agent control | Headless `limeshot-cli` that runs a JSON command script and renders | the project principles forbid network services. The CLI covers headless tests and agent control. |
+| TCP JSON-lines control channel + MCP server for agent control | Headless `limeshot-cli` that runs a JSON command script and renders | The project principles forbid mandatory network services; optional local services are allowed if the application remains fully usable offline without them. The CLI covers headless tests and agent control. |
 | WASM/web target (`soundcraft-web`) | Not built | the project principles forbid browser/WASM targets. |
 | Pro Tools sample-based timeline (`Samples` everywhere) | Musical ticks (960 PPQ) as the primary timebase; samples derived exactly with integer math | FL Studio's model is pattern/step based; musical positions must not drift when tempo changes. |
 | `xtask` with layer/asset/parity checks | Deferred; CI runs fmt, clippy, tests directly | Fewer moving parts for an MVP. Worth adding once the crate graph grows. |

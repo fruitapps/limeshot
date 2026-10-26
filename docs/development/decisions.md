@@ -76,9 +76,11 @@ REA was installed and used for static metadata (plist, Mach-O). Ghidra and Hoppe
 forbids reusing decompiled code, and the behaviour we need is documented. Live UI observation needs Screen Recording
 permission, which only the user can grant (see `docs/research/rea-findings.md`).
 
-### D17. No network service for agent control
-SoundCraft's TCP control channel was not copied (network services are forbidden by [principles.md](principles.md)). `limeshot-cli run` (typed command
-scripts), `render` and `play`, plus the offscreen `ui_shot` renderer, cover headless and agent use.
+### D17. CLI for agent control
+SoundCraft's TCP control channel was not copied. [Principles](principles.md) forbid mandatory network services;
+optional local network services are allowed if the application remains fully usable offline without them.
+`limeshot-cli run` (typed command scripts), `render` and `play`, plus the offscreen `ui_shot` renderer, cover
+headless and agent use.
 
 ### D18. CI on every push for macOS (arm64 + Intel), Windows, Linux (x86-64 + ARM64), plus a Windows ARM64 cross build
 **Why:** the original brief treated all three platforms as first class. Platform status is recorded only after a job has actually

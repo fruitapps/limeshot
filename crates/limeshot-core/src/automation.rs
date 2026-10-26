@@ -8,7 +8,7 @@
 
 use crate::document::PluginTarget;
 use crate::model::{ChannelId, Extra, Project, Rgb};
-use crate::time::Tick;
+use crate::time::{MAX_TICK, Tick};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -371,6 +371,7 @@ impl Automation {
     /// Clamp, sort and de-duplicate points (at most one per tick).
     pub fn normalize_points(points: &mut Vec<AutomationPoint>) {
         for p in points.iter_mut() {
+            p.tick = p.tick.min(MAX_TICK);
             p.value = if p.value.is_finite() {
                 p.value.clamp(0.0, 1.0)
             } else {
@@ -484,10 +485,21 @@ mod tests {
 
     #[test]
     fn normalize_sorts_clamps_and_dedups() {
-        let mut v = vec![pt(50, 2.0, 0.0), pt(10, f32::NAN, 9.0), pt(50, 0.1, 0.0)];
+        let max_tick = crate::MAX_TICK;
+        let mut v = vec![
+            pt(u64::MAX, 0.25, 0.0),
+            pt(50, 2.0, 0.0),
+            pt(10, f32::NAN, 9.0),
+            pt(50, 0.1, 0.0),
+            pt(max_tick, 0.75, 0.0),
+            pt(max_tick + 1, 0.8, 0.0),
+            pt(0, 0.1, 0.0),
+        ];
         Automation::normalize_points(&mut v);
-        assert_eq!(v.len(), 2);
-        assert_eq!((v[0].tick, v[0].value, v[0].tension), (10, 0.5, 1.0));
-        assert_eq!((v[1].tick, v[1].value), (50, 1.0));
+        assert_eq!(v.len(), 4);
+        assert_eq!((v[0].tick, v[0].value), (0, 0.1));
+        assert_eq!((v[1].tick, v[1].value, v[1].tension), (10, 0.5, 1.0));
+        assert_eq!((v[2].tick, v[2].value), (50, 1.0));
+        assert_eq!((v[3].tick, v[3].value), (max_tick, 0.25));
     }
 }

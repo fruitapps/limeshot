@@ -15,7 +15,8 @@ architecture and styling only. LimeShot keeps its own identity, implementation a
 1. First-party code is Rust: audio engine, project model, application behaviour and UI. Platform APIs and FFI bindings
    are fine where native audio, MIDI or plugin interop needs them. Build tooling may be non-Rust.
 2. No Electron, Tauri, JavaScript frontend, webview, browser/WASM target, hosted backend, account system or mandatory
-   network service. The application works offline.
+   network service. Optional local network services are allowed; the application must remain fully usable offline
+   without them.
 3. No FL Studio source code, binary resources, branding or copyrighted assets, and no code copied from ArtCraft or
    SoundCraft.
 4. The architecture supports real-time audio (see [audio-engine](../architecture/audio-engine.md)), not simulated playback.

@@ -1548,9 +1548,9 @@ mod tests {
     #[test]
     fn sanitize_clamps_hostile_tick_values() {
         use crate::MAX_TICK;
-        let mut p = Project::new();
-        let pattern = p.patterns[0].id;
-        let channel = p.channels.first().map(|c| c.id);
+        let (d, _, _) = doc_with_channel();
+        let mut p = d.project().clone();
+        let channel = p.channels.first().unwrap().id;
         let clip_pattern = p.patterns[0].id;
         p.playlist.clips.push(Clip {
             id: ClipId(5),
@@ -1564,19 +1564,18 @@ mod tests {
             fade_out: u64::MAX,
             extra: Extra::new(),
         });
-        if let Some(channel) = channel {
-            p.patterns[0].notes.push(Note {
-                id: NoteId(9),
-                channel,
-                key: 60,
-                start: u64::MAX,
-                length: u64::MAX,
-                velocity: 0.8,
-                pan: 0.0,
-                muted: false,
-            });
-        }
-        let _ = pattern;
+        p.patterns[0].notes.push(Note {
+            id: NoteId(9),
+            channel,
+            key: 60,
+            start: u64::MAX,
+            length: u64::MAX,
+            velocity: 0.8,
+            pan: 0.0,
+            muted: false,
+        });
+        let n = p.patterns[0].notes.iter().find(|n| n.id == NoteId(9)).unwrap();
+        assert_eq!((n.start, n.length), (u64::MAX, u64::MAX));
         p.sanitize();
         let c = &p.playlist.clips[0];
         assert!(
@@ -1584,9 +1583,8 @@ mod tests {
                 .iter()
                 .all(|t| *t <= MAX_TICK)
         );
-        for n in &p.patterns[0].notes {
-            assert!(n.start <= MAX_TICK && n.length <= MAX_TICK);
-        }
+        let n = p.patterns[0].notes.iter().find(|n| n.id == NoteId(9)).unwrap();
+        assert!(n.start <= MAX_TICK && n.length <= MAX_TICK);
         // The derived lengths no longer overflow.
         let sig = p.time_signature;
         assert!(p.playlist.song_length(sig) >= MAX_TICK);
