@@ -624,7 +624,7 @@ impl<P: Vst3Plugin> IEditControllerTrait for Wrapper<P> {
     unsafe fn getParameterInfo(&self, param_index: int32, info: *mut ParameterInfo) -> tresult {
         check_null_ptr!(info);
 
-        if param_index < 0 || param_index > unsafe { self.getParameterCount() } {
+        if param_index < 0 || param_index >= unsafe { self.getParameterCount() } {
             return kInvalidArgument;
         }
 
@@ -855,7 +855,7 @@ impl<P: Vst3Plugin> IAudioProcessorTrait for Wrapper<P> {
                 // NOTE: We completely ignore the speaker arrangements and only look at the channel
                 //       counts here. This may cause issues at some point, but it works for now.
                 let has_main_input = layout.main_input_channels.is_some();
-                let aux_input_start_idx = if has_main_input { 0 } else { 1 };
+                let aux_input_start_idx = if has_main_input { 1 } else { 0 };
                 if has_main_input
                     && unsafe {
                         (*inputs).count_ones() != layout.main_input_channels.unwrap().get()
@@ -873,8 +873,8 @@ impl<P: Vst3Plugin> IAudioProcessorTrait for Wrapper<P> {
                 }
 
                 let has_main_output = layout.main_output_channels.is_some();
-                let aux_output_start_idx = if has_main_output { 0 } else { 1 };
-                if unsafe {
+                let aux_output_start_idx = if has_main_output { 1 } else { 0 };
+                if has_main_output && unsafe {
                     (*outputs).count_ones()
                         != layout
                             .main_output_channels
@@ -1455,7 +1455,7 @@ impl<P: Vst3Plugin> IAudioProcessorTrait for Wrapper<P> {
                                     .enumerate()
                                 {
                                     let aux_input_idx = aux_input_no + aux_input_start_idx;
-                                    if aux_input_idx > data.numOutputs as usize {
+                                    if aux_input_idx >= data.numInputs.max(0) as usize {
                                         break;
                                     }
 
@@ -1479,7 +1479,7 @@ impl<P: Vst3Plugin> IAudioProcessorTrait for Wrapper<P> {
                                     .enumerate()
                                 {
                                     let aux_output_idx = aux_output_no + aux_output_start_idx;
-                                    if aux_output_idx > data.numOutputs as usize {
+                                    if aux_output_idx >= data.numOutputs.max(0) as usize {
                                         break;
                                     }
 

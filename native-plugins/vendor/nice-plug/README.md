@@ -101,7 +101,7 @@ A [cookiecutter template](https://codeberg.org/RustAudio/nice-plug-template) is 
   [Zstandard](https://en.wikipedia.org/wiki/Zstd).
 - Modular GUI/Editor API that lets you use any GUI library that can run on
   [baseview](https://github.com/RustAudio/baseview). By extension, this allows
-  for rendering with OpenGL, [wgpu](wgpu.rs), and/or
+  for rendering with OpenGL, [wgpu](https://wgpu.rs), and/or
   [softbuffer](https://github.com/rust-windowing/softbuffer).
 - Full support for receiving and outputting both modern polyphonic note
   expression events as well as MIDI CCs, channel pressure, and pitch bend for
@@ -162,7 +162,7 @@ examples.
   [iced_audio](https://github.com/iced-rs/iced_audio) widget library for [Iced](https://iced.rs/) in nice-plug.
 - Examples for adding your own custom GUI framework on top of raw rendering APIs:
   - [**byo_gui_gl**](https://codeberg.org/RustAudio/nice-plug/src/branch/main/examples/byo_gui_gl) - for rendering with OpenGL
-  - [**byo_gui_wgpu**](https://codeberg.org/RustAudio/nice-plug/src/branch/main/examples/byo_gui_wgpu) - for rendering with [wgpu](wgpu.rs)
+  - [**byo_gui_wgpu**](https://codeberg.org/RustAudio/nice-plug/src/branch/main/examples/byo_gui_wgpu) - for rendering with [wgpu](https://wgpu.rs)
   - [**byo_gui_softbuffer**](https://codeberg.org/RustAudio/nice-plug/src/branch/main/examples/byo_gui_softbuffer) - for rendering with
   [softbuffer](https://github.com/rust-windowing/softbuffer) (software rendering)
 - [**midi_inverter**](https://codeberg.org/RustAudio/nice-plug/src/branch/main/examples/midi_inverter/src/lib.rs) takes note/MIDI events and

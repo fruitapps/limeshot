@@ -59,7 +59,8 @@ Owner-requested interaction and disk-sampler fixes are in `codex/alpha1-polish`;
 Repeat host-edge resizing with other resizable plugins and long disk-backed playback/seek checks on Windows
 and Linux before promoting the native feature statuses. Disk cache misses and smooth fade/crossfade limits remain recorded.
 
-Every future development session must create a NEW codex/ branch, separate NEW managed worktree and NEW
-attached draft PR, stacked on the latest unmerged continuation. Leave older checkouts intact; carry work
+Create and use branches in the main checkout at `~/Developer/limeshot` so builds and tests reuse its Cargo cache.
+Do not create separate worktrees or clones for routine branch work; preserve local changes when switching.
+This supersedes the earlier separate-worktree policy and must be repeated in handoffs. Carry work
 through implementation, validation, documentation, commit and push. Never merge automatically, and create
 further sessions only when the owner asks.

@@ -84,12 +84,11 @@ impl DiskSample {
                 let right = f32::from_bits(slot.data[index + 1].load(Ordering::Relaxed));
                 std::sync::atomic::fence(Ordering::Acquire);
                 if slot.sequence.load(Ordering::Acquire) == sequence {
-                    if frame.is_multiple_of(PAGE / 2) {
-                        self.request(page + 1);
-                        self.request(page + 2);
-                        if page > 0 {
-                            self.request(page - 1);
-                        }
+                    // Fractional/pitched playback may skip exact page midpoints.
+                    self.request(page + 1);
+                    self.request(page + 2);
+                    if page > 0 {
+                        self.request(page - 1);
                     }
                     return (left, right);
                 }
@@ -307,6 +306,36 @@ fn prepare(source: &Path, target: &Path, peak_file: &Path) -> Result<(), SampleE
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fractional_playback_reads_request_ahead_without_exact_midpoints() {
+        let shared = Arc::new(Shared {
+            pages: (0..SLOTS)
+                .map(|page| Page {
+                    sequence: AtomicU64::new(0),
+                    tag: AtomicU64::new(if page == 0 { 0 } else { EMPTY }),
+                    request: AtomicU64::new(EMPTY),
+                    data: (0..PAGE * 2).map(|_| AtomicU32::new(0)).collect(),
+                })
+                .collect(),
+            failed: AtomicBool::new(false),
+            offline: AtomicBool::new(false),
+            misses: AtomicU64::new(0),
+        });
+        let disk = DiskSample {
+            shared,
+            frames: 10 * PAGE,
+            peaks: Vec::new(),
+            cache: PathBuf::new(),
+        };
+        // +22 semitones reads positions spaced about 3.56 frames apart.
+        let position = 575.0 * 2.0_f64.powf(22.0 / 12.0);
+        assert!(!(position as usize).is_multiple_of(PAGE / 2));
+        disk.frame(position as usize);
+        assert_eq!(disk.shared.pages[1].request.load(Ordering::Acquire), 1);
+        assert_eq!(disk.shared.pages[2].request.load(Ordering::Acquire), 2);
+        assert_eq!(disk.underruns(), 0);
+    }
+
     #[test]
     fn disk_cache_is_bounded_and_seeks_match_pcm() {
         let dir = tempfile::tempdir().unwrap();

@@ -96,6 +96,17 @@ impl NativeEditor {
         let id = ui.scope_id().with(("value-entry", index));
         ui.ctx()
             .data_mut(|d| d.insert_temp(Id::unique(("native-value", param.name())), rect));
+        if self.id == 5 && index == 0 && self.params.controls[5].value.value() > 0.0 {
+            if self.editing == Some(index) {
+                self.editing = None;
+                ui.memory_mut(|m| m.surrender_focus(id.with("text")));
+            }
+            ui.painter()
+                .text(rect.center(), Align2::CENTER_CENTER, readout(param), font, color);
+            ui.interact(rect, id, Sense::hover())
+                .on_hover_text("Manual time is inactive while tempo sync is selected");
+            return;
+        }
         let mut focus = false;
         if self.editing != Some(index) {
             let response = ui

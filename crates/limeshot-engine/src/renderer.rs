@@ -187,7 +187,7 @@ impl Renderer {
             v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
         }
         let tl = self.timeline;
-        self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+        self.instruments.retime(self.now, |t| tl.sample_of_tick(t.max(tick)));
     }
 
     /// The tempo the transport runs at now (tempo automation included).

@@ -147,19 +147,19 @@ impl NoteExpressionController {
                 key: Key::Number(key),
                 vibrato: event.value as f32,
             }),
-            EXPRESSION_EXPRESSION_ID => Some(NoteEvent::PolyBrightness {
-                timing,
-                voice_id: VoiceID::ID(note_id),
-                channel: Channel::Number(channel),
-                key: Key::Number(key),
-                brightness: event.value as f32,
-            }),
-            BRIGHTNESS_EXPRESSION_ID => Some(NoteEvent::PolyExpression {
+            EXPRESSION_EXPRESSION_ID => Some(NoteEvent::PolyExpression {
                 timing,
                 voice_id: VoiceID::ID(note_id),
                 channel: Channel::Number(channel),
                 key: Key::Number(key),
                 expression: event.value as f32,
+            }),
+            BRIGHTNESS_EXPRESSION_ID => Some(NoteEvent::PolyBrightness {
+                timing,
+                voice_id: VoiceID::ID(note_id),
+                channel: Channel::Number(channel),
+                key: Key::Number(key),
+                brightness: event.value as f32,
             }),
             _ => None,
         }
@@ -204,6 +204,32 @@ impl NoteExpressionController {
                 value: *brightness as f64,
             }),
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expression_and_brightness_round_trip_without_swapping() {
+        let mut controller = NoteExpressionController::default();
+        controller.register_note(&NoteOnEvent {
+            channel: 2,
+            pitch: 60,
+            tuning: 0.0,
+            velocity: 1.0,
+            length: 0,
+            noteId: 42,
+        });
+        for kind in [EXPRESSION_EXPRESSION_ID, BRIGHTNESS_EXPRESSION_ID] {
+            let event = NoteExpressionValueEvent { typeId: kind, noteId: 42, value: 0.75 };
+            let translated = controller.translate_event::<()>(17, &event).unwrap();
+            let reverse = NoteExpressionController::translate_event_reverse(42, &translated).unwrap();
+            assert_eq!(reverse.typeId, kind);
+            assert_eq!(reverse.noteId, 42);
+            assert_eq!(reverse.value, 0.75);
         }
     }
 }

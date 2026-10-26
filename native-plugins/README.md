@@ -28,8 +28,8 @@ wireframe room, compressor tiles and wide limiter history. Layout references bas
 Live output/meters, factory presets and `.limepreset` import/export are included. The EQ graph uses the actual
 Eq3 frequency response and supports node dragging; the filter curve is a response guide. Neither is a spectrum
 analyzer. The limiter history displays measured input/output levels and gain reduction.
-Drag knobs vertically; Shift gives fine adjustment, double-click resets, wheel adjusts, and right-click accepts a
-numeric value or named choice. Parameter changes use host automation gestures and smoothing. The ON/BYPASS button
+Drag knobs vertically; Shift gives fine adjustment, double-click resets, wheel adjusts, and clicking a numeric value opens
+direct text entry. Parameter changes use host automation gestures and smoothing. The ON/BYPASS button
 controls host bypass (effects pass input unchanged; instruments become silent while notes keep their timing).
 
 ## Installation

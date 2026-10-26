@@ -72,7 +72,7 @@ menus are removed from Lime Native controls. Shift fine dragging and double-clic
 ## Verification
 
 Automated and visual results are recorded in the current progress entry. Native third-party editor interaction,
-Windows and Linux runtime behavior remain separate from headless checks. The standing session policy remains:
-every future session uses a NEW codex/ branch, NEW managed worktree and NEW attached draft PR based on the latest
-unmerged continuation. Preserve older checkouts, validate/document/commit/push, never merge automatically, and
-create further sessions only when the owner asks.
+Windows and Linux runtime behavior remain separate from headless checks. The owner updated the workspace policy
+on 2026-10-26: create and use branches in `~/Developer/limeshot` and run builds/tests there to retain Cargo caches.
+Do not use separate worktrees or clones for routine branch work; preserve local changes when switching. Repeat
+this preference in handoffs.

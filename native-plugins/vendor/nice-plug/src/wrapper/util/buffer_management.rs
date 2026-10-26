@@ -208,7 +208,8 @@ impl BufferManager {
 
                         // If the caller/host should have provided buffer pointers but didn't then we
                         // must get rid of any dangling slices
-                        output_slices[output_channel_pointers.num_channels..].fill_with(|| &mut [])
+                        let tail = output_channel_pointers.num_channels.min(output_slices.len());
+                        output_slices[tail..].fill_with(|| &mut [])
                     }
                     None => {
                         crate::nice_debug_assert_eq!(output_slices.len(), 0);
@@ -367,8 +368,8 @@ impl BufferManager {
 
                             // If the caller/host should have provided buffer pointers but didn't then
                             // we must get rid of any dangling slices
-                            output_slices[output_channel_pointers.num_channels..]
-                                .fill_with(|| &mut [])
+                            let tail = output_channel_pointers.num_channels.min(output_slices.len());
+                            output_slices[tail..].fill_with(|| &mut [])
                         }
                         None => {
                             crate::nice_debug_assert_eq!(output_slices.len(), 0);

@@ -26,25 +26,37 @@ pub fn restrict_loaded_sources(project: &mut Project, directory: Option<&Path>) 
     let root = directory
         .map(|p| if p.as_os_str().is_empty() { Path::new(".") } else { p })
         .and_then(|p| p.canonicalize().ok());
+    let is_inside = |raw: &str| {
+        let source = limeshot_project::resolve_sample_path(raw, directory)
+            .canonicalize()
+            .ok();
+        root.as_ref()
+            .zip(source.as_ref())
+            .is_some_and(|(root, source)| source.starts_with(root))
+    };
     for channel in &mut project.channels {
-        let source = match &channel.instrument {
-            limeshot_core::Instrument::Sampler(p) => p.sample.as_ref().map(|s| s.path.as_str()),
-            limeshot_core::Instrument::Plugin(p)
-                if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true)
-                    || lime::disk_source(p).is_some() =>
-            {
-                p.extra.get("lime-sample-path").and_then(serde_json::Value::as_str)
+        let (has_source, inside, unapproved_disk) = match &channel.instrument {
+            limeshot_core::Instrument::Sampler(p) => match &p.sample {
+                Some(s) => (true, is_inside(&s.path), false),
+                None => (false, true, false),
+            },
+            limeshot_core::Instrument::Plugin(p) => {
+                let disk = lime::disk_source(p);
+                let pending = (p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true))
+                    .then(|| {
+                        p.extra
+                            .get("lime-sample-path")
+                            .and_then(serde_json::Value::as_str)
+                            .map(str::to_owned)
+                    })
+                    .flatten();
+                let disk_ok = disk.as_deref().is_none_or(is_inside);
+                let pending_ok = pending.as_deref().is_none_or(is_inside);
+                (disk.is_some() || pending.is_some(), disk_ok && pending_ok, !disk_ok)
             }
-            _ => None,
+            _ => (false, true, false),
         };
-        if let Some(source) = source {
-            let source = limeshot_project::resolve_sample_path(source, directory)
-                .canonicalize()
-                .ok();
-            let inside = root
-                .as_ref()
-                .zip(source.as_ref())
-                .is_some_and(|(root, source)| source.starts_with(root));
+        if has_source {
             if inside {
                 channel.extra.remove("lime-external-source");
             } else {
@@ -52,10 +64,7 @@ pub fn restrict_loaded_sources(project: &mut Project, directory: Option<&Path>) 
                     .extra
                     .insert("lime-external-source".into(), serde_json::json!(true));
             }
-            if !inside
-                && let limeshot_core::Instrument::Plugin(plugin) = &mut channel.instrument
-                && lime::disk_source(plugin).is_some()
-            {
+            if unapproved_disk && let limeshot_core::Instrument::Plugin(plugin) = &mut channel.instrument {
                 plugin
                     .extra
                     .insert("lime-disk-unapproved".into(), serde_json::json!(true));
@@ -173,6 +182,39 @@ mod migration_tests {
         })
         .unwrap();
         doc.project().clone()
+    }
+
+    #[test]
+    fn disk_state_source_is_checked_even_with_missing_or_misleading_metadata() {
+        let inside = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let local = inside.path().join("local.wav");
+        let external = outside.path().join("private.wav");
+        std::fs::write(&local, []).unwrap();
+        std::fs::write(&external, []).unwrap();
+        for metadata in [None, Some(local.to_string_lossy().into_owned())] {
+            let mut plugin =
+                LimePlugin::SAMPLER.with_values(&lime::sampler_values(&SamplerParams::default(), 60), false, None);
+            assert!(lime::set_disk_source(&mut plugin, &external.to_string_lossy()));
+            if let Some(metadata) = metadata {
+                plugin
+                    .extra
+                    .insert("lime-sample-path".into(), serde_json::json!(metadata));
+            }
+            let mut doc = Document::default();
+            doc.execute(Command::AddChannel {
+                name: "Disk".into(),
+                instrument: Instrument::Plugin(plugin),
+            })
+            .unwrap();
+            let mut project = doc.project().clone();
+            restrict_loaded_sources(&mut project, Some(inside.path()));
+            assert_eq!(project.channels[0].extra["lime-external-source"], true);
+            let Instrument::Plugin(plugin) = &project.channels[0].instrument else {
+                panic!("plugin")
+            };
+            assert_eq!(plugin.extra["lime-disk-unapproved"], true);
+        }
     }
 
     #[test]

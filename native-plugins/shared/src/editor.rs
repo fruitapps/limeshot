@@ -560,6 +560,50 @@ mod interaction_tests {
     use std::sync::atomic::Ordering;
 
     #[test]
+    fn synced_delay_cancels_manual_time_entry_and_ignores_clicks() {
+        let mut editor = NativeEditor::preview(5);
+        Arc::get_mut(&mut editor.params).unwrap().controls[5].value = nice_plug::prelude::FloatParam::new(
+            "Sync",
+            1.0,
+            nice_plug::prelude::FloatRange::Linear { min: 0.0, max: 8.0 },
+        );
+        editor.editing = Some(0);
+        editor.entry = "2000".into();
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(vec2(850.0, 600.0))
+            .build_ui_state(
+                |ui, (editor, initialized)| {
+                    if !*initialized {
+                        install_theme(ui.ctx());
+                        *initialized = true;
+                        return;
+                    }
+                    editor.draw(ui);
+                },
+                (editor, false),
+            );
+        harness.run_steps(3);
+        assert_eq!(harness.state().0.editing, None);
+        let position = harness
+            .ctx
+            .data(|d| d.get_temp::<Rect>(Id::unique(("native-value", "Time"))))
+            .unwrap()
+            .center();
+        harness.input_mut().events.push(Event::PointerMoved(position));
+        harness.step();
+        for pressed in [true, false] {
+            harness.input_mut().events.push(Event::PointerButton {
+                pos: position,
+                button: PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+            harness.step();
+        }
+        assert_eq!(harness.state().0.editing, None);
+    }
+
+    #[test]
     fn numeric_value_click_selects_text_and_accepts_direct_input() {
         let mut harness = egui_kittest::Harness::builder()
             .with_size(vec2(850.0, 600.0))

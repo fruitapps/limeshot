@@ -95,15 +95,10 @@ impl<T: Send + 'static, E: MainThreadExecutor<T> + 'static> WorkerThread<T, E> {
 impl<T, E> Drop for WorkerThread<T, E> {
     fn drop(&mut self) {
         // The thread is shut down and joined when the handle is dropped
-        self.tasks_sender
-            .send(Message::Shutdown)
-            .expect("Failed while sending worker thread shutdown request");
-        self.join_handle
-            .take()
-            // Only possible if the WorkerThread got dropped twice, somehow?
-            .expect("Missing Worker thread JoinHandle")
-            .join()
-            .expect("Worker thread panicked");
+        let _ = self.tasks_sender.send(Message::Shutdown);
+        if let Some(handle) = self.join_handle.take() {
+            let _ = handle.join();
+        }
     }
 }
 
@@ -149,10 +144,9 @@ where
                 Some(e) => e.execute(task, true),
                 None => {
                     nice_trace!(
-                        "Received a new task but the executor is no longer alive, shutting down \
-                         worker"
+                        "Skipping a task whose executor is no longer alive"
                     );
-                    return;
+                    continue;
                 }
             },
             Ok(Message::Shutdown) => return,
@@ -164,5 +158,34 @@ where
                 return;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct Executor(AtomicUsize);
+    impl MainThreadExecutor<usize> for Executor {
+        fn execute(&self, task: usize, _: bool) { self.0.fetch_add(task, Ordering::Relaxed); }
+    }
+
+    #[test]
+    fn stale_executor_does_not_stop_other_instances() {
+        let (sender, receiver) = crossbeam::channel::unbounded();
+        let live = Arc::new(Executor(AtomicUsize::new(0)));
+        sender.send(Message::Task((100, Weak::<Executor>::new()))).unwrap();
+        sender.send(Message::Task((1, Arc::downgrade(&live)))).unwrap();
+        sender.send(Message::Shutdown).unwrap();
+        worker_thread(receiver);
+        assert_eq!(live.0.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn disconnected_worker_teardown_is_safe() {
+        let (tasks_sender, receiver) = crossbeam::channel::unbounded::<Message<usize, Executor>>();
+        drop(receiver);
+        drop(WorkerThread { tasks_sender, join_handle: None });
     }
 }

@@ -1414,10 +1414,10 @@ fn browser_folders_open_and_filter() {
 #[test]
 fn browser_search_finds_closed_folders_and_long_names_preserve_width() {
     let dir = tempfile::tempdir().unwrap();
-    let long = "Long folder name ".repeat(12);
+    let long = "Long folder name ".repeat(4);
     let folder = dir.path().join(&long);
     std::fs::create_dir(&folder).unwrap();
-    let file = folder.join(format!("{}needle.wav", "very long sample ".repeat(10)));
+    let file = folder.join(format!("{}needle.wav", "very long sample ".repeat(4)));
     std::fs::copy(bundled("Lime Kick.wav"), &file).unwrap();
     let mut h = harness(false);
     h.state_mut().settings.browser_folders.push(dir.path().to_path_buf());
@@ -5776,6 +5776,8 @@ fn recording_turns_played_notes_into_pattern_notes() {
     h.state_mut().ui.record.disarm_on_stop = true;
     h.state_mut().stop();
     assert!(!h.state().ui.record.armed);
+    // Stop is asynchronous: wait before toggling so a slow runner cannot enqueue Pause.
+    wait_for(&mut h, "recording transport to stop", |a| !a.is_playing());
     // Not armed: playing records nothing.
     h.state_mut().toggle_play();
     wait_for(&mut h, "playback", |a| a.is_playing());

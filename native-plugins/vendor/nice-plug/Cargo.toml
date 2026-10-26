@@ -234,3 +234,6 @@ features = [
     "Win32_System_LibraryLoader",
     "Win32_System_Performance",
 ]
+
+# Keep the vendored regression tests runnable independently of the host workspaces.
+[workspace]

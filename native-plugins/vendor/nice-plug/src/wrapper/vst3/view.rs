@@ -789,10 +789,11 @@ impl<P: Vst3Plugin> IPlugViewContentScaleSupportTrait for WrapperView<P> {
         //       on macOS and both the editor implementation and the wrappers would know about the
         //       correct scale.
 
-        if !scale_factor.is_finite() || !scale_factor.is_sign_positive() {
+        if !scale_factor.is_finite() || scale_factor <= 0.0 {
             return kResultFalse;
         }
 
+        self.fallback_scale_factor.store(Some(scale_factor));
         if let Some(editor_window) = inner.editor_window.borrow().as_ref() {
             let editor_window = editor_window.get();
             if let Err(e) = editor_window
@@ -802,11 +803,10 @@ impl<P: Vst3Plugin> IPlugViewContentScaleSupportTrait for WrapperView<P> {
                 crate::nice_error!("Failed to set suggested scale factor: {}", e);
                 kResultFalse
             } else {
-                self.fallback_scale_factor.store(Some(scale_factor));
                 kResultOk
             }
         } else {
-            kResultFalse
+            kResultOk
         }
     }
 }

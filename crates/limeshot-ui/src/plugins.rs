@@ -452,6 +452,12 @@ impl PluginHost {
             self.disk_ready.clear();
         }
         let wanted = wanted(project);
+        let wanted_sources: std::collections::HashSet<_> = wanted
+            .iter()
+            .filter(|(_, p)| p.extra.get("lime-disk-unapproved").and_then(serde_json::Value::as_bool) != Some(true))
+            .filter_map(|(_, p)| limeshot_core::lime::disk_source(p))
+            .collect();
+        self.disk_preloads.retain(|source, _| wanted_sources.contains(source));
         let saved_windows: Vec<(Target, &PluginRef)> = if opened { wanted.clone() } else { Vec::new() };
         self.live
             .retain(|t, l| wanted.iter().any(|(w, p)| w == t && l.key == key_of(p)));
@@ -1243,6 +1249,18 @@ pub fn create_automation(app: &mut LimeShotApp, target: Target, id: u32) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deleted_disk_plugin_does_not_keep_sync_active() {
+        let mut host = PluginHost::new(None);
+        host.generation = Some(7);
+        let (_sender, receiver) = std::sync::mpsc::channel();
+        host.disk_preloads.insert("removed.wav".into(), receiver);
+        assert!(host.take_needs_sync());
+        host.sync(&Project::default(), 7, 48_000, &mut |_| {});
+        assert!(host.disk_preloads.is_empty());
+        assert!(!host.take_needs_sync());
+    }
 
     #[test]
     fn an_offline_export_requires_every_plugin_to_load() {

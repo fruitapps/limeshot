@@ -193,9 +193,9 @@ Manual macOS arm64 verification with granted Screen Recording/Accessibility: the
 rendered LimeSynth, accepted a clicked octave value of -2, and Serum 2 shrank and grew from its own corner with
 its wrapper aligned and top-left position stable. A ten-minute disk-backed Browser preview loaded, displayed
 600 seconds, retained Browser width with a truncated filename, and stopped to zero voices. Offscreen Playlist render inspected for fades/scrollbars/Files.
-Workspace suite: 435 passed (159 UI, 10 hosted VST3); native unit suite: 21 passed.
+Workspace suite: 440 passed (159 UI, 10 hosted VST3); native unit suite: 22 passed; `nice-plug` unit suite: 8 passed.
 Workspace/native strict Clippy, builds, formatting and inventory/reference checks passed. Windows/Linux runtime and broad third-party editor coverage remain unverified.
 
-Session policy: every future development session creates a NEW codex/ branch, NEW managed worktree and NEW
-attached draft PR, stacked on the latest unmerged continuation. Preserve older checkouts; implement, validate,
-document, commit and push. Never merge automatically; create further sessions only when the owner asks.
+Owner update (2026-10-26): create and use branches in the main checkout at `~/Developer/limeshot`, and build/test
+there to retain Cargo caches. Do not use separate worktrees or clones for routine branch work. Preserve local
+changes when switching branches. This supersedes the earlier separate-worktree session policy; repeat it in handoffs.

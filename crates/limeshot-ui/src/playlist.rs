@@ -1980,9 +1980,10 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
         r.contains(p).then(|| {
             let edge = EDGE.min(r.width() * 0.3);
             let fades = fade_handles(view, c);
-            let part = if fade_curve_handle(view, c, false).is_some_and(|h| h.distance(p) <= 6.0) {
+            let inside_edges = p.x > r.left() + edge && p.x < r.right() - edge;
+            let part = if inside_edges && fade_curve_handle(view, c, false).is_some_and(|h| h.distance(p) <= 6.0) {
                 Part::FadeCurveIn
-            } else if fade_curve_handle(view, c, true).is_some_and(|h| h.distance(p) <= 6.0) {
+            } else if inside_edges && fade_curve_handle(view, c, true).is_some_and(|h| h.distance(p) <= 6.0) {
                 Part::FadeCurveOut
             } else if fades.is_some_and(|(a, _)| a.distance(p) <= 5.0) {
                 Part::FadeIn
@@ -2064,8 +2065,8 @@ fn scrub_audio(app: &mut LimeShotApp, clips: &[Clip], tick: Option<Tick>) {
                 remaining_secs: (c.end() - tick) as f64 * seconds_per_tick,
                 fade_in_secs: (c.fade_in as f64 * seconds_per_tick) as f32,
                 fade_out_secs: (c.fade_out as f64 * seconds_per_tick) as f32,
-                fade_in_curve: 0.0,
-                fade_out_curve: 0.0,
+                fade_in_curve: c.fade_curve(false),
+                fade_out_curve: c.fade_curve(true),
             },
         });
         app.ui.playlist.scrub_audio.push((channel, key));
@@ -3251,6 +3252,43 @@ fn automation_cursor(ctx: &Context, at: Pos2, kind: u8) {
             }
         } else {
             p.circle_stroke(at, 4.0, Stroke::new(1.5, t.accent));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_fade_curve_handles_leave_clip_edges_resizable() {
+        let view = View {
+            grid: Rect::from_min_size(Pos2::ZERO, vec2(500.0, 100.0)),
+            ppt: 1.0,
+            track_h: 60.0,
+            scroll: Vec2::ZERO,
+        };
+        let clip = Clip {
+            id: ClipId(1),
+            source: ClipSource::Audio(ChannelId(1)),
+            track: 0,
+            start: 10,
+            length: 200,
+            offset: 0,
+            muted: false,
+            fade_in: 1,
+            fade_out: 1,
+            extra: Default::default(),
+        };
+        for out in [false, true] {
+            let handle = fade_curve_handle(&view, &clip, out).unwrap();
+            let edge = if out {
+                view.clip_rect(&clip).right() - 1.0
+            } else {
+                view.clip_rect(&clip).left() + 1.0
+            };
+            let (_, part) = hit(&view, std::slice::from_ref(&clip), pos2(edge, handle.y)).unwrap();
+            assert!(matches!((out, part), (false, Part::LeftEdge) | (true, Part::RightEdge)));
         }
     }
 }
