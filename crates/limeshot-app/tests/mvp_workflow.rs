@@ -1,4 +1,4 @@
-//! The MVP acceptance workflow (START.md §13), driven through the same typed commands the UI
+//! The MVP acceptance workflow (docs/roadmap/mvp.md), driven through the same typed commands the UI
 //! issues, then verified on the rendered audio:
 //! new project → tempo → sampler channel with a WAV drum → drum steps → synth channel → melody
 //! notes → more patterns → arrange on the Playlist → song mode → mixer routing, volume, pan →

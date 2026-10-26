@@ -17,6 +17,7 @@ Read these before choosing implementation work:
    acceptance criteria and known gaps. [features.md](docs/roadmap/features.md) is the readable generated view.
 3. [Known limitations](docs/roadmap/known-limitations.md), the [MVP](docs/roadmap/mvp.md), and related issues or PRs.
 4. The relevant [architecture documents](docs/architecture/) and [design decisions](docs/development/decisions.md).
+   The binding [project principles](docs/development/principles.md) (constraints, clean-room rules, definition of done) apply to all work.
 
 Feature priorities run P0 through P3; satisfy dependencies before implementing dependent behavior. Check a record
 against the source before assuming a feature is missing. For substantial architecture, format or workflow changes, open an issue with a

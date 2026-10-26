@@ -6881,7 +6881,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": ""
@@ -6913,7 +6913,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": "Native CI passes on macos-15-intel (latest: 40219529679 at 28d3a41); see docs/development/platform-validation.md. Intel GUI/audio remain unverified."
@@ -6945,7 +6945,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": "Runner evidence is in docs/development/platform-validation.md (latest: 40219529679 at 28d3a41). The owner has run the Windows build by hand (plugin editors, Explorer drops); no systematic GUI/audio-device pass yet."
@@ -6977,7 +6977,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": "Runner evidence is in docs/development/platform-validation.md; full CI passes at 28d3a41 (40219529679) and the v0.1.0-alpha.1 packages were built and install-tested on the runner. Headless CI does not establish GUI/audio-device verification or validate later commits."
@@ -7011,7 +7011,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": "Runner evidence is in docs/development/platform-validation.md; full CI passes at 28d3a41 (40219529679) and the v0.1.0-alpha.1 packages were built and install-tested on the runner. Headless CI does not establish GUI/audio-device verification or validate later commits."
@@ -7049,7 +7049,7 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "START.md §14"
+          "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
       "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1."

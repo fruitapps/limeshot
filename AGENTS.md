@@ -2,7 +2,7 @@
 
 LimeShot is an open-source, offline-first, cross-platform DAW in Rust with an FL Studio–style pattern workflow
 (Channel Rack, Piano Roll, Playlist, Mixer). It is an independent implementation: no FL Studio code or assets, and no
-code copied from ArtCraft/SoundCraft. The full brief is `START.md`.
+code copied from ArtCraft/SoundCraft. Binding rules: `docs/development/principles.md`.
 
 ## Checkout and build cache
 Create and use branches in your existing primary checkout. Run builds and tests from that checkout so Cargo's

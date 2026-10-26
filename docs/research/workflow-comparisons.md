@@ -1,6 +1,6 @@
 # Workflow comparisons: FL Studio 26.1.1 vs LimeShot
 
-Each record follows START.md §3.4. "Reference" is the FL Studio manual page (see `fl-studio-analysis.md` for URLs). REA evidence is cited where it exists.
+Each record lists the feature, reference version, expected and observed behaviour, interaction sequence, REA evidence, confidence (VERIFIED/OBSERVED/INFERRED/UNKNOWN), limitations and the proposed LimeShot equivalent (see [principles](../development/principles.md)). "Reference" is the FL Studio manual page (see `fl-studio-analysis.md` for URLs). REA evidence is cited where it exists.
 
 ---
 
