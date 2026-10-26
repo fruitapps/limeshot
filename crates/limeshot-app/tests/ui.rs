@@ -1414,7 +1414,7 @@ fn browser_folders_open_and_filter() {
 #[test]
 fn browser_search_finds_closed_folders_and_long_names_preserve_width() {
     let dir = tempfile::tempdir().unwrap();
-    let long = "Long folder name ".repeat(4);
+    let long = format!("{}folder", "Long folder name ".repeat(4));
     let folder = dir.path().join(&long);
     std::fs::create_dir(&folder).unwrap();
     let file = folder.join(format!("{}needle.wav", "very long sample ".repeat(4)));
