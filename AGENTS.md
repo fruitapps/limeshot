@@ -50,13 +50,13 @@ take pointer positions from geometry the editors record.
 |---|---|
 | `limeshot-core` | time (960 PPQ ticks, exact `Timeline`), `Project` model, `Command` enum, `Document` (undo/redo, gestures) |
 | `limeshot-project` | `.lime` I/O: versioned envelope, `migrate`, unknown-field preservation, atomic save, relative sample paths; `midi` (SMF), `flp` (FL Studio import, format notes in `docs/research/flp-format.md`) |
-| `limeshot-dsp` | oscillators (PolyBLEP), ADSR, pan law, dB, WAV read/write |
+| `limeshot-dsp` | oscillators (PolyBLEP), ADSR, filters, voices, built-in effects, pan law, dB, audio decoding (`sample`), disk-streamed samples (`disk`), WAV read/write |
 | `limeshot-sequencer` | `compile(project, pattern, samples) → Snapshot` (the only model→sound translation) |
 | `limeshot-engine` | `Renderer` (transport, scheduling, voices, mixer), `fx` (effect chains), offline `render_offline`/`export_wav` |
-| `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread |
+| `limeshot-audio` | `Player` (cpal stream, rtrb queues, `Status` atomics, silent fallback), `SampleCache` loader thread, `devices`, `midi` (input), `record` |
 | `limeshot-plugins` | VST3 hosting (`vst3` bindings): `Vst3Module` (bundle loading, classes), `scan`, `Vst3Instance` (control thread: params, state) + `Vst3Processor` (audio thread), `Vst3Editor` (the plugin's own view in a host window), built-in `testing` plugins, `examples/vst3_probe`. The only crate allowed `unsafe` (D32) |
-| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `plugins` + `plugin_window` (plugin database, running plugins, plugin windows), `effects_ui`, `dialogs`, `theme` (tokens + fonts), `icons`, `widgets` |
-| `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot` example, MVP and UI tests |
+| `limeshot-ui` | egui app: `app.rs` state/layout/glue, `toolbar`, `browser`, `channel_rack`, `piano_roll`, `playlist`, `mixer`, `workspace` (window manager), `inspector` (Channel Settings window body), `plugins` + `plugin_window` (plugin database, running plugins, plugin windows), `effects_ui`, `dialogs`, `menus` + per-editor `*_menu` modules, `settings` + `settings_window`, `shortcuts` (help tables), `automation_ui`, `presets_ui`, `recording`, `autosave`, `lime` (Lime Native integration), `theme` (tokens + fonts), `icons`, `widgets` |
+| `limeshot-app` | `limeshot` (GUI), `limeshot-cli`, `demo.rs` (demo song via commands), `ui_shot`, `live_check` and `make_icon` examples, MVP, hostile-input and UI tests |
 
 ## Coding conventions
 * Every project change is a `Command` executed on the `Document`; UI code never mutates `Project` directly. Continuous

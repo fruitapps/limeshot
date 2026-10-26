@@ -2,6 +2,11 @@
 
 Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not implemented or not verified.
 
+## Test coverage
+* Hostile-input tests cover `.lime`, MIDI and `.flp` loading. Audio decoders (WAV/MP3/FLAC), plugin state blobs, UI
+  edge cases and `limeshot-audio` device-loss paths have no corrupt-input tests yet, and there is no coverage or fuzz
+  tooling ([next steps](../development/next-steps.md) item 8).
+
 ## Platforms and packages
 * macOS Apple Silicon is the only platform exercised end to end by hand: build, tests, GUI, realtime audio and
   VST3 processing. The owner has run the Windows x64 build (plugin editors, Explorer drops); there has been no

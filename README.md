@@ -159,7 +159,7 @@ full list is in [known limitations](docs/roadmap/known-limitations.md).
 
 ## Project Status
 
-The [feature inventory](docs/roadmap/features.md) tracks 291 features against FL Studio, each with its acceptance
+The [feature inventory](docs/roadmap/features.md) tracks 292 features against FL Studio, each with its acceptance
 criteria and evidence: IMPLEMENTED means the code exists, VERIFIED that listed tests or recorded manual checks pass.
 These are tracked features, not a percentage of parity with FL Studio.
 
