@@ -1917,6 +1917,8 @@ fn playlist_clip_audition_uses_the_source_offset_at_every_block_size() {
                 remaining_secs: 0.1,
                 fade_in_secs: 0.0,
                 fade_out_secs: 0.0,
+                fade_in_curve: 0.0,
+                fade_out_curve: 0.0,
             },
         );
         let mut out = vec![0.0; block * 2];

@@ -377,6 +377,11 @@ pub enum Command {
         muted: bool,
     },
     /// An audio clip's fade-in and fade-out lengths (each clamped so they fit the clip).
+    SetClipFadeCurve {
+        clip: ClipId,
+        out: bool,
+        tension: f32,
+    },
     SetClipFades {
         clip: ClipId,
         fade_in: Tick,
@@ -764,7 +769,7 @@ impl Command {
             DuplicateClipsBy { .. } | DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             SetClipMuted { .. } => "Mute clip",
-            SetClipFades { .. } => "Clip fade",
+            SetClipFades { .. } | SetClipFadeCurve { .. } => "Clip fade",
             InsertSpace { .. } => "Insert space",
             DeleteSpace { .. } => "Delete space",
             MergeClips(_) => "Merge clips",
@@ -852,7 +857,7 @@ impl Command {
             // A Playlist paint stroke or mute drag is one undo step too.
             AddClip { track, .. } | PlaceClip { track, .. } => format!("addc{track}"),
             SetClipMuted { muted, .. } => format!("cmute{muted}"),
-            SetClipFades { clip, .. } => format!("fade{}", clip.0),
+            SetClipFades { clip, .. } | SetClipFadeCurve { clip, .. } => format!("fade{}", clip.0),
             MoveClips { clips, .. } => format!("mvc{clips:?}"),
             ResizeClip { clip, .. } => format!("rsc{}", clip.0),
             ResizeClipStart { clip, .. } => format!("rss{}", clip.0),
@@ -1470,6 +1475,10 @@ impl Command {
                 if track as usize >= p.playlist.tracks.len() {
                     return Err(CommandError::NoPlaylistTrack(track));
                 }
+                let mut extra = Extra::new();
+                if p.pattern(pid).is_some_and(|pattern| pattern.length(sig) != len) {
+                    extra.insert("length-manual".into(), serde_json::Value::Bool(true));
+                }
                 let id = p.alloc_id();
                 p.playlist.clips.push(Clip {
                     id: ClipId(id),
@@ -1481,7 +1490,7 @@ impl Command {
                     muted: false,
                     fade_in: 0,
                     fade_out: 0,
-                    extra: Extra::new(),
+                    extra,
                 });
                 return Ok(Created(Some(id)));
             }
@@ -1535,6 +1544,20 @@ impl Command {
                 length,
                 offset,
             } => return place_clip(p, source, track, start, length, offset),
+            SetClipFadeCurve { clip, out, tension } => {
+                let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
+                if c.audio_channel().is_some() {
+                    let tension = if tension.is_finite() {
+                        tension.clamp(-1.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    c.extra.insert(
+                        if out { "fade-out-curve" } else { "fade-in-curve" }.into(),
+                        serde_json::json!(tension),
+                    );
+                }
+            }
             SetClipFades {
                 clip,
                 fade_in,
@@ -1692,7 +1715,11 @@ impl Command {
                     c.track = (i64::from(c.track) + i64::from(dtrack)).clamp(0, max_track) as u32;
                 }
             }
-            ResizeClip { clip, length } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.length = length.max(1),
+            ResizeClip { clip, length } => {
+                let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
+                c.length = length.max(1);
+                c.extra.insert("length-manual".into(), serde_json::Value::Bool(true));
+            }
             ResizeClipStart { clip, start } => {
                 let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
                 let end = c.end();
@@ -1700,6 +1727,7 @@ impl Command {
                 c.offset = (c.offset + start).saturating_sub(c.start);
                 c.length = end - start;
                 c.start = start;
+                c.extra.insert("length-manual".into(), serde_json::Value::Bool(true));
             }
             SlipClip { clip, offset } => p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?.offset = offset,
             SliceClips { clips, at } => {
@@ -1716,6 +1744,7 @@ impl Command {
                     last = Some(id.0);
                     if let Some(left) = p.clip_mut(c.id) {
                         left.length = at - c.start;
+                        left.extra.insert("length-manual".into(), serde_json::Value::Bool(true));
                     }
                     p.playlist.clips.push(Clip {
                         id,

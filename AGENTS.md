@@ -1,12 +1,19 @@
-# LimeShot — instructions for agents
+# LimeShot — contributor and agent guide
 
 LimeShot is an open-source, offline-first, cross-platform DAW in Rust with an FL Studio–style pattern workflow
 (Channel Rack, Piano Roll, Playlist, Mixer). It is an independent implementation: no FL Studio code or assets, and no
 code copied from ArtCraft/SoundCraft. The full brief is `START.md`.
 
+## Checkout and build cache
+Create and use branches in your existing primary checkout. Run builds and tests from that checkout so Cargo's
+build cache is reused. Avoid separate worktrees or clones for routine branch work. Preserve local changes when
+switching branches, and include the checkout and cache guidance in handoffs.
+All paths and commands below are relative to the repository root unless stated otherwise.
+
 ## Start every session here
 1. Read `docs/development/next-steps.md` (prioritised work) and the latest entries in `docs/development/progress.md`.
-2. Pick work from `docs/roadmap/features.json` (P0 → P3, respecting `dependencies`). Read the record first.
+2. Read the relevant records in `docs/roadmap/features.json` before changing a feature. When choosing new work,
+   follow P0 → P3 priority and respect `dependencies`.
 3. Architecture: `docs/architecture/{audio-engine,project-model,ui}.md`; reasons: `docs/development/decisions.md`.
 
 ## Build, run, test
@@ -30,13 +37,13 @@ scripts/package-macos.sh                           # dist/LimeShot.app, a DMG an
 scripts/package-linux.sh                           # tarball with install.sh, and a .deb
 powershell -File scripts/package-windows.ps1       # Inno Setup installer and portable ZIP (docs/development/release-packaging.md)
 ```
-**Look at the UI** after UI changes. Render with `ui_shot` and read the PNG. Permissions depend on the execution host;
-verify Screen Recording and Accessibility before live automation.
-For live checks, use `cargo run -p limeshot-app --example live_check -- /tmp/check.lime` with a disposable project;
-this harness disables shared autosave/recovery and does not save preferences on exit.
-When granted, `screencapture -l <window id>` captures the live app and CoreGraphics events can drive it
-(keyboard layout is QWERTZ). The
-headless UI tests in `crates/limeshot-app/tests/ui.rs` take pointer positions from geometry the editors record.
+**Look at the UI** after UI changes. Render with `ui_shot` and inspect the PNG.
+For live checks, run `cargo run -p limeshot-app --example live_check -- <temporary-project.lime>` with a disposable
+project in your system's temporary directory. This harness disables shared autosave/recovery and does not save
+preferences on exit. Verify the permissions required by your platform before live automation. On macOS these
+include Screen Recording and Accessibility; `screencapture -l <window id>` can capture the app window.
+Use the local keyboard layout when automating input. Headless UI tests in `crates/limeshot-app/tests/ui.rs`
+take pointer positions from geometry the editors record.
 
 ## Workspace
 | Crate | Role |
@@ -77,28 +84,20 @@ IMPLEMENTED ≠ VERIFIED: VERIFIED needs tests (or a recorded manual verificatio
 `notes` and `docs/roadmap/known-limitations.md` in the same change as the code. Add newly discovered FL Studio
 features as records.
 
-## Current state (v0.1.0-alpha.1, 2026-10-25)
-* The first prerelease ships installers for Windows x64, macOS Apple Silicon/Intel and Linux x86-64/ARM64
-  (`docs/development/release-packaging.md`). CI passes on all platforms; hands-on GUI/audio checks exist for macOS
-  Apple Silicon and partly for Windows (`docs/development/platform-validation.md`).
-* Instruments and effects are the twelve Lime Native VST3 bundles (D39), hosted like any VST3. Build them with
-  `python3 native-plugins/build.py` before running from source. Lime Test Gain / Tone are compiled-in test fixtures.
-* Plugin editors live in internal Plugin / Settings wrappers. **PLG-006 is IMPLEMENTED, not VERIFIED**: keyboard,
-  OS drops, pin/occlusion and host-edge resizing are open (`docs/development/live-plugin-checks-2026-10-25.md`).
-  Windows embeds editors in owned popups; Linux shows parameters. VST3 class ids are portable hex (`util::tuid_to_hex`).
-* Samples (WAV/MP3/FLAC/Ogg/AIFF) are bounded to 6 million stereo frames (about 125 s at 48 kHz) and decode once on
-  the loader thread; Lime Sampler embeds them in its state and replaces them through bounded hand-off queues.
-* Feature, shortcut, setting and menu counts live in the generated inventories; the latest test counts are in
-  `docs/development/progress.md`.
-* UI/UX follows FL Studio; ArtCraft informs the broad visual style. See `docs/architecture/ui.md` and D24/D35.
+## Project status and validation
+Use `docs/development/progress.md` for the latest implementation and test results, and
+`docs/roadmap/known-limitations.md` for open behavior and verification gaps. Platform evidence is recorded in
+`docs/development/platform-validation.md`; packaging details are in `docs/development/release-packaging.md`.
+Build the twelve Lime Native VST3 bundles before running from source. Report the platform and build tested;
+a successful build or headless test does not establish live GUI/audio behavior on other platforms.
 
 ## Immediate next tasks
 Follow `docs/development/next-steps.md`: verify native plugin embedding and the alpha packages on real hardware,
 then continue the editor menus and production features by priority and dependencies. Keep unverified behavior and
 disabled actions in `docs/roadmap/known-limitations.md`.
 
-## REA (reverse-engineering research tool; not a runtime dependency)
-Registered for Claude Code in `~/.claude.json` (`rea-agents@6.7.0`), skill in `~/.claude/skills/reverse-engineer-anything`.
-The MCP tools appear after a Claude Code restart. Without them, use `npx -y rea-agents@6.7.0 <command>`. Evidence and
-continuation steps: `docs/research/rea-findings.md`. Clean-room rules: observe behaviour and metadata only, never copy
-decompiled code or bundle resources, and never modify the installed FL Studio.
+## Optional reverse-engineering research tools
+REA is a research aid, not a runtime or contributor prerequisite. Tool availability and configuration depend on
+local setup; see `docs/research/rea-findings.md` for recorded evidence and continuation steps.
+Clean-room rules apply to all research: observe behavior and metadata only, never copy decompiled code or bundle
+resources, and never modify the installed FL Studio.

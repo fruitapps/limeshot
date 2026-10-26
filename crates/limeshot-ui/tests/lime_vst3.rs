@@ -298,96 +298,182 @@ fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
     let wav = dir.path().join("ramp.wav");
     let samples: Vec<f32> = (0..48_000).flat_map(|i| [0.1 + i as f32 / 96_000.0; 2]).collect();
     limeshot_dsp::write_wav(&wav, SR, &samples, limeshot_dsp::BitDepth::Float32).unwrap();
-    let mut doc = Document::default();
-    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
-    let clip = ClipId(
+    for (in_curve, out_curve) in [(0.0, 0.0), (0.375, -0.625)] {
+        let mut doc = Document::default();
+        doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+        let clip = ClipId(
+            doc.execute(Command::AddAudioClip {
+                sample: SampleRef {
+                    path: wav.to_str().unwrap().into(),
+                },
+                name: "Ramp".into(),
+                track: 0,
+                start: 240,
+                length: 720,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        // Trim 120 ticks of source; clip now begins at frame 9000 and lasts 15000 frames.
+        doc.execute(Command::ResizeClipStart { clip, start: 360 }).unwrap();
+        doc.execute(Command::SetClipFades {
+            clip,
+            fade_in: 120,
+            fade_out: 120,
+        })
+        .unwrap();
+        doc.execute(Command::SetClipFadeCurve {
+            clip,
+            out: false,
+            tension: in_curve,
+        })
+        .unwrap();
+        doc.execute(Command::SetClipFadeCurve {
+            clip,
+            out: true,
+            tension: out_curve,
+        })
+        .unwrap();
+        let channel = doc.project().clip(clip).unwrap().audio_channel().unwrap();
+        doc.execute(Command::SetChannelVolume { channel, volume: 1.0 }).unwrap();
+        doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
+        // Same-key clip overlaps; it must neither deduplicate nor release the first one.
         doc.execute(Command::AddAudioClip {
             sample: SampleRef {
                 path: wav.to_str().unwrap().into(),
             },
             name: "Ramp".into(),
-            track: 0,
-            start: 240,
-            length: 720,
+            track: 1,
+            start: 480,
+            length: 600,
+        })
+        .unwrap();
+        let mut project = doc.project().clone();
+        assert!(lime::convert_project(&mut project, &limeshot_ui::lime::embedded_audio).is_empty());
+        let snapshot = Arc::new(compile(
+            &project,
+            project.patterns[0].id,
+            &limeshot_sequencer::NoSamples,
+        ));
+        let render = |block, from| {
+            let host = PluginHost::new(None);
+            let (processors, _keep) = host.offline(&project, SR).unwrap();
+            render_offline_with(
+                snapshot.clone(),
+                &RenderSettings {
+                    sample_rate: SR,
+                    range: limeshot_engine::ExportRange::Selection { from, to: 1200 },
+                    max_tail_secs: 0.0,
+                    block,
+                },
+                processors,
+            )
+            .unwrap()
+            .0
+        };
+        let baseline = render(256, 0);
+        for block in [1, 64, 333, 1024] {
+            let audio = render(block, 0);
+            assert_eq!(audio, baseline, "block {block}");
+            for frame in [
+                0, 8999, 9000, 10500, 11999, 12000, 15000, 22500, 23999, 24000, 26999, 27000, 29000,
+            ] {
+                let mut expected = 0.0;
+                if (9000..24000).contains(&frame) {
+                    let pos = (frame - 9000) as f32;
+                    let fade = limeshot_dsp::voice::fade_curve((pos / 3000.0).min(1.0), in_curve)
+                        * limeshot_dsp::voice::fade_curve(((24000 - frame) as f32 / 3000.0).min(1.0), out_curve);
+                    expected += (0.1 + (frame - 9000 + 3000) as f32 / 96_000.0) * fade;
+                }
+                if (12000..27000).contains(&frame) {
+                    expected += 0.1 + (frame - 12000) as f32 / 96_000.0;
+                }
+                assert!(
+                    (audio[2 * frame] - expected).abs() < 1e-5,
+                    "frame {frame}: {} vs {expected}",
+                    audio[2 * frame]
+                );
+            }
+            // Starting halfway through fade-in chases source offset and fade position.
+            let chased = render(block, 420);
+            for frame in [0, 10, 1499, 1500, 3000, 12000, 16500] {
+                assert!(
+                    (chased[2 * frame] - baseline[2 * (10500 + frame)]).abs() < 1e-5,
+                    "chase block {block}, frame {frame}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn hosted_disk_sampler_offline_seeks_wait_for_read_ahead() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("disk-ramp.wav");
+    let samples: Vec<f32> = (0..240_000).flat_map(|i| [i as f32 / 960_000.0; 2]).collect();
+    limeshot_dsp::write_wav(&source, SR, &samples, limeshot_dsp::BitDepth::Float32).unwrap();
+    let mut plugin = LimePlugin::SAMPLER.with_values(&lime::sampler_values(&SamplerParams::default(), 60), false, None);
+    assert!(lime::set_disk_source(&mut plugin, &source.to_string_lossy()));
+    plugin
+        .extra
+        .insert("lime-sample-path".into(), serde_json::json!(source.to_string_lossy()));
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let channel = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "Disk ramp".into(),
+            instrument: Instrument::Plugin(plugin),
         })
         .unwrap()
         .0
         .unwrap(),
     );
-    // Trim 120 ticks of source; clip now begins at frame 9000 and lasts 15000 frames.
-    doc.execute(Command::ResizeClipStart { clip, start: 360 }).unwrap();
-    doc.execute(Command::SetClipFades {
-        clip,
-        fade_in: 120,
-        fade_out: 120,
-    })
-    .unwrap();
-    let channel = doc.project().clip(clip).unwrap().audio_channel().unwrap();
     doc.execute(Command::SetChannelVolume { channel, volume: 1.0 }).unwrap();
     doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
-    // Same-key clip overlaps; it must neither deduplicate nor release the first one.
-    doc.execute(Command::AddAudioClip {
-        sample: SampleRef {
-            path: wav.to_str().unwrap().into(),
-        },
-        name: "Ramp".into(),
-        track: 1,
-        start: 480,
-        length: 600,
+    doc.execute(Command::PlaceClip {
+        source: ClipSource::Audio(channel),
+        track: 0,
+        start: 0,
+        length: 4 * PPQ,
+        offset: 2 * PPQ,
     })
     .unwrap();
-    let mut project = doc.project().clone();
-    assert!(lime::convert_project(&mut project, &limeshot_ui::lime::embedded_audio).is_empty());
-    let snapshot = Arc::new(compile(
-        &project,
-        project.patterns[0].id,
-        &limeshot_sequencer::NoSamples,
-    ));
-    let render = |block, from| {
+    let project = doc.project();
+    let snapshot = Arc::new(compile(project, project.patterns[0].id, &limeshot_sequencer::NoSamples));
+    let mut baseline: Option<Vec<f32>> = None;
+    for block in [1, 64, 333, 1024] {
         let host = PluginHost::new(None);
-        let (processors, _keep) = host.offline(&project, SR).unwrap();
-        render_offline_with(
+        let (processors, _keep) = host.offline(project, SR).unwrap();
+        let (audio, _) = render_offline_with(
             snapshot.clone(),
             &RenderSettings {
                 sample_rate: SR,
-                range: limeshot_engine::ExportRange::Selection { from, to: 1200 },
+                range: limeshot_engine::ExportRange::Selection { from: PPQ, to: 4 * PPQ },
                 max_tail_secs: 0.0,
                 block,
             },
             processors,
         )
-        .unwrap()
-        .0
-    };
-    let baseline = render(256, 0);
-    for block in [1, 64, 333, 1024] {
-        let audio = render(block, 0);
-        assert_eq!(audio, baseline, "block {block}");
-        for frame in [
-            0, 8999, 9000, 10500, 11999, 12000, 15000, 22500, 23999, 24000, 26999, 27000, 29000,
-        ] {
-            let mut expected = 0.0;
-            if (9000..24000).contains(&frame) {
-                let pos = (frame - 9000) as f32;
-                let fade = (pos / 3000.0).min(1.0) * ((24000 - frame) as f32 / 3000.0).min(1.0);
-                expected += (0.1 + (frame - 9000 + 3000) as f32 / 96_000.0) * fade;
-            }
-            if (12000..27000).contains(&frame) {
-                expected += 0.1 + (frame - 12000) as f32 / 96_000.0;
-            }
+        .unwrap();
+        for frame in [0, 1, 4095, 8192, 71_999] {
             assert!(
-                (audio[2 * frame] - expected).abs() < 1e-5,
-                "frame {frame}: {} vs {expected}",
-                audio[2 * frame]
+                (audio[2 * frame] - samples[2 * (72_000 + frame)]).abs() < 1e-6,
+                "offline disk sample at {frame}, block {block}: actual {}, expected {}",
+                audio[2 * frame],
+                samples[2 * (72_000 + frame)]
             );
         }
-        // Starting halfway through fade-in chases source offset and fade position.
-        let chased = render(block, 420);
-        for frame in [0, 10, 1499, 1500, 3000, 12000, 16500] {
+        if let Some(baseline) = &baseline {
             assert!(
-                (chased[2 * frame] - baseline[2 * (10500 + frame)]).abs() < 1e-5,
-                "chase block {block}, frame {frame}"
+                audio.iter().zip(baseline).all(|(a, b)| a == b),
+                "disk seek differs at block {block}"
             );
+        } else {
+            baseline = Some(audio);
         }
     }
 }

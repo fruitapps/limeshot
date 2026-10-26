@@ -38,3 +38,5 @@ packages remains open; the dependency overview above is not a complete set of re
 | Source | Authors | License | Use |
 |---|---|---|---|
 | `native-plugins/vendor/egui-baseview` | egui-baseview 0.9.0, RustAudio contributors | MIT OR Apache-2.0; license texts retained | Locally patched renderer teardown; see `LIMESHOT-PATCH.md` in that directory |
+
+| `native-plugins/vendor/nice-plug` | nice-plug 0.4.2 contributors | ISC; license retained | VST3 processing-mode setup fix; see `LIMESHOT-PATCH.md` |

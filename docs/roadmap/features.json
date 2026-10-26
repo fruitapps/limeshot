@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-25 (post-release documentation cleanup)",
+  "updated": "2026-10-26 (alpha.1 interaction and disk sampler follow-up)",
   "features": [
     {
       "id": "APP-001",
@@ -888,7 +888,7 @@
       "name": "Pattern length (auto / manual)",
       "description": "Length of a pattern loop.",
       "fl_reference": "Auto ends at last bar with data; manual 1–512 steps.",
-      "limeshot_behavior": "Auto (whole bars covering the last note) or a fixed number of steps.",
+      "limeshot_behavior": "Auto covers the ends of notes in whole bars; a manual step length is preserved. Untrimmed Playlist pattern clips follow changes to their pattern content until explicitly resized. Explicit resize state is saved and undoable.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -902,7 +902,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-core model::tests::auto_pattern_length_covers_last_note"
+        "limeshot-core model::tests::auto_pattern_length_covers_last_note",
+        "limeshot-core document::tests::pattern_clips_follow_content_until_manually_resized"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2353,7 +2354,7 @@
       "name": "Zoom, scroll, bar/beat ruler",
       "description": "Timeline navigation.",
       "fl_reference": "Zoom, scroll, ruler.",
-      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers. ⏵ menu › Zoom: PgUp / PgDn, Shift+1–5 (4, 16, 64 bars, whole song, selection), Center (Shift+0).",
+      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers. ⏵ menu › Zoom: PgUp / PgDn, Shift+1–5 (4, 16, 64 bars, whole song, selection), Center (Shift+0). Horizontal and vertical scrollbars share the wheel navigation offsets.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2844,7 +2845,7 @@
       "name": "Crossfades and time stretching",
       "description": "Audio clip processing.",
       "fl_reference": "Audio focus options.",
-      "limeshot_behavior": "Audio clips have fade-in and fade-out handles at the top of their body (drag inward, unsnapped, one undo step; the hint shows the lengths in seconds); playback ramps the clip's gain linearly over them, also when playback starts inside a fade. Not yet: automatic crossfades, fade curve shapes, time stretching.",
+      "limeshot_behavior": "Audio clips have triangular fade length handles and circular tension handles. Horizontal length and vertical curve drags apply relative changes to selected audio clips as one undo step. Saved curves play through Lime Sampler, including chase. Automatic crossfades, smooth S curves and time stretching remain open.",
       "priority": "P2",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -2863,7 +2864,8 @@
       ],
       "tests": [
         "limeshot-engine tests/audio.rs::clip_fade_model_clamps_to_the_clip",
-        "crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades"
+        "crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades",
+        "limeshot-dsp voice::fade_tests::fade_tension_is_monotonic_and_keeps_endpoints"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2872,7 +2874,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Fade editing and saved values remain; hosted audio clip playback/fades are unavailable until PLG-024."
+      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1."
     },
     {
       "id": "PL-024",
@@ -4913,7 +4915,7 @@
       "name": "Folder navigation (bundled + user folders)",
       "description": "Browse sample folders.",
       "fl_reference": "Browser tabs and user folders.",
-      "limeshot_behavior": "Bundled LimeShot samples plus folders added with +; collapsible tree; ⟳ re-reads.",
+      "limeshot_behavior": "Channels and Files categories; Files contains bundled LimeShot Samples and all added folders. Long tree/file names truncate within the set Browser width; channel names reserve space for their type.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -4926,7 +4928,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter"
+        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter",
+        "crates/limeshot-app/tests/ui.rs::browser_search_finds_closed_folders_and_long_names_preserve_width"
       ],
       "reference": {
         "application": "FL Studio",
@@ -4943,7 +4946,7 @@
       "name": "Sample preview",
       "description": "Audition samples.",
       "fl_reference": "Left-click previews.",
-      "limeshot_behavior": "Click a WAV to preview it through the engine (master). The Browser's bottom panel shows the selected sample's waveform with the preview's position, its rate and length; clicking it or its play button plays it again. Audio clips in the Playlist's picker play when clicked (also with the Browser hidden), and pressing the sample's waveform in Channel Settings plays it through the channel until the button is released. Stop while stopped ends a preview (TR-002).",
+      "limeshot_behavior": "Click a WAV to preview it through the engine (master). The Browser's bottom panel shows the selected sample's waveform with the preview's position, its rate and length; clicking it or its play button plays it again. Audio clips in the Playlist's picker play when clicked (also with the Browser hidden), and pressing the sample's waveform in Channel Settings plays it through the channel until the button is released. Stop while stopped ends a preview (TR-002). The Browser preview has a dedicated Stop button that cancels pending playback and stops the preview without stopping the song.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -4959,7 +4962,8 @@
       ],
       "tests": [
         "crates/limeshot-app/tests/ui.rs::browser_click_and_double_click_only_preview_samples",
-        "limeshot-app tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
+        "limeshot-app tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings",
+        "crates/limeshot-app/tests/ui.rs::browser_preview_stop_cancels_audio_and_pending_preview"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5011,7 +5015,7 @@
       "name": "Search / filter",
       "description": "Find samples.",
       "fl_reference": "Ctrl+F search with wildcards.",
-      "limeshot_behavior": "Substring filter on file names.",
+      "limeshot_behavior": "Case-insensitive filename substring search across all sample folders, including closed folders. A temporary Search tab closes when the query is dismissed. Indexing runs on a worker and only visible results render.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -5024,7 +5028,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter"
+        "crates/limeshot-app/tests/ui.rs::browser_folders_open_and_filter",
+        "crates/limeshot-app/tests/ui.rs::browser_search_finds_closed_folders_and_long_names_preserve_width"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5431,7 +5436,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md. 2026-10-25: wrappers share workspace title styling and have minimize, pin and close, with no maximize/detach. Native resize requests resize the wrapper; wrapper resizes negotiate native constraints. Native macOS editors use an AppKit preset menu above their NSView, so the editor stays visible; parameter/headless wrappers use an egui menu. Native views temporarily hide for host sample drags. Host GL context is protected during teardown; native backend also binds its own context before deleting GL objects. Live third-party resize and native interaction verification remain separate. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification."
+      "notes": "Manual verification (session 12, 2026-10-21, macOS, release build driven with synthetic input): Vital (Bass), Serum 2 (Pad) and Surge XT (Lead) channels and an OTT insert opened their editors in plugin windows from the channel button and the insert's name; Plugin/Settings tabs switch and the window resizes to each (1108x707 <-> 440x588 pt, top left kept); dragging Vital's own resize corner resized the window around it (to 919x596); turning a Vital knob marked the saved project modified; closing and reopening kept position and size; a second click on the OTT slot closed its window; quitting with a plugin window open exited cleanly. Lime Test Gain (built-in) has a minimal editor for headless tests; Lime Test Tone has none. Windows and Linux compile (cross-checked) and fall back to the parameter list. Session 15: presets ◀ ▶, presets menu, keyboard toggle and window places in the project, tested headlessly with Lime Test Tone's factory programs; not yet checked live with a real plugin's window. Session 17: Plugin and Settings tabs now live in resizable LimeShot workspace windows. macOS native views are children of the main window and never resize the OS window; fixed-size plugins retain a minimum wrapper size, resizable plugins receive onSize. Native views hide when covered by other windows/popups. Final live embedded-editor resize/tab/input verification is pending: window captures were blank and the terminal UI helper reports AXIsProcessTrusted() == false. Headless wrapper/state tests pass. 2026-10-23 live follow-up: fixed host OpenGL context loss after native plugin rendering; Lime Sampler editor plus host and Settings tab render correctly. Broader resize/occlusion/keyboard/detached/third-party checks remain. Evidence: docs/development/lime-vst3-host-validation.md. 2026-10-25: wrappers share workspace title styling and have minimize, pin and close, with no maximize/detach. Native resize requests resize the wrapper; wrapper resizes negotiate native constraints. Native macOS editors use an AppKit preset menu above their NSView, so the editor stays visible; parameter/headless wrappers use an egui menu. Native views temporarily hide for host sample drags. Host GL context is protected during teardown; native backend also binds its own context before deleting GL objects. Live third-party resize and native interaction verification remain separate. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-26: synchronous plugin echoes of host size negotiation no longer request another wrapper resize; unchanged AppKit child frames are not reassigned. Live Serum host-edge resizing still requires verification."
     },
     {
       "id": "PLG-007",
@@ -8438,7 +8443,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles pass the exported-binary verifier on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024; native-plugin CI passes on macOS, Windows and Linux. pluginval 1.0.4 strictness 5 passed the first nine bundles; it has not been rerun on the current twelve. Gate/Drive/Chorus use IDs 9–11; original IDs and control order are stable. Native editor geometry and sampler audio tests are automated. The local egui-baseview patch binds its own GL context during painter destruction, so closing a plugin cannot delete a host's GL objects. Live macOS pass: docs/development/live-plugin-checks-2026-10-25.md (partial). Hands-on checks in other DAWs remain open. Evidence: native-plugins/VALIDATION.md."
+      "notes": "Twelve release and debug bundles pass the exported-binary verifier on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024; native-plugin CI passes on macOS, Windows and Linux. pluginval 1.0.4 strictness 5 passed the first nine bundles; it has not been rerun on the current twelve. Gate/Drive/Chorus use IDs 9–11; original IDs and control order are stable. Native editor geometry and sampler audio tests are automated. The local egui-baseview patch binds its own GL context during painter destruction, so closing a plugin cannot delete a host's GL objects. Live macOS pass: docs/development/live-plugin-checks-2026-10-25.md (partial). Hands-on checks in other DAWs remain open. Evidence: native-plugins/VALIDATION.md. 2026-10-26: relative drags accumulate locally across parameter quantization/host latency; displayed numeric values accept inline entry. Inactive voice-prefix processing and bounded editor repaints reduce redundant work."
     },
     {
       "id": "WF-009",
@@ -9463,6 +9468,45 @@
         ]
       },
       "notes": "Manual-based subset; live FL defaults/fallbacks not verified. No scale falls back to C roots/all highlighted pitches. Key height below 11 pixels hides labels. Custom key names, presets and keyboard styles remain pending."
+    },
+    {
+      "id": "INS-016",
+      "category": "Instruments",
+      "name": "Sampler Keep on disk and long audio",
+      "description": "Bounded disk-backed sample playback and background preparation.",
+      "fl_reference": "Sampler Content › Keep on disk; General › Auto keep long audio on disk.",
+      "limeshot_behavior": "Short samples remain embedded; long samples use a prepared seekable WAV cache, bounded read-ahead and cached extrema, up to 2 GB decoded stereo float audio. WAV and compressed imports prepare on workers. Keep on disk is per native sampler; automatic long-audio disk mode is a saved host preference. Linked paths persist relative to the project; offline exports wait for disk pages.",
+      "priority": "P0",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001",
+        "PLG-013"
+      ],
+      "modules": [
+        "limeshot-dsp",
+        "limeshot-audio",
+        "limeshot-core",
+        "limeshot-ui",
+        "native-plugins/shared"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-dsp disk::tests::disk_cache_is_bounded_and_seeks_match_pcm",
+        "limeshot-dsp disk::tests::declared_audio_over_two_gb_is_rejected_without_decoding"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
+          "Plugins/Fruity/Generators listing (rea-findings.md)"
+        ]
+      },
+      "notes": "Owner approved after FL manual research and chose 2 GB rather than a time limit. Cache eviction requires the original source. Realtime cache misses produce silence and an underrun counter; very scattered voices can exhaust read-ahead. Live stress/platform verification remains open; see docs/research/alpha1-sampler-and-fades.md."
     }
   ]
 }

@@ -51,3 +51,11 @@ python3 native-plugins/build.py --debug
 cargo run --manifest-path native-plugins/Cargo.toml -p lime-native --example verify -- native-plugins/target/debug-bundled
 pluginval --strictness-level 5 --random-seed 42 --validate '/absolute/path/to/LimeSynth.vst3'
 ```
+
+## Alpha.1 follow-up, 2026-10-26
+
+On macOS arm64, live LimeSynth numerical entry accepted -2 oct; Serum 2 internal-corner shrink/grow kept
+the host wrapper aligned and its origin stable. Headless native tests include direct value typing and disk/embedded
+PCM parity across four block sizes and seeks, with realtime allocation assertions. The DAW hosted suite adds
+curved-fade/chase parity and disk-backed offline seeks. nice-plug's VST3 activation-mode setup is patched locally
+(see vendor/nice-plug/LIMESHOT-PATCH.md). These checks do not establish Windows/Linux runtime verification.

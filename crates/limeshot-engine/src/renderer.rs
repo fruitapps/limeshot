@@ -187,7 +187,7 @@ impl Renderer {
             v.release_at = self.timeline.sample_of_tick(v.end_tick.max(tick));
         }
         let tl = self.timeline;
-        self.instruments.retime(|t| tl.sample_of_tick(t.max(tick)));
+        self.instruments.retime(self.now, |t| tl.sample_of_tick(t.max(tick)));
     }
 
     /// The tempo the transport runs at now (tempo automation included).
@@ -318,7 +318,7 @@ impl Renderer {
         for v in self.voices.iter_mut().filter(|v| v.sequenced) {
             v.release();
         }
-        self.instruments.release_sequenced();
+        self.instruments.release_sequenced(self.now);
     }
 
     /// Silence everything: every voice (sequenced notes, auditions, sample previews) fades out
@@ -685,6 +685,8 @@ impl Renderer {
                                     / f64::from(self.sample_rate),
                                 fade_in_secs: e.fade_in_secs,
                                 fade_out_secs: e.fade_out_secs,
+                                fade_in_curve: e.fade_in_curve,
+                                fade_out_curve: e.fade_out_curve,
                             }),
                         },
                     ));
@@ -711,6 +713,8 @@ impl Renderer {
                             / f64::from(self.sample_rate),
                         fade_in_secs: e.fade_in_secs,
                         fade_out_secs: e.fade_out_secs,
+                        fade_in_curve: e.fade_in_curve,
+                        fade_out_curve: e.fade_out_curve,
                     }),
                 },
             ));
@@ -765,7 +769,7 @@ impl Renderer {
         {
             v.release();
         }
-        self.instruments.release_sequenced();
+        self.instruments.release_sequenced(self.now);
         let restart = self.active_loop().map_or(0, |r| r.0);
         self.timeline = Timeline {
             origin_tick: restart,

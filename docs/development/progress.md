@@ -163,3 +163,39 @@ both DMGs pass `hdiutil verify`, ZIP CRCs pass, Linux tarballs contain twelve VS
 **v0.1.0-alpha.1 published** (prerelease, 2026-10-25) from `28d3a41`: CI `40219529679`, native-plugin CI
 `40219529749` and release run `40219554203` pass. Windows x64, macOS Apple Silicon and Intel, Linux x86-64 and ARM64
 packages with checksums.
+
+
+## 2026-10-26
+
+**Alpha.1 interaction and long-audio follow-up.** Native controls retain local drag precision and accept direct
+value entry; plugin resize echoes are coalesced and self-resizing editors retain their current natural size.
+Browser trees constrain labels, recursive search has a temporary Search tab, sample roots live under Files,
+and preview has a Stop control. Playlist scrollbars, triangular fade length/circular tension handles and
+selected-clip fade gestures are implemented. Untouched pattern clips follow note-end length; explicit resize
+preserves arrangement length and undo groups the automatic update. Pin uses a painter pushpin.
+
+Keep on disk and Auto keep long audio on disk follow the documented FL sampler behavior with an independent
+implementation: 2,000,000,000 decoded stereo-float bytes, 1 MiB page storage per reader, worker decoding and
+waveform extrema, small linked project state and relative source paths. Compressed sources prepare to seekable
+WAV in the temporary cache. Realtime page misses return silence and are counted; offline exports wait. A hosted
+seek regression caught nice-plug 0.4.2 storing its previous activation mode; a documented ISC vendor patch fixes
+that setup ordering. Song-end plugin releases now retain their absolute frame rather than cutting the final
+buffer short; the hosted seek test checks its final sample across four block sizes. See [research](../research/alpha1-sampler-and-fades.md) for sources and limitations.
+
+Performance review removed per-block editor wakeups, limits idle host polling to 5 Hz, bounds Browser repaint
+rates, virtualizes search results and processes only the occupied native voice prefix while preserving all 128
+voice slots. The CPU meter measures audio render time / buffer deadline, not total process CPU.
+A ten-minute 230.4 MB float-WAV probe measured 8265 ms cold preparation, 1.70 ms warm open, 1 MiB pages and
+225 KB waveform extrema; warm standalone process RSS was 3.38 MB. These are reader measurements, not a whole-DAW
+CPU benchmark.
+
+Manual macOS arm64 verification with granted Screen Recording/Accessibility: the disposable live_check app
+rendered LimeSynth, accepted a clicked octave value of -2, and Serum 2 shrank and grew from its own corner with
+its wrapper aligned and top-left position stable. A ten-minute disk-backed Browser preview loaded, displayed
+600 seconds, retained Browser width with a truncated filename, and stopped to zero voices. Offscreen Playlist render inspected for fades/scrollbars/Files.
+Workspace suite: 440 passed (159 UI, 10 hosted VST3); native unit suite: 22 passed; `nice-plug` unit suite: 8 passed.
+Workspace/native strict Clippy, builds, formatting and inventory/reference checks passed. Windows/Linux runtime and broad third-party editor coverage remain unverified.
+
+Owner update (2026-10-26): create and use branches in the main checkout at `~/Developer/limeshot`, and build/test
+there to retain Cargo caches. Do not use separate worktrees or clones for routine branch work. Preserve local
+changes when switching branches. This supersedes the earlier separate-worktree session policy; repeat it in handoffs.

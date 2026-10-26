@@ -130,6 +130,23 @@ impl NativeEditor {
         self.meters(ui.painter(), c, c.r(758.0, 446.0, 65.0, 105.0), t);
     }
     fn sampler(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
+        use nice_plug::params::persist::PersistentField;
+        let (source, mut disk) = self
+            .params
+            .sample
+            .map(|sample| (sample.source.clone(), sample.keep_on_disk));
+        ui.scope_builder(UiBuilder::new().max_rect(c.r(12.0, c.h - 57.0, 185.0, 25.0)), |ui| {
+            if ui
+                .add_enabled(
+                    source.is_some() && self.sample_loading.is_none(),
+                    egui::Checkbox::new(&mut disk, "Keep on disk"),
+                )
+                .changed()
+                && let Some(source) = source
+            {
+                self.load_sample_mode(std::path::Path::new(&source), Some(disk));
+            }
+        });
         let file = c.r(12.0, 54.0, 736.0, 38.0);
         ui.painter().rect_filled(file, 2, t.surface);
         let name = self.params.sample.name();
@@ -158,6 +175,7 @@ impl NativeEditor {
             let mut state = context.get_state();
             state.fields.insert("sample-v1".into(), sample);
             context.set_state(state);
+            self.sample_loading = None;
             self.status = "Sample cleared".into();
         }
         panel(ui.painter(), c.r(12.0, 103.0, 359.0, 153.0), "PLAYBACK", t, c.s);

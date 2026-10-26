@@ -268,10 +268,10 @@ impl InstrumentRack {
         }
     }
 
-    /// Release every sequenced note at the start of the next block (stop, locate, loop).
-    pub(crate) fn release_sequenced(&mut self) {
+    /// Release sequenced notes at the engine frame where stop, locate or loop occurs.
+    pub(crate) fn release_sequenced(&mut self, at: u64) {
         for h in self.held.iter_mut().filter(|h| h.sequenced) {
-            h.off_at = 0;
+            h.off_at = h.off_at.min(at);
         }
     }
 
@@ -306,11 +306,11 @@ impl InstrumentRack {
     }
 
     /// Move note-offs after a tempo change (`sample_of` maps a tick to an engine sample).
-    pub(crate) fn retime(&mut self, sample_of: impl Fn(Tick) -> u64) {
+    pub(crate) fn retime(&mut self, now: u64, sample_of: impl Fn(Tick) -> u64) {
         for h in self
             .held
             .iter_mut()
-            .filter(|h| h.sequenced && h.off_at != u64::MAX && h.off_at != 0)
+            .filter(|h| h.sequenced && h.off_at != u64::MAX && h.off_at > now)
         {
             h.off_at = sample_of(h.end_tick);
         }
@@ -386,6 +386,37 @@ fn sort_events(events: &mut [NoteEvent]) {
         while j > 0 && rank(&events[j - 1]) > rank(&events[j]) {
             events.swap(j - 1, j);
             j -= 1;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tempo_changes_do_not_resurrect_released_notes() {
+        for block in [1, 64, 333, 1024] {
+            let now = 10 * block;
+            let note = Held {
+                channel: 0,
+                key: 60,
+                id: 1,
+                on_at: 0,
+                off_at: now + block,
+                end_tick: 960,
+                sequenced: true,
+                clip: false,
+            };
+            let mut rack = InstrumentRack::new(block as usize);
+            rack.held.push(note);
+            rack.release_sequenced(now);
+            // A stop/locate followed by tempo automation must keep the pending note-off.
+            rack.retime(now, |_| now + 2 * block);
+            assert_eq!(rack.held[0].off_at, now);
+            rack.held.push(note);
+            rack.retime(now, |_| now + 3 * block);
+            assert_eq!(rack.held[1].off_at, now + 3 * block);
         }
     }
 }

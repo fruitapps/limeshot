@@ -142,7 +142,14 @@ impl Document {
     /// not an edit: it makes no undo step and does not change the revision, because the sound
     /// does not change. Returns false if `target` has no plugin.
     pub fn store_plugin_state(&mut self, target: PluginTarget, state: crate::PluginState) -> bool {
-        self.plugin_mut(target).map(|p| p.state = state).is_some()
+        self.plugin_mut(target)
+            .map(|p| {
+                p.state = state;
+                if let Some(source) = crate::lime::disk_source(p) {
+                    p.extra.insert("lime-sample-path".into(), serde_json::json!(source));
+                }
+            })
+            .is_some()
     }
 
     /// Store where a plugin's window is (before saving). Like [`Document::store_plugin_state`]
@@ -183,6 +190,21 @@ impl Document {
         let merge = cmd.merge_key();
         let mut next = self.project.clone();
         let out = cmd.apply(&mut next)?;
+        for clip in &mut next.playlist.clips {
+            if clip.offset != 0 || clip.extra.get("length-manual").and_then(serde_json::Value::as_bool) == Some(true) {
+                continue;
+            }
+            let Some(pattern) = clip.pattern() else { continue };
+            if let (Some(before), Some(after)) = (
+                self.project.pattern(pattern),
+                next.patterns.iter().find(|p| p.id == pattern),
+            ) {
+                let previous = before.length(self.project.time_signature);
+                if self.project.clip(clip.id).is_some_and(|c| c.length == previous) {
+                    clip.length = after.length(next.time_signature);
+                }
+            }
+        }
         self.normalize(&mut next);
         if next == self.project {
             return Ok(out);
@@ -279,6 +301,61 @@ mod tests {
             .unwrap();
         let pat = d.project().patterns[0].id;
         (d, ChannelId(id), pat)
+    }
+
+    #[test]
+    fn pattern_clips_follow_content_until_manually_resized() {
+        let mut d = Document::default();
+        let pattern = d.project().patterns[0].id;
+        let channel = crate::ChannelId(
+            d.execute(Command::AddChannel {
+                name: "Synth".into(),
+                instrument: crate::Instrument::Synth(Default::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let clip = crate::ClipId(
+            d.execute(Command::AddClip {
+                pattern,
+                track: 0,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let note = crate::NewNote {
+            channel,
+            key: 60,
+            start: 3600,
+            length: 480,
+            velocity: 1.0,
+        };
+        let id = crate::NoteId(d.execute(Command::AddNote { pattern, note }).unwrap().0.unwrap());
+        assert_eq!(d.project().clip(clip).unwrap().length, 7680);
+        d.execute(Command::ResizeClip { clip, length: 7680 }).unwrap();
+        d.execute(Command::ResizeNotes {
+            pattern,
+            notes: vec![id],
+            dlen: 7680,
+        })
+        .unwrap();
+        assert_eq!(
+            d.project().clip(clip).unwrap().length,
+            7680,
+            "explicit resize disables following even at the old length"
+        );
+        d.undo();
+        d.undo();
+        d.execute(Command::RemoveNotes {
+            pattern,
+            notes: vec![id],
+        })
+        .unwrap();
+        assert_eq!(d.project().clip(clip).unwrap().length, 3840);
     }
 
     #[test]

@@ -252,6 +252,8 @@ pub struct PluginHost {
     db_path: Option<PathBuf>,
     pub scan: Option<Scan>,
     live: HashMap<Target, Live>,
+    disk_preloads: HashMap<String, std::sync::mpsc::Receiver<Result<(), String>>>,
+    disk_ready: std::collections::HashSet<String>,
     /// Plugins that failed to load, with the reason (cleared when the plugin changes).
     errors: HashMap<Target, (Key, String)>,
     generation: Option<u64>,
@@ -312,13 +314,14 @@ fn instantiate(
     p: &PluginRef,
     sample_rate: u32,
     bridge: Option<&Path>,
+    offline: bool,
 ) -> Result<(PluginInstance, PluginProcessor), String> {
     if p.format != "VST3" {
         return Err(format!("{} plugins are not supported yet", p.format));
     }
     let sr = f64::from(sample_rate);
     let block = limeshot_engine::MAX_BLOCK;
-    let (mut inst, mut proc) = match (p.separate_process, bridge) {
+    let (mut inst, mut proc) = match (p.separate_process && !offline, bridge) {
         #[cfg(unix)]
         (true, Some(exe)) => {
             let (i, pr) = limeshot_plugins::bridge::BridgedInstance::spawn(exe, &p.path, &p.class_id, sr, block)
@@ -328,10 +331,14 @@ fn instantiate(
         (true, _) if cfg!(unix) => return Err("no plugin bridge is available".into()),
         _ => {
             let module = load_module(&p.path)?;
-            let (i, pr) = Vst3Instance::new(&module, &p.class_id, sr, block).map_err(|e| e.to_string())?;
+            let (i, pr) =
+                Vst3Instance::new_with_mode(&module, &p.class_id, sr, block, offline).map_err(|e| e.to_string())?;
             (PluginInstance::Local(i), PluginProcessor::Local(pr))
         }
     };
+    if p.extra.get("lime-disk-unapproved").and_then(serde_json::Value::as_bool) == Some(true) {
+        return Err("Choose the disk sample source to approve this outside-project file".into());
+    }
     if p.extra.get("lime-sample-pending").and_then(serde_json::Value::as_bool) == Some(true) {
         return Err(format!(
             "{}: sample conversion is incomplete; choose a supported source file and reload",
@@ -441,8 +448,16 @@ impl PluginHost {
             self.window_memory.clear();
             self.live.clear();
             self.errors.clear();
+            self.disk_preloads.clear();
+            self.disk_ready.clear();
         }
         let wanted = wanted(project);
+        let wanted_sources: std::collections::HashSet<_> = wanted
+            .iter()
+            .filter(|(_, p)| p.extra.get("lime-disk-unapproved").and_then(serde_json::Value::as_bool) != Some(true))
+            .filter_map(|(_, p)| limeshot_core::lime::disk_source(p))
+            .collect();
+        self.disk_preloads.retain(|source, _| wanted_sources.contains(source));
         let saved_windows: Vec<(Target, &PluginRef)> = if opened { wanted.clone() } else { Vec::new() };
         self.live
             .retain(|t, l| wanted.iter().any(|(w, p)| w == t && l.key == key_of(p)));
@@ -452,6 +467,38 @@ impl PluginHost {
         self.errors
             .retain(|t, (k, _)| wanted.iter().any(|(w, p)| w == t && *k == key_of(p)));
         for (target, p) in wanted {
+            if p.extra.get("lime-disk-unapproved").and_then(serde_json::Value::as_bool) != Some(true)
+                && let Some(source) = limeshot_core::lime::disk_source(p)
+                && !self.disk_ready.contains(&source)
+            {
+                let result = self.disk_preloads.get(&source).and_then(|rx| rx.try_recv().ok());
+                match result {
+                    Some(Ok(())) => {
+                        self.disk_preloads.remove(&source);
+                        self.disk_ready.insert(source);
+                    }
+                    Some(Err(error)) => {
+                        self.disk_preloads.remove(&source);
+                        self.errors.insert(target, (key_of(p), error.clone()));
+                        warnings.push(error);
+                        continue;
+                    }
+                    None => {
+                        if !self.disk_preloads.contains_key(&source) && !self.errors.contains_key(&target) {
+                            let (tx, rx) = std::sync::mpsc::channel();
+                            self.disk_preloads.insert(source.clone(), rx);
+                            std::thread::spawn(move || {
+                                let _ = tx.send(
+                                    limeshot_dsp::disk::load_disk(Path::new(&source))
+                                        .map(|_| ())
+                                        .map_err(|e| e.to_string()),
+                                );
+                            });
+                        }
+                        continue;
+                    }
+                }
+            }
             if let Some(live) = self.live.get_mut(&target) {
                 if live.state != p.state {
                     match live.instance.set_state(p.state.bytes()) {
@@ -472,7 +519,7 @@ impl PluginHost {
                 continue;
             }
             let key = key_of(p);
-            match instantiate(p, sample_rate, self.bridge_exe.as_deref()) {
+            match instantiate(p, sample_rate, self.bridge_exe.as_deref(), false) {
                 Ok((instance, proc)) => {
                     match target {
                         Target::Channel(c) => send(Msg::Instrument(c.0, Box::new(proc))),
@@ -590,7 +637,7 @@ impl PluginHost {
     /// Whether plugins must be synced (and the snapshot sent again) although the project did not
     /// change. Clears the request.
     pub fn take_needs_sync(&mut self) -> bool {
-        std::mem::take(&mut self.needs_sync)
+        std::mem::take(&mut self.needs_sync) || !self.disk_preloads.is_empty()
     }
 
     /// Close the window of the plugin at `target` now and open it again, on the same tab, once
@@ -689,7 +736,7 @@ impl PluginHost {
             if let Some(Ok(s)) = self.live.get(&target).map(|l| l.instance.state()) {
                 p.state = PluginState::new(s);
             }
-            match instantiate(&p, sample_rate, self.bridge_exe.as_deref()) {
+            match instantiate(&p, sample_rate, self.bridge_exe.as_deref(), true) {
                 Ok((inst, proc)) => {
                     let proc = ReturnOnDrop {
                         inner: Some(proc),
@@ -1202,6 +1249,18 @@ pub fn create_automation(app: &mut LimeShotApp, target: Target, id: u32) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deleted_disk_plugin_does_not_keep_sync_active() {
+        let mut host = PluginHost::new(None);
+        host.generation = Some(7);
+        let (_sender, receiver) = std::sync::mpsc::channel();
+        host.disk_preloads.insert("removed.wav".into(), receiver);
+        assert!(host.take_needs_sync());
+        host.sync(&Project::default(), 7, 48_000, &mut |_| {});
+        assert!(host.disk_preloads.is_empty());
+        assert!(!host.take_needs_sync());
+    }
 
     #[test]
     fn an_offline_export_requires_every_plugin_to_load() {

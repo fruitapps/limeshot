@@ -205,10 +205,15 @@ pub fn paint(p: &Painter, r: Rect, icon: Icon, c: Color32) {
             p.rect_filled(Rect::from_min_max(at(-5.5, -1.0), at(5.5, 6.0)), 1.5 * u, c);
         }
         Icon::Pin => {
-            // A round head, a collar and a needle, leaning right.
-            p.circle_filled(at(2.5, -3.5), 3.2 * u, c);
-            p.line_segment([at(-1.5, -2.0), at(4.0, 3.5)], Stroke::new(1.6 * u, c));
-            p.line_segment([at(1.0, 1.0), at(-5.5, 6.5)], line);
+            // A pushpin's cap, stem, flared shoulder and needle.
+            p.rect_filled(Rect::from_min_max(at(-3.5, -6.0), at(3.5, -4.0)), 0.5 * u, c);
+            p.rect_filled(Rect::from_min_max(at(-1.5, -4.0), at(1.5, 0.5)), 0.0, c);
+            p.add(egui::Shape::convex_polygon(
+                vec![at(-1.5, 0.0), at(1.5, 0.0), at(4.5, 2.5), at(-4.5, 2.5)],
+                c,
+                Stroke::NONE,
+            ));
+            p.line_segment([at(0.0, 2.5), at(0.0, 7.0)], line);
         }
         Icon::Graph => {
             for (x, h) in [(-5.0f32, 5.0f32), (-1.7, 9.0), (1.6, 3.5), (4.9, 7.0)] {

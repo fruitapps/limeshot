@@ -75,7 +75,11 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
                 && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
                 && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(Value::as_str)
             {
-                let stored = relative_path(Path::new(stored), dir);
+                let disk_source = limeshot_core::lime::disk_source(plugin);
+                let stored = relative_path(Path::new(disk_source.as_deref().unwrap_or(stored)), dir);
+                if disk_source.is_some() {
+                    limeshot_core::lime::set_disk_source(plugin, &stored);
+                }
                 plugin.extra.insert("lime-sample-path".into(), json!(stored));
             }
         }
@@ -137,7 +141,16 @@ pub fn load(path: &Path) -> Result<Project, ProjectError> {
         return Err(ProjectError::TooLarge(path.to_path_buf()));
     }
     let text = fs::read_to_string(path).map_err(io(path))?;
-    from_json(&text, path)
+    let mut project = from_json(&text, path)?;
+    for channel in &mut project.channels {
+        if let Instrument::Plugin(plugin) = &mut channel.instrument
+            && let Some(source) = limeshot_core::lime::disk_source(plugin)
+        {
+            let source = resolve_sample_path(&source, path.parent());
+            limeshot_core::lime::set_disk_source(plugin, &source.to_string_lossy());
+        }
+    }
+    Ok(project)
 }
 
 /// Save atomically: write `name.lime.tmp-<pid>`, flush to disk, rename over `path`.
@@ -290,6 +303,37 @@ pub fn resolve_sample_path(stored: &str, project_dir: Option<&Path>) -> PathBuf 
 mod tests {
     use super::*;
     use limeshot_core::*;
+
+    #[test]
+    fn disk_sampler_sources_save_relative_and_reopen_absolute() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("audio.wav");
+        let path = dir.path().join("song.lime");
+        let mut plugin =
+            LimePlugin::SAMPLER.with_values(&lime::sampler_values(&SamplerParams::default(), 60), false, None);
+        assert!(lime::set_disk_source(&mut plugin, &source.to_string_lossy()));
+        plugin
+            .extra
+            .insert("lime-sample-path".into(), json!(source.to_string_lossy()));
+        let mut document = Document::default();
+        document
+            .execute(Command::AddChannel {
+                name: "Disk".into(),
+                instrument: Instrument::Plugin(plugin),
+            })
+            .unwrap();
+        save(document.project(), &path).unwrap();
+        let raw = from_json(&std::fs::read_to_string(&path).unwrap(), &path).unwrap();
+        let Instrument::Plugin(plugin) = &raw.channels[0].instrument else {
+            panic!("plugin");
+        };
+        assert_eq!(lime::disk_source(plugin).as_deref(), Some("audio.wav"));
+        let reopened = load(&path).unwrap();
+        let Instrument::Plugin(plugin) = &reopened.channels[0].instrument else {
+            panic!("plugin");
+        };
+        assert_eq!(std::path::PathBuf::from(lime::disk_source(plugin).unwrap()), source);
+    }
 
     fn sample_project(sample: &str) -> Project {
         let mut d = Document::default();

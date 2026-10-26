@@ -135,6 +135,7 @@ pub struct Vst3Processor {
     /// Automation for the next `process` call: (parameter, frame offset, value).
     pending: Vec<(u32, u32, f64)>,
     processing: bool,
+    offline: bool,
     transport: Transport,
     sample_rate: f64,
 }
@@ -203,6 +204,17 @@ impl Vst3Instance {
         class_id: &str,
         sample_rate: f64,
         max_block: usize,
+    ) -> Result<(Vst3Instance, Vst3Processor), PluginError> {
+        Self::new_with_mode(module, class_id, sample_rate, max_block, false)
+    }
+
+    /// Initialize an offline processor with the VST3 freewheeling mode.
+    pub fn new_with_mode(
+        module: &Arc<Vst3Module>,
+        class_id: &str,
+        sample_rate: f64,
+        max_block: usize,
+        offline: bool,
     ) -> Result<(Vst3Instance, Vst3Processor), PluginError> {
         let max_block = max_block.max(1);
         let component: ComPtr<IComponent> = module
@@ -295,7 +307,11 @@ impl Vst3Instance {
                     .activateBus(MediaTypes_::kEvent as i32, BusDirections_::kOutput as i32, 0, 1);
             }
             let mut setup = ProcessSetup {
-                processMode: ProcessModes_::kRealtime as i32,
+                processMode: if offline {
+                    ProcessModes_::kOffline
+                } else {
+                    ProcessModes_::kRealtime
+                } as i32,
                 symbolicSampleSize: SymbolicSampleSizes_::kSample32 as i32,
                 maxSamplesPerBlock: max_block as i32,
                 sampleRate: sample_rate,
@@ -335,6 +351,7 @@ impl Vst3Instance {
                 from_control,
                 pending: Vec::with_capacity(MAX_PENDING),
                 processing: false,
+                offline,
                 transport: Transport::default(),
                 sample_rate,
             };
@@ -838,7 +855,11 @@ impl Vst3Processor {
             }
         };
         let mut data = ProcessData {
-            processMode: ProcessModes_::kRealtime as i32,
+            processMode: if self.offline {
+                ProcessModes_::kOffline
+            } else {
+                ProcessModes_::kRealtime
+            } as i32,
             symbolicSampleSize: SymbolicSampleSizes_::kSample32 as i32,
             numSamples: n as i32,
             numInputs: self.in_bufs.len() as i32,

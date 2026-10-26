@@ -1329,10 +1329,10 @@
       "fl_default": "on",
       "fl_reference": "Options › General settings › Advanced › Auto keep long audio on disk",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
-      "feature": "PL-014",
-      "notes": ""
+      "limeshot_setting": "settings.auto_keep_long_audio_on_disk",
+      "status": "IMPLEMENTED",
+      "feature": "INS-016",
+      "notes": "Default on. Long host imports/previews use a bounded disk cache up to 2 GB decoded stereo float audio; native Sampler also offers per-source Keep on disk."
     },
     {
       "id": "SET-110",

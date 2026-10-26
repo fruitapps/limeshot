@@ -63,6 +63,7 @@ struct FrameState {
     embedded_request: EditorSize,
     /// The plugin resized itself since the host last asked.
     resized: bool,
+    host_resizing: bool,
 }
 
 /// The host's `IPlugFrame`: the plugin calls it to resize its editor.
@@ -88,8 +89,8 @@ impl IPlugFrameTrait for PlugFrame {
             let Ok(mut s) = self.state.try_borrow_mut() else {
                 return kResultFalse;
             };
+            s.resized |= s.size != size && !s.host_resizing;
             s.size = size;
-            s.resized = true;
             let inset = s.top_inset;
             if let Some(c) = &s.container {
                 c.resize(size, inset);
@@ -187,6 +188,7 @@ impl Vst3Editor {
                     size,
                     embedded_request: size,
                     resized: false,
+                    host_resizing: false,
                 }),
             });
             let frame_ptr = frame.as_com_ref::<IPlugFrame>()?.as_ptr();
@@ -272,7 +274,11 @@ impl Vst3Editor {
         };
         if self.can_resize() && self.frame.state.borrow().embedded_request != requested {
             // Cache the request before calling the plugin, which may constrain it or resize itself.
-            self.frame.state.borrow_mut().embedded_request = requested;
+            {
+                let mut state = self.frame.state.borrow_mut();
+                state.embedded_request = requested;
+                state.host_resizing = true;
+            }
             let mut rect = requested.rect();
             // SAFETY: plain size negotiation with a live plugin; the rectangle lives for both calls.
             unsafe {
@@ -284,6 +290,7 @@ impl Vst3Editor {
             {
                 state.size = size;
             }
+            self.frame.state.borrow_mut().host_resizing = false;
         }
         if let Ok(state) = self.frame.state.try_borrow()
             && let Some(c) = &state.container
@@ -615,8 +622,10 @@ mod platform {
             } else {
                 content.bounds().size.height - top - height
             };
-            self.view
-                .setFrame(NSRect::new(NSPoint::new(x, y), NSSize::new(width, height)));
+            let next = NSRect::new(NSPoint::new(x, y), NSSize::new(width, height));
+            if self.view.frame() != next {
+                self.view.setFrame(next);
+            }
         }
 
         pub(super) fn set_input_passthrough(&self, passthrough: bool) {
