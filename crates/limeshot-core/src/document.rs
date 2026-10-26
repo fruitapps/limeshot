@@ -1544,4 +1544,52 @@ mod tests {
         p.sanitize();
         assert!(p.playlist.clips.is_empty());
     }
+
+    #[test]
+    fn sanitize_clamps_hostile_tick_values() {
+        use crate::MAX_TICK;
+        let mut p = Project::new();
+        let pattern = p.patterns[0].id;
+        let channel = p.channels.first().map(|c| c.id);
+        let clip_pattern = p.patterns[0].id;
+        p.playlist.clips.push(Clip {
+            id: ClipId(5),
+            source: ClipSource::Pattern(clip_pattern),
+            track: 0,
+            start: u64::MAX,
+            length: u64::MAX,
+            offset: u64::MAX,
+            muted: false,
+            fade_in: u64::MAX,
+            fade_out: u64::MAX,
+            extra: Extra::new(),
+        });
+        if let Some(channel) = channel {
+            p.patterns[0].notes.push(Note {
+                id: NoteId(9),
+                channel,
+                key: 60,
+                start: u64::MAX,
+                length: u64::MAX,
+                velocity: 0.8,
+                pan: 0.0,
+                muted: false,
+            });
+        }
+        let _ = pattern;
+        p.sanitize();
+        let c = &p.playlist.clips[0];
+        assert!(
+            [c.start, c.length, c.offset, c.fade_in, c.fade_out]
+                .iter()
+                .all(|t| *t <= MAX_TICK)
+        );
+        for n in &p.patterns[0].notes {
+            assert!(n.start <= MAX_TICK && n.length <= MAX_TICK);
+        }
+        // The derived lengths no longer overflow.
+        let sig = p.time_signature;
+        assert!(p.playlist.song_length(sig) >= MAX_TICK);
+        assert!(p.patterns[0].length(sig) > 0);
+    }
 }

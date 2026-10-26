@@ -13,6 +13,10 @@ pub const PPQ: u64 = 960;
 /// A musical position or duration in ticks.
 pub type Tick = u64;
 
+/// Upper bound for any stored position or length (about a million 4/4 bars). `Project::sanitize`
+/// clamps file input to it so tick arithmetic cannot overflow.
+pub const MAX_TICK: Tick = PPQ * 4 * 1_000_000;
+
 /// One step of the step sequencer: a 16th note.
 pub const STEP_TICKS: Tick = PPQ / 4;
 

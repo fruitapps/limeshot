@@ -199,3 +199,14 @@ Workspace/native strict Clippy, builds, formatting and inventory/reference check
 Owner update (2026-10-26): create and use branches in the main checkout at `~/Developer/limeshot`, and build/test
 there to retain Cargo caches. Do not use separate worktrees or clones for routine branch work. Preserve local
 changes when switching branches. This supersedes the earlier separate-worktree session policy; repeat it in handoffs.
+
+
+## Hostile-input audit (2026-10-26)
+
+New `crates/limeshot-app/tests/hostile_input.rs`: every numeric field of the demo project is replaced with extreme
+values (0, -1, u32::MAX, u64::MAX, i64::MIN, ±1e30) and loaded; a random quarter are also compiled and rendered.
+FL Studio and MIDI fixtures are byte-corrupted, truncated and given 0xFF runs (deterministic PRNG). It found real
+bugs: `u64::MAX` note/clip/marker ticks overflowed tick arithmetic (panic in debug, silent wrap in release).
+`Project::sanitize` now clamps all positions and lengths to `MAX_TICK` (about a million 4/4 bars), with a unit test.
+Result: `cargo test --workspace`, clippy and fmt pass on macOS. Not yet covered: audio file decoders (WAV/MP3/FLAC)
+on corrupt input, plugin state blobs, automation point ticks beyond clamping, and UI-level edge cases.

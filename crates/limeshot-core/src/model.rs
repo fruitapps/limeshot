@@ -9,7 +9,7 @@
 //! saved by a newer LimeShot is not silently stripped by an older one.
 
 use crate::automation::{Automation, AutomationId};
-use crate::time::{STEP_TICKS, Tempo, Tick, TimeSignature};
+use crate::time::{MAX_TICK, STEP_TICKS, Tempo, Tick, TimeSignature};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::{Map, Value};
 
@@ -1027,7 +1027,8 @@ impl Project {
             p.notes.retain(|n| channels.contains(&n.channel));
             for n in &mut p.notes {
                 n.key = n.key.min(127);
-                n.length = n.length.max(1);
+                n.start = n.start.min(MAX_TICK);
+                n.length = n.length.clamp(1, MAX_TICK);
                 n.velocity = finite(n.velocity, 0.8).clamp(0.0, 1.0);
                 n.pan = finite(n.pan, 0.0).clamp(-1.0, 1.0);
                 max_id = max_id.max(n.id.0);
@@ -1037,7 +1038,7 @@ impl Project {
         }
         for a in &mut self.automations {
             Automation::normalize_points(&mut a.points);
-            a.length = a.length.max(1);
+            a.length = a.length.clamp(1, MAX_TICK);
             max_id = max_id.max(a.id.0);
         }
         let patterns: Vec<PatternId> = self.patterns.iter().map(|p| p.id).collect();
@@ -1061,10 +1062,17 @@ impl Project {
             .clips
             .retain(|c| (c.track as usize) < self.playlist.tracks.len());
         for c in &mut self.playlist.clips {
-            c.length = c.length.max(1);
+            c.start = c.start.min(MAX_TICK);
+            c.offset = c.offset.min(MAX_TICK);
+            c.length = c.length.clamp(1, MAX_TICK);
+            c.fade_in = c.fade_in.min(MAX_TICK);
+            c.fade_out = c.fade_out.min(MAX_TICK);
             max_id = max_id.max(c.id.0);
         }
         self.playlist.markers.truncate(10_000);
+        for m in &mut self.playlist.markers {
+            m.tick = m.tick.min(MAX_TICK);
+        }
         self.playlist.markers.sort_by_key(|m| m.tick);
         for m in &self.playlist.markers {
             max_id = max_id.max(m.id.0);
