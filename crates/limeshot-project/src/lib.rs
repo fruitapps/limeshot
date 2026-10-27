@@ -148,10 +148,22 @@ pub fn load(path: &Path) -> Result<Project, ProjectError> {
     let mut project = from_json(&text, path)?;
     for channel in &mut project.channels {
         if let Instrument::Plugin(plugin) = &mut channel.instrument
-            && let Some(source) = limeshot_core::lime::sample_source(plugin)
+            && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
         {
-            let source = resolve_sample_path(&source, path.parent());
-            limeshot_core::lime::set_sample_source(plugin, &source.to_string_lossy());
+            if let Some(source) = limeshot_core::lime::sample_source(plugin) {
+                let source = resolve_sample_path(&source, path.parent());
+                limeshot_core::lime::set_sample_source(plugin, &source.to_string_lossy());
+            } else if let Some(source) = plugin
+                .extra
+                .get("lime-sample-path")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+            {
+                let source = resolve_sample_path(&source, path.parent());
+                plugin
+                    .extra
+                    .insert("lime-sample-path".into(), json!(source.to_string_lossy()));
+            }
         }
         limeshot_core::lime::sync_sampler_metadata(channel, None);
     }
