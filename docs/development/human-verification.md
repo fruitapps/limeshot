@@ -161,3 +161,13 @@ Enable automatic crossfades, paste a pair together and a single clip elsewhere, 
 that only destination overlaps get automatic envelopes while isolated copies retain manual fades.
 Save/reopen and repeat on Windows/Linux. Requires the platform GUI permissions and audible output;
 automated core/UI tests and an offscreen image do not establish live audio/platform behavior.
+
+## Windows executable icons (PF-006)
+
+On a Windows desktop with the current x64 build, inspect `limeshot.exe` and `limeshot-cli.exe`
+in Explorer at small and large icon sizes. Launch LimeShot and check its taskbar and Alt+Tab
+icon. Repeat using the portable ZIP and installed Start/Desktop shortcuts; note the Windows
+version, display scaling and build commit. Use a fresh folder if Explorer retains an old icon.
+CI and packaging compare all six embedded icon images to the bundled ICO, without launching
+the binaries; this does not establish shell rendering or icon-cache refresh behavior. ARM64
+remains a cross-build/resource check until verified on ARM64 hardware.
