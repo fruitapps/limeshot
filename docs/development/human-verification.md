@@ -141,3 +141,12 @@ roots and a plugin that fails scanning; standard plugins must remain available. 
 platform folder picker, GUI input permissions and suitable VST3 bundles. Repeat on Windows/Linux.
 Automated discovery/settings/worker/UI checks and an offscreen settings capture do not establish
 live picker/rescan or cross-platform runtime behavior.
+
+## Navigable undo history (APP-006)
+
+Using `live_check` with a disposable project and GUI input/observation permissions, make
+several note, tempo and hosted-parameter edits, save midway, and select earlier/later rows
+in Edit › History. Confirm the selected state, modified indicator, audible plugin state
+and sequential Undo/Redo. Make a new edit after jumping backward and check redo disappears.
+Repeat on Windows/Linux. Headless core/UI tests and the offscreen menu capture establish
+local snapshot behavior, not live audio/plugin or other-platform runtime verification.

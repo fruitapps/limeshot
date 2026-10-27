@@ -85,6 +85,11 @@ and NaN is rejected.
 Snapshot undo was chosen over inverse commands because projects mostly contain notes and settings. Embedded plugin state uses shared blobs, so undo clones do not copy PCM.
 A clone costs microseconds for typical projects, and snapshots cannot drift from the forward path.
 
+Edit › History lists the full retained undo/redo timeline. `seek_history` navigates existing
+snapshots, ends an active gesture on a real jump, and preserves redo until a new edit.
+Position zero means the oldest retained snapshot, which may follow discarded edits at the
+200-step cap. Navigation uses the same revisions and saved-state identity as undo/redo.
+
 **Modified state.** Each distinct content state gets an id. `mark_saved` records the current id, and undoing back to
 it makes the document unmodified again.
 

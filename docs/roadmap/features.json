@@ -176,7 +176,7 @@
       "name": "Undo history list",
       "description": "Browse past edits.",
       "fl_reference": "Browser › Current project › History.",
-      "limeshot_behavior": "Edit › History lists the last 30 steps (read-only).",
+      "limeshot_behavior": "Edit › History shows all retained edits (up to 200) in a scrollable list, newest first, with the current state selected. Click a numbered edit to return to the state after it, or Oldest retained state to undo all retained edits. Undone edits stay listed for forward navigation until a new edit discards redo.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -188,16 +188,21 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::history_navigation_retains_redo_saved_state_and_branches",
+        "limeshot-core document::tests::history_navigation_respects_retention_and_ends_compound_gestures",
+        "limeshot-app tests/ui.rs::history_menu_navigates_backward_forward_and_oldest_state"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/menu_file.htm",
-          "docs/research/rea-findings.md"
+          "docs/research/rea-findings.md",
+          "docs/research/undo-history.md"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-27: navigable undo/redo timeline, saved-state restoration, retained-history bounds and branching covered by automated core/UI tests. UI remains in Edit rather than FL’s Browser. History is session-local, capped at 200 snapshots, and clears on new/open; generic native/third-party parameter edits still do not create undo steps. Live/platform checks remain pending; IMPLEMENTED is not VERIFIED."
     },
     {
       "id": "APP-007",
@@ -5412,7 +5417,7 @@
           "docs/research/custom-vst3-folders.md"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion. PR #27 review follow-up: discovery returns canonical bundle paths so renamed symlink aliases cannot hide loadable Linux/Windows bundles; alias-first discovery is covered on Unix."
     },
     {
       "id": "PLG-005",

@@ -3316,6 +3316,42 @@ fn the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor() {
     assert!(!h.state().can_clipboard(limeshot_ui::app::ClipOp::Paste));
 }
 
+/// APP-006: navigate retained undo and redo snapshots from Edit › History.
+#[test]
+fn history_menu_navigates_backward_forward_and_oldest_state() {
+    let mut h = harness(false);
+    let original = h.state().project().clone();
+    h.state_mut().exec(Command::SetTitle("First".into()));
+    h.state_mut().doc.mark_saved();
+    let saved = h.state().project().clone();
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(120.0)));
+    let latest = h.state().project().clone();
+    let open = |h: &mut Harness<'static, LimeShotApp>| {
+        h.get_by_label("Edit").click();
+        h.step();
+        h.get_by_label("History ⏵").hover();
+        for _ in 0..3 {
+            h.step();
+        }
+    };
+    h.step();
+    open(&mut h);
+    h.get_by_label("1. Rename project").click();
+    h.step();
+    assert_eq!(h.state().project(), &saved);
+    assert!(!h.state().doc.is_modified());
+    open(&mut h);
+    h.get_by_label("2. Set tempo").click();
+    h.step();
+    assert_eq!(h.state().project(), &latest);
+    open(&mut h);
+    h.get_by_label("0. Oldest retained state").click();
+    h.step();
+    assert_eq!(h.state().project(), &original);
+    assert!(h.state_mut().doc.redo());
+    assert_eq!(h.state().project(), &saved);
+}
+
 /// APP-026: the Tools menu's macros that LimeShot has (FL Studio's Tools › Macros).
 #[test]
 fn tools_macros_select_unused_channels_purge_audio_clips_and_reset_tracks() {

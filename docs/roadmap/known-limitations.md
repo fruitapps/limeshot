@@ -214,3 +214,11 @@ state/undo/reopen and standalone hosting still need live checks. See the
   never use external reload hints as a fallback for unavailable previews. Active automatic pairs disable manual curve selection until automatic crossfades are turned off.
   Automatic crossfades use complementary gain, not
   equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.
+
+## Undo history
+
+Edit › History navigates the session’s retained undo/redo snapshots (up to 200 edits),
+with the current state selected. It stays in Edit rather than FL’s Browser; configurable
+depth, sorting preferences and persistence are absent. New/open clears history, and a new
+edit after navigation discards redo. Headless tests and an offscreen capture cover the
+workflow; live/platform checks remain pending. See [design and evidence](../research/undo-history.md).

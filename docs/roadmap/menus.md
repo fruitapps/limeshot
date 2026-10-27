@@ -268,7 +268,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-137 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set image wallpaper... | Layout | dialog |  |  | — | NOT_STARTED | UI-015 |  |
 | MENU-138 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set dynamic wallpaper | Layout | action |  |  | — | NOT_STARTED | UI-015 |  |
 | MENU-139 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Set background color... | Layout | dialog |  |  | — | NOT_STARTED | UI-015 |  |
-| MENU-140 | Undo history | Browser | action |  |  | Edit › History | DIFFERENT | APP-006 | FL shows the history in the Browser; LimeShot lists it in an Edit submenu. |
+| MENU-140 | Undo history | Browser | action |  |  | Edit › History | DIFFERENT | APP-006 | FL shows the history in the Browser; LimeShot uses a scrollable Edit submenu with current-state selection and backward/forward snapshot navigation. |
 | MENU-141 | Patterns | Browser | action |  |  | — | NOT_STARTED | BR-005 | Browser opens at the project's patterns. |
 | MENU-142 | Generators in use | Browser | action |  |  | — | NOT_STARTED | BR-005 |  |
 | MENU-143 | Effects in use | Browser | action |  |  | — | NOT_STARTED | BR-005 |  |

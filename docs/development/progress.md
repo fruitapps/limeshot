@@ -739,3 +739,43 @@ workflow remains: implement eligible roadmap work, inspect the preceding PR/CI/r
 a stacked feature PR, and hand off to a new local session until the current usage window is
 exhausted. Never wait for its reset or spend reset credits; keep using the primary checkout
 and Cargo caches, and never push main or merge automatically.
+
+## 2026-10-27 — Navigable undo history and PR #27 review fix
+
+Continued from #27 in the primary checkout `/Users/sebastian/Developer/limeshot`, reusing
+Cargo caches, on `codex/navigable-undo-history`. Edit › History now shows all retained
+undo/redo edits in a scrollable list with the current state selected. Clicking restores the
+state after an edit; Oldest retained state restores the first retained snapshot. Forward
+navigation preserves redo, saved-state identity and revision updates; a new edit branches
+normally. The existing 200-step cap and new/open reset remain. See
+[reference, semantics and evidence](../research/undo-history.md). APP-006 stays IMPLEMENTED;
+headless evidence does not establish live audio/plugin or cross-platform runtime behavior.
+
+Addressed the valid Codex review finding on #27: canonical bundle paths now represent
+symlink aliases during discovery. Renamed aliases no longer cause Linux/Windows binary
+resolution to use the wrong bundle stem. The Unix test visits `Renamed.vst3` before the
+real bundle and verifies only the canonical bundle is retained. Discovery tests use
+canonical temporary roots, and the worker test compares canonical failure paths. The first
+full suite caught that worker test's `/var` versus `/private/var` expectation after the
+intentional canonical-path change; corrected the expectation and reran the full suite.
+CodeRabbit skipped #27 review because its target is a feature branch; that is not a pass.
+
+Local validation: macOS 26.6.2 (25G83), arm64, debug, using existing matching debug Lime
+VST3 bundles via `LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`; no native/DSP
+production changes. Core navigation and real-menu UI tests pass. Workspace build, strict
+all-target Clippy, formatting, feature inventories, repository references and whitespace
+checks pass. The [History menu PNG](../screenshots/current/undo-history.png) was rendered
+with `ui_shot --history --menu=Edit/History` and visually inspected. Full-suite final result
+is recorded below. Live/plugin/audio and other-platform checks remain in human verification.
+
+At review time, #26 CI run 40590120668 still had Linux x64/ARM64 and Intel macOS unfinished;
+other jobs passed. #27 CI run 40591035650 was still running without a reported failure.
+Continue checking these and the new PR during the next session. Keep using the primary
+checkout/cache, push feature branches only, never push main or merge automatically. The
+owner's continuing chain remains authorized until the current 300-minute usage window
+is exhausted; do not wait for reset or consume reset credits.
+
+Final rerun: **504 workspace tests passed**, including **174 app UI tests** and 13
+hosted-native tests. Bridge tests ran with local-socket access. No test failures remained.
+Usage was 46% in the current primary window at the delivery check; ordinary usage remains
+allowed and no reset credit was used.
