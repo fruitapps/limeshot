@@ -2111,6 +2111,7 @@ name = "limeshot-plugins"
 version = "0.1.0"
 dependencies = [
  "core-foundation-sys",
+ "libc",
  "libloading 0.8.9",
  "limeshot-dsp",
  "log",

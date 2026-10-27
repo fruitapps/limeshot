@@ -144,11 +144,20 @@ impl Serialize for PluginState {
 impl<'de> Deserialize<'de> for PluginState {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        if s.len() / 4 * 3 > MAX_STATE_BYTES {
-            return Ok(PluginState::default());
-        }
-        Ok(base64_decode(&s).map(PluginState::new).unwrap_or_default())
+        Ok(base64_decode_bounded(&s, MAX_STATE_BYTES)
+            .map(PluginState::new)
+            .unwrap_or_default())
     }
+}
+
+fn base64_decode_bounded(s: &str, max_bytes: usize) -> Option<Vec<u8>> {
+    let digits = s.bytes().filter(|b| !b.is_ascii_whitespace()).count();
+    // The final quartet can contain padding: reject oversized input before allocating,
+    // then enforce the exact decoded limit so states at the boundary still round-trip.
+    if digits.div_ceil(4) > max_bytes.div_ceil(3) {
+        return None;
+    }
+    base64_decode(s).filter(|bytes| bytes.len() <= max_bytes)
 }
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -239,6 +248,38 @@ mod tests {
         assert_eq!(back, p);
         let bad = json.replace("AAEC+g==", "not base64");
         assert!(serde_json::from_str::<PluginRef>(&bad).unwrap().state.is_empty());
+    }
+
+    #[test]
+    fn plugin_state_limit_accounts_for_padding_and_whitespace() {
+        // Small limits cover every padding alignment without allocating a 64 MiB state.
+        for limit in 0..=12 {
+            for len in 0..=15 {
+                let bytes: Vec<u8> = (0..len).map(|i| i as u8).collect();
+                let encoded = base64_encode(&bytes);
+                let spaced: String = encoded.chars().flat_map(|c| [c, ' ', '\n']).collect();
+                for text in [&encoded, &spaced] {
+                    assert_eq!(
+                        base64_decode_bounded(text, limit),
+                        (len <= limit).then(|| bytes.clone()),
+                        "limit {limit}, length {len}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn corrupted_plugin_state_text_loads_as_empty() {
+        let plugin = PluginRef::vst3("/x/Y.vst3", "00112233445566778899AABBCCDDEEFF", "Y");
+        for bad in ["Zg=", "Z===", "Zg==Zg==", "Zm9v!", "=Zm9", "\0", "🍋", "===="] {
+            let mut json = serde_json::to_value(&plugin).unwrap();
+            json["state"] = serde_json::Value::String(bad.into());
+            let loaded: PluginRef = serde_json::from_value(json).unwrap();
+            assert!(loaded.state.is_empty(), "{bad:?}");
+            assert_eq!(loaded.name, plugin.name);
+            assert_eq!(loaded.class_id, plugin.class_id);
+        }
     }
 
     #[test]

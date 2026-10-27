@@ -206,9 +206,13 @@ pub(crate) fn decode_to(
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         hint.with_extension(ext);
     }
-    let probed = symphonia::default::get_probe()
-        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
-        .map_err(|e| fail(e.to_string()))?;
+    // Symphonia can panic while probing hostile headers (for example an AIFF rate that
+    // rounds to zero in TimeBase). Contain third-party probing failures on the loader thread.
+    let probed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        symphonia::default::get_probe().format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+    }))
+    .map_err(|_| fail("audio format probe panicked on an invalid header".into()))?
+    .map_err(|e| fail(e.to_string()))?;
     let mut format = probed.format;
     let track = format
         .tracks()

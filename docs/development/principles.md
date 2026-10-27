@@ -1,7 +1,8 @@
 # Project principles
 
 The binding rules from the original project brief (`START.md`, since retired), condensed. For current status see
-[next-steps](next-steps.md) and [progress](progress.md); for the reasons behind design choices see
+[next steps for agents](next-steps.md), [human verification needed](human-verification.md) and
+[progress](progress.md); for the reasons behind design choices see
 [decisions](decisions.md).
 
 ## Mission

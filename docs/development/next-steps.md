@@ -1,31 +1,26 @@
-# Next steps (prioritised)
+# Next steps for agents (prioritised)
 
-Current as of 2026-10-25, after v0.1.0-alpha.1. Read the feature record and its dependencies in
+Current as of 2026-10-27, after v0.1.0-alpha.1. Read the feature record and its dependencies in
 [features.json](../roadmap/features.json) before implementing anything; verification evidence goes in
-[progress.md](progress.md).
+[progress.md](progress.md). Hands-on checks and owner decisions live in
+[Human verification needed](human-verification.md).
 
-## Verification
+## Development
 
-1. **Native plugin embedding (PLG-006).** Use `live_check` with Screen Recording and Accessibility granted. Test Vital
-   and a resizable editor such as Serum: keyboard forwarding, OS drops onto native views, pinned and covering
-   windows, host-edge resizing and reopening saved wrappers. Partial results:
-   [live-plugin-checks-2026-10-25.md](live-plugin-checks-2026-10-25.md). Do not mark VERIFIED from a build or a
-   headless screenshot.
-2. **Platforms (PF-002…PF-005).** Install the alpha packages on real Windows, Linux and Intel macOS machines: GUI,
-   audio device, plugin editors (Windows), parameter fallback (Linux), drops and the installers' uninstall paths.
-3. **Real-plugin pass.** Find plugins…, factory and `.vstpreset` presets, parameter automation, delay compensation
-   and the process bridge with commercial plugins.
-4. **Hands-on interaction regression.** Note drawing, sampler previews and drags, waveform drops, rack
-   multiselection and scrolling, Mixer selection and insert reordering, mute locks, window raising and the typing
-   keyboard.
-5. **Recording and MIDI.** Audio recording from a real input and a hardware MIDI keyboard; open an exported MIDI
-   file in another application.
+Work toward feature and workflow parity with FL Studio, including implementing new features. Choose actionable
+work from the roadmap in P0 → P3 order and respect dependencies; the implementation list below provides starting
+points. Confirm existing behavior and recorded FL research before deciding what needs implementing.
 
-## Decisions for the owner
+If testing or research requires human input, unavailable hardware, platform permissions, licensed plugins,
+credentials or an owner decision, record the exact outstanding check and prerequisites in
+[Human verification needed](human-verification.md), link any partial evidence, and keep the corresponding
+feature status and [known limitations](../roadmap/known-limitations.md) accurate. Continue with independent
+parity work and new features rather than stopping development at that verification gap. Ask for blocking input
+when needed, while continuing work that does not depend on the answer.
 
-* **Piano Roll range looping.** Pattern mode ignores loop ranges, yet the UI still sends the Piano Roll's range to
-  the renderer, where it has no effect. Either loop Pattern playback over the Piano Roll range only, or stop sending
-  it and document FL's behaviour.
+Implement complete feature workflows and run the automated tests and local checks available to the agent. A build or
+headless test does not establish live GUI/audio behavior or verification on another platform. Do not promote
+IMPLEMENTED to VERIFIED until the required evidence exists.
 
 ## Implementation
 
@@ -38,33 +33,29 @@ Current as of 2026-10-25, after v0.1.0-alpha.1. Read the feature record and its 
 3. **Recording.** Input monitoring, latency compensation and count-in.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
    persistence.
-5. **Distribution (PF-006).** Authenticode and Developer ID signing with notarisation; `.lime` opening from Finder;
-   an embedded Windows icon. `.flp` import (APP-022): automation curves, mixer effects and routing, further
-   arrangements and checked fixtures from older FL versions.
+5. **Distribution (PF-006).** `.lime` opening from Finder and an embedded Windows icon;
+   signing/notarisation implementation that can proceed without owner credentials. `.flp` import (APP-022):
+   automation curves, mixer effects and routing, further arrangements and checked fixtures from older FL versions.
 6. **Plugin formats.** CLAP (PLG-001) and AU (PLG-003); Linux editor embedding (`X11EmbedWindowID`, `IRunLoop`).
 7. **Refresh the README Mixer screenshots** (`mixer.png`, `mixer-eq.png`): they predate the On + Mix insert slots.
-8. **Test-suite gaps from the hostile-input audit** (see [progress](progress.md)): corrupt-file tests for the audio
-   decoders (WAV, MP3, FLAC) and plugin state blobs; UI edge cases (zero-size windows, empty projects in every editor,
-   extreme zoom); `limeshot-audio` device-loss and stream-error tests; coverage (`cargo-llvm-cov`) and fuzz
+8. **Test-suite gaps from the hostile-input audit** (see [progress](progress.md)): broader audio-decoder corruption
+   coverage beyond the deterministic WAV/MP3/FLAC/AIFF corpus and opaque third-party plugin state payloads
+   (base64 and host-envelope corruption now covered); UI edge cases (zero-size windows, empty projects in every
+   editor, extreme zoom); `limeshot-audio` device-loss and stream-error tests; coverage (`cargo-llvm-cov`) and fuzz
    (`cargo-fuzz`) tooling to measure and extend the above; repeat the hostile-input run on Windows and Linux.
 
 ## Research and verification rules
 
-FL Studio is the behaviour reference; ArtCraft informs visual styling only. Confirm permissions on the current host
-before synthetic live input. Still to observe in FL: Alt+wheel vertical zoom, in-clip automation point dragging,
-STEP/SLIDE automation options and bindings marked INFERRED. Keep `menus.json`, `keybindings.json` and `settings.json`
-in step with the code and regenerate their Markdown views.
+FL Studio is the behaviour reference; ArtCraft informs visual styling only. Use documented behavior and
+clean-room observations to guide independent implementations; label unobserved behavior as INFERRED or UNKNOWN.
+Checks still needing hands-on observation are listed in [Human verification needed](human-verification.md).
+Confirm permissions on the current host before synthetic live input. Keep `menus.json`, `keybindings.json` and
+`settings.json` in step with the code and regenerate their Markdown views.
 
-
-## Alpha.1 follow-up (2026-10-26)
-
-Owner-requested interaction and disk-sampler fixes are in `codex/alpha1-polish`; see
-[research and design](../research/alpha1-sampler-and-fades.md). The macOS live pass covered native value typing and Serum internal-corner shrink/grow.
-Repeat host-edge resizing with other resizable plugins and long disk-backed playback/seek checks on Windows
-and Linux before promoting the native feature statuses. Disk cache misses and smooth fade/crossfade limits remain recorded.
+## Checkout and delivery
 
 Create and use branches in the main checkout at `~/Developer/limeshot` so builds and tests reuse its Cargo cache.
 Do not create separate worktrees or clones for routine branch work; preserve local changes when switching.
 This supersedes the earlier separate-worktree policy and must be repeated in handoffs. Carry work
-through implementation, validation, documentation, commit and push. Never merge automatically, and create
-further sessions only when the owner asks.
+through implementation, validation, documentation, commit and push to the feature branch and its PR.
+Never push directly to main or merge automatically, and create further sessions only when the owner asks.

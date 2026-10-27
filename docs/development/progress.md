@@ -232,3 +232,97 @@ native strict Clippy, both formatting checks and inventory/repository checks pas
 
 Work stays in the existing primary checkout (`~/Developer/limeshot`) on `codex/fix-merge-ci`, using
 its Cargo caches. Continue branch work and validation there; do not create a routine worktree or clone.
+
+
+## 2026-10-27 — Corrupt audio import regression coverage
+
+Added `crates/limeshot-dsp/tests/hostile_audio.rs`: 2,400 deterministic byte mutations,
+truncations, 0xFF runs and header-focused edits across 16/24-bit PCM WAV, float WAV, FLAC, AIFF
+and generated silent MP3. Every original must decode; successful mutations must stay within
+the requested frame limit and produce finite, complete stereo frames with a positive sample rate.
+A separate float-WAV test checks that NaN and infinities become silence.
+
+The corpus exposed a Symphonia 0.5.5 panic in format probing when a corrupt AIFF sample rate
+produces a zero TimeBase. The loader now contains an unwinding third-party probe panic and
+returns `SampleError::Decode`; a direct zero-rate AIFF regression covers the failure. The
+containment surrounds format probing only and does not change audio-thread processing or
+skipped-frame behavior. It does not establish exhaustive robustness or bound allocations
+inside third-party codecs. INS-001/INS-008 evidence and remaining coverage gaps are updated.
+
+Local validation on macOS Apple Silicon: the three new decoder tests pass in debug and release
+profiles; the native unit suite passes all 22 tests. `cargo test --workspace` passes, including
+159 UI tests and 10 hosted VST3 tests. The workspace run required local-socket permission for
+the plugin process bridge after the sandbox refused its listener. `cargo build --workspace`,
+strict workspace Clippy, formatting and inventory/repository checks pass. All twelve release
+VST3 bundles rebuilt successfully; the existing hosted integration-test executable was then
+rerun against those bundles and all 10 tests passed. Live GUI/audio and other platforms were
+not exercised by this change.
+
+Work uses branch `codex/hostile-audio-decoders` in the existing primary checkout
+(`~/Developer/limeshot`) with its Cargo caches. Continue there; do not create a routine
+worktree or clone.
+
+
+## 2026-10-27 — Plugin-state corruption and decoded size boundaries
+
+Continued the hostile-input audit on `codex/hostile-audio-decoders` with plugin-state tests.
+The base64 guard previously treated padding as decoded bytes, rejecting a valid state exactly
+at the documented 64 MiB limit. It now counts non-whitespace quartets before allocating,
+allows the final padded quartet, and checks the exact decoded size before retaining the state.
+Small-limit tests cover every padding alignment, whitespace and one/two-byte overruns without
+allocating a 64 MiB fixture. Invalid base64 still restores defaults while retaining plugin
+identity. Host state-container tests reject every truncation and extreme component/controller
+lengths, while preserving opaque payload bytes for the plugin reader.
+
+These checks cover the host container and serialized text; they do not establish robustness
+of arbitrary third-party plugin state readers. PLG-005 evidence and remaining test gaps are
+updated. Work remains in the primary checkout (`~/Developer/limeshot`) with its Cargo caches;
+continue branch work there without a routine worktree or clone.
+
+Local validation on macOS Apple Silicon: rebuilt all twelve debug VST3 bundles; full workspace
+tests pass with `LIMESHOT_LIME_PLUGINS` pointing at `native-plugins/target/debug-bundled`, including
+159 UI tests and 10 hosted VST3 tests. Local-socket permission was enabled for the plugin bridge.
+Native unit suite: 22 passed. Workspace build, strict Clippy, formatting, inventory and repository
+checks pass. Live GUI/audio and other-platform runtime verification remain open.
+
+
+## 2026-10-27 — Separate agent development from human verification
+
+`next-steps.md` now holds the agent work queue and a Development entry directing agents to
+pursue FL Studio feature/workflow parity and implement new features by priority and dependencies.
+Checks needing human input, hardware, permissions, credentials or owner decisions are recorded
+in the new [human verification queue](human-verification.md), with prerequisites and partial
+evidence, while independent development continues. Implementation and verification statuses
+remain distinct. The existing native/plugin/platform/recording checks, FL observations and
+Piano Roll owner decision are retained in that queue.
+
+Updated AGENTS.md, CONTRIBUTING.md, README.md, the project principles and known limitations
+to distinguish agent work from hands-on verification. Branch/PR delivery remains in the primary
+checkout (`~/Developer/limeshot`) using its Cargo caches, without routine worktrees/clones,
+direct pushes to main or automatic merges.
+
+Documentation-only validation: inventory checks, repository references (195 links, zero errors),
+and whitespace checks pass. No Rust behavior changed; no rebuild or runtime tests were needed.
+
+
+## 2026-10-27 — PR #20 CI hang-test synchronization and review wording
+
+Linux ARM64 CI job `122120738692` (run `40483780318`, head `fcc77f7`) failed
+`a_hung_bridge_times_out` because the simulated hung bridge returned nonzero audio. Sending
+SIGSTOP is asynchronous: the audio thread can process a request before the process finishes
+stopping. The test now waits for the child stop event using bounded `waitpid(WUNTRACED |
+WNOHANG)` polling before starting the timeout measurement. It also refills the later block
+with nonzero input and verifies that it stays silent after the timeout. `libc` is a Unix-only
+test dependency; production bridge processing and timeout behavior are unchanged.
+
+Addressed CodeRabbit's next-steps wording: agents must explicitly run the available automated
+tests and local checks, in addition to implementing complete workflows.
+
+Work continues on `codex/hostile-audio-decoders` in the primary checkout
+(`~/Developer/limeshot`), reusing its Cargo caches; no worktree/clone or direct main push.
+
+Local validation on macOS Apple Silicon: all five bridge integration tests pass against the
+debug VST3 bundles; the hang regression passes 100/100 runs with eight concurrent workers.
+Tests used local-socket/child-process permission. Workspace strict Clippy, formatting, inventory
+and repository checks pass. This is a test/documentation change; native bundles and production
+code were unchanged. Linux ARM64 validation awaits the updated CI run.

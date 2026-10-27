@@ -1097,6 +1097,34 @@ mod tests {
         assert_eq!(split_state(b"LSV3\xff\xff\xff\xff"), None);
         assert_eq!(split_state(b"nope"), None);
     }
+
+    #[test]
+    fn corrupt_state_lengths_and_truncations_are_refused() {
+        let mut blob = STATE_MAGIC.to_vec();
+        blob.extend_from_slice(&3u32.to_le_bytes());
+        blob.extend_from_slice(b"abc");
+        blob.extend_from_slice(&1u32.to_le_bytes());
+        blob.extend_from_slice(b"z");
+        for end in 0..blob.len() {
+            assert_eq!(split_state(&blob[..end]), None, "truncated at {end}");
+        }
+        for offset in [4, 11] {
+            for length in [2, 16, u32::MAX / 2, u32::MAX] {
+                let mut damaged = blob.clone();
+                damaged[offset..offset + 4].copy_from_slice(&length.to_le_bytes());
+                assert_eq!(split_state(&damaged), None, "offset {offset}, length {length}");
+            }
+        }
+        // Payload bytes are opaque to the host. Corruption inside a correctly framed
+        // component/controller belongs to the plugin's own state reader.
+        for index in [8, 9, 10, 15] {
+            let mut damaged = blob.clone();
+            damaged[index] = 0xff;
+            let (component, controller) = split_state(&damaged).unwrap();
+            assert_eq!(component, &damaged[8..11]);
+            assert_eq!(controller, &damaged[15..]);
+        }
+    }
 }
 
 #[cfg(test)]

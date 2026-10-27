@@ -3469,7 +3469,9 @@
         "limeshot-audio assets::tests::loads_in_the_background_and_reports_failures",
         "limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid",
         "limeshot-app tests/mvp_workflow.rs::mvp_workflow_end_to_end",
-        "crates/limeshot-app/tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings"
+        "crates/limeshot-app/tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings",
+        "limeshot-dsp tests/hostile_audio.rs::corrupted_audio_bytes_never_panic_or_escape_decode_bounds",
+        "limeshot-dsp tests/hostile_audio.rs::float_wav_import_replaces_nonfinite_pcm_with_silence"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3479,7 +3481,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample."
+      "notes": "Session 17: Sampler waveform clicks play the full trimmed/pitched sample, independent of release; the waveform has a moving playhead for previews and sequenced playback. Drag the waveform to drop its sample. 2026-10-27: deterministic corrupt-input tests exercise 2,400 mutations across three WAV depths, FLAC, AIFF and synthetic MP3; successful imports must remain bounded, stereo and finite. Invalid AIFF sample rates exposed a Symphonia format-probe panic, now returned as a typed decode error. This is bounded corpus coverage, not exhaustive fuzzing or additional platform/live verification."
     },
     {
       "id": "INS-002",
@@ -3709,7 +3711,9 @@
         "crates/limeshot-app/tests/ui.rs::compressed_samples_list_load_and_play",
         "crates/limeshot-app/tests/ui.rs::mp3_samples_embed_and_join_the_playlist_picker_from_the_rack",
         "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
-        "docs/development/live-plugin-checks-2026-10-25.md"
+        "docs/development/live-plugin-checks-2026-10-25.md",
+        "limeshot-dsp tests/hostile_audio.rs::corrupted_audio_bytes_never_panic_or_escape_decode_bounds",
+        "limeshot-dsp tests/hostile_audio.rs::aiff_zero_sample_rate_returns_a_decode_error"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3719,7 +3723,7 @@
           "Plugins/Fruity/Generators listing (rea-findings.md)"
         ]
       },
-      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the effective embedding limit is 6 million stereo frames, enforced by MAX_EMBEDDED_FRAMES and embedded_audio_supported, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25 sampler/mixer workflow: the embedded limit is 6 million stereo frames (about 125 s at 48 kHz); imports decode once on the loader thread with a bounded decoder, and the owner’s 119 s 48 kHz MP3 imports into a sampler and a Playlist clip."
+      "notes": "Session 16 (next-steps Then 8; decision D37). MP3 and Ogg decoding is symphonia's, not checked here against a file (no encoder on the dev Mac); AIFF and FLAC fixtures are. 2026-10-25: Native Lime Sampler now uses the shared WAV/MP3/FLAC/Ogg/AIFF loader for both Load and file drops. Synthetic silent MP3 frames exercise host embedding and native sample state; the effective embedding limit is 6 million stereo frames, enforced by MAX_EMBEDDED_FRAMES and embedded_audio_supported, with a specific import error. 2026-10-25 live continuation: permissions enabled; sampler/limiter rendering and close-reopen, sampler tabs, host preset visibility, Serum internal shrink/minimize-restore, and native MP3 loading observed. Fixed native modal re-entrancy crash; drag/modifier/keyboard/pin/occlusion/host-edge checks remain unverified. See live-plugin-checks-2026-10-25.md; this is partial native verification. 2026-10-25 sampler/mixer workflow: the embedded limit is 6 million stereo frames (about 125 s at 48 kHz); imports decode once on the loader thread with a bounded decoder, and the owner’s 119 s 48 kHz MP3 imports into a sampler and a Playlist clip. 2026-10-27: deterministic corrupt-input tests exercise 2,400 mutations across three WAV depths, FLAC, AIFF and synthetic MP3; successful imports must remain bounded, stereo and finite. Invalid AIFF sample rates exposed a Symphonia format-probe panic, now returned as a typed decode error. This is bounded corpus coverage, not exhaustive fuzzing or additional platform/live verification."
     },
     {
       "id": "INS-009",
@@ -5374,7 +5378,10 @@
         "crates/limeshot-core/tests/plugins.rs::plugin_channels_and_effects_survive_json_and_sanitize",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_ref_round_trips_through_json",
         "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens",
-        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio"
+        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio",
+        "crates/limeshot-core/src/plugin.rs::tests::plugin_state_limit_accounts_for_padding_and_whitespace",
+        "crates/limeshot-core/src/plugin.rs::tests::corrupted_plugin_state_text_loads_as_empty",
+        "crates/limeshot-plugins/src/instance.rs::tests::corrupt_state_lengths_and_truncations_are_refused"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5384,7 +5391,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md). 2026-10-27: padded base64 at the 64 MiB decoded limit is accepted; whitespace does not count toward the encoded size guard and an exact decoded-size check rejects over-limit payloads. Small-limit tests cover all padding alignments, malformed state text falls back to defaults, and host envelopes reject truncations and hostile component/controller lengths. Opaque third-party plugin payload handling remains unverified."
     },
     {
       "id": "PLG-006",
