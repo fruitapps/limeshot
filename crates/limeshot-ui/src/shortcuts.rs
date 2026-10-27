@@ -48,6 +48,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("Cmd+N / Cmd+O", "New / open project"),
     ("Cmd+S / Cmd+Shift+S", "Save / save as"),
     ("Cmd+R", "Export WAV"),
+    ("Cmd+Shift+R", "Export MP3"),
     ("Cmd+Q", "Quit"),
     ("Cmd+= / Cmd+- / Cmd+0", "UI zoom"),
     ("+ / −", "Next / previous pattern"),
@@ -204,6 +205,9 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, cmd, Key::N) {
         app.request(Pending::New);
+    }
+    if pressed(ctx, cmd_shift, Key::R) {
+        app.dialog = Some(Dialog::export_mp3(app));
     }
     if pressed(ctx, cmd, Key::R) {
         app.dialog = Some(Dialog::export(app));

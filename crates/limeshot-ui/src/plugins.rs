@@ -8,8 +8,8 @@
 //! * The **host** keeps one plugin instance per plugin channel and plugin insert slot of the
 //!   project. Instances are created and destroyed on this (the main) thread, as plugins expect;
 //!   their audio halves go to the audio thread and come back as garbage.
-//! * Parameter changes made here or in a plugin's own window are not undo steps; they mark the
-//!   project modified, and the plugin's state is read into the project when it is saved.
+//! * Host Lime parameter changes and completed native Sampler gestures are undoable state
+//!   commands. Other native plugins mark the project dirty and have their state read on save.
 
 use crate::widgets::Hint as _;
 use std::collections::HashMap;
@@ -226,6 +226,27 @@ struct Live {
     key: Key,
     state: PluginState,
     instance: PluginInstance,
+    /// Canonical native sampler state, distinct from the project's older/partial encoding.
+    sampler_state: Option<PluginState>,
+    sampler_edit_pending: bool,
+}
+
+impl Live {
+    fn capture_sampler_state(&mut self, target: Target, doc: &mut Document) -> Result<(), String> {
+        let state = PluginState::new(self.instance.state().map_err(|e| e.to_string())?);
+        // A host restore/startup restart is not a user edit.
+        if self.sampler_state.as_ref() == Some(&state) {
+            return Ok(());
+        }
+        doc.execute(Command::SetPluginState {
+            plugin: target,
+            state: state.clone(),
+        })
+        .map_err(|e| e.to_string())?;
+        self.state = state.clone();
+        self.sampler_state = Some(state);
+        Ok(())
+    }
 }
 
 /// What a running plugin was made from: bundle, class, and whether it runs in its own process.
@@ -504,6 +525,10 @@ impl PluginHost {
                     match live.instance.set_state(p.state.bytes()) {
                         Ok(()) => {
                             self.errors.remove(&target);
+                            if live.sampler_state.is_some() {
+                                live.sampler_state = live.instance.state().ok().map(PluginState::new);
+                            }
+                            live.sampler_edit_pending = false;
                         }
                         Err(error) => {
                             let error = format!("{}: could not restore plugin state: {error}", p.name);
@@ -521,6 +546,9 @@ impl PluginHost {
             let key = key_of(p);
             match instantiate(p, sample_rate, self.bridge_exe.as_deref(), false) {
                 Ok((instance, proc)) => {
+                    let sampler_state = (limeshot_core::LimePlugin::of(p) == Some(limeshot_core::LimePlugin::SAMPLER))
+                        .then(|| instance.state().ok().map(PluginState::new))
+                        .flatten();
                     match target {
                         Target::Channel(c) => send(Msg::Instrument(c.0, Box::new(proc))),
                         Target::Effect { effect, .. } => send(Msg::Effect(effect, Box::new(proc))),
@@ -531,6 +559,8 @@ impl PluginHost {
                             key,
                             state: p.state.clone(),
                             instance,
+                            sampler_state,
+                            sampler_edit_pending: false,
                         },
                     );
                 }
@@ -587,24 +617,73 @@ impl PluginHost {
         self.live.get_mut(&target).map(|l| &mut l.instance)
     }
 
-    /// Per frame: forward edits made in plugin windows, drop processors returned by exports.
-    /// Returns true when a plugin changed (the project is then modified).
-    pub fn poll(&mut self) -> bool {
+    /// Mark a live sampler's state as changed by the host wrapper (such as loading a `.vstpreset`).
+    pub(crate) fn mark_preset_loaded(&mut self, target: Target) {
+        if let Some(l) = self.live.get_mut(&target)
+            && l.sampler_state.is_some()
+        {
+            l.sampler_edit_pending = true;
+        }
+    }
+
+    /// Drop offline processors returned to the control thread after an export.
+    pub fn collect_returned(&mut self) {
         if let Some((_, rx)) = &self.returned {
             while rx.try_recv().is_ok() {}
         }
+    }
+
+    /// Per frame: forward edits made in plugin windows, drop processors returned by exports.
+    /// Completed sampler gestures/state changes become commands; other plugins retain dirty
+    /// notifications. Never serialize sampler PCM for each frame of a native drag.
+    pub fn poll(&mut self, doc: &mut Document) -> Vec<String> {
+        self.collect_returned();
+        // New/open can reuse IDs. Old editor notifications must never enter the new document.
+        if self.generation != Some(doc.generation()) {
+            return Vec::new();
+        }
         let mut changed = false;
+        let mut errors = Vec::new();
         for (target, l) in &mut self.live {
             if l.instance.crashed() {
                 continue;
             }
+            let Some(reference) = doc.project().plugin(*target) else {
+                continue;
+            };
+            if key_of(reference) != l.key || reference.state != l.state {
+                // A host command/undo already replaced this state; sync must win over late edits.
+                l.sampler_edit_pending = false;
+                l.instance.take_editor_edits();
+                l.instance.take_restart();
+                continue;
+            }
             if let Some(&(id, _)) = l.instance.take_editor_edits().last() {
                 self.last_tweaked = Some((*target, id));
-                changed = true;
+                if l.sampler_state.is_some() {
+                    l.sampler_edit_pending = true;
+                } else {
+                    changed = true;
+                }
             }
-            changed |= l.instance.take_restart();
+            let restart = l.instance.take_restart();
+            if l.sampler_state.is_none() {
+                changed |= restart;
+                continue;
+            }
+            l.sampler_edit_pending |= restart;
+            if !l.sampler_edit_pending || l.instance.editor_gesture_active() {
+                continue;
+            }
+            l.sampler_edit_pending = false;
+            if let Err(error) = l.capture_sampler_state(*target, doc) {
+                errors.push(error);
+            }
         }
-        changed
+        if changed {
+            doc.mark_unsaved();
+        }
+        errors
     }
 
     /// Plugins whose process crashed or hung since the last call (each reported once).
@@ -703,14 +782,37 @@ impl PluginHost {
 
     /// Read every running plugin's state, and where its window is, into the project (before
     /// saving).
-    pub fn store_states(&self, doc: &mut Document) {
-        for (target, l) in &self.live {
-            match l.instance.state() {
-                Ok(s) => {
-                    doc.store_plugin_state(*target, PluginState::new(s));
-                }
-                Err(e) => log::warn!("could not read a plugin's state: {e}"),
+    pub fn store_states(&mut self, doc: &mut Document) {
+        for error in self.poll(doc) {
+            log::warn!("could not capture sampler edit: {error}");
+        }
+        if self.generation != Some(doc.generation()) {
+            return;
+        }
+        for (target, l) in &mut self.live {
+            if doc
+                .project()
+                .plugin(*target)
+                .is_none_or(|p| key_of(p) != l.key || p.state != l.state)
+            {
+                continue; // A host edit has not reached this instance yet.
             }
+            if l.sampler_state.is_some() {
+                // Saving is an explicit commit boundary. An unchanged state makes no undo step.
+                if let Err(error) = l.capture_sampler_state(*target, doc) {
+                    log::warn!("could not capture sampler edit: {error}");
+                }
+                l.sampler_edit_pending = false;
+            } else {
+                match l.instance.state() {
+                    Ok(s) => {
+                        doc.store_plugin_state(*target, PluginState::new(s));
+                    }
+                    Err(e) => log::warn!("could not read a plugin's state: {e}"),
+                }
+            }
+        }
+        for target in self.live.keys() {
             doc.store_plugin_window(*target, self.window_place(*target));
         }
     }

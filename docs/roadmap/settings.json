@@ -2099,10 +2099,10 @@
       "fl_default": "WAV",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › Output formats",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.mp3",
+      "status": "IN_PROGRESS",
       "feature": "EXP-018",
-      "notes": "Several formats can be rendered in one pass. LimeShot exports WAV only (MIDI separately)."
+      "notes": "One of WAV or MP3 per render; MIDI separately. Simultaneous multi-format export remains open."
     },
     {
       "id": "SET-156",
@@ -2141,10 +2141,10 @@
       "fl_default": "192kbps",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › MP3 bitrate",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.bitrate_kbps",
+      "status": "IMPLEMENTED",
       "feature": "EXP-005",
-      "notes": ""
+      "notes": "CBR dropdown: all MPEG-1 bitrates 32–320 kbps, default 320. No VBR."
     },
     {
       "id": "SET-159",

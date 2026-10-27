@@ -13,7 +13,7 @@ use serde_json::{Map, Value, json};
 use crate::automation::AutomationTarget;
 use crate::document::PluginTarget;
 use crate::effects::{COMPRESSOR_SIDECHAIN, EffectKind, ParamSpec};
-use crate::model::{FilterMode, Instrument, Project, SamplerParams, SynthParams, Waveform};
+use crate::model::{Channel, FilterMode, Instrument, Project, SamplerParams, SynthParams, Waveform};
 use crate::plugin::{PluginRef, PluginState, base64_encode};
 
 /// The prefix of a Lime plugin's path.
@@ -321,6 +321,63 @@ pub fn sampler_ref(p: &SamplerParams, root_key: u8) -> PluginRef {
     plugin
 }
 
+/// Keep host audition/source hints consistent with a sampler state replacement. Older embedded
+/// states have no source field, so retain their hint while the sample payload itself is unchanged.
+/// This reads metadata only: no decoding or source file access belongs in the project model.
+pub fn sync_sampler_metadata(channel: &mut Channel, previous: Option<&PluginState>) {
+    let Instrument::Plugin(plugin) = &mut channel.instrument else {
+        return;
+    };
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return;
+    }
+    let Some(component) = component_state(&plugin.state).and_then(|s| serde_json::from_slice::<Value>(s).ok()) else {
+        return;
+    };
+    if let Some(root) = component["params"]["value_8"]["f32"].as_f64().filter(|v| v.is_finite()) {
+        channel.root_key = root.round().clamp(0.0, 127.0) as u8;
+    }
+    let previous_sample = previous
+        .and_then(component_state)
+        .and_then(|s| serde_json::from_slice::<Value>(s).ok())
+        .and_then(|old| old["fields"]["sample-v1"].as_str().map(str::to_owned));
+    let Some(text) = component["fields"]["sample-v1"].as_str() else {
+        if previous_sample.is_some() {
+            plugin.extra.remove("lime-sample-path");
+            plugin.extra.remove("lime-sample-pending");
+            plugin.extra.remove("lime-disk-unapproved");
+            channel.extra.remove("lime-external-source");
+        }
+        return; // Pending legacy source embedding has no sample field yet.
+    };
+    let Some(sample) = serde_json::from_str::<Value>(text).ok().filter(Value::is_object) else {
+        return;
+    };
+    let disk = sample["keep_on_disk"].as_bool() == Some(true);
+    let Some(pcm) = sample["pcm"].as_str() else { return };
+    let source = sample["source"].as_str().filter(|s| !s.is_empty());
+    if disk || !pcm.is_empty() {
+        if let Some(source) = source {
+            plugin.extra.insert("lime-sample-path".into(), json!(source));
+        } else if previous.is_some() {
+            let old_pcm = previous_sample
+                .as_deref()
+                .and_then(|t| serde_json::from_str::<Value>(t).ok())
+                .and_then(|v| v["pcm"].as_str().map(str::to_owned));
+            if old_pcm.as_deref() != Some(pcm) {
+                plugin.extra.remove("lime-sample-path");
+            }
+        }
+        plugin.extra.remove("lime-sample-pending");
+    } else {
+        // An explicit native Clear must not fall back to the previous on-disk waveform/source.
+        plugin.extra.remove("lime-sample-path");
+        plugin.extra.remove("lime-sample-pending");
+        plugin.extra.remove("lime-disk-unapproved");
+        channel.extra.remove("lime-external-source");
+    }
+}
+
 /// Sampler settings in a legacy channel or a Lime Sampler's saved component state.
 /// The source path is a preview/reload hint; playback uses the embedded audio.
 pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
@@ -370,7 +427,8 @@ pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
 }
 
 /// Settings of a former built-in sampler that Lime Sampler cannot reproduce yet (the P0 features
-/// listed in decision D39), as user-facing phrases. Lime Sampler now has every sampler setting.
+/// listed in decision D39), as user-facing phrases. All modeled legacy fields are supported;
+/// this does not imply parity with every FL Studio Sampler control.
 pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
     Vec::new()
 }
@@ -455,7 +513,9 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                         LimePlugin::SAMPLER.with_values(&sampler_values(p, c.root_key), false, sample.as_ref());
                     if let Some(source) = &p.sample {
                         plugin.extra.insert("lime-sample-path".into(), json!(source.path));
-                        if sample.is_none() {
+                        if sample.is_some() {
+                            set_sample_source(&mut plugin, &source.path);
+                        } else {
                             plugin.extra.insert("lime-sample-pending".into(), json!(true));
                         }
                     }
@@ -484,7 +544,11 @@ pub fn convert_project(project: &mut Project, audio: &dyn Fn(&str) -> Option<Emb
                         .round()
                         .clamp(0.0, 127.0) as u8;
                     if sample.is_some() {
-                        let state = LimePlugin::SAMPLER.with_values(&sampler_values(&p, root), false, sample.as_ref());
+                        let mut state =
+                            LimePlugin::SAMPLER.with_values(&sampler_values(&p, root), false, sample.as_ref());
+                        if let Some(source) = &p.sample {
+                            set_sample_source(&mut state, &source.path);
+                        }
                         plugin.state = state.state;
                         plugin.extra.remove("lime-sample-pending");
                     }
@@ -675,11 +739,17 @@ pub fn edited_param_state(plugin: &PluginRef, id: u32, normalized: f64) -> Optio
     Some(PluginState::new(host_state(state.to_string().as_bytes())))
 }
 
-/// Apply a legacy effect preset's plain controls while retaining bypass, key and opaque fields.
+/// Apply a preset's plain controls while retaining bypass, key and opaque fields (such as `sample-v1`).
 pub fn edited_values_state(plugin: &PluginRef, values: &[f32]) -> Option<PluginState> {
     let lime = LimePlugin::of(plugin)?;
-    let mut state: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
-    let params = state.get_mut("params")?.as_object_mut()?;
+    let mut state: Value = component_state(&plugin.state)
+        .and_then(|s| serde_json::from_slice(s).ok())
+        .unwrap_or_else(|| json!({"version": "0.1.0", "params": {"bypass": {"bool": false}}, "fields": {}}));
+    let params = state
+        .as_object_mut()?
+        .entry("params")
+        .or_insert_with(|| json!({"bypass": {"bool": false}}))
+        .as_object_mut()?;
     for (index, (value, spec)) in values.iter().zip(control_specs(lime.0)).enumerate() {
         let value = if value.is_finite() {
             value.clamp(spec.min, spec.max)
@@ -822,6 +892,38 @@ pub fn disk_source(plugin: &PluginRef) -> Option<String> {
         return None;
     }
     sample["source"].as_str().map(str::to_owned)
+}
+
+/// Native source hint for either embedded or disk-backed PCM. Embedded playback still uses PCM.
+pub fn sample_source(plugin: &PluginRef) -> Option<String> {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return None;
+    }
+    let component: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
+    let sample: Value = serde_json::from_str(component["fields"]["sample-v1"].as_str()?).ok()?;
+    sample["source"].as_str().filter(|s| !s.is_empty()).map(str::to_owned)
+}
+
+/// Relocate a source hint without converting embedded audio to disk mode or changing its PCM.
+pub fn set_sample_source(plugin: &mut PluginRef, source: &str) -> bool {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return false;
+    }
+    let Some(mut component) = component_state(&plugin.state).and_then(|s| serde_json::from_slice::<Value>(s).ok())
+    else {
+        return false;
+    };
+    let Some(mut sample) = component["fields"]["sample-v1"]
+        .as_str()
+        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .filter(Value::is_object)
+    else {
+        return false;
+    };
+    sample["source"] = json!(source);
+    component["fields"]["sample-v1"] = Value::String(sample.to_string());
+    plugin.state = PluginState::new(host_state(component.to_string().as_bytes()));
+    true
 }
 
 /// Update a disk source without changing controls or other persisted plugin fields.
@@ -1118,5 +1220,166 @@ mod tests {
         assert_eq!(p.mixer.tracks[1].effects.last().unwrap().id, id);
         doc.undo();
         assert_eq!(doc.project().mixer.tracks[1].effects.len(), 10);
+    }
+}
+
+#[cfg(test)]
+mod sampler_metadata_tests {
+    use super::*;
+    use crate::{ChannelId, Command, Document, PluginTarget};
+
+    fn document() -> (Document, ChannelId) {
+        let mut doc = Document::default();
+        let plugin = sampler_ref(
+            &SamplerParams {
+                sample: Some(crate::SampleRef { path: "old.wav".into() }),
+                ..Default::default()
+            },
+            48,
+        );
+        let id = ChannelId(
+            doc.execute(Command::AddChannel {
+                name: "Sampler".into(),
+                instrument: Instrument::Plugin(plugin),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        (doc, id)
+    }
+
+    fn with_sample(plugin: &PluginRef, sample: Value) -> PluginState {
+        let mut component: Value = serde_json::from_slice(component_state(&plugin.state).unwrap()).unwrap();
+        component["fields"]["sample-v1"] = json!(sample.to_string());
+        PluginState::new(host_state(component.to_string().as_bytes()))
+    }
+
+    #[test]
+    fn sampler_state_root_changes_are_undoable_and_drive_new_steps() {
+        let (mut doc, id) = document();
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 48);
+        let target = PluginTarget::Channel(id);
+        let state = edited_param_state(doc.project().plugin(target).unwrap(), param_id(7), 72.0 / 127.0).unwrap();
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 72);
+        assert!(doc.undo());
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 48);
+        assert!(doc.redo());
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 72);
+        let pattern = doc.project().patterns[0].id;
+        doc.execute(Command::SetStep {
+            pattern,
+            channel: id,
+            step: 0,
+            on: true,
+        })
+        .unwrap();
+        assert_eq!(doc.project().pattern(pattern).unwrap().notes[0].key, 72);
+        let plugin = LimePlugin::SAMPLER.with_values(&sampler_values(&SamplerParams::default(), 36), false, None);
+        doc.execute(Command::SetInstrument {
+            channel: id,
+            instrument: Instrument::Plugin(plugin),
+        })
+        .unwrap();
+        assert_eq!(
+            doc.project().channel(id).unwrap().root_key,
+            36,
+            "preset/instrument replacement"
+        );
+    }
+
+    #[test]
+    fn native_source_replace_clear_and_undo_keep_hints_consistent() {
+        let (mut doc, id) = document();
+        let target = PluginTarget::Channel(id);
+        let sample =
+            json!({"name":"new.wav", "sample_rate":48000, "pcm":"AAAAAA==", "source":"new.wav", "keep_on_disk":false});
+        let state = with_sample(doc.project().plugin(target).unwrap(), sample);
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        let plugin = doc.project().plugin(target).unwrap();
+        assert_eq!(plugin.extra["lime-sample-path"], "new.wav");
+        assert!(!plugin.extra.contains_key("lime-sample-pending"));
+        let state = with_sample(
+            plugin,
+            json!({"name":"", "sample_rate":0, "pcm":"", "source":null, "keep_on_disk":false}),
+        );
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        assert!(
+            sampler_params(&doc.project().channel(id).unwrap().instrument)
+                .unwrap()
+                .sample
+                .is_none()
+        );
+        assert!(doc.undo());
+        assert_eq!(
+            doc.project().plugin(target).unwrap().extra["lime-sample-path"],
+            "new.wav"
+        );
+        assert!(doc.redo());
+        assert!(
+            !doc.project()
+                .plugin(target)
+                .unwrap()
+                .extra
+                .contains_key("lime-sample-path")
+        );
+    }
+
+    #[test]
+    fn legacy_hints_survive_parameter_edits_but_not_replacement_audio() {
+        let (mut doc, id) = document();
+        let target = PluginTarget::Channel(id);
+        let state = with_sample(
+            doc.project().plugin(target).unwrap(),
+            json!({"name":"old.wav", "sample_rate":48000, "pcm":"AAAAAA=="}),
+        );
+        // Seed an old project whose embedded state has only an extra source hint.
+        let mut project = doc.project().clone();
+        project.plugin_mut(target).unwrap().state = state;
+        doc.replace(project);
+        let state = edited_param_state(doc.project().plugin(target).unwrap(), param_id(7), 24.0 / 127.0).unwrap();
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        assert_eq!(
+            doc.project().plugin(target).unwrap().extra["lime-sample-path"],
+            "old.wav"
+        );
+        let state = with_sample(
+            doc.project().plugin(target).unwrap(),
+            json!({"name":"embedded-only.wav", "sample_rate":48000, "pcm":"BBBBBB=="}),
+        );
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        assert!(
+            !doc.project()
+                .plugin(target)
+                .unwrap()
+                .extra
+                .contains_key("lime-sample-path")
+        );
+    }
+
+    #[test]
+    fn sanitize_and_save_capture_sync_root_without_approving_sources() {
+        let (mut doc, id) = document();
+        let target = PluginTarget::Channel(id);
+        let plugin = doc.project().plugin(target).unwrap();
+        let mut state: Value = serde_json::from_slice(component_state(&plugin.state).unwrap()).unwrap();
+        state["params"]["value_8"]["f32"] = json!(999.0);
+        let mut project = doc.project().clone();
+        let plugin = project.plugin_mut(target).unwrap();
+        plugin.state = PluginState::new(host_state(state.to_string().as_bytes()));
+        plugin.extra.insert("lime-disk-unapproved".into(), json!(true));
+        project.sanitize();
+        assert_eq!(project.channel(id).unwrap().root_key, 127);
+        assert_eq!(project.plugin(target).unwrap().extra["lime-disk-unapproved"], true);
+        doc.replace(project);
+        let state = edited_param_state(doc.project().plugin(target).unwrap(), param_id(7), 52.0 / 127.0).unwrap();
+        let revision = doc.revision();
+        doc.store_plugin_state(target, state);
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 52);
+        assert_eq!(doc.revision(), revision);
+        let state = PluginState::new(b"invalid".to_vec());
+        doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
+        assert_eq!(doc.project().channel(id).unwrap().root_key, 52);
     }
 }

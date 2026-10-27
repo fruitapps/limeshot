@@ -11,6 +11,8 @@ limeshot-core.workspace = true
 limeshot-dsp.workspace = true
 limeshot-sequencer.workspace = true
 thiserror.workspace = true
+rusty_mp3 = { version = "=1.0.5", default-features = false }
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -209,7 +209,10 @@ Changing settings restarts the stream with the last snapshot and transport flags
 
 `limeshot_engine::render_offline` builds a fresh `Renderer` with the snapshot. It sets Song (or Pattern) mode, turns
 looping off and renders exactly `sample_of_tick(length)` frames, then the tail until every voice ends (at most 4 s).
-`export_wav` writes 16/24-bit PCM (clipped, no dither) or 32-bit float. It runs on a worker thread from the UI. The same
+`export_wav` writes 16/24-bit PCM (clipped, no dither) or 32-bit float. `export_audio_with` also
+encodes stereo MPEG-1 MP3 through pinned pure-Rust `rusty_mp3` (32/44.1/48 kHz, CBR 32–320 kbps),
+with final delay/padding tags and atomic destination replacement. Both share the same PCM render;
+encoding runs off the audio thread, and the UI runs export on a worker thread. See [MP3 export](../research/mp3-export.md). The same
 renderer as playback means the export tests also check playback scheduling.
 
 ## Performance notes

@@ -401,10 +401,10 @@
       "fl_keys": "Shift+Cmd+R",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "File › Export MP3…",
+      "status": "DIFFERENT",
       "feature": "EXP-005",
-      "notes": "Opens: settings.json page 'Render'."
+      "notes": "Same key; flat File menu item opens Export audio with MP3 selected. Stereo CBR bitrate/rate controls; no simultaneous formats."
     },
     {
       "id": "MENU-024",

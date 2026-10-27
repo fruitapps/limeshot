@@ -44,7 +44,10 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   output callback clocks are not compensated; sample-exact playback count-in does not establish physical input
   alignment. No automation/clip recording, punch or loop takes. A recorded note appears when it ends. Physical
   input/platform checks remain open; see [recording research](../research/recording-monitoring-and-count-in.md).
-* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only, stereo only, without stems.
+* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV or MP3, stereo only, without
+  stems. MP3 is CBR at 32/44.1/48 kHz; no VBR, metadata tags or simultaneous formats. The Info/LAME gapless tag is written, but LimeShot reimport retains
+  codec padding; use WAV for aligned loops. MP3 quality/listening and other-platform runtime checks
+  remain open ([implementation and tests](../research/mp3-export.md)).
   Integer WAV export is clipped, not dithered.
 * Instruments and inserts are the twelve Lime Native VST3s. Missing bundles abort export and show errors in the GUI;
   missing realtime channels stay silent and report load errors.
@@ -84,14 +87,33 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   100 % the wrapper can be larger than a fixed-size editor, and keyboard focus may stay in a clicked plugin view
   until the host window is clicked again.
 * Presets: factory programs and `.vstpreset` files (no FL `.fst`, no preset browser in the Browser); some plugins
-  name programs only by number; loading a preset is not an undo step.
+  name programs only by number; loading a `.vstpreset` or factory program on a third-party or non-sampler plugin is not an undo step.
 * The keyboard toggle forwards typed characters only (not arrows or function keys).
-* Native-editor and third-party parameter changes are not undo steps; known Lime host controls are.
+* Native-editor and third-party parameter changes on non-sampler plugins mark the project dirty rather than creating undo steps; known Lime host controls and completed native Lime Sampler edits are undo steps.
 * Delay compensation covers up to about 340 ms per path and 64 delayed paths; export trimming cannot be turned off.
 * No custom plugin folders; a crashing plugin takes LimeShot down unless it runs in a separate process (macOS and
   Linux). No CLAP or Audio Units.
 * Value menus cover channel/mixer volume and pan and known Lime controls; third-party controls have the generic
   automation menu only.
+
+## Sampler parity and integration
+
+The [sampler audit](../research/sampler-parity-audit.md) distinguishes documented FL behavior,
+Lime source findings, existing tests and unverified live behavior. Hosted P0 field migration does
+not imply complete FL Sampler parity.
+
+* No time stretching, source BPM lock/detection, formants, ping-pong/crossfaded loops, precomputed
+  sample processing, extended declick modes, metadata-driven sampler setup or interpolation quality
+  selection. Sampler has volume ADSR and one low-pass, without extended envelopes, sampler LFOs,
+  filter selection/tracking, configurable polyphony/mono/porta or cross-channel cut groups.
+* Host and native root/source synchronization, preset sample preservation and gesture-coalesced undoable
+  native sampler state capture are implemented and covered by headless/hosted tests (INS-021), but live
+  GUI interaction verification remains open. Audio clips share sampler channel state; FL uses a distinct
+  Audio Clip generator.
+* FLP import defaults advanced sampler settings, including root/pitch, loops, envelopes, filter,
+  stretch, declick and precomputed processing, without detailed per-setting warnings (APP-022).
+* FL live A/B and Lime Sampler in other DAWs remain unverified. The current computer-use FL
+  selection timed out despite owner authorization for Accessibility/Screen Recording.
 
 ## Editing
 * The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not

@@ -579,6 +579,15 @@ impl Vst3Instance {
         edits
     }
 
+    /// A native control gesture is still open; defer expensive state capture until release.
+    pub fn editor_gesture_active(&self) -> bool {
+        self.core
+            .handler
+            .active_edits
+            .lock()
+            .is_ok_and(|active| !active.is_empty())
+    }
+
     /// Whether the plugin reported changed parameter values or settings (`restartComponent`)
     /// since the last call, as plugins do after loading one of their own presets.
     pub fn take_restart(&mut self) -> bool {

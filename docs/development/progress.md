@@ -392,3 +392,102 @@ Strict Clippy for the UI test target, formatting, inventory/reference and whites
 Intel CI verification awaits the pushed commit. Feature/verification statuses are unchanged.
 Work remains on `codex/input-monitoring` in the primary checkout (`~/Developer/limeshot`),
 reusing Cargo caches without a routine worktree/clone, direct main push or automatic merge.
+
+
+## 2026-10-27 — MP3 export and sampler parity/integration audit
+
+Implemented EXP-005: File > Export MP3… and Cmd/Ctrl+Shift+R open the shared Export audio dialog
+with MP3 selected. Stereo MPEG-1 CBR supports 32/44.1/48 kHz and all 14 standard bitrates from
+32 to 320 kbps (default 320). GUI and CLI share the existing hosted render, range, PDC and tail
+path; CLI selects `.wav`/`.mp3` by suffix and accepts `--bitrate`. Pinned `rusty_mp3` 1.0.5 is
+Apache-2.0, pure Rust, with no runtime dependencies/C encoder installation. MP3 validates settings
+before render, sanitizes/clips PCM, finishes the gapless tag, and writes through a synced temporary
+file with atomic replacement. The GUI rejects a mismatched filename suffix rather than rewriting
+a name after the save panel confirmed overwriting a different path. WAV entry points remain.
+[Design, licensing, tests and limitations](../research/mp3-export.md).
+
+Automated coverage: independent Symphonia decode at all 42 rate/bitrate combinations, stereo tone
+separation, header parameters/CBR size, partial-frame/short/silent/non-finite inputs, invalid-setting
+preservation and file-error cleanup. Engine tests compare WAV/MP3 Song/Pattern/selection reports
+and release tails; CLI renders the hosted demo and checks invalid rates/bitrates/extensions; UI
+tests exercise the MP3 shortcut and format/rate switching. The
+[dialog screenshot](../screenshots/current/export-mp3.png) was generated with `ui_shot --dialog=mp3`
+and visually inspected. Offscreen rendering required host GPU access after the sandbox found no adapter.
+
+A separate system-decoder check exported the demo at 48 kHz/192 kbps: `afinfo` recognized stereo,
+191,999 bits/s, and 806,202 valid frames plus priming/remainder. Permitted AudioToolbox `afconvert`
+decoded exactly 806,202 stereo PCM frames (matching a fresh WAV export), peak 0.64877; sample-difference
+SNR against 16-bit WAV was 26.50 dB. The first sandboxed conversion failed; the permitted conversion
+succeeded. This one fixture is not listening-quality certification. LimeShot's own loader retains
+codec padding with default decoder options; WAV remains the aligned-loop format. CBR only, no MP3
+metadata/VBR/multiple simultaneous formats; offline PCM/encoder memory and other-platform listening/runtime
+checks remain open. EXP-005 is IMPLEMENTED, not promoted to full verification.
+
+The owner also requested a sampler feature and integration comparison. The
+[sampler parity audit](../research/sampler-parity-audit.md) compares documented FL controls against
+Lime code and tests, and proposes staged fixed-duration preparation then realtime stretching.
+New records INS-017…INS-024 track precomputed processing, metadata/navigation, declick, modulation,
+host/native synchronization, cut groups, interpolation quality and event arp/echo. Existing records
+now link the audit; INS-014 corrects the old claim about a pan envelope (FL documents pan LFOs).
+Source-confirmed integration gaps include root-key state/display divergence, native edits without
+document undo, shared sampler/audio-clip channel state and defaulted advanced FLP sampler settings.
+Host source replacement/clear metadata needs live checking. The sampler-loss helper's comment now
+clarifies that preserving every former LimeShot field does not mean complete FL sampler parity.
+
+No FL source/assets were used. Current official manuals and the existing observed menu inventory
+supply the reference. Two attempts to select installed FL Studio through computer use timed out;
+the owner authorized Accessibility/Screen Recording, so no missing permission is asserted. No fresh
+live FL A/B or standalone sampler-in-FL result is claimed. The exact outstanding checks, plus MP3
+listening/player/platform checks, are in the human verification queue; limitations and next steps
+are updated. Time stretching is research/design scope here, not a new implemented DSP mode.
+
+Local validation on macOS 26.6.2 Apple Silicon: all twelve debug VST3 bundles rebuilt; native suite
+22 passed. Workspace suite 463 passed, including 162 UI tests and 10 hosted VST3 tests; workspace
+build, strict workspace Clippy, formatting and inventory/repository/whitespace checks pass. The first
+sandboxed workspace run failed the existing plugin-bridge listener test; the run with local-socket
+permission passes. Live GUI save-panel interaction, listening and other-platform runtime are unverified.
+
+Work uses `codex/mp3-export-sampler-audit` in the existing primary checkout
+(`~/Developer/limeshot`), reusing Cargo caches. Continue there without routine worktrees/clones;
+push only the feature branch and its PR, never main, and do not merge automatically.
+
+
+## 2026-10-27 — Sampler host and native control synchronization (INS-021)
+
+Implemented INS-021 to keep host and native Lime Sampler controls, metadata, presets and undo
+history synchronized:
+
+* `limeshot_core::lime::sync_sampler_metadata` updates `Channel.root_key` from `value_8` and
+  synchronizes `lime-sample-path`, `lime-sample-pending`, `lime-disk-unapproved` and
+  `lime-external-source` with `sample-v1` across `AddChannel`, `SetInstrument`, `SetPluginState`,
+  `Document::store_plugin_state`, `Project::sanitize` and `limeshot_project::load`. Explicit native
+  `Clear` removes stale host sample path hints so waveform/drag/preview fallbacks do not resurrect
+  cleared audio, while older embedded states without a `source` field retain their host path across
+  parameter-only edits.
+* Host sample imports (`browser::sampler_with_audio`, `lime::convert_project`) and `.lime`
+  save/load/recovery (`sample_source`, `set_sample_source`, `absolutize_samples`) preserve and
+  relocate `sample-v1.source` relative to the project folder without turning embedded PCM into disk
+  mode.
+* `ComponentHandler` tracks active VST3 `beginEdit`/`endEdit` parameter gestures
+  (`editor_gesture_active`), and `PluginHost::poll` / `store_states` captures completed native
+  Lime Sampler parameter gestures, `restartComponent` state changes (Load/Clear/Keep on disk) and
+  wrapper preset loads into single undoable `Command::SetPluginState` steps without serializing PCM
+  on every drag frame.
+* Applying a Channel Settings sampler preset (`presets_ui::apply`) updates controls through
+  `edited_values_state` and `Command::SetPluginState`, preserving embedded or disk-backed `sample-v1`
+  audio and `Channel.root_key` even if the original source file was moved or removed.
+* Fixed Playlist `clip_menu` so the opening pointer press does not dismiss the menu on the same pass
+  (matching `point_menu`).
+* Addressed PR #22 review feedback: MP3 atomic export preserves existing destination file permissions
+  and respects `umask` on Unix; `mp3-export.md` labels `VERIFIED`/`OBSERVED`/`UNKNOWN` confidence;
+  `audio-engine.md` and `features.json` (`PLG-022`) formatting notes are cleaned up.
+
+Local validation on macOS Apple Silicon: workspace test suite passes (471 passed, including 163 UI
+tests and 11 hosted VST3 tests across `limeshot-core`, `limeshot-plugins`, `limeshot-project`,
+`crates/limeshot-ui/tests/lime_vst3.rs` and `crates/limeshot-app/tests/ui.rs`), along with strict
+workspace Clippy, `cargo fmt`, `scripts/features.py check` and `scripts/check_repository.py`.
+Live GUI A/B verification with FL Studio and native editor interaction remains in
+`docs/development/human-verification.md`; INS-021 is marked `IMPLEMENTED`, not `VERIFIED`.
+
+Work remains on `codex/mp3-export-sampler-audit` in the primary checkout (`~/Developer/limeshot`),
+reusing Cargo caches without routine worktrees/clones, direct main pushes or automatic merges.

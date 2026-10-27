@@ -33,6 +33,12 @@ The macOS bundle includes this file, LimeShot's licence texts and all font licen
 `Contents/Resources/licenses/fonts`. Aggregation of third-party Rust source licence notices into distribution
 packages remains open; the dependency overview above is not a complete set of redistribution notices.
 
+MP3 export (2026-10-27) adds unmodified `rusty_mp3` **1.0.5** from crates.io, Apache-2.0,
+Copyright 2026 Mata Network (https://github.com/Remade-With-Rust/remade_ffmpeg_rs).
+Default features are disabled; it is pure Rust with no runtime dependencies. Its Apache-2.0
+license text is the same license shipped in `LICENSE-APACHE`; the package contains no NOTICE file.
+No FL Studio or LAME encoder binary is bundled.
+
 ## Vendored editor backend
 
 | Source | Authors | License | Use |

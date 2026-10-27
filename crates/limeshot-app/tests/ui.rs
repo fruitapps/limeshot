@@ -7197,3 +7197,146 @@ fn recording_precount_shortcut_menu_bars_and_note_filter_work() {
     h.step();
     assert!(!h.state().ui.record.count_in);
 }
+
+#[test]
+fn export_shortcuts_and_format_controls_select_mp3_or_wav() {
+    use limeshot_ui::dialogs::Dialog;
+    let mut h = harness(false);
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::R);
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(opts.mp3);
+    assert_eq!(opts.bitrate_kbps, 320);
+    assert!(h.query_all_by_label("Bitrate").next().is_some());
+    h.get_by_label("WAV").click();
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(!opts.mp3);
+    h.state_mut().dialog = None;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::R);
+    h.step();
+    let Some(Dialog::Export(opts)) = &mut h.state_mut().dialog else {
+        panic!("export dialog")
+    };
+    assert!(!opts.mp3);
+    opts.sample_rate = 96_000;
+    h.step();
+    h.get_by_label("MP3").click();
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(opts.mp3);
+    assert_eq!(opts.sample_rate, 48_000, "switching from WAV chooses a supported rate");
+}
+
+#[test]
+fn sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized() {
+    let dir = tempfile::tempdir().unwrap();
+    let samples_dir = dir.path().join("samples");
+    std::fs::create_dir_all(&samples_dir).unwrap();
+    let first = samples_dir.join("first.wav");
+    let second = samples_dir.join("second.wav");
+    // 1.0 s stereo at 48 kHz and 0.5 s stereo at 48 kHz.
+    limeshot_dsp::write_wav(&first, 48_000, &vec![0.35; 96_000], limeshot_dsp::BitDepth::Float32).unwrap();
+    limeshot_dsp::write_wav(&second, 48_000, &vec![0.5; 48_000], limeshot_dsp::BitDepth::Float32).unwrap();
+
+    let mut h = harness(false);
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(120.0)));
+    h.state_mut().samples.load_blocking(&first.to_string_lossy()).unwrap();
+    h.state_mut().samples.load_blocking(&second.to_string_lossy()).unwrap();
+    let clip = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &first, 0, 0).unwrap();
+    let channel = h.state().project().clip(clip).unwrap().audio_channel().unwrap();
+    h.step();
+    assert_eq!(h.state().project().clip(clip).unwrap().length, 2 * PPQ);
+
+    // Native state edit: replace source with second.wav (0.5 s), trim end to 0.5 (0.25 s), and set root key to C6 (72).
+    let target = PluginTarget::Channel(channel);
+    let mut native_plugin = LimePlugin::SAMPLER.with_values(
+        &lime::sampler_values(
+            &SamplerParams {
+                end: 0.5,
+                ..Default::default()
+            },
+            72,
+        ),
+        false,
+        Some(&lime::EmbeddedAudio {
+            name: "second.wav".into(),
+            sample_rate: 48_000,
+            stereo: vec![0.5; 48_000],
+        }),
+    );
+    assert!(lime::set_sample_source(&mut native_plugin, &second.to_string_lossy()));
+    h.state_mut().exec(Command::SetPluginState {
+        plugin: target,
+        state: native_plugin.state.clone(),
+    });
+    h.step();
+    assert_eq!(h.state().project().channel(channel).unwrap().root_key, 72);
+    assert_eq!(
+        lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path,
+        second.to_string_lossy()
+    );
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let menu_pos = egui::pos2(g.pos(0, 0).x + 6.0, g.pos(0, 0).y - g.track_h * 0.5 + 6.0);
+    click(&mut h, menu_pos, PointerButton::Primary);
+    h.get_by_label("Fit to sample length").click();
+    h.step();
+    assert_eq!(
+        h.state().project().clip(clip).unwrap().length,
+        PPQ / 2,
+        "0.25 s at 120 BPM is half a beat"
+    );
+
+    // Save to disk, relocate to a new folder, and reopen: embedded source path and root key stay synchronized.
+    let saved_path = dir.path().join("project.lime");
+    assert!(h.state_mut().save_to(&saved_path));
+    let moved_dir = dir.path().join("moved");
+    let moved_second = moved_dir.join("samples").join("second.wav");
+    std::fs::create_dir_all(moved_dir.join("samples")).unwrap();
+    std::fs::copy(&second, &moved_second).unwrap();
+    std::fs::copy(&saved_path, moved_dir.join("project.lime")).unwrap();
+    h.state_mut().open_path(&moved_dir.join("project.lime"));
+    h.step();
+    assert_eq!(h.state().project().channel(channel).unwrap().root_key, 72);
+    assert_eq!(
+        lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path,
+        moved_second.to_string_lossy()
+    );
+
+    // Native clear removes the sample source so stale waveforms/drag payloads do not remain, and undo restores it.
+    let cleared = LimePlugin::SAMPLER.with_values(&lime::sampler_values(&SamplerParams::default(), 64), false, None);
+    h.state_mut().exec(Command::SetPluginState {
+        plugin: target,
+        state: cleared.state,
+    });
+    h.step();
+    assert_eq!(h.state().project().channel(channel).unwrap().root_key, 64);
+    assert_eq!(h.state().sampler_source(channel), None);
+    assert!(h.state_mut().doc.undo());
+    h.step();
+    assert_eq!(h.state().project().channel(channel).unwrap().root_key, 72);
+    assert_eq!(
+        lime::sampler_params(&h.state().project().channel(channel).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path,
+        moved_second.to_string_lossy()
+    );
+}

@@ -195,6 +195,7 @@ pub(crate) fn sampler_with_audio(
         Some(&audio),
     );
     if let Some(source) = &params.sample {
+        limeshot_core::lime::set_sample_source(&mut plugin, &source.path);
         plugin
             .extra
             .insert("lime-sample-path".into(), serde_json::json!(source.path));

@@ -1,4 +1,4 @@
-//! Offline rendering (bounce) and WAV export. Uses the same [`Renderer`] as realtime playback.
+//! Offline rendering (bounce) and audio export. Uses the same [`Renderer`] as realtime playback.
 
 use crate::renderer::{PlayMode, Renderer};
 use limeshot_core::{Tick, Timeline};
@@ -46,6 +46,45 @@ pub enum ExportError {
     EmptySong,
     #[error(transparent)]
     Write(#[from] SampleError),
+    #[error("MP3 needs a sample rate of 32000, 44100 or 48000 Hz")]
+    Mp3SampleRate,
+    #[error("unsupported MP3 bitrate: {0} kbps")]
+    Mp3Bitrate(u32),
+    #[error("MP3 encoding failed: {0}")]
+    Mp3(String),
+    #[error("could not write audio: {0}")]
+    Io(#[from] std::io::Error),
+}
+
+/// MPEG-1 constant bitrates; reject unsupported values instead of silently rounding them.
+pub const MP3_BITRATES: &[u32] = &[32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+pub const MP3_SAMPLE_RATES: &[u32] = &[32_000, 44_100, 48_000];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExportFormat {
+    Wav(BitDepth),
+    Mp3 { bitrate_kbps: u32 },
+}
+
+impl ExportFormat {
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Wav(_) => "wav",
+            Self::Mp3 { .. } => "mp3",
+        }
+    }
+
+    pub fn validate(self, sample_rate: u32) -> Result<(), ExportError> {
+        if let Self::Mp3 { bitrate_kbps } = self {
+            if !MP3_SAMPLE_RATES.contains(&sample_rate) {
+                return Err(ExportError::Mp3SampleRate);
+            }
+            if !MP3_BITRATES.contains(&bitrate_kbps) {
+                return Err(ExportError::Mp3Bitrate(bitrate_kbps));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// What an export produced.
@@ -193,7 +232,205 @@ pub fn export_wav_with(
     path: &Path,
     processors: Processors,
 ) -> Result<RenderReport, ExportError> {
-    let (audio, report) = render_offline_with(snapshot, settings, processors)?;
-    write_wav(path, report.sample_rate, &audio, depth)?;
+    export_audio_with(snapshot, settings, ExportFormat::Wav(depth), path, processors)
+}
+
+/// Render the same mix for either format. Encoding and file I/O run off the audio thread.
+pub fn export_audio_with(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    format: ExportFormat,
+    path: &Path,
+    processors: Processors,
+) -> Result<RenderReport, ExportError> {
+    format.validate(settings.sample_rate)?;
+    let (mut audio, report) = render_offline_with(snapshot, settings, processors)?;
+    match format {
+        ExportFormat::Wav(depth) => write_wav(path, report.sample_rate, &audio, depth)?,
+        ExportFormat::Mp3 { bitrate_kbps } => write_mp3(path, report.sample_rate, bitrate_kbps, &mut audio)?,
+    }
     Ok(report)
+}
+
+/// Encode stereo `audio` as constant-bitrate MP3 and atomically replace `path`.
+fn write_mp3(path: &Path, sample_rate: u32, bitrate_kbps: u32, audio: &mut [f32]) -> Result<(), ExportError> {
+    use std::io::{BufWriter, Write};
+    // Do not feed non-finite plugin output or overs into the encoder's quantizer.
+    for sample in audio.iter_mut() {
+        *sample = if sample.is_finite() {
+            sample.clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+    }
+    let mut encoder = rusty_mp3::Mp3Encoder::new(rusty_mp3::Mp3EncoderConfig {
+        bitrate_kbps,
+        vbr_quality: None,
+    });
+    encoder
+        .push_pcm_f32(audio, 2, sample_rate)
+        .map_err(|error| ExportError::Mp3(error.to_string()))?;
+    // Drain after finish so the first packet has the final delay/padding (gapless) tag.
+    encoder.finish();
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let existing_permissions = std::fs::metadata(path).ok().map(|meta| meta.permissions());
+    #[cfg(unix)]
+    let default_permissions = {
+        let probe = tempfile::Builder::new()
+            .permissions(std::os::unix::fs::PermissionsExt::from_mode(0o666))
+            .tempfile_in(parent)?;
+        probe.as_file().metadata()?.permissions()
+    };
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    {
+        let mut writer = BufWriter::new(temporary.as_file_mut());
+        loop {
+            match encoder.next_packet() {
+                Ok(packet) => writer.write_all(&packet)?,
+                Err(rusty_mp3::Error::Eof) => break,
+                Err(error) => return Err(ExportError::Mp3(error.to_string())),
+            }
+        }
+        writer.flush()?;
+    }
+    temporary.as_file().sync_all()?;
+    if let Some(permissions) = existing_permissions {
+        let _ = temporary.as_file().set_permissions(permissions);
+    } else {
+        #[cfg(unix)]
+        let _ = temporary.as_file().set_permissions(default_permissions);
+    }
+    temporary.persist(path).map_err(|error| error.error)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mp3_encodes_stereo_at_each_rate_and_bitrate() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tone.mp3");
+        for &rate in MP3_SAMPLE_RATES {
+            for &bitrate in MP3_BITRATES {
+                let frames = rate as usize / 4 + 17; // A partial final MPEG frame.
+                let mut audio: Vec<f32> = (0..frames)
+                    .flat_map(|i| {
+                        let t = i as f32 / rate as f32;
+                        [
+                            0.5 * (t * 440.0 * std::f32::consts::TAU).sin(),
+                            0.3 * (t * 880.0 * std::f32::consts::TAU).sin(),
+                        ]
+                    })
+                    .collect();
+                write_mp3(&path, rate, bitrate, &mut audio).unwrap();
+                let bytes = std::fs::read(&path).unwrap();
+                assert!(bytes.windows(4).any(|w| w == b"Info"), "final seek/delay tag");
+                // Symphonia is independent of the encoder. It currently retains codec padding.
+                let decoded = limeshot_dsp::load_audio(&path).unwrap();
+                assert_eq!(decoded.sample_rate, rate);
+                assert!(
+                    decoded.frames() >= frames && decoded.frames() < frames + 3456,
+                    "rate {rate}, bitrate {bitrate}: {} vs {frames}",
+                    decoded.frames()
+                );
+                assert!(decoded.data.iter().all(|s| s.is_finite()));
+                let channel_energy = |channel: usize, hz: f32| {
+                    let mut re = 0.0f64;
+                    let mut im = 0.0f64;
+                    for (i, frame) in decoded.data.as_chunks::<2>().0.iter().enumerate() {
+                        let angle = i as f64 * f64::from(hz) * std::f64::consts::TAU / f64::from(rate);
+                        re += f64::from(frame[channel]) * angle.cos();
+                        im += f64::from(frame[channel]) * angle.sin();
+                    }
+                    (re * re + im * im).sqrt() / decoded.frames() as f64
+                };
+                assert!(channel_energy(0, 440.0) > 0.1, "left tone {rate}/{bitrate}");
+                assert!(channel_energy(1, 880.0) > 0.05, "right tone {rate}/{bitrate}");
+                assert!(channel_energy(0, 880.0) < channel_energy(0, 440.0) * 0.2, "stereo left");
+                assert!(
+                    channel_energy(1, 440.0) < channel_energy(1, 880.0) * 0.2,
+                    "stereo right"
+                );
+                // Verify the first audio frame's MPEG-1 bitrate/rate header, not just decoder success.
+                let header = rusty_mp3::encoder_header(rate, 2, bitrate).unwrap();
+                let tag_header = rusty_mp3::header::FrameHeader::parse(bytes[..4].try_into().unwrap()).unwrap();
+                let offset = tag_header.frame_size();
+                let bitrate_index = (bytes[offset + 2] >> 4) as usize;
+                let rate_index = ((bytes[offset + 2] >> 2) & 3) as usize;
+                assert_eq!(
+                    [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320][bitrate_index],
+                    bitrate
+                );
+                assert_eq!([44100, 48000, 32000][rate_index], rate);
+                let expected = frames as f64 / f64::from(rate) * f64::from(bitrate) * 125.0;
+                assert!(
+                    (bytes.len() as f64 - expected).abs() < 4.0 * header.frame_size() as f64,
+                    "CBR size {rate}/{bitrate}: {} bytes",
+                    bytes.len()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn mp3_short_silent_and_nonfinite_inputs_and_write_failures() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("short.mp3");
+        for frames in [1, 23, 1152, 1153] {
+            let mut audio = vec![0.0; frames * 2];
+            audio[0] = f32::NAN;
+            audio[1] = f32::INFINITY;
+            write_mp3(&path, 44100, 320, &mut audio).unwrap();
+            let decoded = limeshot_dsp::load_audio(&path).unwrap();
+            assert!(decoded.data.iter().all(|v| v.is_finite() && v.abs() < 0.001));
+        }
+        assert!(write_mp3(&dir.path().join("absent/out.mp3"), 44100, 128, &mut [0.0; 2]).is_err());
+        // A rename failure leaves no temporary file behind.
+        let target = dir.path().join("directory.mp3");
+        std::fs::create_dir(&target).unwrap();
+        assert!(write_mp3(&target, 44100, 128, &mut [0.0; 2]).is_err());
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
+            write_mp3(&path, 44100, 128, &mut [0.0; 2]).unwrap();
+            assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o640);
+        }
+    }
+
+    #[test]
+    fn invalid_mp3_settings_preserve_existing_output() {
+        let project = limeshot_core::Project::new();
+        let snap = Arc::new(limeshot_sequencer::compile(
+            &project,
+            project.patterns[0].id,
+            &limeshot_sequencer::NoSamples,
+        ));
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("existing.mp3");
+        std::fs::write(&path, b"keep this").unwrap();
+        for (rate, bitrate) in [(96000, 320), (44100, 123), (0, 320)] {
+            let result = export_audio_with(
+                snap.clone(),
+                &RenderSettings {
+                    sample_rate: rate,
+                    ..Default::default()
+                },
+                ExportFormat::Mp3 { bitrate_kbps: bitrate },
+                &path,
+                Processors::default(),
+            );
+            assert!(matches!(
+                result,
+                Err(ExportError::Mp3SampleRate | ExportError::Mp3Bitrate(_))
+            ));
+            assert_eq!(std::fs::read(&path).unwrap(), b"keep this");
+        }
+    }
 }

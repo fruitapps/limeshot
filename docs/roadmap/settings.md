@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
+Tracked: **193** — IMPLEMENTED 29, IN_PROGRESS 2, NOT_STARTED 147, NOT_PLANNED 15
 
 ## MIDI
 
@@ -211,10 +211,10 @@ Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 | SET-152 | Project type | Mode | dropdown | Pattern (in Pattern mode) | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Project type › Mode | OBSERVED | `dialog.range` | IMPLEMENTED | EXP-004 | Full song / Pattern. FL takes the sample rate from Audio settings; LimeShot's export dialog also picks the sample rate (dialog.sample_rate). |
 | SET-153 | Project type | Tail | dropdown | Leave remainder | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Project type › Tail | OBSERVED | — | NOT_STARTED | EXP-013 | Cut remainder / Leave remainder / Wrap remainder. |
 | SET-154 | Project type | Length, total time and disk space | info |  | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Project type › Length, total time and disk space | OBSERVED | — | NOT_STARTED | EXP-001 |  |
-| SET-155 | Output format | Output formats | multi-select (WAV, MP3, OGG, FLAC, MID, M4A) | WAV | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › Output formats | OBSERVED | — | NOT_STARTED | EXP-018 | Several formats can be rendered in one pass. LimeShot exports WAV only (MIDI separately). |
+| SET-155 | Output format | Output formats | multi-select (WAV, MP3, OGG, FLAC, MID, M4A) | WAV | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › Output formats | OBSERVED | `dialog.mp3` | IN_PROGRESS | EXP-018 | One of WAV or MP3 per render; MIDI separately. Simultaneous multi-format export remains open. |
 | SET-156 | Output format | WAV bit depth | dropdown | 16Bit int | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › WAV bit depth | OBSERVED | `dialog.depth` | IMPLEMENTED | EXP-003 | 16Bit int / 24Bit int / 32Bit float. |
 | SET-157 | Output format | Channels | dropdown | Stereo | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › Channels | OBSERVED | — | NOT_STARTED | EXP-018 | Stereo / Mono (merged) / Mono (left only) / Mono (right only). |
-| SET-158 | Output format | MP3 bitrate | slider | 192kbps | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › MP3 bitrate | OBSERVED | — | NOT_STARTED | EXP-005 |  |
+| SET-158 | Output format | MP3 bitrate | slider | 192kbps | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › MP3 bitrate | OBSERVED | `dialog.bitrate_kbps` | IMPLEMENTED | EXP-005 | CBR dropdown: all MPEG-1 bitrates 32–320 kbps, default 320. No VBR. |
 | SET-159 | Output format | OGG bitrate | slider | 192kbps | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › OGG bitrate | OBSERVED | — | NOT_STARTED | EXP-006 |  |
 | SET-160 | Output format | FLAC bit depth | dropdown | 16Bit int | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › FLAC bit depth | OBSERVED | — | NOT_STARTED | EXP-006 |  |
 | SET-161 | Output format | FLAC compression | slider | level 5 | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Output format › FLAC compression | OBSERVED | — | NOT_STARTED | EXP-006 |  |

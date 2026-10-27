@@ -893,7 +893,7 @@ impl Command {
                 let id = p.alloc_id();
                 let color = PALETTE[p.channels.len() % PALETTE.len()];
                 let mixer_track = p.free_mixer_track().unwrap_or(0);
-                p.channels.push(Channel {
+                let mut added = Channel {
                     id: ChannelId(id),
                     name,
                     color,
@@ -907,7 +907,9 @@ impl Command {
                     root_key: 60,
                     group: None,
                     extra: Extra::new(),
-                });
+                };
+                crate::lime::sync_sampler_metadata(&mut added, None);
+                p.channels.push(added);
                 return Ok(Created(Some(id)));
             }
             RemoveChannel(id) => {
@@ -996,6 +998,7 @@ impl Command {
             } => {
                 let c = channel(p, id)?;
                 c.instrument = instrument;
+                crate::lime::sync_sampler_metadata(c, None);
             }
 
             SetStep {
@@ -2094,9 +2097,13 @@ impl Command {
                 if state.len() > crate::plugin::MAX_STATE_BYTES {
                     return Err(CommandError::Invalid("the plugin state is too large".into()));
                 }
-                p.plugin_mut(plugin)
-                    .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?
-                    .state = state;
+                let reference = p
+                    .plugin_mut(plugin)
+                    .ok_or_else(|| CommandError::Invalid("that plugin no longer exists".into()))?;
+                let previous = std::mem::replace(&mut reference.state, state);
+                if let crate::PluginTarget::Channel(id) = plugin {
+                    crate::lime::sync_sampler_metadata(channel(p, id)?, Some(&previous));
+                }
             }
             SetPluginSidechain { plugin, source } => {
                 if usize::from(source) >= p.mixer.tracks.len() {

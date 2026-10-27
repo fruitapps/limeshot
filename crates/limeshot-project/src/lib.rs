@@ -73,14 +73,18 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
             }
             if let Instrument::Plugin(plugin) = &mut c.instrument
                 && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
-                && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(Value::as_str)
             {
-                let disk_source = limeshot_core::lime::disk_source(plugin);
-                let stored = relative_path(Path::new(disk_source.as_deref().unwrap_or(stored)), dir);
-                if disk_source.is_some() {
-                    limeshot_core::lime::set_disk_source(plugin, &stored);
+                let native_source = limeshot_core::lime::sample_source(plugin);
+                let source = native_source
+                    .as_deref()
+                    .or_else(|| plugin.extra.get("lime-sample-path").and_then(Value::as_str));
+                if let Some(source) = source {
+                    let stored = relative_path(Path::new(source), dir);
+                    if native_source.is_some() {
+                        limeshot_core::lime::set_sample_source(plugin, &stored);
+                    }
+                    plugin.extra.insert("lime-sample-path".into(), json!(stored));
                 }
-                plugin.extra.insert("lime-sample-path".into(), json!(stored));
             }
         }
     }
@@ -144,11 +148,24 @@ pub fn load(path: &Path) -> Result<Project, ProjectError> {
     let mut project = from_json(&text, path)?;
     for channel in &mut project.channels {
         if let Instrument::Plugin(plugin) = &mut channel.instrument
-            && let Some(source) = limeshot_core::lime::disk_source(plugin)
+            && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
         {
-            let source = resolve_sample_path(&source, path.parent());
-            limeshot_core::lime::set_disk_source(plugin, &source.to_string_lossy());
+            if let Some(source) = limeshot_core::lime::sample_source(plugin) {
+                let source = resolve_sample_path(&source, path.parent());
+                limeshot_core::lime::set_sample_source(plugin, &source.to_string_lossy());
+            } else if let Some(source) = plugin
+                .extra
+                .get("lime-sample-path")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+            {
+                let source = resolve_sample_path(&source, path.parent());
+                plugin
+                    .extra
+                    .insert("lime-sample-path".into(), json!(source.to_string_lossy()));
+            }
         }
+        limeshot_core::lime::sync_sampler_metadata(channel, None);
     }
     Ok(project)
 }
@@ -333,6 +350,46 @@ mod tests {
             panic!("plugin");
         };
         assert_eq!(std::path::PathBuf::from(lime::disk_source(plugin).unwrap()), source);
+    }
+
+    #[test]
+    fn native_embedded_sources_relocate_without_changing_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("native.wav");
+        let path = dir.path().join("native.lime");
+        let audio = EmbeddedAudio {
+            name: "native.wav".into(),
+            sample_rate: 48000,
+            stereo: vec![0.5, -0.5, 0.0, 0.0],
+        };
+        let mut plugin = LimePlugin::SAMPLER.with_values(
+            &lime::sampler_values(&SamplerParams::default(), 45),
+            false,
+            Some(&audio),
+        );
+        assert!(lime::set_sample_source(&mut plugin, &source.to_string_lossy()));
+        let mut doc = Document::default();
+        doc.execute(Command::AddChannel {
+            name: "Native".into(),
+            instrument: Instrument::Plugin(plugin),
+        })
+        .unwrap();
+        save(doc.project(), &path).unwrap();
+        let raw = from_json(&std::fs::read_to_string(&path).unwrap(), &path).unwrap();
+        let target = PluginTarget::Channel(raw.channels[0].id);
+        assert_eq!(
+            lime::sample_source(raw.plugin(target).unwrap()).as_deref(),
+            Some("native.wav")
+        );
+        let reopened = load(&path).unwrap();
+        let plugin = reopened.plugin(target).unwrap();
+        assert_eq!(lime::sample_source(plugin).as_deref(), source.to_str());
+        assert_eq!(plugin.extra["lime-sample-path"].as_str(), source.to_str());
+        assert!(lime::disk_source(plugin).is_none(), "embedded remains embedded");
+        assert_eq!(reopened.channels[0].root_key, 45);
+        let component: Value = serde_json::from_slice(lime::component_state(&plugin.state).unwrap()).unwrap();
+        let sample: Value = serde_json::from_str(component["fields"]["sample-v1"].as_str().unwrap()).unwrap();
+        assert!(!sample["pcm"].as_str().unwrap().is_empty());
     }
 
     fn sample_project(sample: &str) -> Project {

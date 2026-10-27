@@ -2,7 +2,7 @@
 //! component handler, and the fixed-capacity parameter-change and event lists used in `process`.
 
 use std::cell::{Cell, UnsafeCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{CStr, c_void};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -368,6 +368,7 @@ impl IBStreamTrait for MemoryStream {
 #[derive(Default)]
 pub(crate) struct ComponentHandler {
     pub(crate) edits: Mutex<Vec<(u32, f64)>>,
+    pub(crate) active_edits: Mutex<HashSet<u32>>,
     pub(crate) restart_flags: AtomicI32,
 }
 
@@ -376,7 +377,10 @@ impl Class for ComponentHandler {
 }
 
 impl IComponentHandlerTrait for ComponentHandler {
-    unsafe fn beginEdit(&self, _id: ParamID) -> tresult {
+    unsafe fn beginEdit(&self, id: ParamID) -> tresult {
+        if let Ok(mut active) = self.active_edits.lock() {
+            active.insert(id);
+        }
         kResultOk
     }
 
@@ -387,7 +391,10 @@ impl IComponentHandlerTrait for ComponentHandler {
         kResultOk
     }
 
-    unsafe fn endEdit(&self, _id: ParamID) -> tresult {
+    unsafe fn endEdit(&self, id: ParamID) -> tresult {
+        if let Ok(mut active) = self.active_edits.lock() {
+            active.remove(&id);
+        }
         kResultOk
     }
 
@@ -645,5 +652,31 @@ impl IEventListTrait for EventList {
             return kResultOk;
         }
         if self.push(event) { kResultOk } else { kOutOfMemory }
+    }
+}
+
+#[cfg(test)]
+mod gesture_tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_native_gestures_finish_only_after_all_controls_end() {
+        let handler = ComponentHandler::default();
+        // SAFETY: these callbacks receive only plain IDs/values and operate on this live handler.
+        unsafe {
+            handler.beginEdit(7);
+            handler.beginEdit(7); // A duplicate Begin cannot leave capture permanently stuck.
+            handler.beginEdit(8);
+            handler.performEdit(7, 0.5);
+            handler.endEdit(7);
+        }
+        assert_eq!(handler.active_edits.lock().unwrap().len(), 1);
+        assert_eq!(*handler.edits.lock().unwrap(), vec![(7, 0.5)]);
+        // SAFETY: same live handler and plain parameter ID.
+        unsafe {
+            handler.endEdit(8);
+            handler.endEdit(8);
+        }
+        assert!(handler.active_edits.lock().unwrap().is_empty());
     }
 }
