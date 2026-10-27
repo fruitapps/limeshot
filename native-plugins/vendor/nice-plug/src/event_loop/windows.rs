@@ -6,11 +6,10 @@ use std::ffi::{CString, c_void};
 use std::mem;
 use std::ptr;
 use std::sync::Weak;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::{self, ThreadId};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
-use windows::Win32::System::{
-    LibraryLoader::GetModuleHandleA, Performance::QueryPerformanceCounter,
-};
+use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::UI::WindowsAndMessaging::{
     CREATESTRUCTA, CreateWindowExA, DefWindowProcA, DestroyWindow, GWLP_USERDATA,
     GetWindowLongPtrA, PostMessageA, RegisterClassExA, SetWindowLongPtrA, UnregisterClassA,
@@ -25,6 +24,8 @@ use crate::util::permit_alloc;
 /// The custom message ID for our notify event. If the hidden event loop window receives this, then
 /// it knows it should start polling events.
 const NOTIFY_MESSAGE_ID: u32 = WM_USER;
+
+static NEXT_CLASS_ID: AtomicU64 = AtomicU64::new(0);
 
 /// A type erased function passed to the window so it can poll for events. We can't pass the tasks
 /// queue and executor to the window callback since the callback wouldn't know what types they are,
@@ -73,11 +74,10 @@ where
     fn new_and_spawn(executor: Weak<E>) -> Self {
         let (tasks_sender, tasks_receiver) = channel::bounded(super::TASK_QUEUE_CAPACITY);
 
-        // Window classes need to have unique names or else multiple plugins loaded into the same
-        // process will end up calling the other plugin's callbacks
-        let mut ticks = 0i64;
-        assert!(unsafe { QueryPerformanceCounter(&mut ticks).is_ok() });
-        let class_name = CString::new(format!("nice-event-loop-{ticks}"))
+        // Concurrent instances can observe the same performance-counter tick. The counter makes
+        // names unique within this DLL; its address separates copies in different plugin DLLs.
+        let class_id = NEXT_CLASS_ID.fetch_add(1, Ordering::Relaxed);
+        let class_name = CString::new(format!("nice-event-loop-{:p}-{class_id}", &NEXT_CLASS_ID))
             .expect("Where did these null bytes come from?");
         let class_name_ptr = PCSTR(class_name.as_bytes_with_nul().as_ptr());
 
@@ -239,5 +239,53 @@ unsafe extern "system" fn window_proc(
         }
 
         DefWindowProcA(handle, message, wparam, lparam)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+    use std::sync::{Arc, Barrier};
+
+    struct Executor(AtomicU64);
+
+    impl MainThreadExecutor<()> for Executor {
+        fn execute(&self, _: (), is_gui_thread: bool) {
+            assert!(is_gui_thread);
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn concurrent_event_loops_register_distinct_window_classes() {
+        const THREADS: usize = 8;
+        const INSTANCES: usize = 64;
+        let barrier = Arc::new(Barrier::new(THREADS));
+        let threads: Vec<_> = (0..THREADS)
+            .map(|_| {
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    let executor = Arc::new(Executor(AtomicU64::new(0)));
+                    let mut names = Vec::new();
+                    barrier.wait();
+                    for _ in 0..INSTANCES {
+                        // Create and destroy each window on its owning thread, as hosts do.
+                        let event_loop = WindowsEventLoop::new_and_spawn(Arc::downgrade(&executor));
+                        names.push(event_loop.message_window_class_name.clone());
+                        assert!(event_loop.schedule_gui(()));
+                    }
+                    assert_eq!(executor.0.load(Ordering::Relaxed), INSTANCES as u64);
+                    names
+                })
+            })
+            .collect();
+        let mut names = HashSet::new();
+        for thread in threads {
+            for name in thread.join().unwrap() {
+                assert!(names.insert(name), "window class name was reused");
+            }
+        }
+        assert_eq!(names.len(), THREADS * INSTANCES);
     }
 }

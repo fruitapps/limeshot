@@ -13,6 +13,9 @@ Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not impleme
   systematic hands-on pass on Windows, Linux or Intel macOS.
 * Headless CI passes on Windows x86-64, Linux x86-64/ARM64 and macOS Apple Silicon/Intel; Windows ARM64 is a
   cross-build only. CI results are commit-specific: see [platform-validation.md](../development/platform-validation.md).
+  CI 40463705283 at `586443f` aborted in Windows UI tests when concurrent Lime plugin creation reused a hidden
+  window class name. The framework now uses a DLL-specific atomic sequence, with a Windows concurrency regression
+  in native-plugin CI; this does not establish live GUI/audio verification.
 * Packages ([release packaging](../development/release-packaging.md)) are unsigned on Windows (SmartScreen warns)
   and signed ad hoc on macOS (Gatekeeper blocks them until allowed; no Developer ID or notarisation).
   Double-clicking a `.lime` file in Finder starts LimeShot without opening the file. No AppImage, MSI, Flatpak or

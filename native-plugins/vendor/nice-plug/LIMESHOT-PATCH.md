@@ -12,6 +12,11 @@ Source provenance: crates.io nice-plug 0.4.2, upstream commit `91ba75d20c43ca0cd
 - Expression and Brightness use their matching note-event variants.
 - Suggested DPI scale is validated and retained before an editor opens.
 - README wgpu links use absolute URLs so repository reference checks work.
+- Windows hidden event-loop window classes use a DLL-local atomic sequence plus the sequence's address.
+  Performance-counter ticks can collide during concurrent plugin creation and abort the host at
+  `RegisterClassExA`; the address also separates framework copies in different plugin DLLs.
+  `concurrent_event_loops_register_distinct_window_classes` creates/destroys 512 windows across eight
+  threads and checks GUI task dispatch and unique class names. Native-plugin CI runs the vendor unit tests.
 
 The normalized Cargo manifest declares an independent workspace so its regression tests can run directly:
 `CARGO_TARGET_DIR="$PWD/native-plugins/target" cargo test --manifest-path native-plugins/vendor/nice-plug/Cargo.toml --no-default-features --features vst3 --lib`.
