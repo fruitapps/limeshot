@@ -373,3 +373,22 @@ mode transition, or other-platform runtime behavior. Feature statuses stay IMPLE
 Work uses `codex/input-monitoring` in the primary checkout (`~/Developer/limeshot`), preserving
 its Cargo caches. Continue there without routine worktrees/clones; push only the feature branch
 and its PR, never main, and do not merge automatically.
+
+
+## 2026-10-27 — PR #21 count-in UI synchronization
+
+macOS Intel CI job `122159946662` (run `40495547564`, head `ba1e83a`) failed the
+count-in UI test's `COUNT IN` accessibility-label assertion. The audio thread can publish
+count-in status after the polling helper's last UI frame, so observing the atomic does not
+establish that the corresponding label has been drawn. The test now draws a fresh frame
+after observing startup and uses 60 BPM to keep the lead-in active on busy runners; it still
+stops immediately rather than waiting for the lead-in. Production playback is unchanged.
+CodeRabbit's preceding documentation correction is retained.
+
+Local macOS Apple Silicon validation: regression 100/100 runs with eight concurrent workers;
+all 161 UI tests pass with debug Lime bundles and local-socket permission for the plugin bridge.
+The initial sandboxed suite could not open the bridge listener; the permitted rerun passes.
+Strict Clippy for the UI test target, formatting, inventory/reference and whitespace checks pass.
+Intel CI verification awaits the pushed commit. Feature/verification statuses are unchanged.
+Work remains on `codex/input-monitoring` in the primary checkout (`~/Developer/limeshot`),
+reusing Cargo caches without a routine worktree/clone, direct main push or automatic merge.

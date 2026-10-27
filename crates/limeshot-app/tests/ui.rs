@@ -7161,7 +7161,7 @@ fn audio_settings_monitoring_is_session_local_and_uses_explicit_track() {
 fn recording_precount_shortcut_menu_bars_and_note_filter_work() {
     let (mut h, _, _) = empty_piano_roll();
     h.state_mut().ui.focus = limeshot_ui::app::Focus::None;
-    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(522.0)));
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(60.0)));
     let pat = h.state().current_pattern();
     let channel = h.state().project().channels[0].id;
     let revision = h.state().doc.revision();
@@ -7179,6 +7179,10 @@ fn recording_precount_shortcut_menu_bars_and_note_filter_work() {
     h.step();
     limeshot_ui::recording::toggle(h.state_mut());
     wait_for(&mut h, "count-in to start", |a| a.player.status().count_in_beats() > 0);
+    // The audio thread can publish the count-in after wait_for's last UI frame.
+    // Draw that published state before querying the accessibility tree. A slower tempo
+    // leaves ample lead-in time on busy CI runners without delaying this test's stop.
+    h.step();
     assert_eq!(h.state().player.status().position(), 0);
     assert!(h.query_by_label_contains("COUNT IN").is_some());
     limeshot_ui::recording::note_on(h.state_mut(), channel, 60, 1.0);
