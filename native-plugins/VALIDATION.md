@@ -60,6 +60,23 @@ PCM parity across four block sizes and seeks, with realtime allocation assertion
 curved-fade/chase parity and disk-backed offline seeks. nice-plug's VST3 activation-mode setup is patched locally
 (see vendor/nice-plug/LIMESHOT-PATCH.md). These checks do not establish Windows/Linux runtime verification.
 
+## 2026-10-27 — Sampler loop/filter continuation (macOS arm64, debug)
+
+All twelve allocation-checked debug VST3 bundles rebuilt. Native suite: 26 tests passed; workspace:
+485 tests passed. Exported bundles pass `shared/examples/verify` at 44.1/48/96 kHz with blocks
+1/64/333/1024: ABI loading, editor creation, audio/MIDI offsets, state and automation. Strict all-target
+Clippy in both workspaces, formatting and repository/inventory checks pass.
+
+Sampler controls 16/17 append ping-pong and independent LP/BP/HP output selection; old IDs/defaults
+remain stable. Tests exercise disk/embedded ping-pong with allocation assertions, expected turns,
+parameter polling, seeks, old state, presets, host reset/undo, loop gesture bounds/routing and editor
+geometry. Hosted output matches the reference across rates/blocks and filter modes. The larger
+sampler layout was rendered offscreen and inspected. See
+[control inventory](../docs/research/sampler-controls-2026-10-27.md) and
+[screenshot](../docs/screenshots/current/lime-sampler-loops.png). Exact FL DSP/endpoint equivalence,
+live Lime gestures, standalone-in-FL and Windows/Linux runtime remain unverified. This section refers
+to newly built debug bundles; prior release hashes do not identify this build.
+
 ## Prepared sampling and smooth fades, 2026-10-27
 
 macOS 26.6.2 arm64: native suite 23 passed; exported-binary verification passes all twelve
@@ -67,3 +84,10 @@ bundles at the three rates/four block sizes above. Prepared PCM sharing, persist
 reverse/trim/loop/seek and allocation assertions are covered. The sampler's updated Time
 stretching panel was rendered and visually inspected; live interaction/listening and other
 hosts/platforms remain open. See [prepared sampling](../docs/research/prepared-sampling.md).
+
+After integrating current main's ping-pong/filter and Playlist work for PR #25, the combined
+native suite passes **27 tests**, with all twelve rebuilt debug bundles passing the exported
+verifier at three rates/four block sizes. Strict native Clippy passes. The combined 760×780
+sampler layout retains loop/filter controls above the Time stretching panel; its PNG was
+rendered and inspected. This supersedes the pre-integration 23-test count above, without
+establishing live listening or other-platform runtime evidence.

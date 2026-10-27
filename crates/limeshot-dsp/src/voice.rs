@@ -24,6 +24,8 @@ pub enum VoiceInstrument {
         one_shot: bool,
         /// Loop range as fractions of the sample, when looping.
         looping: Option<(f32, f32)>,
+        ping_pong: bool,
+        filter_mode: crate::filter::Mode,
         /// Low-pass cutoff (Hz) and resonance, when the filter is not fully open.
         filter: Option<(f32, f32)>,
     },
@@ -92,6 +94,9 @@ pub enum Source {
         reverse: bool,
         /// A loop inside `[lo, hi)`: playback wraps round it instead of running out.
         looping: Option<(f64, f64)>,
+        ping_pong: bool,
+        /// Last requested direction; `reverse` itself also changes at ping-pong turns.
+        reverse_setting: bool,
     },
     Synth {
         a: Oscillator,
@@ -198,6 +203,7 @@ pub struct Voice {
     pub fade: Option<ClipFade>,
     /// The sampler's low-pass filter, one per side.
     pub filter: Option<[Svf; 2]>,
+    sampler_filter_mode: crate::filter::Mode,
 }
 
 /// An audio clip's fade-in and fade-out, counted in frames: `pos` from the clip's start, `left`
@@ -261,7 +267,27 @@ impl Default for Voice {
             serial: 0,
             fade: None,
             filter: None,
+            sampler_filter_mode: crate::filter::Mode::LowPass,
         }
+    }
+}
+
+/// Fold arbitrarily large steps in constant time. Ping-pong endpoints are frame centers,
+/// so a turn does not play an endpoint twice or interpolate beyond the loop's last frame.
+/// `pos`, `a`, and exclusive end `b` are source-frame positions; callers supply `b - a >= 4`.
+/// Fold only after crossing the boundary in the current direction, preserving the lead-in.
+/// Wrapping uses `[a, b)`; ping-pong reflects between `a` and `b - 1`, updating `reverse`.
+fn loop_position(pos: &mut f64, reverse: &mut bool, ping_pong: bool, a: f64, b: f64) {
+    if ping_pong {
+        let span = b - 1.0 - a;
+        if (!*reverse && *pos > b - 1.0) || (*reverse && *pos < a) {
+            let phase = if *reverse { 2.0 * span - (*pos - a) } else { *pos - a };
+            let phase = phase.rem_euclid(2.0 * span);
+            *reverse = phase >= span;
+            *pos = a + if *reverse { 2.0 * span - phase } else { phase };
+        }
+    } else if (!*reverse && *pos >= b) || (*reverse && *pos < a) {
+        *pos = a + (*pos - a).rem_euclid(b - a);
     }
 }
 
@@ -296,6 +322,8 @@ impl Voice {
                 release,
                 one_shot: _,
                 looping,
+                ping_pong,
+                filter_mode,
                 filter,
             } => {
                 let sample = sample.as_ref()?;
@@ -330,8 +358,11 @@ impl Voice {
                         hi,
                         reverse: *reverse,
                         looping,
+                        ping_pong: *ping_pong,
+                        reverse_setting: *reverse,
                     },
                     filter,
+                    sampler_filter_mode: *filter_mode,
                     // With no attack set, the first sample frame lands exactly on the note's onset
                     // (samples are expected to start cleanly); the release declicks the end.
                     env: Envelope::start(
@@ -386,9 +417,10 @@ impl Voice {
     /// sample position, and the current envelope stage. Call with the note's original velocity.
     /// `root_key` is the sampler's MIDI root note; `bend_semitones` offsets pitch and
     /// `sample_rate` is the output rate in Hz. Mismatched source/instrument kinds do nothing.
-    /// Sampler updates keep the loaded audio, loop, and filter; trim and direction changes
-    /// take effect at the existing playback position. Newly enabled synth oscillators or
-    /// modulation start with fresh state.
+    /// Sampler updates keep the loaded audio while updating trim, loop, and filter settings
+    /// at the existing playback position. Ping-pong turns retain their direction unless the
+    /// requested reverse setting changes or ping-pong is toggled. Newly enabled synth
+    /// oscillators or modulation start with fresh state.
     pub fn update_instrument(
         &mut self,
         instrument: &VoiceInstrument,
@@ -447,6 +479,8 @@ impl Voice {
                     hi,
                     reverse,
                     looping: current_loop,
+                    ping_pong: current_ping_pong,
+                    reverse_setting,
                     ..
                 },
                 VoiceInstrument::Sampler {
@@ -460,6 +494,8 @@ impl Voice {
                     sustain,
                     release,
                     looping,
+                    ping_pong,
+                    filter_mode,
                     filter,
                     ..
                 },
@@ -468,7 +504,12 @@ impl Voice {
                 *step = f64::from(sample.sample_rate) / f64::from(sample_rate) * 2f64.powf(semis / 12.0);
                 *lo = f64::from(start.min(*end)) * sample.frames() as f64;
                 *hi = f64::from(start.max(*end)) * sample.frames() as f64;
-                *reverse = *rev;
+                // Parameter polling must not reset a ping-pong turn every audio block.
+                if *reverse_setting != *rev || !*ping_pong || !*current_ping_pong {
+                    *reverse = *rev;
+                }
+                *reverse_setting = *rev;
+                *current_ping_pong = *ping_pong;
                 *current_loop = looping.and_then(|(a, b)| {
                     let a = (f64::from(a) * sample.frames() as f64).max(*lo);
                     let b = (f64::from(b) * sample.frames() as f64).min(*hi);
@@ -482,6 +523,7 @@ impl Voice {
                 } else {
                     self.filter = None;
                 }
+                self.sampler_filter_mode = *filter_mode;
                 self.gain = velocity * gain;
                 self.env.set_adsr(Adsr {
                     attack: *attack,
@@ -517,20 +559,36 @@ impl Voice {
 
     /// Plays a whole sample once at its own pitch (browser preview).
     pub fn preview(sample: Arc<SampleData>, sample_rate: f32) -> Option<Self> {
+        Self::preview_from(sample, 0.0, sample_rate)
+    }
+
+    /// Plays a sample once at its own pitch starting at `start_fraction` (`0.0..=1.0`) of the
+    /// sample's length (browser scrub preview). Finite fractions are clamped to that range;
+    /// nonfinite fractions start at zero, and `1.0` starts at the last source frame.
+    /// Returns `None` for samples shorter than two frames. `sample_rate` is the output rate in Hz.
+    pub fn preview_from(sample: Arc<SampleData>, start_fraction: f32, sample_rate: f32) -> Option<Self> {
         let frames = sample.frames() as f64;
         if frames < 2.0 {
             return None;
         }
+        let frac = if start_fraction.is_finite() {
+            f64::from(start_fraction.clamp(0.0, 1.0))
+        } else {
+            0.0
+        };
+        let pos = (frac * frames).min((frames - 1.0).max(0.0));
         let step = f64::from(sample.sample_rate) / f64::from(sample_rate);
         Some(Self {
             source: Source::Sampler {
                 sample,
-                pos: 0.0,
+                pos,
                 step,
                 lo: 0.0,
                 hi: frames,
                 reverse: false,
                 looping: None,
+                ping_pong: false,
+                reverse_setting: false,
             },
             env: Envelope::start(
                 Adsr {
@@ -554,10 +612,18 @@ impl Voice {
     /// Start `secs` (of output time) into the source: audio clips trimmed at the start, or
     /// playback starting inside a clip. Negative durations are treated as zero. `sample_rate`
     /// is the output rate in Hz; elapsed whole output samples advance every voice's envelope.
-    /// Only sampler playback positions move; crossing the playback window or finishing the
-    /// envelope turns the voice off, including for looping samples.
+    /// Only sampler playback positions move; held loops wrap/reflect like normal playback.
+    /// Leaving a nonlooped playback window or finishing the envelope turns the voice off.
     pub fn skip(&mut self, secs: f64, sample_rate: f32) {
         let output_samples = secs.max(0.0) * f64::from(sample_rate);
+        // Seconds reconstructed from an exact frame can land just below an integer. At a
+        // loop discontinuity that tiny error would select the opposite side of the seam.
+        let nearest = output_samples.round();
+        let output_samples = if (output_samples - nearest).abs() <= 8.0 * f64::EPSILON * output_samples.max(1.0) {
+            nearest
+        } else {
+            output_samples
+        };
         self.env.advance(output_samples as u64);
         if let Source::Sampler {
             pos,
@@ -565,6 +631,8 @@ impl Voice {
             lo,
             hi,
             reverse,
+            looping,
+            ping_pong,
             ..
         } = &mut self.source
         {
@@ -573,6 +641,9 @@ impl Voice {
                 *pos -= frames;
             } else {
                 *pos += frames;
+            }
+            if let Some((a, b)) = *looping {
+                loop_position(pos, reverse, *ping_pong, a, b);
             }
             if *pos < *lo || *pos >= *hi {
                 self.source = Source::Off;
@@ -596,14 +667,11 @@ impl Voice {
                 hi,
                 reverse,
                 looping,
+                ping_pong,
+                ..
             } => {
                 if let Some((a, b)) = *looping {
-                    // Wrap round the loop (both ways, for reversed samples).
-                    if !*reverse && *pos >= b {
-                        *pos = a + (*pos - b) % (b - a);
-                    } else if *reverse && *pos < a {
-                        *pos = b - (a - *pos) % (b - a);
-                    }
+                    loop_position(pos, reverse, *ping_pong, a, b);
                 }
                 if *pos < *lo || *pos >= *hi {
                     self.source = Source::Off;
@@ -616,7 +684,10 @@ impl Voice {
                     *pos += *step;
                 }
                 if let Some([l, r]) = &mut self.filter {
-                    f = (l.lowpass(f.0), r.lowpass(f.1));
+                    f = (
+                        l.process(f.0, self.sampler_filter_mode),
+                        r.process(f.1, self.sampler_filter_mode),
+                    );
                 }
                 f
             }
@@ -661,5 +732,126 @@ mod fade_tests {
                 previous = value;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod sampler_loop_tests {
+    use super::*;
+
+    fn instrument(reverse: bool, ping_pong: bool) -> VoiceInstrument {
+        VoiceInstrument::Sampler {
+            sample: Some(Arc::new(SampleData::from_stereo(
+                48000,
+                (0..8).flat_map(|i| [i as f32 / 8.0; 2]).collect(),
+            ))),
+            gain: 1.0,
+            pitch: 0.0,
+            start: 0.0,
+            end: 1.0,
+            reverse,
+            attack: 0.0,
+            decay: 0.0,
+            sustain: 1.0,
+            release: 0.0,
+            one_shot: false,
+            looping: Some((0.25, 0.75)),
+            ping_pong,
+            filter: None,
+            filter_mode: crate::filter::Mode::LowPass,
+        }
+    }
+
+    #[test]
+    fn ping_pong_turns_without_duplicate_endpoints_and_survives_parameter_polling() {
+        for (reverse, expected) in [
+            (false, vec![0, 1, 2, 3, 4, 5, 4, 3, 2, 3, 4, 5, 4, 3, 2, 3]),
+            (true, vec![7, 6, 5, 4, 3, 2, 3, 4, 5, 4, 3, 2, 3, 4, 5, 4]),
+        ] {
+            let cfg = instrument(reverse, true);
+            for block in [1, 3, 64, 333, 1024] {
+                let mut voice = Voice::for_instrument(&cfg, 60, 60, 1.0, 48000.0).unwrap();
+                let mut got = Vec::new();
+                for i in 0..expected.len() {
+                    if i % block == 0 {
+                        voice.update_instrument(&cfg, 60, 1.0, 0.0, 48000.0);
+                    }
+                    got.push((voice.next_frame().0 * 8.0).round() as i32);
+                }
+                assert_eq!(got, expected, "reverse {reverse}, block {block}");
+            }
+        }
+    }
+
+    #[test]
+    fn loop_seek_matches_rendering_and_extreme_steps_stay_bounded() {
+        for reverse in [false, true] {
+            for ping_pong in [false, true] {
+                let cfg = instrument(reverse, ping_pong);
+                for skipped in 0..100 {
+                    let mut played = Voice::for_instrument(&cfg, 60, 60, 1.0, 48000.0).unwrap();
+                    let mut sought = played.clone();
+                    for _ in 0..skipped {
+                        played.next_frame();
+                    }
+                    sought.skip(f64::from(skipped) / 48000.0, 48000.0);
+                    for _ in 0..16 {
+                        let (a, b) = (played.next_frame().0, sought.next_frame().0);
+                        assert!(
+                            (a - b).abs() < 1e-6,
+                            "reverse {reverse}, ping-pong {ping_pong}, seek {skipped}: {a} != {b}"
+                        );
+                    }
+                }
+                for rate in [8000.0, 44100.0, 48000.0, 96000.0] {
+                    let mut voice = Voice::for_instrument(&cfg, 0, 127, 1.0, rate).unwrap();
+                    for _ in 0..4096 {
+                        let (l, r) = voice.next_frame();
+                        assert!(l.is_finite() && (0.0..1.0).contains(&l));
+                        assert_eq!(l, r);
+                        assert!(voice.is_active());
+                    }
+                    voice.release();
+                    voice.next_frame();
+                    assert!(!voice.is_active());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn sampler_high_pass_is_active_and_removes_low_frequency_content() {
+        let render = |mode| {
+            let mut cfg = instrument(false, false);
+            if let VoiceInstrument::Sampler {
+                sample,
+                looping,
+                filter,
+                filter_mode,
+                ..
+            } = &mut cfg
+            {
+                *sample = Some(Arc::new(SampleData::from_stereo(
+                    48000,
+                    (0..48000)
+                        .flat_map(|i| [(i as f32 * std::f32::consts::TAU * 100.0 / 48000.0).sin(); 2])
+                        .collect(),
+                )));
+                *looping = None;
+                *filter = Some((2000.0, 0.0));
+                *filter_mode = mode;
+            }
+            let mut voice = Voice::for_instrument(&cfg, 60, 60, 1.0, 48000.0).unwrap();
+            let mut energy = 0.0;
+            for i in 0..48000 {
+                let x = voice.next_frame().0;
+                if i > 1000 {
+                    energy += x * x;
+                }
+            }
+            energy
+        };
+        assert!(render(crate::filter::Mode::HighPass) < render(crate::filter::Mode::LowPass) * 0.001);
+        assert!(render(crate::filter::Mode::BandPass) < render(crate::filter::Mode::LowPass) * 0.01);
     }
 }

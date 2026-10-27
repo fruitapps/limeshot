@@ -54,7 +54,7 @@ The host Channel Settings dialog changes all uses of that channel. Playlist's Pr
 this clip action instead clones the channel, including root, controls and mixer route,
 then assigns only the chosen clip to it in one undoable command. Other clips and pattern
 notes keep their original channel. The generated channel remains editable in the Rack.
-Repeated preparation reuses a private channel while no other clips or notes use it. Removing
+Repeated preparation reuses a private channel while no other clips or notes use it, including clips in inactive arrangements. Removing
 a clip can leave its channel for explicit Rack removal.
 
 The existing `sample-v1` field continues to contain the playable PCM. Optional nested
@@ -133,3 +133,9 @@ an original has been retained, and disk/missing sources show actionable preparat
 Clip dialogs choose a valid multiplier default when the current clip length would exceed
 bounds. DSP names and frame-limit details live in tooltips/docs, while duration and scope
 remain visible. Both default-size PNGs were rendered and visually checked after this review.
+
+The main-branch ping-pong/filter and Rev 1 arrangement work was integrated before delivery.
+Preparation retains the appended sampler controls and loop-gesture UI. Private channel reuse
+checks all arrangements; automatic fade cleanup also restores inactive arrangements' manual
+bases before arrangement edits. Legacy right-edge Stretch remains shared-channel resampling;
+use Time stretching for the independent fixed-duration workflow described here.

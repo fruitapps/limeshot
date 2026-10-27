@@ -16,7 +16,8 @@ it is not a claim of listening parity or identical DSP. No FL code or assets wer
 * **UNKNOWN live**: attempts to select the installed FL Studio 2026 through computer-use automation
   timed out twice. Accessibility and Screen Recording were authorized by the owner; the timeout
   does not establish that permissions are missing. No FL project was edited by these attempts.
-  A live A/B check remains in the human verification queue.
+  A live A/B check remains in the human verification queue. A later owner-assisted pass observed
+  the Sample and Envelope/Instrument pages; see [control inventory](sampler-controls-2026-10-27.md).
 
 Source anchors: `crates/limeshot-core/src/{lime,command,model}.rs`,
 `crates/limeshot-dsp/src/{voice,sample,disk}.rs`, `crates/limeshot-ui/src/{lime,inspector,plugins,browser,playlist}.rs`,
@@ -26,14 +27,14 @@ Source anchors: `crates/limeshot-core/src/{lime,command,model}.rs`,
 
 | Area | Documented FL workflow | Lime implementation and missing parity |
 | --- | --- | --- |
-| Source and waveform | Load, locate, remove, sample history; draggable sample/loop handles | Load/Clear and waveform preview/drag exist; host also offers sample assignment. No equivalent source history/locate workflow. Native trim handles and numeric loop endpoints exist; joint loop-handle movement is not implemented. |
+| Source and waveform | Load, locate, remove, sample history; draggable sample/loop handles | Load/Clear and waveform preview/drag exist; host also offers sample assignment. No equivalent source history/locate workflow. Native trim and loop handles plus numeric loop endpoints exist; Shift-drag moves both loop endpoints together. |
 | Content | Disk mode, resampling, region/slice metadata | Embedded short samples or worker-prepared disk cache. No metadata-driven root, loop, tempo, region or slice import. Linear interpolation; no user-selectable quality. |
-| Loops | Held loops and ping-pong | Held forward/reverse looping with fractional endpoints. No ping-pong or crossfaded loop seam. Reverse is playback direction, not ping-pong. |
+| Loops | Held loops and ping-pong | Held forward/reverse and ping-pong loops with fractional endpoints. No crossfaded loop seam; exact FL fractional-turn behavior is unverified. |
 | Declick | Several transient/bleeding fade modes | ADSR release and Playlist manual fades exist, without equivalent declick modes or source audio bleeding beyond a cut. Release is not proof of FL's fade shape. |
-| Stretch | Separate pitch, multiplier, musical duration, mode; tempo locking | Updated after this audit: fixed-duration worker Resample/Stretch, independent prepared pitch, multiplier and host beat fitting are now available; see [prepared sampling](prepared-sampling.md). Ordinary channel Pitch still resamples. No realtime tempo following, source BPM detection/lock or formants. Playlist edge resizing still trims/repeats until explicitly prepared. |
+| Stretch | Separate pitch, multiplier, musical duration, mode; tempo locking | Pitch changes playback rate and duration together. No stretch mode, duration ratio, beat/bar fitting, source BPM detection/lock or formant parameter. Rev 1 right-edge resize can resample via shared sampler pitch. This changes linked uses and is not independent or pitch-preserving stretch. |
 | Precomputed processing | Sample processing controls and crossfade-loop preparation | Gain, trim and reverse are playback settings; no equivalent precomputed normalize, DC removal, stereo processing or crossfade-loop preparation. Mixer effects do not replace persistent sample processing. |
 | Volume shaping | Envelope delay/hold, tensions, amount, tempo options | Fixed ADSR controls, milliseconds, linear stages. No delay, hold, envelope enable/amount/tension or beat synchronization. One-shot bypasses normal note-off unless looping; it is not a complete envelope-enable equivalent. |
-| Modulation/filter | Four envelopes, five LFO destinations; selectable filters | One low-pass cutoff/resonance pair, no sampler LFOs, pitch/filter envelopes, filter choice or velocity/key-to-filter tracking. LimeSynth's modulation controls do not give these capabilities to Sampler. Pan has LFO support in FL, not a pan envelope. |
+| Modulation/filter | Four envelopes, five LFO destinations; selectable filters | Independent TPT low-/band-/high-pass outputs and cutoff/resonance; no sampler LFOs, pitch/filter envelopes, further FL filter families or velocity/key-to-filter tracking. LimeSynth's modulation controls do not give these capabilities to Sampler. Pan has LFO support in FL, not a pan envelope. |
 | Voice/channel tools | Polyphony/mono/porta, cut groups, timing, tracking, event arp/echo | Fixed 128-voice pool with oldest stealing and same-key retrigger handling. No configurable sampler polyphony, mono/porta, cross-channel cut groups, per-channel swing mix or realtime event arp/echo. Piano Roll's destructive arpeggiator and Mixer Delay are different workflows. |
 | Note expression | Native note properties/slide integration | Velocity and VST3 per-note pan are supported. Release velocity, fine pitch, Mod X/Y and FL slide/porta-note semantics are absent from the note path. MIDI pitch bend in the standalone processor does not establish live MIDI bend forwarding by LimeShot. |
 
@@ -65,7 +66,7 @@ The hosted P0 sampler records describe migration of LimeShot's former sampler fi
    `docs/development/human-verification.md`.
 3. **Sampler and Audio Clip share a channel.** Both use the same Lime Sampler instance/state and mixer
    route. Reusing the source can therefore couple settings between note playback and Playlist clips.
-   FL's Audio Clip is a distinct generator. The prepared-sampling stage now clones the channel for a selected clip. Its design separates source settings, channel
+   FL's Audio Clip is a distinct generator. Stretch must explicitly separate source settings, channel
    settings and per-clip duration/chase; a single global playback-rate control would be insufficient.
 4. **File and state limits differ.** Embedded state supports six million stereo frames and 8–384 kHz;
    disk preparation accepts up to 250 million stereo frames (2,000,000,000 decoded bytes). The disk mode
@@ -90,9 +91,7 @@ None establishes full sampler parity.
 
 ## Time-stretch implementation scope
 
-**Original design proposal; fixed-duration preparation is now integrated in
-[prepared sampling](prepared-sampling.md).** The original scope below distinguishes the later
-realtime milestone. Start with fixed-duration offline preparation, then treat
+**Original design proposal; fixed-duration preparation is now integrated in [prepared sampling](prepared-sampling.md).** Start with fixed-duration offline preparation, then treat
 realtime tempo automation as a separate milestone. Preserve existing parameter IDs/defaults and
 version the new state/protocol. Existing songs must retain their current resampling behavior.
 
@@ -124,3 +123,19 @@ Acceptance gate: duration/pitch independence at 0.5×/1×/2×, stereo coherence,
 silent/tiny/invalid sources, extreme-ratio rejection, state migration/save/reopen/undo, seeks/reverse,
 all supported rates and blocks 1/64/333/1024, plus processing allocation assertions. Listening and
 live A/B checks remain necessary; numeric tone tests alone are insufficient.
+
+
+## Loop/filter continuation
+
+[2026-10-27 control inventory and implementation](sampler-controls-2026-10-27.md) records fresh
+owner-assisted FL UI observation, stable appended sampler parameters, ping-pong loops, independent
+filter outputs and waveform loop gestures. DSP endpoint conventions and transfer functions remain
+independent; this does not establish full FL audio parity.
+
+## Prepared sampling update
+
+Fixed-duration Resample/Stretch, independent prepared pitch, target multiplier/host beats,
+per-clip channel isolation and saved automatic pair/S fades are now integrated. Ordinary
+channel Pitch still resamples; realtime tempo following remains separate. See
+[prepared sampling](prepared-sampling.md) for ownership, frame mapping, state, limits,
+comparison evidence and listening/live gaps. This extends the ping-pong/filter stage above.

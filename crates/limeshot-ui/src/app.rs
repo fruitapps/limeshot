@@ -400,8 +400,35 @@ impl LimeShotApp {
 
     /// Execute a command; failures become an error toast. Returns the created id, if any.
     pub fn exec(&mut self, cmd: Command) -> Option<u32> {
+        let edited_pat = touched_pattern(&cmd);
+        let creates_pat = matches!(
+            cmd,
+            Command::AddPattern { .. }
+                | Command::ImportPattern { .. }
+                | Command::ClonePattern(_)
+                | Command::InsertPattern { .. }
+                | Command::MakeClipUnique(_)
+        );
+        let merges_clips = matches!(cmd, Command::MergeClips(_));
         match self.doc.execute(cmd) {
-            Ok(c) => c.0,
+            Ok(c) => {
+                let pat = if creates_pat {
+                    c.0.map(PatternId)
+                } else if merges_clips {
+                    c.0.and_then(|id| self.project().clip(limeshot_core::ClipId(id)))
+                        .and_then(limeshot_core::Clip::pattern)
+                } else {
+                    edited_pat
+                };
+                if let Some(p) = pat
+                    && self.project().pattern(p).is_some()
+                {
+                    self.ui.place = Some(limeshot_core::ClipSource::Pattern(p));
+                    self.ui.playlist.picker_tab = crate::playlist::PickerTab::Patterns;
+                    self.ui.playlist.clip_focus = crate::playlist::ClipFocus::Patterns;
+                }
+                c.0
+            }
             Err(e) => {
                 self.toast_error(e.to_string());
                 None
@@ -464,6 +491,9 @@ impl LimeShotApp {
         self.ui.current_pattern = id;
         if self.project().pattern(id).is_some() {
             self.ui.rack.viewed_pattern = Some(id);
+            self.ui.place = Some(limeshot_core::ClipSource::Pattern(id));
+            self.ui.playlist.picker_tab = crate::playlist::PickerTab::Patterns;
+            self.ui.playlist.clip_focus = crate::playlist::ClipFocus::Patterns;
         }
         self.ui.piano.selection.clear();
     }
@@ -1372,4 +1402,35 @@ fn absolutize_samples(project: &Project, dir: Option<&Path>) -> Project {
         }
     }
     p
+}
+
+/// If `cmd` edits a specific pattern's contents or metadata, return that pattern's id.
+fn touched_pattern(cmd: &Command) -> Option<PatternId> {
+    use Command::*;
+    match cmd {
+        SetStep { pattern, .. }
+        | FillSteps { pattern, .. }
+        | ClearChannelNotes { pattern, .. }
+        | RotateNotes { pattern, .. }
+        | AddNote { pattern, .. }
+        | AddNotes { pattern, .. }
+        | RemoveNotes { pattern, .. }
+        | MoveNotes { pattern, .. }
+        | ResizeNotes { pattern, .. }
+        | ResizeNotesStart { pattern, .. }
+        | SetNoteVelocity { pattern, .. }
+        | SetNoteValues { pattern, .. }
+        | SetNotesMuted { pattern, .. }
+        | EditNotes { pattern, .. }
+        | Quantize { pattern, .. }
+        | SliceNotes { pattern, .. }
+        | GlueNotes { pattern, .. }
+        | DuplicateNotes { pattern, .. }
+        | DuplicateNotesBy { pattern, .. }
+        | RenamePattern { pattern, .. }
+        | SetPatternColor { pattern, .. }
+        | SetPatternLength { pattern, .. } => Some(*pattern),
+        Batch(cmds) => cmds.iter().find_map(touched_pattern),
+        _ => None,
+    }
 }

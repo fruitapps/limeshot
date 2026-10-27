@@ -492,6 +492,83 @@ Live GUI A/B verification with FL Studio and native editor interaction remains i
 Work remains on `codex/mp3-export-sampler-audit` in the primary checkout (`~/Developer/limeshot`),
 reusing Cargo caches without routine worktrees/clones, direct main pushes or automatic merges.
 
+
+## 2026-10-27 — Alpha.1 Rev 1 continuation
+
+Continued the inherited uncommitted work in `codex/alpha1-rev1-issues` in the existing primary
+checkout (`~/Developer/limeshot`), reusing Cargo caches. No repository lock named Argon was found;
+application-managed thread locks were left untouched. No worktree/clone was created.
+
+Implemented mouse-held Piano Roll auditions, Playlist edge-drag scrolling and pattern-source
+selection, Sample/Automation/Patterns focus controls, clip-preview scrollbar, arrangements and
+track selection/activity/height/collapse/groups, plus release-to-play Browser waveform scrubbing.
+The continuation fixes next-frame audition cancellation, group-parent selection, the arrangement
+limit, geometry above 64 tracks and pattern selection interfering with held Channel Rack strokes.
+It adds core arrangement/height/undo/persistence tests, six UI regressions, held-audition coverage
+and a preview-offset/replacement audio test at block sizes 1/64/333/1024. Roadmap, menu/shortcut
+inventories, architecture and limitations are updated. The requested Windows native-plugin
+responsiveness investigation and FL-style wrapper/Settings research are in next steps.
+
+macOS 26.6.2 (25G83), Apple Silicon: all 480 workspace tests pass across workspace/package runs,
+including 169 UI and 62 engine tests. Workspace build, strict workspace all-target Clippy, rustfmt,
+feature inventories, repository references and whitespace checks pass. All twelve native release
+VST3 bundles rebuilt. The initial sandboxed plugin bridge test could not listen on its local socket;
+permitted tests pass. The new preview test was corrected to account for the existing attack/release
+fades. [Playlist screenshot](../screenshots/current/alpha1-rev1.png) rendered with `ui_shot --rev1`
+and inspected after replacing a missing arrow glyph; offscreen rendering required host GPU access.
+
+[Design, inherited coverage and remaining gaps](../research/alpha1-rev1.md). Stretch is shared-sampler
+resampling on the right edge, changes pitch and is bounded by sampler pitch range; pitch-preserving
+and independent clip stretch remain open. Track lights infer musical activity rather than metering
+actual audio. STEP pulse/tension parity, disk zero crossings, full arrangement merge policies and
+additional FLP arrangements remain open. Live FL/macOS comparisons and Windows/Linux runtime checks
+are recorded in human verification; new features remain IMPLEMENTED rather than VERIFIED.
+
+Push only the feature branch and its PR; do not push main or merge automatically. Continue using the
+primary checkout and shared Cargo cache in handoffs.
+
+## 2026-10-27 — Sampler ping-pong, loop gestures and filter outputs
+
+Expanded the [FL Sampler control inventory](../research/sampler-controls-2026-10-27.md) and refreshed
+the [parity audit](../research/sampler-parity-audit.md). FL 26.1.1 build 5313 was available after retry:
+screenshots and keyboard input worked, but pointer input repeatedly returned `noWindowsAvailable`.
+The owner opened Sample and Envelope/Instrument pages for observation. The control presence and
+selected Fast LP label were observed; the filter popup was closed in the captured view. Exact audio,
+endpoint, envelope and filter equivalence remains unverified. No FL code/resources were copied.
+
+Implemented ping-pong loops, native waveform loop handles with Shift-pair movement, and independent
+TPT low-/band-/high-pass outputs. Sampler controls 16/17 append stable parameters; IDs 0–15/defaults
+are unchanged. Legacy sampler conversion, component states, factory/user presets, host automation,
+reset and undo retain the fields. The editor has additional vertical space for the controls and
+footer. The Shift gesture is in shortcut help and the inventory. INS-007 remains IN_PROGRESS for
+stretch/crossfades; INS-020 is IN_PROGRESS for expanded modulation, without claiming FL filter DSP.
+
+DSP reflects arbitrarily large loop steps in constant time without duplicate turn endpoints, and
+retains bounce direction across parameter polls. Loop seek/chase folds through the same loop;
+near-integer frame offsets avoid floating-point seam-side errors. Reverse wrapping stays inside
+the half-open loop rather than occasionally selecting its exclusive end. Tests cover expected
+turn sequences, reverse, high pitch, release, seeks, stereo coherence, old state, presets, waveform
+gesture routing and geometry, filter rejection and host reset/undo. Native disk/embedded comparison
+at 44.1/48/96 kHz and blocks 1/64/333/1024 runs with allocation assertions. Hosted output is compared
+with the reference across those rates/blocks for all three filter modes.
+
+macOS 26.6.2 (25G83), arm64, debug: rebuilt all twelve VST3 bundles with `build.py --debug`;
+485 workspace tests and 26 native tests pass. The twelve exported bundles pass ABI/editor creation,
+state, MIDI/audio and automation checks at three rates/four buffer sizes (`examples/verify`).
+Workspace build, strict all-target Clippy in both workspaces, rustfmt, feature/shortcut inventories,
+repository references and whitespace checks pass. Workspace tests use `LIMESHOT_LIME_PLUGINS` pointing
+at `native-plugins/target/debug-bundled` and local-socket permission for bridge tests.
+The [native sampler screenshot](../screenshots/current/lime-sampler-loops.png) was rendered and inspected;
+offscreen rendering required host GPU access. No live Lime GUI/audio or Windows/Linux pass is claimed.
+
+Remaining: pitch-preserving/independent stretching, seam crossfades, extended envelopes/LFOs, further
+filter families/tracking, reversible processing, metadata/navigation, declick and channel voice/event
+tools. Live endpoint/DSP comparisons and standalone-in-FL testing remain in human verification.
+
+Work uses `codex/sampler-loop-filter-parity` atop `codex/alpha1-rev1-issues` (PR #23 still open at the
+start of delivery), in the primary checkout `~/Developer/limeshot`, reusing Cargo caches. No routine
+worktree/clone; push only the feature branch/PR, never main, and do not merge automatically.
+
 ## 2026-10-27 — Prepared sampling, arrangement crossfades and UI consistency
 
 Implemented the fixed-duration sampling/arrangement workflow on
@@ -560,3 +637,28 @@ hosting gaps from the sanitation report were not promoted or broadened into this
 Work uses the existing primary checkout `/Users/sebastian/Developer/limeshot` and its Cargo
 caches. Continue there without routine worktrees/clones; push only the feature branch and
 its PR, never main, and do not merge automatically.
+
+### PR #25 — integration with current main
+
+Main advanced to `c38615c` during implementation (Rev 1 Playlist/arrangements and sampler
+ping-pong/filter work). Integrated it on the feature branch and retained both implementations.
+The sampler panel now sits beneath the newer loop/filter controls; its combined 760×780
+layout and the current Playlist/dialog PNGs were rendered and visually inspected. Private
+channel reuse checks inactive arrangements as well as active clips/notes; its worker test
+proves a clip edit leaves an inactive arrangement's shared sampler unchanged. Automatic fade
+cleanup restores manual bases across arrangements before edits. The prepared hosted test also
+runs with ping-pong enabled. Legacy right-edge stretch retains its existing shared-channel
+resampling behavior; independent fixed-duration preparation is the Time stretching action.
+
+Combined local macOS 26.6.2 arm64 validation: **493 workspace tests passed**, including 169
+app UI and 13 hosted-native tests; **27 native tests passed**. Rebuilt all twelve debug bundles;
+exported-binary verification passed all twelve at three rates/four block sizes. Workspace build,
+strict Clippy in both workspaces, formatting, 301-feature inventories, repository references
+(247 links, 6 embedded assets, 251 evidence paths) and whitespace checks pass. Original
+source/restore bounds and generic VST3 identity gates remain enforced. The previous 479/23
+counts above describe the pre-integration stage. Listening/live/platform gaps remain unchanged.
+
+[PR #25](https://github.com/fruitapps/limeshot/pull/25) carries the DSP comparison, integrated
+workflow, UI consistency review and main integration. Only the feature branch is pushed;
+main is not pushed or the PR merged automatically. Continue using the primary checkout and
+its Cargo caches without routine worktrees/clones.

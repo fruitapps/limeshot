@@ -505,8 +505,13 @@ impl Renderer {
 
     /// Play a sample from the browser into the master.
     pub fn preview_sample(&mut self, sample: Arc<SampleData>) {
+        self.preview_sample_from(sample, 0.0);
+    }
+
+    /// Play a sample from the browser into the master starting at `start_fraction` (`0.0..=1.0`).
+    pub fn preview_sample_from(&mut self, sample: Arc<SampleData>, start_fraction: f32) {
         self.stop_sample_preview();
-        if let Some(v) = Voice::preview(sample, self.sample_rate as f32) {
+        if let Some(v) = Voice::preview_from(sample, start_fraction, self.sample_rate as f32) {
             self.alloc_voice(v);
         }
     }

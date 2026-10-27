@@ -25,6 +25,20 @@ fn main() {
             app.select_channel(c);
         }
     }
+    if args.iter().any(|a| a == "--rev1") {
+        app.ui.workspace.close(Win::ChannelRack);
+        app.ui.playlist.clip_focus = limeshot_ui::playlist::ClipFocus::Sample;
+        app.ui.playlist.selected_tracks = vec![1, 2, 3];
+        app.exec(limeshot_core::Command::SetPlaylistTracksGrouped {
+            tracks: vec![1, 2, 3],
+            grouped: true,
+        });
+        app.exec(limeshot_core::Command::SetPlaylistTrackHeight {
+            track: 1,
+            height: Some(92.0),
+            collapsed: false,
+        });
+    }
     if args.iter().any(|a| a == "--auto-scroll") {
         app.set_auto_scroll(true);
     }

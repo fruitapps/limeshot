@@ -413,6 +413,23 @@ mod tests {
         assert_eq!(app.project().clip(clip).unwrap().audio_channel(), Some(unique));
         assert!(app.doc.undo());
         assert_eq!(&loaded, app.project());
+        app.exec(Command::CloneArrangement {
+            index: 0,
+            name: Some("Other".into()),
+        });
+        app.exec(Command::SelectArrangement { index: 0 });
+        let shared = app.project().channel(unique).unwrap().clone();
+        open(&mut app, Target::Clip(clip));
+        app.preparation.use_beats = false;
+        app.preparation.ratio = 1.;
+        start(&mut app, false);
+        finish(&mut app);
+        assert_eq!(
+            app.project().channel(unique).unwrap(),
+            &shared,
+            "inactive arrangements retain their shared source"
+        );
+        assert_ne!(app.project().clip(clip).unwrap().audio_channel(), Some(unique));
     }
     #[test]
     fn cancel_and_concurrent_edits_never_overwrite_the_document() {

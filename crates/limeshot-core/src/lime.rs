@@ -254,6 +254,12 @@ pub fn sampler_values(p: &SamplerParams, root_key: u8) -> Vec<f32> {
         f32::from(u8::from(p.looping)),
         p.loop_start,
         p.loop_end,
+        f32::from(u8::from(p.ping_pong)),
+        match p.filter_mode {
+            FilterMode::LowPass => 0.0,
+            FilterMode::BandPass => 1.0,
+            FilterMode::HighPass => 2.0,
+        },
     ]
 }
 
@@ -380,6 +386,8 @@ pub fn sync_sampler_metadata(channel: &mut Channel, previous: Option<&PluginStat
 
 /// Sampler settings in a legacy channel or a Lime Sampler's saved component state.
 /// The source path is a preview/reload hint; playback uses the embedded audio.
+/// Returns `None` for other instruments. Missing or unreadable component state and missing
+/// or nonnumeric controls use sampler defaults: looping and ping-pong off, low-pass selected.
 pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
     let Instrument::Plugin(plugin) = instrument else {
         return match instrument {
@@ -422,6 +430,12 @@ pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
         p.looping = value(13) >= 0.5;
         p.loop_start = value(14);
         p.loop_end = value(15);
+        p.ping_pong = value(16) >= 0.5;
+        p.filter_mode = match value(17).round() as u8 {
+            1 => FilterMode::BandPass,
+            2 => FilterMode::HighPass,
+            _ => FilterMode::LowPass,
+        };
     }
     Some(p)
 }
@@ -682,6 +696,9 @@ pub const SAMPLER_CONTROLS: &[ParamSpec] = &[
     choice("Loop", &["Off", "On"], 0.0),
     spec("Loop start", 0.0, 1.0, 0.0, "", false),
     spec("Loop end", 0.0, 1.0, 1.0, "", false),
+    // Append only: saved parameter IDs and earlier defaults must retain their meaning.
+    choice("Ping-pong loop", &["Off", "On"], 0.0),
+    choice("Filter type", &["Low-pass", "Band-pass", "High-pass"], 0.0),
 ];
 
 /// Return controls in the stable native plugin order (IDs 0–11), or an empty slice for other IDs.
@@ -1411,4 +1428,33 @@ pub fn with_sample_state(plugin: &PluginRef, text: &str) -> Option<PluginState> 
         .insert("sample-v1".into(), Value::String(text.into()));
     let bytes = component.to_string();
     (bytes.len() + 12 <= crate::plugin::MAX_STATE_BYTES).then(|| PluginState::new(host_state(bytes.as_bytes())))
+}
+
+#[cfg(test)]
+mod sampler_parity_tests {
+    use super::*;
+
+    #[test]
+    fn sampler_extensions_preserve_old_ids_and_roundtrip_through_native_state() {
+        assert_eq!(SAMPLER_CONTROLS[0].name, "Gain");
+        assert_eq!(SAMPLER_CONTROLS[7].name, "Root key");
+        assert_eq!(SAMPLER_CONTROLS[15].name, "Loop end");
+        let p = SamplerParams {
+            looping: true,
+            loop_start: 0.25,
+            loop_end: 0.75,
+            ping_pong: true,
+            filter_mode: FilterMode::HighPass,
+            ..Default::default()
+        };
+        let plugin = LimePlugin::SAMPLER.with_values(&sampler_values(&p, 48), false, None);
+        assert_eq!(sampler_params(&Instrument::Plugin(plugin)).unwrap(), p);
+        let legacy: SamplerParams = serde_json::from_str(r#"{"looping":true}"#).unwrap();
+        assert!(!legacy.ping_pong);
+        assert_eq!(legacy.filter_mode, FilterMode::LowPass);
+        let old = LimePlugin::SAMPLER.with_values(&sampler_values(&p, 48)[..16], false, None);
+        let restored = sampler_params(&Instrument::Plugin(old)).unwrap();
+        assert!(!restored.ping_pong);
+        assert_eq!(restored.filter_mode, FilterMode::LowPass);
+    }
 }

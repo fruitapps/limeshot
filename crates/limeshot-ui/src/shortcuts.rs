@@ -84,6 +84,7 @@ pub const EDITING: &[(&str, &str)] = &[
         "Piano Roll: transpose a semitone (all of the channel's notes when none is selected)",
     ),
     ("Cmd+↑ / Cmd+↓", "Piano Roll: transpose an octave"),
+    ("Shift+G / Alt+G", "Playlist: group / ungroup selected tracks"),
     (
         "Shift+← / Shift+→",
         "Piano Roll / Playlist: nudge by the snap (Shift+↑/↓ in the Playlist: move clips a track)",
@@ -94,6 +95,7 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("← / →", "Piano Roll / Playlist: scroll"),
     ("Cmd+wheel / pinch", "Piano Roll / Playlist: zoom time"),
+    ("Shift+drag", "Lime Sampler waveform: move both loop endpoints"),
     (
         "Opt+wheel / Opt+pinch",
         "Piano Roll / Playlist: zoom vertically (key / track height)",

@@ -18,6 +18,8 @@ pub enum RenameTarget {
     Pattern(PatternId),
     Channel(ChannelId),
     PlaylistTrack(u32),
+    Arrangement(usize),
+    NewArrangement,
     MixerTrack(u16),
     Marker(limeshot_core::MarkerId),
     /// Name the Channel Rack filter group for these channels (FL Studio's Group selected…).
@@ -183,6 +185,26 @@ impl Dialog {
             .unwrap_or_default();
         Dialog::Rename {
             target: RenameTarget::MixerTrack(i),
+            text,
+        }
+    }
+
+    pub fn rename_arrangement(app: &LimeShotApp, index: usize) -> Self {
+        let text = app
+            .project()
+            .arrangement(index)
+            .map(|a| a.name.clone())
+            .unwrap_or_default();
+        Dialog::Rename {
+            target: RenameTarget::Arrangement(index),
+            text,
+        }
+    }
+
+    pub fn new_arrangement(app: &LimeShotApp) -> Self {
+        let text = format!("Arrangement {}", app.project().arrangement_count() + 1);
+        Dialog::Rename {
+            target: RenameTarget::NewArrangement,
             text,
         }
     }
@@ -580,6 +602,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
             let title = match target {
                 RenameTarget::ChannelGroup(_) => "Filter group name",
                 RenameTarget::Preset(_) => "Save preset as",
+                RenameTarget::NewArrangement => "New arrangement",
                 _ => "Rename",
             };
             modal(ctx, title, |ui| {
@@ -608,6 +631,8 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 RenameTarget::Automation(automation) => Command::RenameAutomation { automation, name },
                                 RenameTarget::Channel(channel) => Command::RenameChannel { channel, name },
                                 RenameTarget::PlaylistTrack(track) => Command::RenamePlaylistTrack { track, name },
+                                RenameTarget::Arrangement(index) => Command::RenameArrangement { index, name },
+                                RenameTarget::NewArrangement => Command::AddArrangement { name },
                                 RenameTarget::MixerTrack(track) => Command::RenameMixerTrack { track, name },
                                 RenameTarget::Marker(marker) => Command::RenameMarker { marker, name },
                                 RenameTarget::Project => Command::SetTitle(name),

@@ -11187,10 +11187,10 @@
       "fl_keys": "Shift+G",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Group",
+      "status": "IMPLEMENTED",
       "feature": "PL-018",
-      "notes": ""
+      "notes": "Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View."
     },
     {
       "id": "MENU-622",
@@ -11206,10 +11206,10 @@
       "fl_keys": "Opt+G",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Ungroup",
+      "status": "IMPLEMENTED",
       "feature": "PL-018",
-      "notes": ""
+      "notes": "Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View."
     },
     {
       "id": "MENU-623",
@@ -12254,10 +12254,10 @@
       "fl_keys": "",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Collapse all grouped tracks",
+      "status": "IMPLEMENTED",
       "feature": "PL-018",
-      "notes": ""
+      "notes": "Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View."
     },
     {
       "id": "MENU-679",

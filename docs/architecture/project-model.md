@@ -145,3 +145,13 @@ paths and symlink escapes are not automatically copied into portable state. Expl
 that restriction through ApproveSamplerSource in the source-assignment batch; CLI users can opt in with --allow-external-samples. Already embedded audio
 and normalizer commands for explicitly selected/new sources keep their existing workflow. First-party lime:
 references resolve only known bundle filenames; arbitrary VST3 paths remain the host's explicit plugin-loading boundary.
+
+
+## Arrangements and Playlist layout
+
+`Project.playlist` is the active arrangement; `arrangements` stores the inactive ones in order,
+with the active slot indicated by `current_arrangement`. At most 64 arrangements share pattern,
+channel, automation and mixer entities. Clones and merges allocate fresh clip/marker IDs. Global
+source deletion removes references in every arrangement. Only the active Playlist compiles/exports.
+Track height, collapsed/size-lock and contiguous group/collapse fields persist with defaults for
+older files. All changes go through undoable commands; groups hide rows without muting audio.

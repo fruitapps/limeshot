@@ -19,7 +19,7 @@ use style::{Canvas, Theme};
 
 pub const EDITOR_SIZES: [(f32, f32); 12] = [
     (850.0, 600.0),
-    (760.0, 740.0),
+    (760.0, 780.0),
     (520.0, 300.0),
     (940.0, 580.0),
     (650.0, 370.0),
@@ -108,6 +108,7 @@ pub struct NativeEditor {
     sample_name: String,
     sample: Option<Arc<limeshot_dsp::SampleData>>,
     waveform: [f32; 256],
+    loop_drag: Option<(usize, f32, f32, f32, bool)>,
     history: [[f32; 3]; 256],
     history_cursor: usize,
     history_time: f64,
@@ -135,6 +136,7 @@ impl NativeEditor {
             sample_name: String::new(),
             sample: None,
             waveform: [0.0; 256],
+            loop_drag: None,
             history: [[0.0; 3]; 256],
             history_cursor: 0,
             history_time: -1.0,
@@ -487,6 +489,12 @@ fn values(content: &Content) -> Vec<f32> {
             f32::from(s.looping),
             s.loop_start,
             s.loop_end,
+            f32::from(s.ping_pong),
+            match s.filter_mode {
+                limeshot_core::FilterMode::LowPass => 0.0,
+                limeshot_core::FilterMode::BandPass => 1.0,
+                limeshot_core::FilterMode::HighPass => 2.0,
+            },
         ],
     }
 }
@@ -539,6 +547,12 @@ fn content(id: u8, p: &[f32; parameters::MAX_CONTROLS]) -> Content {
             looping: p[13] >= 0.5,
             loop_start: p[14],
             loop_end: p[15],
+            ping_pong: p[16] >= 0.5,
+            filter_mode: match p[17].round() as u8 {
+                1 => limeshot_core::FilterMode::BandPass,
+                2 => limeshot_core::FilterMode::HighPass,
+                _ => limeshot_core::FilterMode::LowPass,
+            },
         }),
         _ => Content::Effect {
             kind: parameters::KINDS[(id - 2) as usize],
@@ -773,5 +787,93 @@ mod interaction_tests {
             harness.step();
             assert_eq!(harness.state().0.meters.preview_note.load(Ordering::Relaxed), 0);
         }
+    }
+}
+
+#[cfg(test)]
+mod loop_gesture_tests {
+    use super::*;
+
+    #[test]
+    fn waveform_loop_handles_latch_shift_and_do_not_audition() {
+        for index in [14, 15] {
+            let mut editor = NativeEditor::preview(1);
+            for (i, value) in [(14, 0.25), (15, 0.75)] {
+                Arc::get_mut(&mut editor.params).unwrap().controls[i].value =
+                    FloatParam::new("Loop", value, FloatRange::Linear { min: 0.0, max: 1.0 });
+            }
+            let (w, h) = editor_size(1);
+            let mut harness = egui_kittest::Harness::builder().with_size(vec2(w, h)).build_ui_state(
+                |ui, (editor, initialized)| {
+                    if !*initialized {
+                        install_theme(ui.ctx());
+                        *initialized = true;
+                        return;
+                    }
+                    editor.draw(ui);
+                },
+                (editor, false),
+            );
+            harness.run_steps(3);
+            let rect = harness
+                .ctx
+                .data(|d| d.get_temp::<Rect>(Id::unique(("sampler-loop-handle", index))))
+                .unwrap();
+            let pos = rect.center();
+            harness
+                .input_mut()
+                .events
+                .push(Event::ModifiersChanged(egui::Modifiers::SHIFT));
+            harness.input_mut().events.extend([
+                Event::PointerMoved(pos),
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::SHIFT,
+                },
+            ]);
+            harness.step();
+            harness
+                .input_mut()
+                .events
+                .push(Event::ModifiersChanged(egui::Modifiers::SHIFT));
+            harness
+                .input_mut()
+                .events
+                .push(Event::PointerMoved(pos + vec2(60.0, 0.0)));
+            harness.step();
+            let gesture = harness.state().0.loop_drag.unwrap();
+            assert_eq!(gesture.0, index);
+            assert!(gesture.4);
+            assert_eq!((gesture.1, gesture.2), (0.25, 0.75));
+            assert_eq!(
+                harness
+                    .state()
+                    .0
+                    .meters
+                    .preview_note
+                    .load(std::sync::atomic::Ordering::Relaxed),
+                0
+            );
+            harness.input_mut().events.push(Event::PointerButton {
+                pos: pos + vec2(60.0, 0.0),
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::SHIFT,
+            });
+            harness.step();
+            assert!(harness.state().0.loop_drag.is_none());
+        }
+    }
+
+    #[test]
+    fn native_sampler_preset_preserves_ping_pong_and_filter_type() {
+        let mut values = NativeParams::new(1).values();
+        values[16] = 1.0;
+        values[17] = 2.0;
+        let preset = content(1, &values);
+        let recalled = super::values(&preset);
+        assert_eq!((recalled[16], recalled[17]), (1.0, 2.0));
     }
 }

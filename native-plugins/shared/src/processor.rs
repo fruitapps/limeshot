@@ -303,8 +303,14 @@ impl<const ID: u8> LimePlugin<ID> {
                     let (a, b) = (p[14].clamp(0.0, 1.0), p[15].clamp(0.0, 1.0));
                     (a.min(b), a.max(b))
                 }),
-                // As LimeShot compiles its sampler: no filter while it is fully open.
-                filter: (p[11] < 19_999.0 || p[12] > 0.0)
+                ping_pong: p[16] >= 0.5,
+                filter_mode: match p[17].round() as u8 {
+                    1 => Mode::BandPass,
+                    2 => Mode::HighPass,
+                    _ => Mode::LowPass,
+                },
+                // Other filter outputs remain active even at the maximum cutoff.
+                filter: (p[11] < 19_999.0 || p[12] > 0.0 || p[17] >= 0.5)
                     .then(|| (p[11].clamp(20.0, 20_000.0), p[12].clamp(0.0, 0.95))),
             }
         }
@@ -1144,6 +1150,64 @@ mod tests {
             voice.source,
             limeshot_dsp::voice::Source::Synth { mods: Some(_), .. }
         ));
+    }
+
+    #[test]
+    fn ping_pong_disk_and_memory_match_without_realtime_allocation() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("loop.wav");
+        let data: Vec<f32> = (0..64).flat_map(|i| [i as f32 / 128.0, -(i as f32) / 128.0]).collect();
+        limeshot_dsp::write_wav(&path, 48000, &data, limeshot_dsp::BitDepth::Float32).unwrap();
+        for rate in [44100.0, 48000.0, 96000.0] {
+            for block in [1, 64, 333, 1024] {
+                for reverse in [0.0, 1.0] {
+                    let mut disk = LimePlugin::<1>::default();
+                    disk.params.sample.set(EmbeddedSample::load_mode(&path, true).unwrap());
+                    disk.prepare(rate);
+                    let mut memory = LimePlugin::<1>::default();
+                    memory
+                        .params
+                        .sample
+                        .set(EmbeddedSample::load_mode(&path, false).unwrap());
+                    memory.prepare(rate);
+                    let mut values = memory.params.values();
+                    values[4] = 0.0;
+                    values[5] = reverse;
+                    values[6] = 0.0;
+                    values[13] = 1.0;
+                    values[14] = 0.25;
+                    values[15] = 0.75;
+                    values[16] = 1.0;
+                    disk.event(on(1, 60), &values);
+                    memory.event(on(1, 60), &values);
+                    nice_assert_no_alloc::assert_no_alloc(|| {
+                        for i in 0..4096 {
+                            if i % block == 0 {
+                                disk.update_voices(&values);
+                                memory.update_voices(&values);
+                            }
+                            assert_eq!(
+                                disk.frame([0.0; 2], None, &values, 120.0),
+                                memory.frame([0.0; 2], None, &values, 120.0)
+                            );
+                        }
+                    });
+                    assert!(memory.voices[0].voice.is_active());
+                    values[17] = 2.0;
+                    memory.update_voices(&values);
+                    assert!(
+                        memory.voices[0].voice.filter.is_some(),
+                        "HP must remain active at maximum cutoff"
+                    );
+                    values[16] = 0.0;
+                    memory.update_voices(&values);
+                    assert!(matches!(
+                        memory.voices[0].voice.source,
+                        limeshot_dsp::voice::Source::Sampler { ping_pong: false, .. }
+                    ));
+                }
+            }
+        }
     }
 
     #[test]
