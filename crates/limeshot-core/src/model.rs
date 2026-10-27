@@ -104,6 +104,8 @@ pub struct SamplerParams {
     pub looping: bool,
     pub loop_start: f32,
     pub loop_end: f32,
+    pub ping_pong: bool,
+    pub filter_mode: FilterMode,
     /// Low-pass filter cutoff in Hz (20 000 = open) and resonance 0–0.95.
     pub cutoff_hz: f32,
     pub resonance: f32,
@@ -126,6 +128,8 @@ impl Default for SamplerParams {
             looping: false,
             loop_start: 0.0,
             loop_end: 1.0,
+            ping_pong: false,
+            filter_mode: FilterMode::LowPass,
             cutoff_hz: 20_000.0,
             resonance: 0.0,
         }

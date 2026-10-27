@@ -95,6 +95,7 @@ pub const EDITING: &[(&str, &str)] = &[
     ),
     ("← / →", "Piano Roll / Playlist: scroll"),
     ("Cmd+wheel / pinch", "Piano Roll / Playlist: zoom time"),
+    ("Shift+drag", "Lime Sampler waveform: move both loop endpoints"),
     (
         "Opt+wheel / Opt+pinch",
         "Piano Roll / Playlist: zoom vertically (key / track height)",

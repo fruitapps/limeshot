@@ -5949,6 +5949,8 @@ fn sampler_envelope_controls_reset_and_undo() {
     params.attack_ms = 500.0;
     params.decay_ms = 800.0;
     params.sustain = 0.3;
+    params.ping_pong = true;
+    params.filter_mode = FilterMode::HighPass;
     h.state_mut().exec(Command::SetInstrument {
         channel,
         instrument: Instrument::Sampler(params),
@@ -5956,7 +5958,13 @@ fn sampler_envelope_controls_reset_and_undo() {
     h.state_mut().select_channel(channel);
     h.state_mut().show_window(Win::ChannelSettings);
     let target = PluginTarget::Channel(channel);
-    for (label, index) in [("Attack", 8), ("Decay", 9), ("Sustain", 10)] {
+    for (label, index) in [
+        ("Attack", 8),
+        ("Decay", 9),
+        ("Sustain", 10),
+        ("Ping-pong loop", 16),
+        ("Filter type", 17),
+    ] {
         h.state_mut().plugins.filter_parameters(target, label);
         h.step();
         h.step();

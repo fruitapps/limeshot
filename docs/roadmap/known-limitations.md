@@ -186,3 +186,14 @@ musical activity rather than measured signal/tails or complete solo/mixer audibi
 are session-local. Live FL/macOS interaction comparison and Windows/Linux runtime verification remain
 pending. Windows native plugin sluggishness and the plugin Settings wrapper overhaul are queued in
 [next steps](../development/next-steps.md#owner-follow-up-alpha1-rev-1).
+
+
+## Sampler loop/filter continuation
+
+Lime supports forward/reverse/ping-pong loops and three independent TPT filter outputs. These do not
+establish FL's exact fractional loop endpoints or filter transfer functions. No crossfaded seams,
+additional FL filter families, sampler LFOs, extended delay/hold/tension envelopes or key/velocity
+modulation yet. Loop chase preserves position/direction but does not reconstruct prior filter history.
+Disk realtime cache misses remain possible at extreme pitch or short loops. Native loop gestures,
+state/undo/reopen and standalone hosting still need live checks. See the
+[control inventory and implementation](../research/sampler-controls-2026-10-27.md).

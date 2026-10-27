@@ -305,3 +305,15 @@ latency compensated. See [design and limits](../research/recording-monitoring-an
 
 Browser scrub previews use `PreviewSampleFrom` to replace the preview voice at a normalized source
 offset; source position is set without allocating in the callback.
+
+
+## Sampler loop and filter extensions
+
+Lime Sampler controls 16/17 append ping-pong and filter output, leaving IDs 0–15 and their defaults
+unchanged. `Voice` separates the requested reverse setting from its current ping-pong direction so
+held-control polling preserves a turn. Constant-time modulo folding handles multi-loop pitch steps;
+seek/chase uses the same fold. Ping-pong endpoints are source frame centers without repeated turn
+frames. Near-integer seek offsets are rounded only within floating-point precision. Sampler filter
+outputs use the existing stereo TPT SVFs; LP bypass defaults remain unchanged and BP/HP stay active
+at maximum cutoff. No allocation or I/O is introduced in the voice path. These are independent DSP
+choices; filter-history reconstruction on seek and exact FL responses remain unverified.

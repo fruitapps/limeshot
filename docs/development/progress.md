@@ -526,3 +526,45 @@ are recorded in human verification; new features remain IMPLEMENTED rather than 
 
 Push only the feature branch and its PR; do not push main or merge automatically. Continue using the
 primary checkout and shared Cargo cache in handoffs.
+
+## 2026-10-27 — Sampler ping-pong, loop gestures and filter outputs
+
+Expanded the [FL Sampler control inventory](../research/sampler-controls-2026-10-27.md) and refreshed
+the [parity audit](../research/sampler-parity-audit.md). FL 26.1.1 build 5313 was available after retry:
+screenshots and keyboard input worked, but pointer input repeatedly returned `noWindowsAvailable`.
+The owner opened Sample and Envelope/Instrument pages for observation. The control presence and
+selected Fast LP label were observed; the filter popup was closed in the captured view. Exact audio,
+endpoint, envelope and filter equivalence remains unverified. No FL code/resources were copied.
+
+Implemented ping-pong loops, native waveform loop handles with Shift-pair movement, and independent
+TPT low-/band-/high-pass outputs. Sampler controls 16/17 append stable parameters; IDs 0–15/defaults
+are unchanged. Legacy sampler conversion, component states, factory/user presets, host automation,
+reset and undo retain the fields. The editor has additional vertical space for the controls and
+footer. The Shift gesture is in shortcut help and the inventory. INS-007 remains IN_PROGRESS for
+stretch/crossfades; INS-020 is IN_PROGRESS for expanded modulation, without claiming FL filter DSP.
+
+DSP reflects arbitrarily large loop steps in constant time without duplicate turn endpoints, and
+retains bounce direction across parameter polls. Loop seek/chase folds through the same loop;
+near-integer frame offsets avoid floating-point seam-side errors. Reverse wrapping stays inside
+the half-open loop rather than occasionally selecting its exclusive end. Tests cover expected
+turn sequences, reverse, high pitch, release, seeks, stereo coherence, old state, presets, waveform
+gesture routing and geometry, filter rejection and host reset/undo. Native disk/embedded comparison
+at 44.1/48/96 kHz and blocks 1/64/333/1024 runs with allocation assertions. Hosted output is compared
+with the reference across those rates/blocks for all three filter modes.
+
+macOS 26.6.2 (25G83), arm64, debug: rebuilt all twelve VST3 bundles with `build.py --debug`;
+485 workspace tests and 26 native tests pass. The twelve exported bundles pass ABI/editor creation,
+state, MIDI/audio and automation checks at three rates/four buffer sizes (`examples/verify`).
+Workspace build, strict all-target Clippy in both workspaces, rustfmt, feature/shortcut inventories,
+repository references and whitespace checks pass. Workspace tests use `LIMESHOT_LIME_PLUGINS` pointing
+at `native-plugins/target/debug-bundled` and local-socket permission for bridge tests.
+The [native sampler screenshot](../screenshots/current/lime-sampler-loops.png) was rendered and inspected;
+offscreen rendering required host GPU access. No live Lime GUI/audio or Windows/Linux pass is claimed.
+
+Remaining: pitch-preserving/independent stretching, seam crossfades, extended envelopes/LFOs, further
+filter families/tracking, reversible processing, metadata/navigation, declick and channel voice/event
+tools. Live endpoint/DSP comparisons and standalone-in-FL testing remain in human verification.
+
+Work uses `codex/sampler-loop-filter-parity` atop `codex/alpha1-rev1-issues` (PR #23 still open at the
+start of delivery), in the primary checkout `~/Developer/limeshot`, reusing Cargo caches. No routine
+worktree/clone; push only the feature branch/PR, never main, and do not merge automatically.

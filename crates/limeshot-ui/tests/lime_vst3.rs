@@ -1004,3 +1004,101 @@ fn hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo() {
     app.sync_engine();
     assert_eq!(app.project().channel(channel).unwrap().root_key, 64);
 }
+
+#[test]
+fn hosted_ping_pong_and_filter_modes_match_reference_across_rates_and_blocks() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("loop.wav");
+    let data: Vec<f32> = (0..64)
+        .flat_map(|i| [(i as f32 * 0.2).sin() * 0.4, (i as f32 * 0.2).cos() * 0.3])
+        .collect();
+    limeshot_dsp::write_wav(&path, 48000, &data, limeshot_dsp::BitDepth::Float32).unwrap();
+    let mut d = Document::default();
+    let pat = d.project().patterns[0].id;
+    d.execute(Command::SetPatternLength {
+        pattern: pat,
+        steps: Some(1),
+    })
+    .unwrap();
+    let channel = ChannelId(
+        d.execute(Command::AddChannel {
+            name: "Loop".into(),
+            instrument: Instrument::Sampler(SamplerParams {
+                sample: Some(SampleRef {
+                    path: path.to_string_lossy().into_owned(),
+                }),
+                looping: true,
+                loop_start: 0.25,
+                loop_end: 0.75,
+                ping_pong: true,
+                one_shot: false,
+                release_ms: 0.0,
+                cutoff_hz: 2000.0,
+                ..Default::default()
+            }),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    d.execute(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel,
+            key: 69,
+            start: 0,
+            length: STEP_TICKS,
+            velocity: 0.8,
+        },
+    })
+    .unwrap();
+    let sample = Arc::new(limeshot_dsp::load_audio(&path).unwrap());
+    let host = PluginHost::new(None);
+    for mode in FilterMode::ALL {
+        let Instrument::Sampler(mut settings) = d.project().channel(channel).unwrap().instrument.clone() else {
+            panic!("sampler")
+        };
+        settings.filter_mode = mode;
+        settings.reverse = mode == FilterMode::BandPass;
+        d.execute(Command::SetInstrument {
+            channel,
+            instrument: Instrument::Sampler(settings),
+        })
+        .unwrap();
+        let mut converted = d.project().clone();
+        assert!(lime::convert_project(&mut converted, &limeshot_ui::lime::embedded_audio).is_empty());
+        for rate in [44100, 48000, 96000] {
+            for block in [1, 64, 333, 1024] {
+                let settings = RenderSettings {
+                    sample_rate: rate,
+                    block,
+                    range: limeshot_engine::ExportRange::Pattern,
+                    max_tail_secs: 0.0,
+                };
+                let expected = reference::render_offline(
+                    Arc::new(reference::compile(d.project(), pat, &|_: &str| Some(sample.clone()))),
+                    &settings,
+                )
+                .unwrap()
+                .0;
+                let (processors, _keep) = host.offline(&converted, rate).unwrap();
+                let actual = render_offline_with(
+                    Arc::new(compile(&converted, pat, &limeshot_sequencer::NoSamples)),
+                    &settings,
+                    processors,
+                )
+                .unwrap()
+                .0;
+                assert!(expected.iter().any(|x| x.abs() > 1e-5));
+                assert_eq!(expected.len(), actual.len());
+                assert!(
+                    expected.iter().zip(&actual).all(|(a, b)| (a - b).abs() < 1e-6),
+                    "{mode:?}, {rate}, {block}"
+                );
+            }
+        }
+    }
+}

@@ -33,7 +33,9 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
    implemented (live GUI A/B check in [human verification](human-verification.md)); next pursue
    sampler/clip time stretching (INS-007, PL-023), crossfades and a larger automation editing
    surface. Start with the [sampler parity audit and stretch scope](../research/sampler-parity-audit.md);
-   keep source metadata paths, host duration/chase and FLP settings losses explicit rather than assuming
+   Ping-pong loops, waveform loop gestures and three independent filter outputs are now implemented;
+   see the [control inventory and continuation](../research/sampler-controls-2026-10-27.md). Keep source metadata
+   paths, host duration/chase and FLP settings losses explicit rather than assuming
    hosted P0 field migration establishes FL Sampler parity.
 3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
