@@ -397,9 +397,11 @@ impl NativeEditor {
             t.dim,
         );
     }
-    /// Refresh and draw the cached sample peaks, handle trim gestures, and request root-note
-    /// audition while held away from trim handles. Loads the first dropped file through
-    /// the host context; trim gestures keep start at or before end.
+    /// Refresh and draw sample peaks with trim and loop handles; holding away from the
+    /// handles and loop band requests root-note audition. Host gestures keep endpoints ordered;
+    /// Shift held at the start of a loop drag moves the pair together within the sample.
+    /// Loads the first dropped file asynchronously through the host context; load and
+    /// serialization errors become status text. Parameter edits require a host context.
     pub(super) fn sample_waveform(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         ui.ctx().data_mut(|d| d.insert_temp(Id::unique("sampler-waveform"), r));
         let sample = self.params.sample.audio();
@@ -454,7 +456,10 @@ impl NativeEditor {
             );
         }
         for (index, x, color, label) in [(2, lo, t.accent, "START"), (3, hi, t.danger, "END")] {
-            let handle = Rect::from_center_size(pos2(x, r.center().y), vec2(14.0, r.height() / c.s) * c.s);
+            let handle = Rect::from_min_max(
+                pos2(x - 7.0 * c.s, r.top()),
+                pos2(x + 7.0 * c.s, r.bottom() - 22.0 * c.s),
+            );
             let response = ui.interact(handle, ui.scope_id().with(("trim", index)), Sense::click_and_drag());
             p.line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(2.0 * c.s, color));
             p.text(
@@ -489,9 +494,87 @@ impl NativeEditor {
                 }
             }
         }
-        let over_handle = ui
-            .input(|i| i.pointer.interact_pos())
-            .is_some_and(|pos| (pos.x - lo).abs() < 10.0 * c.s || (pos.x - hi).abs() < 10.0 * c.s);
+        let a = v[14].min(v[15]);
+        let b = v[14].max(v[15]);
+        let loop_color = if v[13] >= 0.5 { t.accent } else { t.dim };
+        let bottom = r.bottom() - 2.0 * c.s;
+        let band = Rect::from_min_max(
+            pos2(egui::lerp(r.x_range(), a), bottom - 18.0 * c.s),
+            pos2(egui::lerp(r.x_range(), b), bottom),
+        );
+        p.rect_filled(band, 0, loop_color.gamma_multiply(0.15));
+        if band.width() > 70.0 * c.s {
+            p.text(
+                band.center(),
+                Align2::CENTER_CENTER,
+                if v[16] >= 0.5 { "PING-PONG LOOP" } else { "LOOP" },
+                FontId::monospace(9.0 * c.s),
+                loop_color,
+            );
+        }
+        for (index, fraction) in [(14, a), (15, b)] {
+            let x = egui::lerp(r.x_range(), fraction);
+            let handle = Rect::from_center_size(pos2(x, bottom - 9.0 * c.s), vec2(14.0, 18.0) * c.s);
+            ui.ctx()
+                .data_mut(|d| d.insert_temp(Id::unique(("sampler-loop-handle", index)), handle));
+            p.line_segment(
+                [pos2(x, r.top() + 23.0 * c.s), pos2(x, bottom)],
+                Stroke::new(c.s, loop_color),
+            );
+            p.add(Shape::convex_polygon(
+                vec![
+                    pos2(x - 5.0 * c.s, bottom),
+                    pos2(x + 5.0 * c.s, bottom),
+                    pos2(x, bottom - 9.0 * c.s),
+                ],
+                loop_color,
+                Stroke::NONE,
+            ));
+            let response = ui
+                .interact(
+                    handle,
+                    ui.scope_id().with(("loop-handle", index)),
+                    Sense::click_and_drag(),
+                )
+                .on_hover_text("Drag loop endpoint · Shift-drag moves both endpoints");
+            if response.drag_started() {
+                let origin = ui.input(|i| i.pointer.press_origin()).unwrap_or(handle.center());
+                self.loop_drag = Some((
+                    index,
+                    a,
+                    b,
+                    (origin.x - r.left()) / r.width(),
+                    ui.input(|i| i.modifiers.shift),
+                ));
+                if let Some(context) = &self.context {
+                    let setter = context.param_setter();
+                    setter.begin_set_parameter(&self.params.controls[14].value);
+                    setter.begin_set_parameter(&self.params.controls[15].value);
+                }
+            }
+            if response.dragged()
+                && let Some((active, start, end, anchor, joint)) = self.loop_drag
+                && active == index
+                && let Some(pos) = response.interact_pointer_pos()
+                && let Some(context) = &self.context
+            {
+                let (start, end) = loop_drag_bounds(start, end, index, (pos.x - r.left()) / r.width() - anchor, joint);
+                let setter = context.param_setter();
+                setter.set_parameter(&self.params.controls[14].value, start);
+                setter.set_parameter(&self.params.controls[15].value, end);
+            }
+            if response.drag_stopped() {
+                self.loop_drag = None;
+                if let Some(context) = &self.context {
+                    let setter = context.param_setter();
+                    setter.end_set_parameter(&self.params.controls[14].value);
+                    setter.end_set_parameter(&self.params.controls[15].value);
+                }
+            }
+        }
+        let over_handle = ui.input(|i| i.pointer.interact_pos()).is_some_and(|pos| {
+            (pos.x - lo).abs() < 10.0 * c.s || (pos.x - hi).abs() < 10.0 * c.s || pos.y >= r.bottom() - 22.0 * c.s
+        });
         let preview = ui.interact(
             r.shrink2(vec2(9.0, 22.0) * c.s),
             ui.scope_id().with("sample-preview"),
@@ -625,5 +708,36 @@ pub(super) fn grid(p: &Painter, r: Rect, t: &Theme, s: f32) {
             [pos2(r.left(), y), pos2(r.right(), y)],
             Stroke::new(s, t.surface.gamma_multiply(0.45)),
         );
+    }
+}
+
+/// Keep the loop width during a Shift drag, clamping the pair at source boundaries.
+/// `start`, `end`, and `delta` are sample-length fractions, with `0 <= start <= end <= 1`.
+/// Returns the new endpoints: `joint` moves both; otherwise index 14 moves the start and
+/// other indices move the end, clamped to prevent crossing.
+fn loop_drag_bounds(start: f32, end: f32, index: usize, delta: f32, joint: bool) -> (f32, f32) {
+    if joint {
+        let delta = delta.clamp(-start, 1.0 - end);
+        (start + delta, end + delta)
+    } else if index == 14 {
+        ((start + delta).clamp(0.0, end), end)
+    } else {
+        (start, (end + delta).clamp(start, 1.0))
+    }
+}
+
+#[cfg(test)]
+mod loop_tests {
+    use super::loop_drag_bounds;
+
+    #[test]
+    fn loop_handles_move_independently_or_preserve_width_at_both_boundaries() {
+        assert_eq!(loop_drag_bounds(0.25, 0.75, 14, 1.0, false), (0.75, 0.75));
+        assert_eq!(loop_drag_bounds(0.25, 0.75, 15, -1.0, false), (0.25, 0.25));
+        for index in [14, 15] {
+            assert_eq!(loop_drag_bounds(0.25, 0.75, index, 1.0, true), (0.5, 1.0));
+            assert_eq!(loop_drag_bounds(0.25, 0.75, index, -1.0, true), (0.0, 0.5));
+            assert_eq!(loop_drag_bounds(0.25, 0.75, index, 0.125, true), (0.375, 0.875));
+        }
     }
 }

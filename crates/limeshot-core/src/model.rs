@@ -104,12 +104,16 @@ pub struct SamplerParams {
     pub looping: bool,
     pub loop_start: f32,
     pub loop_end: f32,
+    pub ping_pong: bool,
+    pub filter_mode: FilterMode,
     /// Low-pass filter cutoff in Hz (20 000 = open) and resonance 0–0.95.
     pub cutoff_hz: f32,
     pub resonance: f32,
 }
 
 impl Default for SamplerParams {
+    /// One-shot forward playback of the full sample range, with no sample loaded, looping
+    /// disabled, a 10 ms release, and a fully open low-pass cutoff with no resonance.
     fn default() -> Self {
         Self {
             sample: None,
@@ -126,6 +130,8 @@ impl Default for SamplerParams {
             looping: false,
             loop_start: 0.0,
             loop_end: 1.0,
+            ping_pong: false,
+            filter_mode: FilterMode::LowPass,
             cutoff_hz: 20_000.0,
             resonance: 0.0,
         }
@@ -476,10 +482,58 @@ pub struct PlaylistTrack {
     pub mute_locked: bool,
     #[serde(default)]
     pub muted: bool,
+    /// Custom track height in pixels (`None` uses the Playlist's default/zoomed height).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<f32>,
+    /// Whether the track is collapsed to a thin header strip.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub collapsed: bool,
+    /// Locks the track's height against resizing and vertical zoom.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub size_locked: bool,
+    /// Grouped with the track above it (sub-track in a collapsible group).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub grouped_with_above: bool,
+    /// When this track is a group parent, whether its grouped child tracks are collapsed.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub group_collapsed: bool,
+}
+
+impl PlaylistTrack {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            color: None,
+            mute_locked: false,
+            muted: false,
+            height: None,
+            collapsed: false,
+            size_locked: false,
+            grouped_with_above: false,
+            group_collapsed: false,
+        }
+    }
+}
+
+fn default_arrangement_name() -> String {
+    "Arrangement".into()
+}
+
+fn is_default_arrangement_name(name: &String) -> bool {
+    name.is_empty() || name == "Arrangement"
+}
+
+fn is_zero_usize(v: &usize) -> bool {
+    *v == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Playlist {
+    #[serde(
+        default = "default_arrangement_name",
+        skip_serializing_if = "is_default_arrangement_name"
+    )]
+    pub name: String,
     pub tracks: Vec<PlaylistTrack>,
     pub clips: Vec<Clip>,
     /// Time markers on the Playlist ruler, sorted by time.
@@ -496,6 +550,17 @@ pub struct Marker {
 }
 
 impl Playlist {
+    pub fn new(name: impl Into<String>, track_count: usize) -> Self {
+        Self {
+            name: name.into(),
+            tracks: (1..=track_count)
+                .map(|i| PlaylistTrack::new(format!("Track {i}")))
+                .collect(),
+            clips: Vec::new(),
+            markers: Vec::new(),
+        }
+    }
+
     /// The end of the last unmuted clip, rounded up to whole bars (0 when empty).
     pub fn song_length(&self, sig: TimeSignature) -> Tick {
         let end = self.clips.iter().map(Clip::end).max().unwrap_or(0);
@@ -755,6 +820,12 @@ pub struct Project {
     pub channels: Vec<Channel>,
     pub patterns: Vec<Pattern>,
     pub playlist: Playlist,
+    /// Inactive arrangements when a project has more than one. The active arrangement is in
+    /// `playlist` at index `current_arrangement` within the full arrangement list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub arrangements: Vec<Playlist>,
+    #[serde(default, skip_serializing_if = "is_zero_usize")]
+    pub current_arrangement: usize,
     pub mixer: Mixer,
     /// Automation curves (FL Studio's automation clips), placed on the Playlist by clips.
     #[serde(default)]
@@ -786,18 +857,9 @@ impl Project {
             time_signature: TimeSignature::default(),
             channels: Vec::new(),
             patterns: Vec::new(),
-            playlist: Playlist {
-                tracks: (1..=16)
-                    .map(|i| PlaylistTrack {
-                        color: None,
-                        mute_locked: false,
-                        name: format!("Track {i}"),
-                        muted: false,
-                    })
-                    .collect(),
-                clips: Vec::new(),
-                markers: Vec::new(),
-            },
+            playlist: Playlist::new("Arrangement", 16),
+            arrangements: Vec::new(),
+            current_arrangement: 0,
             mixer: Mixer::default(),
             automations: Vec::new(),
             swing: 0.0,
@@ -902,6 +964,40 @@ impl Project {
 
     pub fn clip_mut(&mut self, id: ClipId) -> Option<&mut Clip> {
         self.playlist.clips.iter_mut().find(|c| c.id == id)
+    }
+
+    /// Number of arrangements in the project (always at least 1).
+    pub fn arrangement_count(&self) -> usize {
+        1 + self.arrangements.len()
+    }
+
+    /// The arrangement at `index` in the ordered arrangement list.
+    pub fn arrangement(&self, index: usize) -> Option<&Playlist> {
+        let cur = self.current_arrangement.min(self.arrangements.len());
+        if index == cur {
+            Some(&self.playlist)
+        } else if index < cur {
+            self.arrangements.get(index)
+        } else {
+            self.arrangements.get(index - 1)
+        }
+    }
+
+    /// Mutable reference to the arrangement at `index` in the ordered arrangement list.
+    pub fn arrangement_mut(&mut self, index: usize) -> Option<&mut Playlist> {
+        let cur = self.current_arrangement.min(self.arrangements.len());
+        if index == cur {
+            Some(&mut self.playlist)
+        } else if index < cur {
+            self.arrangements.get_mut(index)
+        } else {
+            self.arrangements.get_mut(index - 1)
+        }
+    }
+
+    /// Every arrangement in the project (the active one and all stored ones).
+    pub fn all_playlists_mut(&mut self) -> impl Iterator<Item = &mut Playlist> {
+        std::iter::once(&mut self.playlist).chain(self.arrangements.iter_mut())
     }
 
     /// The next free insert (not master, not targeted by any channel), if any.
@@ -1044,39 +1140,10 @@ impl Project {
         }
         let patterns: Vec<PatternId> = self.patterns.iter().map(|p| p.id).collect();
         let automations: Vec<AutomationId> = self.automations.iter().map(|a| a.id).collect();
-        self.playlist.clips.retain(|c| match c.source {
-            ClipSource::Pattern(p) => patterns.contains(&p),
-            ClipSource::Audio(ch) => channels.contains(&ch),
-            ClipSource::Automation(a) => automations.contains(&a),
-        });
-        let max_track = self.playlist.clips.iter().map(|c| c.track).max().unwrap_or(0);
-        while self.playlist.tracks.len() <= max_track as usize && self.playlist.tracks.len() < 500 {
-            let n = self.playlist.tracks.len() + 1;
-            self.playlist.tracks.push(PlaylistTrack {
-                color: None,
-                mute_locked: false,
-                name: format!("Track {n}"),
-                muted: false,
-            });
-        }
-        self.playlist
-            .clips
-            .retain(|c| (c.track as usize) < self.playlist.tracks.len());
-        for c in &mut self.playlist.clips {
-            c.start = c.start.min(MAX_TICK);
-            c.offset = c.offset.min(MAX_TICK);
-            c.length = c.length.clamp(1, MAX_TICK);
-            c.fade_in = c.fade_in.min(MAX_TICK);
-            c.fade_out = c.fade_out.min(MAX_TICK);
-            max_id = max_id.max(c.id.0);
-        }
-        self.playlist.markers.truncate(10_000);
-        for m in &mut self.playlist.markers {
-            m.tick = m.tick.min(MAX_TICK);
-        }
-        self.playlist.markers.sort_by_key(|m| m.tick);
-        for m in &self.playlist.markers {
-            max_id = max_id.max(m.id.0);
+        self.arrangements.truncate(63);
+        self.current_arrangement = self.current_arrangement.min(self.arrangements.len());
+        for playlist in std::iter::once(&mut self.playlist).chain(self.arrangements.iter_mut()) {
+            sanitize_playlist(playlist, &patterns, &channels, &automations, &mut max_id);
         }
         self.next_id = self.next_id.max(max_id.saturating_add(1));
         // A pattern id of 0 can only come from the repair above; give it a real id.
@@ -1084,6 +1151,57 @@ impl Project {
             p.id = PatternId(self.next_id);
             self.next_id = self.next_id.saturating_add(1);
         }
+    }
+}
+
+fn sanitize_playlist(
+    playlist: &mut Playlist,
+    patterns: &[PatternId],
+    channels: &[ChannelId],
+    automations: &[AutomationId],
+    max_id: &mut u32,
+) {
+    if playlist.name.trim().is_empty() {
+        playlist.name = default_arrangement_name();
+    } else if playlist.name.len() > 256 {
+        let mut end = 256;
+        while !playlist.name.is_char_boundary(end) {
+            end -= 1;
+        }
+        playlist.name.truncate(end);
+    }
+    playlist.clips.retain(|c| match c.source {
+        ClipSource::Pattern(p) => patterns.contains(&p),
+        ClipSource::Audio(ch) => channels.contains(&ch),
+        ClipSource::Automation(a) => automations.contains(&a),
+    });
+    let max_track = playlist.clips.iter().map(|c| c.track).max().unwrap_or(0);
+    while playlist.tracks.len() <= max_track as usize && playlist.tracks.len() < 500 {
+        let n = playlist.tracks.len() + 1;
+        playlist.tracks.push(PlaylistTrack::new(format!("Track {n}")));
+    }
+    if let Some(first) = playlist.tracks.first_mut() {
+        first.grouped_with_above = false;
+    }
+    for t in &mut playlist.tracks {
+        t.height = t.height.filter(|h| h.is_finite()).map(|h| h.clamp(12.0, 640.0));
+    }
+    playlist.clips.retain(|c| (c.track as usize) < playlist.tracks.len());
+    for c in &mut playlist.clips {
+        c.start = c.start.min(MAX_TICK);
+        c.offset = c.offset.min(MAX_TICK);
+        c.length = c.length.clamp(1, MAX_TICK);
+        c.fade_in = c.fade_in.min(MAX_TICK);
+        c.fade_out = c.fade_out.min(MAX_TICK);
+        *max_id = (*max_id).max(c.id.0);
+    }
+    playlist.markers.truncate(10_000);
+    for m in &mut playlist.markers {
+        m.tick = m.tick.min(MAX_TICK);
+    }
+    playlist.markers.sort_by_key(|m| m.tick);
+    for m in &playlist.markers {
+        *max_id = (*max_id).max(m.id.0);
     }
 }
 

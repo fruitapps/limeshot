@@ -26,14 +26,16 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
 
 1. **Editor and context menus from the FL inventories** ([menus.md](../roadmap/menus.md)): other editor View
    options, Piano Roll Time markers, further Target control properties (PR-016), Group, Riff machine, chord
-   progressions and Claw machine; Playlist picker options, performance mode, track modes, grouping, icons, heights,
+   progressions and Claw machine; Playlist picker options, performance mode, track modes, icons,
    lock-to-content and consolidation; Mixer groups, docking and multiselection; Channel Rack display options. Document
    FL's Browser top bar, context menus and floating View windows in `docs/research/` before implementing them.
 2. **Audio and automation.** Sampler host/native root, source, preset and undo synchronization (INS-021) is
    implemented (live GUI A/B check in [human verification](human-verification.md)); next pursue
    sampler/clip time stretching (INS-007, PL-023), crossfades and a larger automation editing
    surface. Start with the [sampler parity audit and stretch scope](../research/sampler-parity-audit.md);
-   keep source metadata paths, host duration/chase and FLP settings losses explicit rather than assuming
+   Ping-pong loops, waveform loop gestures and three independent filter outputs are now implemented;
+   see the [control inventory and continuation](../research/sampler-controls-2026-10-27.md). Keep source metadata
+   paths, host duration/chase and FLP settings losses explicit rather than assuming
    hosted P0 field migration establishes FL Sampler parity.
 3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
@@ -48,6 +50,20 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
    (base64 and host-envelope corruption now covered); UI edge cases (zero-size windows, empty projects in every
    editor, extreme zoom); `limeshot-audio` device-loss and stream-error tests; coverage (`cargo-llvm-cov`) and fuzz
    (`cargo-fuzz`) tooling to measure and extend the above; repeat the hostile-input run on Windows and Linux.
+
+## Owner follow-up: alpha.1 Rev 1
+
+The interaction/Playlist continuation is described in [Rev 1 notes](../research/alpha1-rev1.md).
+
+1. **Windows Lime Native VST3 responsiveness (P1).** Reproduce slow/unresponsive native editors on
+   a Windows machine; profile UI event delivery, state synchronization and host/native polling before
+   changing timing. Record Windows build, hardware, affected bundles and reproducible interaction.
+2. **Plugin wrapper overhaul (research first, P2).** Compare FL's plugin windows, especially the
+   Settings tab, with LimeShot's wrapper. Record clean-room observations and concrete controls/layouts
+   before implementation; preserve working native editor embedding, parameter edits and undo.
+3. **Complete Rev 1 parity gaps.** Independent clip stretching and left-edge stretch, pitch-preserving
+   methods, disk-sample zero crossings, STEP pulse/tension behavior, full arrangement merge policies,
+   FLP multi-arrangement import and measured track audio activity. Keep partial statuses explicit.
 
 ## Research and verification rules
 

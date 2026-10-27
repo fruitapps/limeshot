@@ -2120,3 +2120,39 @@ fn mp3_and_wav_share_range_tail_and_render_report() {
         assert!(decoded.frames().abs_diff(mp3_report.frames) < 3456);
     }
 }
+
+#[test]
+fn browser_scrub_offset_and_replacement_are_independent_of_block_size() {
+    let f = fixture();
+    let snap = snapshot(&f);
+    let sample = Arc::new(SampleData::from_stereo(
+        SR,
+        (0..8192).map(|i| (i / 2) as f32 / 8192.0).collect(),
+    ));
+    for block in [1, 64, 333, 1024] {
+        let mut full = Renderer::new(SR, snap.clone());
+        full.preview_sample(sample.clone());
+        let mut reference = vec![0.0; 8192];
+        for out in reference.chunks_mut(block * 2) {
+            full.render(out);
+        }
+        let mut scrub = Renderer::new(SR, snap.clone());
+        scrub.preview_sample(sample.clone());
+        scrub.render(&mut [0.0; 200]);
+        scrub.preview_sample_from(sample.clone(), 0.5);
+        let mut audio = vec![0.0; 2048];
+        for out in audio.chunks_mut(block * 2) {
+            scrub.render(out);
+        }
+        assert_eq!(
+            audio[1024..],
+            reference[5120..6144],
+            "block {block}: source offset after attack and the previous preview release"
+        );
+        scrub.stop_sample_preview();
+        scrub.render(&mut [0.0; 2048]);
+        let mut silent = [0.0; 128];
+        scrub.render(&mut silent);
+        assert!(silent.iter().all(|x| *x == 0.0));
+    }
+}

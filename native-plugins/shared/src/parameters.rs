@@ -46,8 +46,8 @@ pub const KINDS: [EffectKind; 10] = [
     EffectKind::Chorus,
 ];
 
-/// Capacity of the plain-control arrays: the largest specification (LimeSynth) has 17 controls.
-pub const MAX_CONTROLS: usize = 17;
+/// Capacity of the plain-control arrays: the largest specification (Lime Sampler) has 18 controls.
+pub const MAX_CONTROLS: usize = 18;
 
 pub use limeshot_core::lime::{SAMPLER_CONTROLS as SAMPLER, SYNTH_CONTROLS as SYNTH, control_specs as specs};
 

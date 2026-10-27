@@ -663,13 +663,9 @@ pub fn to_project(f: &FlpFile, factory_dir: Option<&Path>) -> (Project, ImportRe
     }
     r.clips = clips.len();
     p.playlist = Playlist {
+        name: "Arrangement".into(),
         tracks: (1..=u32::from(max_track) + 1)
-            .map(|i| PlaylistTrack {
-                color: None,
-                mute_locked: false,
-                name: format!("Track {i}"),
-                muted: false,
-            })
+            .map(|i| PlaylistTrack::new(format!("Track {i}")))
             .collect(),
         clips,
         markers: Vec::new(),

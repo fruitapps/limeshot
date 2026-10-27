@@ -447,6 +447,43 @@ pub enum Command {
         track: u32,
         muted: bool,
     },
+    SetPlaylistTrackHeight {
+        track: u32,
+        height: Option<f32>,
+        collapsed: bool,
+    },
+    SetPlaylistTrackSizeLock {
+        track: u32,
+        locked: bool,
+    },
+    SetPlaylistTracksGrouped {
+        tracks: Vec<u32>,
+        grouped: bool,
+    },
+    SetPlaylistTrackGroupCollapsed {
+        track: u32,
+        collapsed: bool,
+    },
+    SelectArrangement {
+        index: usize,
+    },
+    AddArrangement {
+        name: String,
+    },
+    CloneArrangement {
+        index: usize,
+        name: Option<String>,
+    },
+    RenameArrangement {
+        index: usize,
+        name: String,
+    },
+    DeleteArrangement {
+        index: usize,
+    },
+    MergeArrangement {
+        source: usize,
+    },
 
     AddMixerTrack,
     RenameMixerTrack {
@@ -786,6 +823,18 @@ impl Command {
             InsertPlaylistTrack { .. } => "Insert playlist track",
             RemovePlaylistTrack { .. } => "Delete playlist track",
             SetPlaylistTrackMute { .. } => "Mute track",
+            SetPlaylistTrackHeight { .. } => "Track height",
+            SetPlaylistTrackSizeLock { .. } => "Lock track size",
+            SetPlaylistTracksGrouped { grouped: true, .. } => "Group tracks",
+            SetPlaylistTracksGrouped { grouped: false, .. } => "Ungroup tracks",
+            SetPlaylistTrackGroupCollapsed { collapsed: true, .. } => "Collapse group",
+            SetPlaylistTrackGroupCollapsed { collapsed: false, .. } => "Expand group",
+            SelectArrangement { .. } => "Select arrangement",
+            AddArrangement { .. } => "Add arrangement",
+            CloneArrangement { .. } => "Clone arrangement",
+            RenameArrangement { .. } => "Rename arrangement",
+            DeleteArrangement { .. } => "Delete arrangement",
+            MergeArrangement { .. } => "Merge arrangement",
             AddMixerTrack => "Add mixer track",
             RenameMixerTrack { .. } => "Rename mixer track",
             SetMixerVolume { .. } => "Mixer volume",
@@ -867,6 +916,7 @@ impl Command {
                 pattern, channel, on, ..
             } => format!("step{}:{}:{on}", pattern.0, channel.0),
             MoveMarker { marker, .. } => format!("mvm{}", marker.0),
+            SetPlaylistTrackHeight { track, .. } => format!("plth{track}"),
             _ => return None,
         })
     }
@@ -918,7 +968,9 @@ impl Command {
                 for pat in &mut p.patterns {
                     pat.notes.retain(|n| n.channel != id);
                 }
-                p.playlist.clips.retain(|c| c.audio_channel() != Some(id));
+                for pl in p.all_playlists_mut() {
+                    pl.clips.retain(|c| c.audio_channel() != Some(id));
+                }
             }
             CloneChannel(id) => {
                 let i = p.channel_index(id).ok_or(CommandError::NoChannel(id))?;
@@ -1455,7 +1507,9 @@ impl Command {
                 }
                 let i = pattern_index(p, id)?;
                 p.patterns.remove(i);
-                p.playlist.clips.retain(|c| c.pattern() != Some(id));
+                for pl in p.all_playlists_mut() {
+                    pl.clips.retain(|c| c.pattern() != Some(id));
+                }
                 renumber_default_names(p);
             }
             RenamePattern { pattern: id, name } => pattern(p, id)?.name = name,
@@ -1708,7 +1762,9 @@ impl Command {
                     .position(|a| a.id == id)
                     .ok_or_else(|| CommandError::Invalid(format!("no automation {}", id.0)))?;
                 p.automations.remove(i);
-                p.playlist.clips.retain(|c| c.automation() != Some(id));
+                for pl in p.all_playlists_mut() {
+                    pl.clips.retain(|c| c.automation() != Some(id));
+                }
             }
             RemoveClips(ids) => p.playlist.clips.retain(|c| !ids.contains(&c.id)),
             MoveClips { clips, dt, dtrack } => {
@@ -1830,12 +1886,7 @@ impl Command {
                     return Err(CommandError::Invalid("the playlist holds at most 500 tracks".into()));
                 }
                 let n = p.playlist.tracks.len() + 1;
-                p.playlist.tracks.push(PlaylistTrack {
-                    color: None,
-                    mute_locked: false,
-                    name: format!("Track {n}"),
-                    muted: false,
-                });
+                p.playlist.tracks.push(PlaylistTrack::new(format!("Track {n}")));
             }
             AddMarker { tick, name } => {
                 let id = MarkerId(p.alloc_id());
@@ -1884,6 +1935,9 @@ impl Command {
                 let j = (i as i64 + i64::from(delta)).clamp(0, p.playlist.tracks.len() as i64 - 1) as usize;
                 let item = p.playlist.tracks.remove(i);
                 p.playlist.tracks.insert(j, item);
+                if let Some(first) = p.playlist.tracks.first_mut() {
+                    first.grouped_with_above = false;
+                }
                 for c in &mut p.playlist.clips {
                     let n = c.track as usize;
                     c.track = if n == i {
@@ -1902,15 +1956,9 @@ impl Command {
                     return Err(CommandError::Invalid("the playlist holds at most 500 tracks".into()));
                 }
                 let i = (track as usize).min(p.playlist.tracks.len());
-                p.playlist.tracks.insert(
-                    i,
-                    PlaylistTrack {
-                        name: format!("Track {}", i + 1),
-                        color: None,
-                        muted: false,
-                        mute_locked: false,
-                    },
-                );
+                p.playlist
+                    .tracks
+                    .insert(i, PlaylistTrack::new(format!("Track {}", i + 1)));
                 for c in &mut p.playlist.clips {
                     if c.track >= i as u32 {
                         c.track += 1;
@@ -1922,6 +1970,9 @@ impl Command {
                     return Err(CommandError::NoPlaylistTrack(track));
                 }
                 p.playlist.tracks.remove(track as usize);
+                if let Some(first) = p.playlist.tracks.first_mut() {
+                    first.grouped_with_above = false;
+                }
                 p.playlist.clips.retain(|c| c.track != track);
                 for c in &mut p.playlist.clips {
                     if c.track > track {
@@ -1935,6 +1986,192 @@ impl Command {
                     .get_mut(track as usize)
                     .ok_or(CommandError::NoPlaylistTrack(track))?
                     .muted = muted
+            }
+            SetPlaylistTrackHeight {
+                track,
+                height,
+                collapsed,
+            } => {
+                let t = p
+                    .playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?;
+                if t.size_locked {
+                    return Ok(Created(None));
+                }
+                if let Some(h) = height {
+                    let h = finite(h)?.clamp(12.0, 640.0);
+                    t.height = Some(h);
+                } else {
+                    t.height = None;
+                }
+                t.collapsed = collapsed;
+            }
+            SetPlaylistTrackSizeLock { track, locked } => {
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .size_locked = locked;
+            }
+            SetPlaylistTracksGrouped { tracks, grouped } => {
+                if tracks.is_empty() {
+                    return Ok(Created(None));
+                }
+                for &track in &tracks {
+                    if track as usize >= p.playlist.tracks.len() {
+                        return Err(CommandError::NoPlaylistTrack(track));
+                    }
+                }
+                let mut sorted = tracks;
+                sorted.sort_unstable();
+                sorted.dedup();
+                if grouped && sorted.len() > 1 {
+                    // When multiple tracks are selected, the first selected track is the group
+                    // parent (remains ungrouped with above) and the subsequent selected tracks
+                    // group under it.
+                    let parent = sorted[0];
+                    if let Some(t) = p.playlist.tracks.get_mut(parent as usize) {
+                        t.grouped_with_above = false;
+                    }
+                    for tr in parent + 1..=sorted[sorted.len() - 1] {
+                        if tr > 0
+                            && let Some(t) = p.playlist.tracks.get_mut(tr as usize)
+                        {
+                            t.grouped_with_above = true;
+                        }
+                    }
+                } else {
+                    for tr in sorted {
+                        if tr == 0 {
+                            if let Some(t) = p.playlist.tracks.get_mut(0) {
+                                t.grouped_with_above = false;
+                            }
+                            continue;
+                        }
+                        if let Some(t) = p.playlist.tracks.get_mut(tr as usize) {
+                            t.grouped_with_above = grouped;
+                        }
+                    }
+                }
+            }
+            SetPlaylistTrackGroupCollapsed { track, collapsed } => {
+                p.playlist
+                    .tracks
+                    .get_mut(track as usize)
+                    .ok_or(CommandError::NoPlaylistTrack(track))?
+                    .group_collapsed = collapsed;
+            }
+            SelectArrangement { index } => {
+                let count = p.arrangement_count();
+                if index >= count {
+                    return Err(CommandError::Invalid(format!("no arrangement {index}")));
+                }
+                let cur = p.current_arrangement.min(p.arrangements.len());
+                if index != cur {
+                    let current = std::mem::replace(&mut p.playlist, Playlist::new("Arrangement", 0));
+                    p.arrangements.insert(cur, current);
+                    p.playlist = p.arrangements.remove(index);
+                    p.current_arrangement = index;
+                }
+                return Ok(Created(Some(index as u32)));
+            }
+            AddArrangement { name } => {
+                if p.arrangement_count() >= 64 {
+                    return Err(CommandError::Invalid("a project holds at most 64 arrangements".into()));
+                }
+                let name = if name.trim().is_empty() {
+                    format!("Arrangement {}", p.arrangement_count() + 1)
+                } else {
+                    name
+                };
+                let cur = p.current_arrangement.min(p.arrangements.len());
+                let current = std::mem::replace(&mut p.playlist, Playlist::new(name, 16));
+                p.arrangements.insert(cur, current);
+                let new_index = p.arrangements.len();
+                p.current_arrangement = new_index;
+                return Ok(Created(Some(new_index as u32)));
+            }
+            CloneArrangement { index, name } => {
+                if p.arrangement_count() >= 64 {
+                    return Err(CommandError::Invalid("a project holds at most 64 arrangements".into()));
+                }
+                let mut cloned = p
+                    .arrangement(index)
+                    .ok_or_else(|| CommandError::Invalid(format!("no arrangement {index}")))?
+                    .clone();
+                cloned.name = name
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| format!("{} #2", cloned.name));
+                for c in &mut cloned.clips {
+                    c.id = ClipId(p.alloc_id());
+                }
+                for m in &mut cloned.markers {
+                    m.id = MarkerId(p.alloc_id());
+                }
+                let cur = p.current_arrangement.min(p.arrangements.len());
+                let current = std::mem::replace(&mut p.playlist, cloned);
+                p.arrangements.insert(cur, current);
+                let target = (index + 1).min(p.arrangements.len());
+                p.current_arrangement = target;
+                return Ok(Created(Some(target as u32)));
+            }
+            RenameArrangement { index, name } => {
+                let name = name.trim().to_string();
+                if name.is_empty() {
+                    return Err(CommandError::Invalid("arrangement name cannot be empty".into()));
+                }
+                p.arrangement_mut(index)
+                    .ok_or_else(|| CommandError::Invalid(format!("no arrangement {index}")))?
+                    .name = name;
+            }
+            DeleteArrangement { index } => {
+                let count = p.arrangement_count();
+                if count <= 1 {
+                    return Err(CommandError::Invalid("a project keeps at least one arrangement".into()));
+                }
+                if index >= count {
+                    return Err(CommandError::Invalid(format!("no arrangement {index}")));
+                }
+                let cur = p.current_arrangement.min(p.arrangements.len());
+                let current = std::mem::replace(&mut p.playlist, Playlist::new("Arrangement", 0));
+                p.arrangements.insert(cur, current);
+                p.arrangements.remove(index);
+                let next = if index < cur {
+                    cur - 1
+                } else {
+                    cur.min(p.arrangements.len() - 1)
+                };
+                p.playlist = p.arrangements.remove(next);
+                p.current_arrangement = next;
+            }
+            MergeArrangement { source } => {
+                let cur = p.current_arrangement.min(p.arrangements.len());
+                if source == cur {
+                    return Err(CommandError::Invalid("cannot merge an arrangement with itself".into()));
+                }
+                let src = p
+                    .arrangement(source)
+                    .ok_or_else(|| CommandError::Invalid(format!("no arrangement {source}")))?
+                    .clone();
+                while p.playlist.tracks.len() < src.tracks.len() && p.playlist.tracks.len() < 500 {
+                    let i = p.playlist.tracks.len();
+                    p.playlist.tracks.push(src.tracks[i].clone());
+                }
+                for mut clip in src.clips {
+                    if (clip.track as usize) < p.playlist.tracks.len() {
+                        clip.id = ClipId(p.alloc_id());
+                        p.playlist.clips.push(clip);
+                    }
+                }
+                for mut marker in src.markers {
+                    if !p.playlist.markers.iter().any(|m| m.tick == marker.tick) {
+                        marker.id = MarkerId(p.alloc_id());
+                        p.playlist.markers.push(marker);
+                    }
+                }
+                p.playlist.markers.sort_by_key(|m| m.tick);
             }
 
             AddMixerTrack => {

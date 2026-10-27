@@ -228,8 +228,8 @@ check.
 
 ## Editor auditions
 
-Held piano keys and scrub notes use `Msg::NoteOn` / `NoteOff`. Drawn or moved notes and sampler waveform
-previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
+Held piano keys, drawn/moved notes and scrub notes use `Msg::NoteOn` / `NoteOff`; Piano Roll
+auditions end on mouse release or replacement. Sampler waveform previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
 the message. That deadline runs while transport is stopped, for preview/metronome voices and hosted instruments alike;
 UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.
 
@@ -302,3 +302,18 @@ and locate cancel the lead-in. The audio status publishes remaining beats and a 
 the input callback records only once the gate is open, while monitoring continues independently.
 This flag bridges independent callbacks; physical input alignment is not sample synchronized or
 latency compensated. See [design and limits](../research/recording-monitoring-and-count-in.md).
+
+Browser scrub previews use `PreviewSampleFrom` to replace the preview voice at a normalized source
+offset; source position is set without allocating in the callback.
+
+
+## Sampler loop and filter extensions
+
+Lime Sampler controls 16/17 append ping-pong and filter output, leaving IDs 0–15 and their defaults
+unchanged. `Voice` separates the requested reverse setting from its current ping-pong direction so
+held-control polling preserves a turn. Constant-time modulo folding handles multi-loop pitch steps;
+seek/chase uses the same fold. Ping-pong endpoints are source frame centers without repeated turn
+frames. Near-integer seek offsets are rounded only within floating-point precision. Sampler filter
+outputs use the existing stereo TPT SVFs; LP bypass defaults remain unchanged and BP/HP stay active
+at maximum cutoff. No allocation or I/O is introduced in the voice path. These are independent DSP
+choices; filter-history reconstruction on seek and exact FL responses remain unverified.
