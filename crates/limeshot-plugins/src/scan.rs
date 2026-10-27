@@ -4,6 +4,7 @@
 //! therefore scans each bundle in a child process (`limeshot --scan-vst3 <bundle>`) and keeps
 //! the result in its plugin database; this module is what that child runs.
 
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::{PluginError, PluginInfo, Vst3Module};
@@ -39,29 +40,46 @@ pub fn default_dirs() -> Vec<PathBuf> {
 /// are not searched.
 pub fn find_bundles(dirs: &[PathBuf]) -> Vec<PathBuf> {
     let mut out = Vec::new();
+    let mut visited = HashMap::new();
+    let mut bundles = HashSet::new();
     for d in dirs {
-        walk(d, 0, &mut out);
+        walk(d, 0, &mut visited, &mut bundles, &mut out);
     }
     out.sort();
-    out.dedup();
     out
 }
 
-fn walk(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
-    // Vendors nest plugins in sub-folders; a bound keeps symlink loops finite.
-    if depth > 8 {
+fn walk(
+    path: &Path,
+    depth: usize,
+    visited: &mut HashMap<PathBuf, usize>,
+    bundles: &mut HashSet<PathBuf>,
+    out: &mut Vec<PathBuf>,
+) {
+    // Canonical identities avoid rescanning overlapping roots, aliases and symlink cycles.
+    // Keep the selected spelling for loading and for the persisted plugin database.
+    let Ok(identity) = std::fs::canonicalize(path) else {
+        return;
+    };
+    if is_bundle(path) {
+        if bundles.insert(identity) {
+            out.push(path.to_path_buf());
+        }
         return;
     }
-    let Ok(entries) = std::fs::read_dir(dir) else {
+    if depth > 8
+        || visited
+            .get(&identity)
+            .is_some_and(|previous_depth| *previous_depth <= depth)
+    {
+        return;
+    }
+    visited.insert(identity, depth);
+    let Ok(entries) = std::fs::read_dir(path) else {
         return;
     };
     for e in entries.flatten() {
-        let p = e.path();
-        if is_bundle(&p) {
-            out.push(p);
-        } else if p.is_dir() {
-            walk(&p, depth + 1, out);
-        }
+        walk(&e.path(), depth + 1, visited, bundles, out);
     }
 }
 
@@ -100,6 +118,42 @@ mod tests {
                 PathBuf::from("Vendor/B.VST3")
             ]
         );
+    }
+
+    #[test]
+    fn overlapping_custom_roots_and_bundle_roots_scan_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let vendor = dir.path().join("Vendor");
+        let bundle = vendor.join("Custom.vst3");
+        std::fs::create_dir_all(bundle.join("Contents/Hidden.vst3")).unwrap();
+        let roots = [dir.path().to_owned(), vendor, bundle.clone(), dir.path().to_owned()];
+        assert_eq!(find_bundles(&roots), std::slice::from_ref(&bundle));
+        assert_eq!(find_bundles(std::slice::from_ref(&bundle)), [bundle]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_aliases_and_cycles_do_not_duplicate_bundles() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Plugins");
+        let bundle = root.join("Custom.vst3");
+        std::fs::create_dir_all(&bundle).unwrap();
+        std::os::unix::fs::symlink(&root, root.join("Cycle")).unwrap();
+        let alias = dir.path().join("Alias");
+        std::os::unix::fs::symlink(&root, &alias).unwrap();
+        assert_eq!(find_bundles(&[root, alias]), std::slice::from_ref(&bundle));
+        let bundle_alias = dir.path().join("BundleAlias");
+        std::os::unix::fs::symlink(&bundle, &bundle_alias).unwrap();
+        assert_eq!(find_bundles(&[bundle_alias, bundle.clone()]), [bundle]);
+    }
+
+    #[test]
+    fn a_shallower_extra_root_can_reach_beyond_an_earlier_depth_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let deep = dir.path().join("1/2/3/4/5/6/7/8");
+        let bundle = deep.join("9/Custom.vst3");
+        std::fs::create_dir_all(&bundle).unwrap();
+        assert_eq!(find_bundles(&[dir.path().to_owned(), deep]), [bundle]);
     }
 
     #[test]

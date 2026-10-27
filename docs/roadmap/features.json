@@ -5377,7 +5377,7 @@
       "name": "Plugin scanning",
       "description": "Plugin scanning.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Plugins → Find plugins… (in both Add menus) scans the platform's standard VST3 folders in the background, running `limeshot --scan-vst3 <bundle>` once per bundle (30 s limit) so a plugin that crashes or hangs while loading only fails its own scan. Found instruments and effects (name, vendor, version, sub-categories, class id) and the bundles that failed are saved to `plugins.json` next to the settings.",
+      "limeshot_behavior": "Plugins → Find plugins… (in both Add menus) scans the platform's standard VST3 folders in the background, running `limeshot --scan-vst3 <bundle>` once per bundle (30 s limit) so a plugin that crashes or hangs while loading only fails its own scan. Found instruments and effects (name, vendor, version, sub-categories, class id) and the bundles that failed are saved to `plugins.json` next to the settings. Settings › File manages extra VST3 search folders alongside platform defaults. Find plugins discovers roots on a worker, scans each unique bundle in a child process and refreshes the saved database.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -5395,17 +5395,24 @@
         "crates/limeshot-plugins/src/scan.rs::tests::finds_bundles_but_not_inside_them",
         "crates/limeshot-plugins/tests/host.rs::the_factory_lists_its_instrument_and_effect",
         "crates/limeshot-ui/src/plugins.rs::tests::the_database_round_trips_and_splits_by_kind",
-        "crates/limeshot-ui/src/plugins.rs::tests::a_failed_scan_child_reports_an_error"
+        "crates/limeshot-ui/src/plugins.rs::tests::a_failed_scan_child_reports_an_error",
+        "limeshot-plugins scan::tests::overlapping_custom_roots_and_bundle_roots_scan_once",
+        "limeshot-plugins scan::tests::symlink_aliases_and_cycles_do_not_duplicate_bundles",
+        "limeshot-plugins scan::tests::a_shallower_extra_root_can_reach_beyond_an_earlier_depth_limit",
+        "limeshot-ui plugins::tests::custom_roots_are_discovered_on_worker_and_failures_finish_the_scan",
+        "limeshot-ui settings::tests::round_trip_and_recent_list",
+        "limeshot-app tests/ui.rs::custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project"
       ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm",
-          "HelpAliases.scr (plugins\\wrapper.htm)"
+          "HelpAliases.scr (plugins\\wrapper.htm)",
+          "docs/research/custom-vst3-folders.md"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. No custom plugin folders yet. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
     },
     {
       "id": "PLG-005",

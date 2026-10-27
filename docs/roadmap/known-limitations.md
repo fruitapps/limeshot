@@ -91,8 +91,11 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * The keyboard toggle forwards typed characters only (not arrows or function keys).
 * Native-editor and third-party parameter changes on non-sampler plugins mark the project dirty rather than creating undo steps; known Lime host controls and completed native Lime Sampler edits are undo steps.
 * Delay compensation covers up to about 340 ms per path and 64 delayed paths; export trimming cannot be turned off.
-* No custom plugin folders; a crashing plugin takes LimeShot down unless it runs in a separate process (macOS and
-  Linux). No CLAP or Audio Units.
+* Custom VST3 folders are managed in Settings › File; run Find plugins after changes to replace the saved
+  database. Standard folders stay enabled; there is no per-root enable switch or separate Plugin Manager.
+  Missing/unreadable roots are skipped and recursion is limited to eight levels. Loaded project instances
+  remain active after a folder is removed. Live picker/rescan and Windows/Linux runtime checks remain pending.
+  A crashing plugin takes LimeShot down unless it runs in a separate process (macOS and Linux). No CLAP or Audio Units.
 * Value menus cover channel/mixer volume and pan and known Lime controls; third-party controls have the generic
   automation menu only.
 

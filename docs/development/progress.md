@@ -704,3 +704,38 @@ runtime failure; existing broad documentation coverage was not rewritten in this
 Continue implementation in the primary checkout/cache, push feature branches/PRs only, and
 pass the owner's issue → implementation → previous-PR review/CI fixes → stacked PR → new
 session workflow forward until the current usage window is exhausted; do not wait for a reset.
+
+## 2026-10-27 — Custom VST3 search folders (PLG-004)
+
+Continued from #26 in the primary checkout and existing Cargo caches on
+`codex/custom-vst3-search-folders`. Settings › File now adds/removes persistent extra VST3
+folders. Find plugins searches those plus platform defaults; discovery runs on the scan
+worker before the existing per-bundle child processes, with separate discovery/progress text.
+Overlapping roots, repeated bundles and symlink aliases scan once; canonical directory
+identities stop cycles, and a shallower root can extend a previous depth-limited search.
+Missing/offline roots remain in settings and are skipped until a later rescan. Removing a
+root does not unload project instances. See [scope and evidence](../research/custom-vst3-folders.md).
+
+Local validation: macOS 26.6.2 (25G83), arm64, debug app/tests. Rebuilt the twelve release
+Lime VST3 bundles; workspace tests use the existing matching debug bundles via
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`. **501 workspace tests
+passed**, including 173 app UI tests. Coverage adds duplicate/bundle roots, depth-limit
+recovery, Unix symlink cycles/aliases, worker failure/progress and folder removal without a
+project edit; settings round-trip covers defaults and custom/missing paths. A real app scan
+child successfully found rebuilt Lime Utility through a temporary custom path containing
+spaces. Workspace build, strict all-target Clippy, formatting, feature inventory, repository
+references and whitespace checks pass. The first full test pass hit the sandbox's local
+socket restriction in the existing bridge UI test; the full rerun with socket access passed.
+The [settings screenshot](../screenshots/current/vst3-search-folders.png), rendered with
+`ui_shot --prefs=File` and GPU access, was visually inspected. Live folder picker/rescan/
+restart and Windows/Linux runtime checks remain in human verification; PLG-004 stays
+IMPLEMENTED and the broader Plugin Manager setting remains partial.
+
+Reviewed #26's implementation and review discussion: Codex review completed without
+findings, no inline review threads existed, and CodeRabbit skipped automatic review because
+its base is a feature branch. CI run 40590120668 was still running without a reported failure
+at the pre-delivery check; no green cross-platform result is claimed. The owner's continuation
+workflow remains: implement eligible roadmap work, inspect the preceding PR/CI/reviews, push
+a stacked feature PR, and hand off to a new local session until the current usage window is
+exhausted. Never wait for its reset or spend reset credits; keep using the primary checkout
+and Cargo caches, and never push main or merge automatically.

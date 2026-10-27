@@ -7762,3 +7762,23 @@ fn embedded_preview_budget_refuses_source_fallback_and_recovers_after_unpinning(
     };
     assert_eq!(sample.data, audio.stereo);
 }
+
+#[test]
+fn custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project() {
+    let mut h = harness(true);
+    h.state_mut().settings.vst3_folders = vec!["/custom/VST3".into(), "/offline/VST3".into()];
+    h.state_mut().open_settings(limeshot_ui::settings_window::Page::File);
+    h.step();
+    h.step();
+    assert!(h.query_by_label("/custom/VST3").is_some());
+    assert!(h.query_by_label("/offline/VST3").is_some());
+    assert!(h.query_by_label("Add VST3 folder…").is_some());
+    assert!(h.query_by_label("Find plugins…").is_some());
+    h.get_all_by_label("Remove").next().unwrap().click();
+    h.step();
+    assert_eq!(
+        h.state().settings.vst3_folders,
+        [std::path::PathBuf::from("/offline/VST3")]
+    );
+    assert!(!h.state().doc.is_modified());
+}

@@ -129,3 +129,15 @@ hint, becomes editable when automatic crossfades are turned off, and remains edi
 nonoverlapping clips. Automated UI/cache tests and the rendered menu cover local behavior;
 physical GUI/audio and Windows/Linux checks remain open. Requires an audible output and the
 platform's GUI input/observation permissions. See [prepared sampling](../research/prepared-sampling.md).
+
+## Custom VST3 search folders (PLG-004)
+
+With a rebuilt app and a disposable project, open Settings › File, add a folder containing a
+known installed/licensed VST3 (nested vendor folder and a folder with spaces), and run Find plugins.
+Confirm progress, successful instrument/effect entries, load from the Rack/Mixer menus, saved
+settings/database after restart, and removal followed by a rescan. A removed folder must leave
+already loaded project instances usable. Check a missing/offline root, duplicate/overlapping
+roots and a plugin that fails scanning; standard plugins must remain available. Requires the
+platform folder picker, GUI input permissions and suitable VST3 bundles. Repeat on Windows/Linux.
+Automated discovery/settings/worker/UI checks and an offscreen settings capture do not establish
+live picker/rescan or cross-platform runtime behavior.

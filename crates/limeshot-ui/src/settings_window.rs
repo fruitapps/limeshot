@@ -518,6 +518,40 @@ fn file(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.label("Autosave unsaved changes");
         });
     });
+    section(ui, "VST3 plugin search folders", |ui| {
+        ui.label("Standard VST3 folders are always searched.");
+        let scanning = app.plugins.is_scanning();
+        ui.add_enabled_ui(!scanning, |ui| {
+            let folders = app.settings.vst3_folders.clone();
+            if folders.is_empty() {
+                ui.label(RichText::new("No extra folders").color(t.text_faint));
+            }
+            for (index, folder) in folders.iter().enumerate() {
+                ui.push_id(index, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui
+                            .small_button("Remove")
+                            .hint("Remove this VST3 search folder")
+                            .clicked()
+                        {
+                            app.settings.vst3_folders.retain(|p| p != folder);
+                            app.save_settings();
+                        }
+                        ui.add(egui::Label::new(folder.display().to_string()).wrap());
+                    });
+                });
+            }
+            if ui.button("Add VST3 folder…").clicked()
+                && let Some(dir) = rfd::FileDialog::new().pick_folder()
+                && !app.settings.vst3_folders.contains(&dir)
+            {
+                app.settings.vst3_folders.push(dir);
+                app.save_settings();
+            }
+        });
+        ui.label(RichText::new("Run Find plugins after changing folders to refresh the plugin list.").small());
+        crate::plugins::scan_button(app, ui);
+    });
     section(ui, "Browser extra search folders", |ui| {
         let folders = app.settings.browser_folders.clone();
         if folders.is_empty() {
