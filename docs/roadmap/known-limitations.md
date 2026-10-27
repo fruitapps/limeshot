@@ -205,6 +205,9 @@ state/undo/reopen and standalone hosting still need live checks. See the
   unverified. Clip preparations create separate channels, reused for repeated private edits; removing clips
   can leave unused channels for explicit Rack removal. Ordinary channel Pitch/keyboard transposition still resample prepared audio. No long disk
   stretching; original, result and pitch intermediate each have a 3 million frame limit. Beat fitting
-  captures the current tempo once. Host embedded previews cap at 32 buffers/256 MiB and may be
-  unavailable when active voices pin that budget. Automatic crossfades use complementary gain, not
+  captures the current tempo once. Host embedded previews cap at 4096 buffers/256 MiB and may be
+  unavailable when mapped channel sources or active voices pin that budget. Existing mapped
+  previews retain their PCM; replacing/removing sources releases their pins. Embedded states
+  never use external reload hints as a fallback for unavailable previews. Active automatic pairs disable manual curve selection until automatic crossfades are turned off.
+  Automatic crossfades use complementary gain, not
   equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.

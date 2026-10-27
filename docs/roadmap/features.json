@@ -2884,7 +2884,8 @@
         "limeshot-dsp voice::fade_tests::fade_tension_is_monotonic_and_keeps_endpoints",
         "crates/limeshot-app/tests/ui.rs::rev1_audio_stretch_resamples_and_undo_restores_source_state",
         "limeshot-ui preparation::arrangement_tests::automatic_crossfades_follow_moves_and_restore_manual_fades_with_undo",
-        "crates/limeshot-ui/tests/lime_vst3.rs::prepared_clips_crossfade_reopen_and_chase_at_every_block_size"
+        "crates/limeshot-ui/tests/lime_vst3.rs::prepared_clips_crossfade_reopen_and_chase_at_every_block_size",
+        "crates/limeshot-app/tests/ui.rs::automatic_crossfade_curve_control_disables_only_for_active_pairs"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2895,7 +2896,7 @@
           "docs/research/prepared-sampling.md"
         ]
       },
-      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Zero-crossing searches a bounded decoded sample window; disk-only waveforms are not supported by this path. 2026-10-27: fixed-duration clip preparation, smooth S fades and automatic pair crossfades integrated; see docs/research/prepared-sampling.md."
+      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Zero-crossing searches a bounded decoded sample window; disk-only waveforms are not supported by this path. 2026-10-27: fixed-duration clip preparation, smooth S fades and automatic pair crossfades integrated; see docs/research/prepared-sampling.md. PR #25 follow-up: Smooth S fades is disabled with guidance while an automatic pair owns the curve; nonoverlapping clips remain editable."
     },
     {
       "id": "PL-024",
@@ -3718,7 +3719,7 @@
           "docs/research/prepared-sampling.md"
         ]
       },
-      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 loop/filter continuation: fresh owner-assisted Sample and Envelope/Instrument UI observation; exact FL loop endpoint conventions and audio A/B remain unverified. See sampler-controls-2026-10-27.md. 2026-10-27: fixed-duration preparation integrated; controls/state/restore/undo tested, with 0.5/1/2x duration/pitch and 8–384 kHz DSP coverage. Tiny sources resample, embedded sources/results limited to 3 million frames; listening/live FL A/B remains unverified. See docs/research/prepared-sampling.md."
+      "notes": "FL's sampler (Channel Settings › Sample) also has loop seam crossfades, ping-pong and time stretch. Ping-pong and bounded fixed-duration preparation are implemented; loop seam crossfades and realtime tempo following remain open. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 loop/filter continuation: fresh owner-assisted Sample and Envelope/Instrument UI observation; exact FL loop endpoint conventions and audio A/B remain unverified. See sampler-controls-2026-10-27.md. 2026-10-27: fixed-duration preparation integrated; controls/state/restore/undo tested, with 0.5/1/2x duration/pitch and 8–384 kHz DSP coverage. Tiny sources resample, embedded sources/results limited to 3 million frames; listening/live FL A/B remains unverified. See docs/research/prepared-sampling.md."
     },
     {
       "id": "INS-008",
@@ -9744,7 +9745,9 @@
         "limeshot-plugins host::gesture_tests::overlapping_native_gestures_finish_only_after_all_controls_end",
         "limeshot-project tests::native_embedded_sources_relocate_without_changing_audio",
         "crates/limeshot-ui/tests/lime_vst3.rs::hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo",
-        "crates/limeshot-app/tests/ui.rs::sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized"
+        "crates/limeshot-app/tests/ui.rs::sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized",
+        "crates/limeshot-app/tests/ui.rs::embedded_sampler_previews_survive_more_than_32_sources_and_release_replaced_audio",
+        "crates/limeshot-app/tests/ui.rs::embedded_preview_budget_refuses_source_fallback_and_recovers_after_unpinning"
       ],
       "reference": {
         "application": "FL Studio",
@@ -9753,7 +9756,7 @@
           "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "2026-10-27: implemented host/native root and source metadata synchronization, project-relative embedded source relocation, preset sample preservation and gesture-coalesced undoable native sampler state capture. Automated unit, project, hosted VST3 and UI tests pass; live GUI A/B verification remains in human-verification.md."
+      "notes": "2026-10-27: implemented host/native root and source metadata synchronization, project-relative embedded source relocation, preset sample preservation and gesture-coalesced undoable native sampler state capture. Automated unit, project, hosted VST3 and UI tests pass; live GUI A/B verification remains in human-verification.md. PR #25 follow-up: channel preview mappings pin their PCM within 4096 entries/256 MiB; source changes/removals release pins, and embedded sources never fall back to external reload hints when previews are unavailable."
     },
     {
       "id": "INS-022",

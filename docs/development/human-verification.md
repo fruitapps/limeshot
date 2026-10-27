@@ -117,3 +117,15 @@ not verify its sound or complete the sampler feature.
   on Windows/Linux/Intel macOS. Requires the rebuilt bundles, relevant machines/host, audio hardware
   and listening; local automated/macOS offscreen evidence is not live/platform certification.
   See [design and bounds](../research/prepared-sampling.md).
+
+## PR #25 preview and fade review follow-up
+
+With rebuilt Lime Native bundles and `live_check` using a disposable temporary project, create
+more than 32 distinct short embedded samples. Inspect Rack/Playlist/Channel Settings waveforms
+and audition older channels after editing/replacing/removing other samples. Check that a full
+preview budget leaves existing mapped previews available, without substituting source files.
+Enable automatic crossfades for an overlapping audio pair: Smooth S fades is disabled with a
+hint, becomes editable when automatic crossfades are turned off, and remains editable for
+nonoverlapping clips. Automated UI/cache tests and the rendered menu cover local behavior;
+physical GUI/audio and Windows/Linux checks remain open. Requires an audible output and the
+platform's GUI input/observation permissions. See [prepared sampling](../research/prepared-sampling.md).

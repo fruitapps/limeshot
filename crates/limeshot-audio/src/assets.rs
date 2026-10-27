@@ -156,7 +156,8 @@ impl SampleCache {
         changed
     }
 
-    /// Retain a decoded embedded source on the control thread, just like a file load.
+    /// Retain a decoded embedded source within 256 MiB and 4096 entries on the control thread.
+    /// Published source mappings and active voices pin buffers against eviction.
     pub fn insert_embedded(&mut self, path: PathBuf, sample: Arc<SampleData>) -> bool {
         if self.entries.contains_key(&path) {
             return true;
@@ -178,15 +179,15 @@ impl SampleCache {
                 })
         };
         let (count, bytes) = usage(&self.entries);
-        if count >= 32 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
-            // Snapshot/voice references keep active audio pinned. Only the control thread
+        if count >= 4096 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
+            // Source mappings/voice references keep active audio pinned. Only the control thread
             // releases an unused buffer, preserving the callback's no-large-free contract.
             self.entries.retain(|key, status| {
                 !embedded(key) || !matches!(status,SampleStatus::Ready(audio) if Arc::strong_count(audio)==1)
             });
         }
         let (count, bytes) = usage(&self.entries);
-        if count >= 32 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
+        if count >= 4096 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
             return false;
         }
         self.entries.insert(path, SampleStatus::Ready(sample));
@@ -302,7 +303,7 @@ mod tests {
     fn embedded_preview_budget_pins_active_audio_and_collects_unused_buffers() {
         let mut cache = SampleCache::new();
         let mut active = Vec::new();
-        for i in 0..32 {
+        for i in 0..4096 {
             let audio = Arc::new(SampleData::from_stereo(48000, vec![0.; 4]));
             assert!(cache.insert_embedded(PathBuf::from(format!("/.limeshot-embedded/{i}.wav")), audio.clone()));
             active.push(audio);
@@ -310,7 +311,7 @@ mod tests {
         let next = PathBuf::from("/.limeshot-embedded/next.wav");
         let audio = Arc::new(SampleData::from_stereo(48000, vec![0.; 4]));
         assert!(!cache.insert_embedded(next.clone(), audio.clone()));
-        assert_eq!(cache.entries.len(), 32);
+        assert_eq!(cache.entries.len(), 4096);
         let old = Arc::downgrade(&active[0]);
         active.clear();
         assert!(cache.insert_embedded(next, audio));

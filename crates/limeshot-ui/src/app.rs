@@ -145,12 +145,19 @@ pub struct Toast {
     pub until: Instant,
 }
 
+struct SamplerSource {
+    state: limeshot_core::PluginState,
+    path: PathBuf,
+    // A published path must retain its PCM until the source mapping is replaced.
+    _audio: Option<Arc<limeshot_dsp::SampleData>>,
+}
+
 pub struct LimeShotApp {
     pub doc: Document,
     pub path: Option<PathBuf>,
     pub player: Player,
     pub samples: SampleCache,
-    sampler_sources: std::collections::HashMap<ChannelId, (limeshot_core::PluginState, PathBuf)>,
+    sampler_sources: std::collections::HashMap<ChannelId, SamplerSource>,
     /// The plugin database and the project's running plugins.
     pub plugins: crate::plugins::PluginHost,
     pub settings: Settings,
@@ -661,17 +668,16 @@ impl LimeShotApp {
         }
     }
 
-    /// Rebuild and send the playback snapshot when the project, the current pattern or the loaded
-    /// samples changed.
     /// Runtime source for waveform/audition, using the same embedded PCM as hosted playback.
     pub fn sampler_source(&self, channel: ChannelId) -> Option<PathBuf> {
         self.sampler_sources
             .get(&channel)
-            .map(|(_, path)| path.clone())
+            .filter(|source| self.samples.status_of_path(&source.path).is_some())
+            .map(|source| source.path.clone())
             .or_else(|| {
-                // Never display/audition an unprepared file when the bounded preview cache is full.
+                // Embedded state is authoritative, even when its preview does not fit the budget.
                 if let limeshot_core::Instrument::Plugin(p) = &self.project().channel(channel)?.instrument
-                    && limeshot_core::lime::sample_state(p).is_some_and(|text| text.contains("preparation-v1"))
+                    && limeshot_core::lime::sample_state(p).is_some()
                 {
                     return None;
                 }
@@ -679,6 +685,7 @@ impl LimeShotApp {
                 Some(self.samples.resolve(&sampler.sample?.path))
             })
     }
+    /// Rebuild the playback snapshot and source previews after project, pattern or sample changes.
     pub fn sync_engine(&mut self) {
         self.samples.auto_keep_long_audio_on_disk = self.settings.auto_keep_long_audio_on_disk;
         let loaded = self.samples.poll();
@@ -744,14 +751,24 @@ impl LimeShotApp {
             })
             .collect();
         self.sampler_sources
-            .retain(|id, _| sources.iter().any(|(c, _)| c == id));
+            .retain(|id, source| sources.iter().any(|(c, state)| c == id && *state == source.state));
         for (id, state) in sources {
-            if self.sampler_sources.get(&id).is_some_and(|(old, _)| *old == state) {
+            if self.sampler_sources.contains_key(&id) {
                 continue;
             }
-            self.sampler_sources.remove(&id);
             if let Some(path) = crate::lime::cache_embedded_sample(&state, &mut self.samples) {
-                self.sampler_sources.insert(id, (state, path));
+                let audio = match self.samples.status_of_path(&path) {
+                    Some(limeshot_audio::assets::SampleStatus::Ready(audio)) => Some(audio.clone()),
+                    _ => None,
+                };
+                self.sampler_sources.insert(
+                    id,
+                    SamplerSource {
+                        state,
+                        path,
+                        _audio: audio,
+                    },
+                );
             }
         }
         self.send_effect_processors();
