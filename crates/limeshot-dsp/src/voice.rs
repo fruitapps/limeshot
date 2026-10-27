@@ -271,6 +271,9 @@ impl Default for Voice {
 
 /// Fold arbitrarily large steps in constant time. Ping-pong endpoints are frame centers,
 /// so a turn does not play an endpoint twice or interpolate beyond the loop's last frame.
+/// `pos`, `a`, and exclusive end `b` are source-frame positions; callers supply `b - a >= 4`.
+/// Fold only after crossing the boundary in the current direction, preserving the lead-in.
+/// Wrapping uses `[a, b)`; ping-pong reflects between `a` and `b - 1`, updating `reverse`.
 fn loop_position(pos: &mut f64, reverse: &mut bool, ping_pong: bool, a: f64, b: f64) {
     if ping_pong {
         let span = b - 1.0 - a;
@@ -411,9 +414,10 @@ impl Voice {
     /// sample position, and the current envelope stage. Call with the note's original velocity.
     /// `root_key` is the sampler's MIDI root note; `bend_semitones` offsets pitch and
     /// `sample_rate` is the output rate in Hz. Mismatched source/instrument kinds do nothing.
-    /// Sampler updates keep the loaded audio, loop, and filter; trim and direction changes
-    /// take effect at the existing playback position. Newly enabled synth oscillators or
-    /// modulation start with fresh state.
+    /// Sampler updates keep the loaded audio while updating trim, loop, and filter settings
+    /// at the existing playback position. Ping-pong turns retain their direction unless the
+    /// requested reverse setting changes or ping-pong is toggled. Newly enabled synth
+    /// oscillators or modulation start with fresh state.
     pub fn update_instrument(
         &mut self,
         instrument: &VoiceInstrument,
@@ -556,7 +560,9 @@ impl Voice {
     }
 
     /// Plays a sample once at its own pitch starting at `start_fraction` (`0.0..=1.0`) of the
-    /// sample's length (browser scrub preview).
+    /// sample's length (browser scrub preview). Finite fractions are clamped to that range;
+    /// nonfinite fractions start at zero, and `1.0` starts at the last source frame.
+    /// Returns `None` for samples shorter than two frames. `sample_rate` is the output rate in Hz.
     pub fn preview_from(sample: Arc<SampleData>, start_fraction: f32, sample_rate: f32) -> Option<Self> {
         let frames = sample.frames() as f64;
         if frames < 2.0 {

@@ -129,6 +129,8 @@ impl NativeEditor {
         self.scope(ui.painter(), c, c.r(536.0, 453.0, 210.0, 86.0), t.accent, t);
         self.meters(ui.painter(), c, c.r(758.0, 446.0, 65.0, 105.0), t);
     }
+    /// Draw sampler controls, waveform handles, and the audition keyboard. File actions
+    /// can open a dialog, request asynchronous loading, or clear the sample through the host.
     fn sampler(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
         use nice_plug::params::persist::PersistentField;
         let (source, mut disk) = self

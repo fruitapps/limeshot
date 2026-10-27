@@ -397,9 +397,11 @@ impl NativeEditor {
             t.dim,
         );
     }
-    /// Refresh and draw the cached sample peaks, handle trim gestures, and request root-note
-    /// audition while held away from trim handles. Loads the first dropped file through
-    /// the host context; trim gestures keep start at or before end.
+    /// Refresh and draw sample peaks with trim and loop handles; holding away from the
+    /// handles and loop band requests root-note audition. Host gestures keep endpoints ordered;
+    /// Shift held at the start of a loop drag moves the pair together within the sample.
+    /// Loads the first dropped file asynchronously through the host context; load and
+    /// serialization errors become status text. Parameter edits require a host context.
     pub(super) fn sample_waveform(&mut self, ui: &mut Ui, c: Canvas, r: Rect, t: &Theme) {
         ui.ctx().data_mut(|d| d.insert_temp(Id::unique("sampler-waveform"), r));
         let sample = self.params.sample.audio();
@@ -710,6 +712,9 @@ pub(super) fn grid(p: &Painter, r: Rect, t: &Theme, s: f32) {
 }
 
 /// Keep the loop width during a Shift drag, clamping the pair at source boundaries.
+/// `start`, `end`, and `delta` are sample-length fractions, with `0 <= start <= end <= 1`.
+/// Returns the new endpoints: `joint` moves both; otherwise index 14 moves the start and
+/// other indices move the end, clamped to prevent crossing.
 fn loop_drag_bounds(start: f32, end: f32, index: usize, delta: f32, joint: bool) -> (f32, f32) {
     if joint {
         let delta = delta.clamp(-start, 1.0 - end);

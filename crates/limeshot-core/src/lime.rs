@@ -386,6 +386,8 @@ pub fn sync_sampler_metadata(channel: &mut Channel, previous: Option<&PluginStat
 
 /// Sampler settings in a legacy channel or a Lime Sampler's saved component state.
 /// The source path is a preview/reload hint; playback uses the embedded audio.
+/// Returns `None` for other instruments. Missing or unreadable component state and missing
+/// or nonnumeric controls use sampler defaults: looping and ping-pong off, low-pass selected.
 pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
     let Instrument::Plugin(plugin) = instrument else {
         return match instrument {

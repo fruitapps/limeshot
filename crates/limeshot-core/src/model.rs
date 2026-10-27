@@ -112,6 +112,8 @@ pub struct SamplerParams {
 }
 
 impl Default for SamplerParams {
+    /// One-shot forward playback of the full sample range, with no sample loaded, looping
+    /// disabled, a 10 ms release, and a fully open low-pass cutoff with no resonance.
     fn default() -> Self {
         Self {
             sample: None,
