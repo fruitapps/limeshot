@@ -28,8 +28,9 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * Packages ([release packaging](../development/release-packaging.md)) are unsigned on Windows (SmartScreen warns)
   and signed ad hoc on macOS (Gatekeeper blocks them until allowed; no Developer ID or notarisation).
   Double-clicking a `.lime` file in Finder starts LimeShot without opening the file. No AppImage, MSI, Flatpak or
-  Windows ARM64 package exists, and the Windows executables carry no embedded icon (shortcuts and the installer use
-  `LimeShot.ico`). The macOS PKG/DMG and the Linux `.deb`/tarball have been tested on CI runners, not on hardware.
+  Windows ARM64 package exists. Windows executables now embed the six-size `LimeShot.ico`; native resource
+  checks are wired into CI and packaging, but Explorer/taskbar appearance still needs a Windows desktop check.
+  The macOS PKG/DMG and the Linux `.deb`/tarball have been tested on CI runners, not on hardware.
 
 ## Audio
 * Loaded VST3 module code stays resident until LimeShot exits, to keep framework callbacks valid; closing

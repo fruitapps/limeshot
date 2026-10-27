@@ -41,7 +41,7 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
 3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
    persistence.
-5. **Distribution (PF-006).** `.lime` opening from Finder and an embedded Windows icon;
+5. **Distribution (PF-006).** `.lime` opening from Finder and Windows embedded-icon desktop verification;
    signing/notarisation implementation that can proceed without owner credentials. `.flp` import (APP-022):
    automation curves, mixer effects and routing, further arrangements and checked fixtures from older FL versions.
 6. **Plugin formats.** CLAP (PLG-001) and AU (PLG-003); Linux editor embedding (`X11EmbedWindowID`, `IRunLoop`).
