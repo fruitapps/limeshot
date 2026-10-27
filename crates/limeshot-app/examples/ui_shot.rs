@@ -256,6 +256,7 @@ fn main() {
                 text: "-12".into(),
             }),
             "export" => Some(Dialog::export(&app)),
+            "mp3" => Some(Dialog::export_mp3(&app)),
             "quit" => Some(Dialog::ConfirmDiscard(limeshot_ui::app::Pending::Quit)),
             "marker" => limeshot_ui::playlist::add_marker(&mut app, 0).map(|id| Dialog::rename_marker(&app, id)),
             _ => None,

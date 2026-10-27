@@ -161,3 +161,49 @@ fn flp_external_samples_require_opt_in_while_local_samples_still_embed() {
         }
     }
 }
+
+#[test]
+fn cli_mp3_export_uses_hosted_mix_and_rejects_invalid_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("demo.lime");
+    let mp3 = dir.path().join("demo.MP3");
+    let run = |args: &[&std::ffi::OsStr]| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_limeshot-cli"))
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let output = run(&[
+        "demo".as_ref(),
+        project.as_os_str(),
+        "--render".as_ref(),
+        mp3.as_os_str(),
+        "--rate".as_ref(),
+        "48000".as_ref(),
+        "--bitrate".as_ref(),
+        "192".as_ref(),
+    ]);
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let decoded = limeshot_dsp::load_audio(&mp3).unwrap();
+    assert_eq!(decoded.sample_rate, 48000);
+    assert!(decoded.frames() > 48000);
+    assert!(decoded.peak() > 0.01);
+    assert!(decoded.data.iter().all(|v| v.is_finite()));
+    let original = std::fs::read(&mp3).unwrap();
+    for options in [["--rate", "96000"], ["--bitrate", "123"]] {
+        let output = run(&[
+            "render".as_ref(),
+            project.as_os_str(),
+            mp3.as_os_str(),
+            options[0].as_ref(),
+            options[1].as_ref(),
+        ]);
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("MP3"));
+        assert_eq!(std::fs::read(&mp3).unwrap(), original);
+    }
+    let invalid = dir.path().join("out.flac");
+    let output = run(&["render".as_ref(), project.as_os_str(), invalid.as_os_str()]);
+    assert!(!output.status.success());
+    assert!(!invalid.exists());
+}

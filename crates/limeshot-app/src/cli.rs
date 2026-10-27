@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! limeshot-cli info   <project.lime>
-//! limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate 48000] [--bits 16|24|32f]
+//! limeshot-cli render <project.lime> <out.wav|out.mp3> [--pattern] [--rate 48000] [--bits 16|24|32f] [--bitrate 320]
 //! limeshot-cli run    <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]
 //! limeshot-cli demo   <out.lime> [--render out.wav]
 //! limeshot-cli play   <project.lime> [--pattern] [--seconds 5]   (realtime, through the audio device)
@@ -13,14 +13,14 @@
 
 use limeshot_audio::assets::SampleCache;
 use limeshot_core::{Command, Document, Project};
-use limeshot_engine::{BitDepth, ExportRange, RenderSettings};
+use limeshot_engine::{BitDepth, ExportFormat, ExportRange, RenderSettings};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav> [--pattern] [--rate N] [--bits 16|24|32f]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
+        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav|out.mp3> [--pattern] [--rate N] [--bits 16|24|32f] [--bitrate N]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
     );
     eprintln!("  --allow-external-samples: explicitly allow embedding audio outside the loaded project folder");
     ExitCode::from(2)
@@ -32,6 +32,7 @@ struct Opts {
     allow_external_samples: bool,
     rate: u32,
     depth: BitDepth,
+    bitrate_kbps: u32,
     project: Option<PathBuf>,
     save: Option<PathBuf>,
     render: Option<PathBuf>,
@@ -45,6 +46,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
         allow_external_samples: false,
         rate: 44_100,
         depth: BitDepth::Int24,
+        bitrate_kbps: 320,
         project: None,
         save: None,
         render: None,
@@ -57,6 +59,7 @@ fn parse(args: &[String]) -> Result<Opts, String> {
             "--pattern" => o.pattern = true,
             "--allow-external-samples" => o.allow_external_samples = true,
             "--rate" => o.rate = val()?.parse().map_err(|_| "bad --rate".to_string())?,
+            "--bitrate" => o.bitrate_kbps = val()?.parse().map_err(|_| "bad --bitrate".to_string())?,
             "--bits" => {
                 o.depth = match val()?.as_str() {
                     "16" => BitDepth::Int16,
@@ -114,6 +117,19 @@ fn save_converted(project: &Project, path: &Path) -> Result<(), String> {
 }
 
 fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
+    let format = match out
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("wav") => ExportFormat::Wav(o.depth),
+        Some("mp3") => ExportFormat::Mp3 {
+            bitrate_kbps: o.bitrate_kbps,
+        },
+        _ => return Err("audio output must have a .wav or .mp3 extension".into()),
+    };
+    format.validate(o.rate).map_err(|error| error.to_string())?;
     // Instruments and effects are the Lime VST3s (D39), as in the app.
     let mut converted = project.clone();
     convert(&mut converted);
@@ -139,7 +155,8 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     // Plugin channels and inserts get instances of their own, restored from the saved state.
     let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
     let (processors, instances) = plugins.offline(project, o.rate)?;
-    let rep = limeshot_engine::export_wav_with(snap, &settings, o.depth, out, processors).map_err(|e| e.to_string())?;
+    let rep =
+        limeshot_engine::export_audio_with(snap, &settings, format, out, processors).map_err(|e| e.to_string())?;
     drop(instances);
     plugins.poll();
     println!(

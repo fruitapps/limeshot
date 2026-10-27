@@ -38,6 +38,22 @@ Link the evidence from the relevant [feature record](../roadmap/features.json) a
    signing identities/credentials and verification of the resulting installers. See
    [release packaging](release-packaging.md); independent packaging implementation remains agent work.
 
+## Sampler and MP3 follow-up (2026-10-27)
+
+* **Sampler A/B (INS-007, INS-014, INS-017…INS-021, APP-022).** With FL Studio 2026 and
+  LimeShot available, use disposable projects and generated samples to compare stretch duration/pitch,
+  note-off/envelope/loop behavior, declick and source metadata. In Lime, change root through the native
+  keyboard/parameter state and check host Root/audition, undo and reopen; replace/clear samples through
+  native and host controls and check waveforms, preview, drag and clip fit-to-length. Test standalone
+  Lime Sampler in FL as well. Source-confirmed root synchronization gap and unverified source metadata
+  paths: [audit](../research/sampler-parity-audit.md). Computer-use app selection timed out twice in
+  this session; permissions were authorized, so their absence has not been established.
+* **MP3 export (EXP-005).** Listen to exported percussion, bass and polyphonic music at several
+  bitrates; check duration/delay in additional gapless-aware players and on Windows/Linux. Automated
+  independent-decode tests and macOS UI inspection do not establish perceptual quality or platform
+  behavior. LimeShot reimport retains padding; use WAV when alignment matters. See
+  [implementation](../research/mp3-export.md).
+
 ## Decisions for the owner
 
 * **Piano Roll range looping.** Pattern mode ignores loop ranges, yet the UI still sends the Piano Roll's range to

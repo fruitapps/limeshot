@@ -158,7 +158,7 @@ docked layout, small upper-case headers, saturated clips with solid title strips
 * `cargo run -p limeshot-app --example ui_shot -- out.png [flags]` renders
   the window offscreen. Flags include `--piano --mixer --fx --eq --sidechain --settings --synth --melody --scale
   --note-pan --empty --audio --automation --markers --graph --zip --auto-zip --record --scrub --tools --tool=…
-  --menu=… --prefs=… --plugin --plugin-window --detach --missing-sample --auto-scroll --tapper --dialog=export|quit|marker`;
+  --menu=… --prefs=… --plugin --plugin-window --detach --missing-sample --auto-scroll --tapper --dialog=export|mp3|quit|marker`;
   the example's source is the full reference. It
   uses wgpu and is used to review layout without a display or screen-recording permission
   (`docs/screenshots/`).

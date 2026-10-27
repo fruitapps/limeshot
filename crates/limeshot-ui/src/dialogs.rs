@@ -5,7 +5,9 @@ use crate::theme::Theme;
 use crate::widgets::Hint as _;
 use egui::{Align2, ComboBox, Context, RichText, vec2};
 use limeshot_core::{ChannelId, Command, PatternId};
-use limeshot_engine::{BitDepth, ExportRange, RenderReport, RenderSettings};
+use limeshot_engine::{
+    BitDepth, ExportFormat, ExportRange, MP3_BITRATES, MP3_SAMPLE_RATES, RenderReport, RenderSettings,
+};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Instant;
@@ -29,6 +31,20 @@ pub struct ExportOptions {
     pub range: ExportRange,
     pub sample_rate: u32,
     pub depth: BitDepth,
+    pub mp3: bool,
+    pub bitrate_kbps: u32,
+}
+
+impl ExportOptions {
+    pub fn format(&self) -> ExportFormat {
+        if self.mp3 {
+            ExportFormat::Mp3 {
+                bitrate_kbps: self.bitrate_kbps,
+            }
+        } else {
+            ExportFormat::Wav(self.depth)
+        }
+    }
 }
 
 pub enum Dialog {
@@ -79,7 +95,17 @@ impl Dialog {
             range,
             sample_rate: 44_100,
             depth: BitDepth::Int24,
+            mp3: false,
+            bitrate_kbps: 320,
         })
+    }
+
+    pub fn export_mp3(app: &LimeShotApp) -> Self {
+        let mut dialog = Self::export(app);
+        if let Self::Export(opts) = &mut dialog {
+            opts.mp3 = true;
+        }
+        dialog
     }
 
     pub fn rename_pattern(app: &LimeShotApp, id: PatternId) -> Self {
@@ -172,6 +198,10 @@ pub struct ExportJob {
 }
 
 pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) {
+    if let Err(error) = opts.format().validate(opts.sample_rate) {
+        app.toast_error(error.to_string());
+        return;
+    }
     app.sync_engine();
     let snap = app.snapshot().clone();
     let settings = RenderSettings {
@@ -179,7 +209,7 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
         range: opts.range,
         ..RenderSettings::default()
     };
-    let depth = opts.depth;
+    let format = opts.format();
     let (processors, plugins) = match app.plugins.offline(app.project(), opts.sample_rate) {
         Ok(prepared) => prepared,
         Err(error) => {
@@ -192,7 +222,8 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
     let spawned = std::thread::Builder::new()
         .name("limeshot-export".into())
         .spawn(move || {
-            let r = limeshot_engine::export_wav_with(snap, &settings, depth, &p, processors).map_err(|e| e.to_string());
+            let r =
+                limeshot_engine::export_audio_with(snap, &settings, format, &p, processors).map_err(|e| e.to_string());
             let _ = tx.send(r);
         });
     match spawned {
@@ -349,7 +380,15 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
             });
         }
         Dialog::Export(opts) => {
-            modal(ctx, "Export WAV", |ui| {
+            modal(ctx, "Export audio", |ui| {
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut opts.mp3, false, "WAV");
+                    if ui.selectable_value(&mut opts.mp3, true, "MP3").changed()
+                        && !MP3_SAMPLE_RATES.contains(&opts.sample_rate)
+                    {
+                        opts.sample_rate = 48_000;
+                    }
+                });
                 egui::Grid::new("export_grid")
                     .min_col_width(82.0)
                     .num_columns(2)
@@ -370,19 +409,35 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                         ComboBox::from_id_salt("export_sr")
                             .selected_text(format!("{} Hz", opts.sample_rate))
                             .show_ui(ui, |ui| {
-                                for sr in [44_100u32, 48_000, 88_200, 96_000] {
+                                let rates: &[u32] = if opts.mp3 {
+                                    MP3_SAMPLE_RATES
+                                } else {
+                                    &[44_100, 48_000, 88_200, 96_000]
+                                };
+                                for &sr in rates {
                                     ui.selectable_value(&mut opts.sample_rate, sr, format!("{sr} Hz"));
                                 }
                             });
                         ui.end_row();
-                        ui.label("Format");
-                        ComboBox::from_id_salt("export_depth")
-                            .selected_text(opts.depth.label())
-                            .show_ui(ui, |ui| {
-                                for d in BitDepth::ALL {
-                                    ui.selectable_value(&mut opts.depth, d, d.label());
-                                }
-                            });
+                        if opts.mp3 {
+                            ui.label("Bitrate");
+                            ComboBox::from_id_salt("export_bitrate")
+                                .selected_text(format!("{} kbps", opts.bitrate_kbps))
+                                .show_ui(ui, |ui| {
+                                    for &rate in MP3_BITRATES {
+                                        ui.selectable_value(&mut opts.bitrate_kbps, rate, format!("{rate} kbps"));
+                                    }
+                                });
+                        } else {
+                            ui.label("Bit depth");
+                            ComboBox::from_id_salt("export_depth")
+                                .selected_text(opts.depth.label())
+                                .show_ui(ui, |ui| {
+                                    for d in BitDepth::ALL {
+                                        ui.selectable_value(&mut opts.depth, d, d.label());
+                                    }
+                                });
+                        }
                         ui.end_row();
                     });
                 if matches!(opts.range, ExportRange::Song | ExportRange::Selection { .. })
@@ -394,31 +449,42 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                     );
                 }
                 ui.label(
-                    RichText::new("Stereo WAV. Notes ring out for up to 4 s after the end. No dithering.")
-                        .small()
-                        .color(Theme::current().text_dim),
+                    RichText::new(if opts.mp3 {
+                        "Stereo MP3 (CBR, lossy). Notes ring out for up to 4 s. Use WAV for production loops."
+                    } else {
+                        "Stereo WAV. Notes ring out for up to 4 s after the end. No dithering."
+                    })
+                    .small()
+                    .color(Theme::current().text_dim),
                 );
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
                     if ui.button(RichText::new("Export…").strong()).clicked() {
+                        let extension = opts.format().extension();
                         let name = format!(
-                            "{}.wav",
+                            "{}.{extension}",
                             app.path
                                 .as_ref()
                                 .and_then(|p| p.file_stem())
                                 .map(|s| s.to_string_lossy().into_owned())
                                 .unwrap_or_else(|| "LimeShot export".into())
                         );
-                        if let Some(mut path) = rfd::FileDialog::new()
-                            .add_filter("WAV audio", &["wav"])
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter(if opts.mp3 { "MP3 audio" } else { "WAV audio" }, &[extension])
                             .set_file_name(name)
                             .save_file()
                         {
-                            if path.extension().is_none() {
-                                path.set_extension("wav");
+                            // Do not rewrite a name after the save panel's overwrite confirmation:
+                            // that could replace a different file from the one the user chose.
+                            if path
+                                .extension()
+                                .is_some_and(|suffix| suffix.eq_ignore_ascii_case(extension))
+                            {
+                                start_export(app, opts, path);
+                                keep = false;
+                            } else {
+                                app.toast_error(format!("Choose a filename ending in .{extension}"));
                             }
-                            start_export(app, opts, path);
-                            keep = false;
                         }
                     }
                     if ui.button("Cancel").clicked() {

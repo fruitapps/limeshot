@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **143** — IMPLEMENTED 110, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 20, NOT_PLANNED 3
+Tracked: **143** — IMPLEMENTED 111, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 19, NOT_PLANNED 3
 
 ## Global
 
@@ -73,7 +73,7 @@ Tracked: **143** — IMPLEMENTED 110, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-030 | Save new version | `Ctrl+N` | VERIFIED | — | NOT_STARTED | APP-018 | File menu action is implemented. LimeShot keeps Cmd+N for New; a new-version shortcut remains unassigned. |
 | KB-031 | New project | `—` | INFERRED | `Cmd+N` | LIMESHOT_ONLY | APP-001 |  |
 | KB-032 | Export WAV | `Ctrl+R` | VERIFIED | `Cmd+R` | IMPLEMENTED | EXP-001 |  |
-| KB-033 | Export MP3 | `Ctrl+Shift+R` | VERIFIED | — | NOT_STARTED | EXP-005 |  |
+| KB-033 | Export MP3 | `Ctrl+Shift+R` | VERIFIED | `Cmd+Shift+R` | IMPLEMENTED | EXP-005 | Opens MP3 in Export audio; stereo CBR bitrate and sample rate controls. |
 | KB-034 | Open recent project 1–10 | `Alt+1…0` | VERIFIED | — | NOT_STARTED | APP-010 | Recent files are in File › Open recent. |
 | KB-035 | Quit | `Alt+F4 / Cmd+Q` | OBSERVED | `Cmd+Q` | IMPLEMENTED | APP-014 | Seen in the main menu on macOS (session 13, menus.json). |
 | KB-095 | Export MIDI file | `Ctrl+Shift+M` | OBSERVED | — | NOT_STARTED | EXP-012 | File › Export › MIDI file... (MENU-026). |

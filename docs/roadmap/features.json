@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reference": "FL Studio 2026 (26.1.1.5313)",
-  "updated": "2026-10-26 (alpha.1 interaction and disk sampler follow-up)",
+  "updated": "2026-10-27 (MP3 export and sampler parity audit)",
   "features": [
     {
       "id": "APP-001",
@@ -703,10 +703,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "docs/research/flp-format.md",
-          "crates/limeshot-project/tests/fixtures/flp/fl26/README.md"
+          "crates/limeshot-project/tests/fixtures/flp/fl26/README.md",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Clean-room: from the bytes of project files (FL's shipped templates/demos read-only and files saved by FL 26.1.1 for the tests); no decompilation. Not converted: plugin states, mixer effects and routing, automation curves, layers, further arrangements. Only FL 26.1.1 was used to make test files; older versions are covered by the shipped demos importing without errors."
+      "notes": "Clean-room: from the bytes of project files (FL's shipped templates/demos read-only and files saved by FL 26.1.1 for the tests); no decompilation. Not converted: plugin states, mixer effects and routing, automation curves, layers, further arrangements. Only FL 26.1.1 was used to make test files; older versions are covered by the shipped demos importing without errors. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. Sampler-specific settings (pitch/root, loops, envelopes, filter, stretch, declick and precomputed processing) default rather than being restored; no per-setting warnings yet."
     },
     {
       "id": "SEQ-001",
@@ -1043,7 +1044,8 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/channelrack.htm",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
       "notes": "Per-channel swing mix and 'truncate swing notes' are not implemented."
@@ -1848,10 +1850,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
-          "docs/research/piano-roll-view-controls.md"
+          "docs/research/piano-roll-view-controls.md",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Pan editing is implemented and tested; release velocity, Mod X/Y, fine pitch and a note-properties dialog remain pending. Third-party instruments must support VST3 note-pan expressions. See docs/research/piano-roll-view-controls.md."
+      "notes": "Pan editing is implemented and tested; release velocity, Mod X/Y, fine pitch and a note-properties dialog remain pending. Third-party instruments must support VST3 note-pan expressions. See docs/research/piano-roll-view-controls.md. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "PR-017",
@@ -1874,10 +1877,11 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "PR-018",
@@ -2871,10 +2875,11 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1."
+      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "PL-024",
@@ -3511,10 +3516,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
-          "Plugins/Fruity/Generators listing (rea-findings.md)"
+          "Plugins/Fruity/Generators listing (rea-findings.md)",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": ""
+      "notes": "Pitch is coupled to playback speed, not independent time stretch; ADSR release is not FL declick-mode parity. Native/plugin-state root synchronization with the host remains INS-021."
     },
     {
       "id": "INS-003",
@@ -3680,10 +3686,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
-          "Plugins/Fruity/Generators listing (rea-findings.md)"
+          "Plugins/Fruity/Generators listing (rea-findings.md)",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in."
+      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "INS-008",
@@ -3808,10 +3815,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
-          "Plugins/Fruity/Generators listing (rea-findings.md)"
+          "Plugins/Fruity/Generators listing (rea-findings.md)",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "INS-012",
@@ -5374,7 +5382,7 @@
       "name": "Plugin state persistence",
       "description": "Plugin state persistence.",
       "fl_reference": "Fruity Wrapper (VST/AU), plugin database.",
-      "limeshot_behavior": "Saving reads each running plugin's processor and controller state into the project (`PluginRef::state`, base64 in the `.lime` file, shared between undo steps), without an undo step; opening the project restores it. A state that is too large (over 64 MiB) or not valid base64 loads as empty. Parameter changes made in LimeShot's parameter list mark the project modified; they are not undo steps.",
+      "limeshot_behavior": "Saving reads each running plugin's processor and controller state into the project (`PluginRef::state`, base64 in the `.lime` file, shared between undo steps), without an undo step; opening the project restores it. A state that is too large (over 64 MiB) or not valid base64 loads as empty. Host parameter-list changes commit plugin-state Commands and are undoable. Native editor notifications mark the project modified; their state is captured on save without creating a document undo step.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -5405,10 +5413,11 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm",
-          "HelpAliases.scr (plugins\\wrapper.htm)"
+          "HelpAliases.scr (plugins\\wrapper.htm)",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md). 2026-10-27: padded base64 at the 64 MiB decoded limit is accepted; whitespace does not count toward the encoded size guard and an exact decoded-size check rejects over-limit payloads. Small-limit tests cover all padding alignments, malformed state text falls back to defaults, and host envelopes reject truncations and hostile component/controller lengths. Opaque third-party plugin payload handling remains unverified."
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md). 2026-10-27: padded base64 at the 64 MiB decoded limit is accepted; whitespace does not count toward the encoded size guard and an exact decoded-size check rejects over-limit payloads. Small-limit tests cover all padding alignments, malformed state text falls back to defaults, and host envelopes reject truncations and hostile component/controller lengths. Opaque third-party plugin payload handling remains unverified. Sampler native/host edit consistency and native-edit undo limitations are recorded in docs/research/sampler-parity-audit.md."
     },
     {
       "id": "PLG-006",
@@ -5752,26 +5761,41 @@
       "name": "MP3 export",
       "description": "Compressed export.",
       "fl_reference": "Ctrl+Shift+R.",
-      "limeshot_behavior": "Needs a permissively licensed encoder; not started.",
+      "limeshot_behavior": "File › Export MP3… / Cmd+Shift+R opens Export audio with MP3 selected. Stereo CBR at 32/44.1/48 kHz, 32–320 kbps (default 320), with the same Song/Pattern/time-selection render and up-to-4-second tail as WAV. CLI chooses WAV or MP3 by output extension; --bitrate selects MP3 kbps. Encoding is offline, pure Rust (rusty_mp3 1.0.5, Apache-2.0), with no external encoder installation.",
       "priority": "P1",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
-      "acceptance_criteria": [
-        "Behaves as described under 'LimeShot intended behaviour'.",
-        "Has an automated test or a documented manual test procedure."
+      "modules": [
+        "limeshot-engine::export",
+        "limeshot-ui::dialogs",
+        "limeshot-app::cli"
       ],
-      "tests": [],
+      "acceptance_criteria": [
+        "File menu and Cmd/Ctrl+Shift+R open MP3 export; WAV remains available.",
+        "All offered MPEG-1 rates/bitrates produce independently decodable stereo audio; invalid settings fail before rendering or replacing an existing output.",
+        "Song, Pattern and selection share WAV scheduling, hosted processors and tail/report semantics.",
+        "CLI renders .mp3 and .wav by suffix; errors do not create a misleading audio file."
+      ],
+      "tests": [
+        "limeshot-engine export::tests::mp3_encodes_stereo_at_each_rate_and_bitrate",
+        "limeshot-engine export::tests::mp3_short_silent_and_nonfinite_inputs_and_write_failures",
+        "limeshot-engine export::tests::invalid_mp3_settings_preserve_existing_output",
+        "limeshot-engine tests/audio.rs::mp3_and_wav_share_range_tail_and_render_report",
+        "crates/limeshot-app/tests/cli.rs::cli_mp3_export_uses_hosted_mix_and_rejects_invalid_settings",
+        "crates/limeshot-app/tests/ui.rs::export_shortcuts_and_format_controls_select_mp3_or_wav"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_shortcuts.htm",
-          "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)"
+          "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)",
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/fformats_save_export.htm",
+          "docs/research/mp3-export.md"
         ]
       },
-      "notes": ""
+      "notes": "CBR stereo only; no VBR, simultaneous formats or MP3 metadata. Encoder writes a final Info/LAME delay/padding tag, but LimeShot sample import currently retains codec padding; use WAV for aligned production assets. Encoder quality/listening and other-platform runtime checks remain open. Offline export retains the rendered PCM and encoder buffers in memory. See docs/research/mp3-export.md."
     },
     {
       "id": "EXP-006",
@@ -7594,7 +7618,7 @@
       "category": "Instruments",
       "name": "Sampler volume envelope",
       "description": "ADSR for sampler channels.",
-      "fl_reference": "Channel Sampler › Envelope/instrument settings: volume, panning, cutoff, resonance and pitch envelopes with LFOs.",
+      "fl_reference": "Channel Sampler › Envelope/instrument settings: volume, cutoff, resonance and pitch envelopes; LFOs also cover pan.",
       "limeshot_behavior": "The Sampler's Playback section has a volume envelope: Attack, Decay, Sustain and Release (defaults 0 ms / 0 ms / 100 % / 10 ms keep a sample's start exact).",
       "priority": "P2",
       "status": "VERIFIED",
@@ -7621,10 +7645,11 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm"
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for panning, cutoff and pitch; those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024."
+      "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for cutoff, resonance and pitch, plus LFOs (including pan); those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
     },
     {
       "id": "EXP-013",
@@ -9215,10 +9240,11 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/decisions.md"
+          "docs/development/decisions.md",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. Root changes through SetPluginState can leave Channel.root_key and host preview/display stale; reverse synchronization is pending. Native source actions also need host metadata consistency verification."
     },
     {
       "id": "PLG-023",
@@ -9529,10 +9555,225 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
-          "Plugins/Fruity/Generators listing (rea-findings.md)"
+          "Plugins/Fruity/Generators listing (rea-findings.md)",
+          "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Owner approved after FL manual research and chose 2 GB rather than a time limit. Cache eviction requires the original source. Realtime cache misses produce silence and an underrun counter; very scattered voices can exhaust read-ahead. Live stress/platform verification remains open; see docs/research/alpha1-sampler-and-fades.md."
+      "notes": "Owner approved after FL manual research and chose 2 GB rather than a time limit. Cache eviction requires the original source. Realtime cache misses produce silence and an underrun counter; very scattered voices can exhaust read-ahead. Live stress/platform verification remains open; see docs/research/alpha1-sampler-and-fades.md. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
+    },
+    {
+      "id": "INS-017",
+      "category": "Instruments",
+      "name": "Sampler precomputed sample processing",
+      "description": "Normalize, DC removal, stereo processing and crossfade-loop preparation.",
+      "fl_reference": "Normalize, DC removal, stereo processing and crossfade-loop preparation.",
+      "limeshot_behavior": "Gain/trim/reverse playback controls exist, but no equivalent precomputed sample-processing workflow.",
+      "priority": "P2",
+      "status": "NOT_STARTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [],
+      "acceptance_criteria": [
+        "Processed audio and original source remain recoverable; state, undo and disk restrictions are explicit."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+    },
+    {
+      "id": "INS-018",
+      "category": "Instruments",
+      "name": "Sampler source metadata and navigation",
+      "description": "Root/tempo/loop/region/slice metadata; source locate/history.",
+      "fl_reference": "Root/tempo/loop/region/slice metadata; source locate/history.",
+      "limeshot_behavior": "Audio decoding retains stereo PCM/rate; metadata-driven sampler configuration and source history/locate are absent.",
+      "priority": "P2",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Supported metadata populates documented sampler settings without overriding explicit user settings; source navigation targets the current source."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+    },
+    {
+      "id": "INS-019",
+      "category": "Instruments",
+      "name": "Sampler declick modes",
+      "description": "Transient-preserving and bleeding declick modes.",
+      "fl_reference": "Transient-preserving and bleeding declick modes.",
+      "limeshot_behavior": "ADSR release and manual clip fades do not reproduce FL declick modes or bleeding.",
+      "priority": "P2",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Named modes have documented onset/end behavior and tests across clip cuts, trim, chase and block sizes."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+    },
+    {
+      "id": "INS-020",
+      "category": "Instruments",
+      "name": "Sampler modulation and expanded envelopes",
+      "description": "Delay/hold/tension, tempo envelopes, sampler LFOs and filter/tracking choices.",
+      "fl_reference": "Delay/hold/tension, tempo envelopes, sampler LFOs and filter/tracking choices.",
+      "limeshot_behavior": "Sampler has volume ADSR and one resonant low-pass. No extended envelopes, sampler LFOs, other filter types or key/velocity modulation.",
+      "priority": "P2",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-014"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Sampler state and automation expose the implemented destinations with stable parameter IDs; old projects preserve their sound."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+    },
+    {
+      "id": "INS-021",
+      "category": "Instruments",
+      "name": "Sampler host and native control synchronization",
+      "description": "Keep host root/source displays, preview and clip helpers consistent with native state.",
+      "fl_reference": "Keep host root/source displays, preview and clip helpers consistent with native state.",
+      "limeshot_behavior": "Host root writes parameter 7; generic plugin-state edits do not update Channel.root_key. Native source-action metadata consistency needs live verification. Native editor edits mark the document dirty; state capture on save does not create an undo step.",
+      "priority": "P1",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "PLG-022"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Host/native root and source edits, presets, undo/redo and reopen agree in display, audition, drag and clip duration."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+    },
+    {
+      "id": "INS-022",
+      "category": "Instruments",
+      "name": "Sampler cut / cut-by groups",
+      "description": "Channels can release matching cut-by groups, including cut itself.",
+      "fl_reference": "Channels can release matching cut-by groups, including cut itself.",
+      "limeshot_behavior": "No cross-channel cut/cut-by group model; fixed voice stealing/retrigger handling is not the same workflow.",
+      "priority": "P2",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Cut group routing, note release and one-shot behavior have deterministic tests and visible undoable controls."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 source/documentation audit; no new implementation or live verification."
+    },
+    {
+      "id": "INS-023",
+      "category": "Instruments",
+      "name": "Sampler interpolation quality",
+      "description": "Sample resampling/interpolation quality selection.",
+      "fl_reference": "Sample resampling/interpolation quality selection.",
+      "limeshot_behavior": "Sampler uses linear interpolation without a user-selectable quality mode.",
+      "priority": "P2",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Implemented quality modes apply consistently in native playback, preview and offline rendering with explicit CPU/quality limits."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 source/documentation audit; no new implementation or live verification."
+    },
+    {
+      "id": "INS-024",
+      "category": "Instruments",
+      "name": "Channel realtime arpeggiator and event echo",
+      "description": "Non-destructive note arpeggiation and echo with note properties.",
+      "fl_reference": "Non-destructive note arpeggiation and echo with note properties.",
+      "limeshot_behavior": "No channel event arp/echo; Piano Roll note tools and audio delay remain separate workflows.",
+      "priority": "P3",
+      "status": "RESEARCHED",
+      "mvp": false,
+      "dependencies": [
+        "INS-001"
+      ],
+      "modules": [],
+      "acceptance_criteria": [
+        "Saved channel settings transform scheduled/live notes without editing pattern notes and preserve event timing across block sizes."
+      ],
+      "tests": [],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "docs/research/sampler-parity-audit.md"
+        ]
+      },
+      "notes": "2026-10-27 source/documentation audit; no new implementation or live verification."
     }
   ]
 }

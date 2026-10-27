@@ -321,6 +321,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 if item(ui, "Export WAV…", &key("Cmd+R")) {
                     app.dialog = Some(Dialog::export(app));
                 }
+                if item(ui, "Export MP3…", &key("Cmd+Shift+R")) {
+                    app.dialog = Some(Dialog::export_mp3(app));
+                }
                 if item(ui, "Export MIDI file (pattern)…", "") {
                     app.export_midi_dialog(false);
                 }

@@ -370,7 +370,8 @@ pub fn sampler_params(instrument: &Instrument) -> Option<SamplerParams> {
 }
 
 /// Settings of a former built-in sampler that Lime Sampler cannot reproduce yet (the P0 features
-/// listed in decision D39), as user-facing phrases. Lime Sampler now has every sampler setting.
+/// listed in decision D39), as user-facing phrases. All modeled legacy fields are supported;
+/// this does not imply parity with every FL Studio Sampler control.
 pub fn sampler_losses(_: &SamplerParams) -> Vec<&'static str> {
     Vec::new()
 }

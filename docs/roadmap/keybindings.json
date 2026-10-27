@@ -362,10 +362,10 @@
       "action": "Export MP3",
       "fl_keys": "Ctrl+Shift+R",
       "confidence": "VERIFIED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+Shift+R",
+      "status": "IMPLEMENTED",
       "feature": "EXP-005",
-      "notes": ""
+      "notes": "Opens MP3 in Export audio; stereo CBR bitrate and sample rate controls."
     },
     {
       "id": "KB-034",

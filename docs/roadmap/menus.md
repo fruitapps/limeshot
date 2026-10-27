@@ -6,13 +6,13 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **737** — IMPLEMENTED 212, DIFFERENT 96, LIMESHOT_ONLY 14, NOT_STARTED 374, NOT_PLANNED 41
+Tracked: **737** — IMPLEMENTED 212, DIFFERENT 97, LIMESHOT_ONLY 14, NOT_STARTED 373, NOT_PLANNED 41
 
 ## Summary
 
 | Menu | FL items | Implemented | Different | Not started | Not planned | LimeShot only |
 |---|---|---|---|---|---|---|
-| File | 45 | 5 | 7 | 30 | 3 | 0 |
+| File | 45 | 5 | 8 | 29 | 3 | 0 |
 | Edit | 4 | 4 | 0 | 0 | 0 | 0 |
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
@@ -38,7 +38,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | SEQ-002 | P0 | VERIFIED | Add sampler / synth channels | MENU-383 Channel Rack › Channel menu › Insert<br>MENU-384 Channel Rack › Channel menu › Replace |
 | AUT-003 | P1 | VERIFIED | Automate mixer and channel parameters | MENU-217 Tools › Last tweaked › Edit automation clip...<br>MENU-231 Tools › Next to last tweaked › Create automation clip<br>MENU-232 Tools › Next to last tweaked › Edit automation clip...<br>MENU-536 Piano Roll › Options › Target control › Channel panning<br>MENU-537 Piano Roll › Options › Target control › Channel volume<br>MENU-538 Piano Roll › Options › Target control › Channel pitch |
 | BR-005 | P1 | IMPLEMENTED | Current project tree | MENU-086 Patterns › Open in project browser<br>MENU-106 View › Project picker<br>MENU-141 View › Patterns<br>MENU-142 View › Generators in use<br>MENU-143 View › Effects in use |
-| EXP-005 | P1 | NOT_STARTED | MP3 export | MENU-023 File › Export › MP3 file... |
 | EXP-012 | P1 | VERIFIED | MIDI export | MENU-243 Tools › Prepare for MIDI export |
 | PL-014 | P1 | IMPLEMENTED | Audio clips | MENU-572 Playlist › Options › Edit › Reverse selected audio clips |
 | PL-015 | P1 | VERIFIED | Automation clips | MENU-568 Playlist › Options › Edit › Merge automation clips |
@@ -132,7 +131,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-020 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MIDI file... |  | dialog |  |  | File › Import MIDI file… | DIFFERENT | PR-020 |  |
 | MENU-021 | Export |  | submenu |  |  | File › Export WAV… | DIFFERENT | EXP-001 | LimeShot has flat File items (Export WAV…, Export MIDI file (pattern/song)…) instead of the submenu. |
 | MENU-022 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Wave file... | Audio | dialog | `Cmd+R` |  | File › Export WAV… | DIFFERENT | EXP-001 | Same key; LimeShot's label says WAV. Opens: settings.json page 'Render'. |
-| MENU-023 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MP3 file... | Audio | dialog | `Shift+Cmd+R` |  | — | NOT_STARTED | EXP-005 | Opens: settings.json page 'Render'. |
+| MENU-023 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MP3 file... | Audio | dialog | `Shift+Cmd+R` |  | File › Export MP3… | DIFFERENT | EXP-005 | Same key; flat File menu item opens Export audio with MP3 selected. Stereo CBR bitrate/rate controls; no simultaneous formats. |
 | MENU-024 | &nbsp;&nbsp;&nbsp;&nbsp;↳ OGG file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | Opens: settings.json page 'Render'. |
 | MENU-025 | &nbsp;&nbsp;&nbsp;&nbsp;↳ FLAC file... | Audio | dialog |  |  | — | NOT_STARTED | EXP-006 | Opens: settings.json page 'Render'. |
 | MENU-026 | &nbsp;&nbsp;&nbsp;&nbsp;↳ MIDI file... | Audio | dialog | `Shift+Cmd+M` |  | File › Export MIDI file (song)… | DIFFERENT | EXP-012 | LimeShot has separate pattern and song items and no shortcut. |

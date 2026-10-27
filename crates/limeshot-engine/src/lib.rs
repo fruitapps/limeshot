@@ -17,8 +17,8 @@ mod plugins;
 pub mod renderer;
 
 pub use export::{
-    ExportError, ExportRange, Processors, RenderReport, RenderSettings, export_wav, export_wav_with, render_offline,
-    render_offline_with,
+    ExportError, ExportFormat, ExportRange, MP3_BITRATES, MP3_SAMPLE_RATES, Processors, RenderReport, RenderSettings,
+    export_audio_with, export_wav, export_wav_with, render_offline, render_offline_with,
 };
 pub use limeshot_dsp::BitDepth;
 pub use plugins::MAX_PLUGIN_CHANNELS;

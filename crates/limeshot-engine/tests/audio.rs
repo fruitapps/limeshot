@@ -2064,3 +2064,59 @@ fn stopping_pausing_and_locating_cancel_count_in() {
         }
     }
 }
+
+#[test]
+fn mp3_and_wav_share_range_tail_and_render_report() {
+    let mut f = fixture();
+    f.doc
+        .execute(Command::SetStep {
+            pattern: f.pat,
+            channel: f.synth,
+            step: 15,
+            on: true,
+        })
+        .unwrap();
+    f.doc
+        .execute(Command::AddClip {
+            pattern: f.pat,
+            track: 0,
+            start: 0,
+            length: None,
+        })
+        .unwrap();
+    let snap = snapshot(&f);
+    let dir = tempfile::tempdir().unwrap();
+    for range in [
+        ExportRange::Song,
+        ExportRange::Pattern,
+        ExportRange::Selection {
+            from: 2 * PPQ,
+            to: 4 * PPQ,
+        },
+    ] {
+        let settings = RenderSettings {
+            sample_rate: 44100,
+            range,
+            ..Default::default()
+        };
+        let write = |format, path: &std::path::Path| {
+            export_audio_with(
+                Arc::new(snap.inner.clone()),
+                &settings,
+                format,
+                path,
+                support::processors(&snap, settings.sample_rate),
+            )
+            .unwrap()
+        };
+        let wav = dir.path().join("mix.wav");
+        let mp3 = dir.path().join("mix.mp3");
+        let wav_report = write(ExportFormat::Wav(BitDepth::Float32), &wav);
+        let mp3_report = write(ExportFormat::Mp3 { bitrate_kbps: 192 }, &mp3);
+        assert_eq!(mp3_report, wav_report);
+        assert!(mp3_report.frames > mp3_report.music_frames, "release tail included");
+        let decoded = limeshot_dsp::load_audio(&mp3).unwrap();
+        assert!(decoded.peak() > 0.01);
+        assert!(decoded.frames().abs_diff(mp3_report.frames) < 3456);
+    }
+}

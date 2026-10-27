@@ -29,7 +29,11 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
    progressions and Claw machine; Playlist picker options, performance mode, track modes, grouping, icons, heights,
    lock-to-content and consolidation; Mixer groups, docking and multiselection; Channel Rack display options. Document
    FL's Browser top bar, context menus and floating View windows in `docs/research/` before implementing them.
-2. **Audio and automation.** Crossfades and time stretching (PL-023), a larger automation editing surface.
+2. **Audio and automation.** Close the P1 sampler host/native synchronization gap (INS-021), then
+   pursue sampler/clip time stretching (INS-007, PL-023), crossfades and a larger automation editing
+   surface. Start with the [sampler parity audit and stretch scope](../research/sampler-parity-audit.md);
+   verify source metadata paths, host duration/chase and FLP settings losses rather than assuming
+   hosted P0 field migration establishes FL Sampler parity.
 3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
    persistence.

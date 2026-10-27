@@ -115,7 +115,7 @@ Windows, `open -a LimeShot --args --demo` on macOS.
 | **Space** | Play / stop |
 | **L** | Switch between Pattern and Song mode |
 | **F5 / F6 / F7 / F9** | Show or hide the Playlist, Channel Rack, Piano Roll and Mixer |
-| **Cmd/Ctrl+S**, **Cmd/Ctrl+R** | Save, export WAV |
+| **Cmd/Ctrl+S**, **Cmd/Ctrl+R** | Save, export WAV (Cmd/Ctrl+Shift+R for MP3) |
 | **F1** | List every shortcut |
 
 Drag samples from the Browser onto the Channel Rack or the Playlist. Turn on typing-keyboard notes in the toolbar to
@@ -139,7 +139,7 @@ The core loop has an automated end-to-end test,
 | **Sampler**<br>Inspect the waveform and adjust playback, loop and filter settings. | <a href="docs/screenshots/current/sampler.png"><img src="docs/screenshots/current/sampler.png" width="240" alt="Sampler Channel Settings with waveform and playback controls"></a> |
 | **LimeSynth**<br>Edit oscillators, envelopes, filtering and modulation. | <a href="docs/screenshots/current/synth.png"><img src="docs/screenshots/current/synth.png" width="240" alt="LimeSynth Channel Settings"></a> |
 | **Mixer EQ**<br>Shape the selected insert with the inline three-band EQ. | <a href="docs/screenshots/current/mixer-eq.png"><img src="docs/screenshots/current/mixer-eq.png" width="240" alt="Maximised Mixer with the selected insert EQ"></a> |
-| **WAV export**<br>Choose the render range, sample rate and bit depth. | <a href="docs/screenshots/current/export.png"><img src="docs/screenshots/current/export.png" width="240" alt="WAV export dialog over the audio clip arrangement"></a> |
+| **Audio export**<br>Choose the render range, sample rate, WAV bit depth or MP3 bitrate. | <a href="docs/screenshots/current/export-mp3.png"><img src="docs/screenshots/current/export-mp3.png" width="240" alt="Audio export dialog with MP3 bitrate and sample rate controls"></a> |
 
 ## Sounds, Effects and Plugins
 
@@ -150,7 +150,7 @@ The core loop has an automated end-to-end test,
 | **Plugins** | VST3 instruments and effects: a scanned plugin database, state saved in the project, plugin editors in LimeShot windows (macOS and Windows), presets, automation, delay compensation and an optional separate process per plugin |
 | **Automation** | Song-mode clips for channel/mixer volume and pan, tempo and VST3 parameters; point modes; automated controls move |
 | **Recording** | MIDI input and note recording from a device or the typing keyboard; audio recording to Playlist clips |
-| **Files** | `.lime` projects (versioned, atomic save, autosave/recovery), WAV/MP3/FLAC/Ogg Vorbis/AIFF samples, WAV export of a song/pattern/time selection, MIDI import/export and partial FL Studio `.flp` import |
+| **Files** | `.lime` projects (versioned, atomic save, autosave/recovery), WAV/MP3/FLAC/Ogg Vorbis/AIFF samples, WAV/MP3 export of a song/pattern/time selection, MIDI import/export and partial FL Studio `.flp` import |
 
 Not there yet: CLAP/AU plugins, stems, templates, remappable shortcuts, time stretching and many advanced editor
 actions. Hardware MIDI and audio recording still need hands-on checks; audio recording has no input monitoring or
@@ -244,6 +244,9 @@ cargo run --release -p limeshot-app --bin limeshot-cli -- demo out/demo.lime --r
 cargo run --release -p limeshot-app --bin limeshot-cli -- import-flp song.flp out/song.lime
 cargo run --release -p limeshot-app --bin limeshot-cli -- midi out/demo.lime out/demo.mid
 ```
+
+For MP3, use `render song.lime song.mp3 --rate 48000 --bitrate 192` (stereo CBR, 32–320 kbps).
+Use WAV for aligned production loops; MP3 reimport can retain codec padding.
 
 `limeshot-cli` also has `info`, `render`, `play` (realtime through the audio device), `import-midi` and `run`. `run`
 applies a JSON list of the same typed commands the UI uses:

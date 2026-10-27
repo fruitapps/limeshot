@@ -7197,3 +7197,39 @@ fn recording_precount_shortcut_menu_bars_and_note_filter_work() {
     h.step();
     assert!(!h.state().ui.record.count_in);
 }
+
+#[test]
+fn export_shortcuts_and_format_controls_select_mp3_or_wav() {
+    use limeshot_ui::dialogs::Dialog;
+    let mut h = harness(false);
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::R);
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(opts.mp3);
+    assert_eq!(opts.bitrate_kbps, 320);
+    assert!(h.query_all_by_label("Bitrate").next().is_some());
+    h.get_by_label("WAV").click();
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(!opts.mp3);
+    h.state_mut().dialog = None;
+    h.key_press_modifiers(Modifiers::COMMAND, Key::R);
+    h.step();
+    let Some(Dialog::Export(opts)) = &mut h.state_mut().dialog else {
+        panic!("export dialog")
+    };
+    assert!(!opts.mp3);
+    opts.sample_rate = 96_000;
+    h.step();
+    h.get_by_label("MP3").click();
+    h.step();
+    let Some(Dialog::Export(opts)) = &h.state().dialog else {
+        panic!("export dialog")
+    };
+    assert!(opts.mp3);
+    assert_eq!(opts.sample_rate, 48_000, "switching from WAV chooses a supported rate");
+}
