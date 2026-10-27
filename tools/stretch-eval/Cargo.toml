@@ -1,0 +1,10 @@
+[package]
+name = "limeshot-stretch-eval"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+wsola = "=0.1.0"
+timestretch = "=0.15.0"
+limeshot-dsp = { path = "../../crates/limeshot-dsp" }
