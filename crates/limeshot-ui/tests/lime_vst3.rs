@@ -1008,6 +1008,7 @@ fn hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo() {
     assert_eq!(app.project().channel(channel).unwrap().root_key, 64);
 }
 
+/// Compare prepared overlap playback, reopen and mid-clip chase across render block sizes.
 #[test]
 fn prepared_clips_crossfade_reopen_and_chase_at_every_block_size() {
     if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {

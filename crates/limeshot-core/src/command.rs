@@ -2655,6 +2655,7 @@ pub(crate) fn clear_auto_crossfades(project: &mut Project) {
         }
     }
 }
+/// Apply smooth complementary fades to eligible adjacent pairs, optionally retaining manual bases.
 pub(crate) fn apply_crossfades(p: &mut Project, ids: &[ClipId], remember: bool) {
     let ids: std::collections::HashSet<_> = ids.iter().copied().collect();
     let indices: std::collections::HashMap<_, _> =

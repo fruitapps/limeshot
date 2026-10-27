@@ -169,7 +169,11 @@ impl NativeEditor {
     /// File actions may open dialogs and perform I/O; failures appear in the status text.
     /// Host parameter/state edits require an attached context. Requests a repaint after 33 ms.
     pub fn draw(&mut self, ui: &mut Ui) {
-        if let Some(result) = self.sample_loading.as_ref().and_then(|rx| rx.try_recv().ok()) {
+        if let Some(result) = self.sample_loading.as_ref().and_then(|rx| match rx.try_recv() {
+            Ok(result) => Some(result),
+            Err(std::sync::mpsc::TryRecvError::Empty) => None,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => Some(Err("Sample worker stopped; retry".into())),
+        }) {
             self.sample_loading = None;
             let expected = self.sample_expected.take();
             let stale = expected
@@ -347,6 +351,7 @@ impl NativeEditor {
         self.load_sample_mode(path, None);
     }
 
+    /// Load embedded or disk-backed audio off the editor thread when no worker is active.
     fn load_sample_mode(&mut self, path: &std::path::Path, disk: Option<bool>) {
         if self.context.is_none() {
             return;
@@ -374,6 +379,7 @@ impl NativeEditor {
 }
 
 impl NativeEditor {
+    /// Prepare or restore the captured source off-thread; draw rejects stale results.
     fn prepare_sample(&mut self, restore: bool) {
         if self.sample_loading.is_some() || self.context.is_none() {
             return;
@@ -575,6 +581,25 @@ fn save_preset_file(path: &std::path::Path, preset: &preset::Preset) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// A disconnected load/preparation worker must release its slot and stale expectation.
+    #[test]
+    fn disconnected_sample_worker_clears_busy_state() {
+        let mut editor = NativeEditor::preview(1);
+        let (tx, rx) = std::sync::mpsc::channel();
+        editor.sample_loading = Some(rx);
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(vec2(900., 700.))
+            .build_ui_state(|ui, editor| editor.draw(ui), editor);
+        harness.step();
+        assert!(harness.state().sample_loading.is_some());
+
+        drop(tx);
+        harness.step();
+        assert!(harness.state().sample_loading.is_none());
+        assert!(harness.state().sample_expected.is_none());
+        assert!(harness.state().status.contains("worker stopped"));
+    }
+
     #[test]
     fn native_presets_round_trip_through_limeshots_reader() {
         let folder = tempfile::tempdir().unwrap();

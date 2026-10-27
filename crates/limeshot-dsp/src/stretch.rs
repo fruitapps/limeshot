@@ -16,6 +16,7 @@ pub enum PrepareError {
     Cancelled,
 }
 
+/// Check the worker cancellation flag without sharing mutable DSP state.
 fn cancelled(cancel: &AtomicBool) -> Result<(), PrepareError> {
     if cancel.load(Ordering::Relaxed) {
         Err(PrepareError::Cancelled)
@@ -154,6 +155,7 @@ pub fn prepare(
 }
 
 // Windowed-sinc interpolation uses one kernel for both channels. All scratch is worker-owned.
+/// Linearly resample interleaved stereo to a bounded frame count, checking cancellation.
 fn resample(input: &[f32], frames: usize, cancel: &AtomicBool) -> Result<Vec<f32>, PrepareError> {
     let n = input.len() / 2;
     if n == frames {
@@ -193,6 +195,7 @@ fn resample(input: &[f32], frames: usize, cancel: &AtomicBool) -> Result<Vec<f32
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Generate a stereo tone with a silent right channel to detect channel leakage.
     fn tone(rate: u32, hz: f64) -> SampleData {
         SampleData::from_stereo(
             rate,
@@ -204,6 +207,7 @@ mod tests {
                 .collect(),
         )
     }
+    /// Check duration, fundamental pitch and stereo separation over supported source rates.
     #[test]
     fn duration_pitch_stereo_and_all_source_rates() {
         for rate in [
@@ -227,6 +231,7 @@ mod tests {
             }
         }
     }
+    /// Exercise identity, silence, tiny-source fallback, validation and cancellation.
     #[test]
     fn bounds_identity_silence_tiny_and_cancel() {
         let source = tone(8000, 440.);

@@ -69,6 +69,7 @@ pub fn prepare_sample(
     Ok(result)
 }
 
+/// Restore validated retained PCM, or validate an unprepared embedded source.
 pub fn restore_sample(text: &str) -> Result<String, String> {
     let sample: Value = serde_json::from_str(text).map_err(|e| e.to_string())?;
     let original = sample
@@ -105,6 +106,7 @@ pub fn restore_sample(text: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Validate portable recipe recall, original restoration and rejection of disk sources.
     #[test]
     fn recipes_reprepare_from_original_restore_and_reject_unapproved_disk() {
         let pcm: Vec<u8> = (0..8000)
