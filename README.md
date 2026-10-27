@@ -175,7 +175,8 @@ These are tracked features, not a percentage of parity with FL Studio.
 | [Feature inventory](docs/roadmap/features.md) / [canonical JSON](docs/roadmap/features.json) | Priorities, dependencies, acceptance criteria, states and evidence |
 | [Menus](docs/roadmap/menus.md), [shortcuts](docs/roadmap/keybindings.md), [settings](docs/roadmap/settings.md) | FL Studio's menu items, shortcuts and settings against LimeShot's |
 | [Known limitations](docs/roadmap/known-limitations.md) | What does not work yet, or is not verified |
-| [Next steps](docs/development/next-steps.md) / [progress log](docs/development/progress.md) | Priorities and dated verification evidence |
+| [Next steps for agents](docs/development/next-steps.md) | Development priorities and FL Studio parity work |
+| [Human verification needed](docs/development/human-verification.md) / [progress log](docs/development/progress.md) | Hands-on checks, owner decisions and dated evidence |
 | [Platform validation](docs/development/platform-validation.md) | CI and hands-on evidence per platform |
 
 ## Lime Native VST3 Suite

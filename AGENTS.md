@@ -8,10 +8,12 @@ code copied from ArtCraft/SoundCraft. Binding rules: `docs/development/principle
 Create and use branches in your existing primary checkout. Run builds and tests from that checkout so Cargo's
 build cache is reused. Avoid separate worktrees or clones for routine branch work. Preserve local changes when
 switching branches, and include the checkout and cache guidance in handoffs.
+Push changes to the feature branch and its PR; never push directly to main or merge automatically.
 All paths and commands below are relative to the repository root unless stated otherwise.
 
 ## Start every session here
-1. Read `docs/development/next-steps.md` (prioritised work) and the latest entries in `docs/development/progress.md`.
+1. Read [next steps for agents](docs/development/next-steps.md), [human verification needed](docs/development/human-verification.md)
+   and the latest entries in [progress](docs/development/progress.md).
 2. Read the relevant records in `docs/roadmap/features.json` before changing a feature. When choosing new work,
    follow P0 → P3 priority and respect `dependencies`.
 3. Architecture: `docs/architecture/{audio-engine,project-model,ui}.md`; reasons: `docs/development/decisions.md`.
@@ -92,9 +94,11 @@ Build the twelve Lime Native VST3 bundles before running from source. Report the
 a successful build or headless test does not establish live GUI/audio behavior on other platforms.
 
 ## Immediate next tasks
-Follow `docs/development/next-steps.md`: verify native plugin embedding and the alpha packages on real hardware,
-then continue the editor menus and production features by priority and dependencies. Keep unverified behavior and
-disabled actions in `docs/roadmap/known-limitations.md`.
+Follow [next steps for agents](docs/development/next-steps.md#development): work toward FL Studio parity and
+implement new features by priority and dependencies. When testing or research needs human input, record the check
+and prerequisites in [human verification needed](docs/development/human-verification.md), then continue independent
+development. Keep unverified behavior and disabled actions in `docs/roadmap/known-limitations.md`; do not promote
+feature statuses without the required evidence.
 
 ## Optional reverse-engineering research tools
 REA is a research aid, not a runtime or contributor prerequisite. Tool availability and configuration depend on

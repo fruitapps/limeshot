@@ -11,8 +11,8 @@ and describe what you tested. A feature being implemented does not mean every wo
 
 Read these before choosing implementation work:
 
-1. [Next steps](docs/development/next-steps.md) and the latest entries in the
-   [progress log](docs/development/progress.md).
+1. [Next steps for agents](docs/development/next-steps.md), [human verification needed](docs/development/human-verification.md)
+   and the latest entries in the [progress log](docs/development/progress.md).
 2. The relevant record in [features.json](docs/roadmap/features.json), including its priority, dependencies,
    acceptance criteria and known gaps. [features.md](docs/roadmap/features.md) is the readable generated view.
 3. [Known limitations](docs/roadmap/known-limitations.md), the [MVP](docs/roadmap/mvp.md), and related issues or PRs.
@@ -20,7 +20,9 @@ Read these before choosing implementation work:
    The binding [project principles](docs/development/principles.md) (constraints, clean-room rules, definition of done) apply to all work.
 
 Feature priorities run P0 through P3; satisfy dependencies before implementing dependent behavior. Check a record
-against the source before assuming a feature is missing. For substantial architecture, format or workflow changes, open an issue with a
+against the source before assuming a feature is missing. When verification requires human input or unavailable
+hardware, record the check and prerequisites in [human verification needed](docs/development/human-verification.md)
+and continue independent FL Studio parity work and new features. For substantial architecture, format or workflow changes, open an issue with a
 concrete proposal before investing in a large patch. Documentation fixes and small bug fixes can go straight to a PR.
 
 Useful entry points include parser regressions with redistributable fixtures, focused editor interaction bugs,

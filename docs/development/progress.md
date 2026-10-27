@@ -284,3 +284,22 @@ tests pass with `LIMESHOT_LIME_PLUGINS` pointing at `native-plugins/target/debug
 159 UI tests and 10 hosted VST3 tests. Local-socket permission was enabled for the plugin bridge.
 Native unit suite: 22 passed. Workspace build, strict Clippy, formatting, inventory and repository
 checks pass. Live GUI/audio and other-platform runtime verification remain open.
+
+
+## 2026-10-27 — Separate agent development from human verification
+
+`next-steps.md` now holds the agent work queue and a Development entry directing agents to
+pursue FL Studio feature/workflow parity and implement new features by priority and dependencies.
+Checks needing human input, hardware, permissions, credentials or owner decisions are recorded
+in the new [human verification queue](human-verification.md), with prerequisites and partial
+evidence, while independent development continues. Implementation and verification statuses
+remain distinct. The existing native/plugin/platform/recording checks, FL observations and
+Piano Roll owner decision are retained in that queue.
+
+Updated AGENTS.md, CONTRIBUTING.md, README.md, the project principles and known limitations
+to distinguish agent work from hands-on verification. Branch/PR delivery remains in the primary
+checkout (`~/Developer/limeshot`) using its Cargo caches, without routine worktrees/clones,
+direct pushes to main or automatic merges.
+
+Documentation-only validation: inventory checks, repository references (195 links, zero errors),
+and whitespace checks pass. No Rust behavior changed; no rebuild or runtime tests were needed.

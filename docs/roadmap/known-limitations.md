@@ -11,9 +11,12 @@ Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not impleme
   size boundaries and corrupt/truncated host envelopes; arbitrary payloads passed to third-party plugins remain
   unverified. UI edge cases and `limeshot-audio` device-loss paths still lack corrupt-input tests; coverage and fuzz
   tooling remain open
-  ([next steps](../development/next-steps.md) item 8).
+  ([agent implementation queue](../development/next-steps.md#implementation), item 8).
 
 ## Platforms and packages
+
+Hands-on checks and prerequisites are tracked in [human verification needed](../development/human-verification.md).
+
 * macOS Apple Silicon is the only platform exercised end to end by hand: build, tests, GUI, realtime audio and
   VST3 processing. The owner has run the Windows x64 build (plugin editors, Explorer drops); there has been no
   systematic hands-on pass on Windows, Linux or Intel macOS.
