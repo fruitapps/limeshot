@@ -18,7 +18,7 @@ feature status and [known limitations](../roadmap/known-limitations.md) accurate
 parity work and new features rather than stopping development at that verification gap. Ask for blocking input
 when needed, while continuing work that does not depend on the answer.
 
-Implement features end to end with the automated tests and local checks available to the agent. A build or
+Implement complete feature workflows and run the automated tests and local checks available to the agent. A build or
 headless test does not establish live GUI/audio behavior or verification on another platform. Do not promote
 IMPLEMENTED to VERIFIED until the required evidence exists.
 

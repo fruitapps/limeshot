@@ -26,6 +26,9 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphic
 [dev-dependencies]
 tempfile.workspace = true
 
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2"
+
 # Not `[lints] workspace = true`: the workspace forbids `unsafe`, which this crate needs for FFI.
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

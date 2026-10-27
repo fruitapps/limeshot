@@ -303,3 +303,26 @@ direct pushes to main or automatic merges.
 
 Documentation-only validation: inventory checks, repository references (195 links, zero errors),
 and whitespace checks pass. No Rust behavior changed; no rebuild or runtime tests were needed.
+
+
+## 2026-10-27 — PR #20 CI hang-test synchronization and review wording
+
+Linux ARM64 CI job `122120738692` (run `40483780318`, head `fcc77f7`) failed
+`a_hung_bridge_times_out` because the simulated hung bridge returned nonzero audio. Sending
+SIGSTOP is asynchronous: the audio thread can process a request before the process finishes
+stopping. The test now waits for the child stop event using bounded `waitpid(WUNTRACED |
+WNOHANG)` polling before starting the timeout measurement. It also refills the later block
+with nonzero input and verifies that it stays silent after the timeout. `libc` is a Unix-only
+test dependency; production bridge processing and timeout behavior are unchanged.
+
+Addressed CodeRabbit's next-steps wording: agents must explicitly run the available automated
+tests and local checks, in addition to implementing complete workflows.
+
+Work continues on `codex/hostile-audio-decoders` in the primary checkout
+(`~/Developer/limeshot`), reusing its Cargo caches; no worktree/clone or direct main push.
+
+Local validation on macOS Apple Silicon: all five bridge integration tests pass against the
+debug VST3 bundles; the hang regression passes 100/100 runs with eight concurrent workers.
+Tests used local-socket/child-process permission. Workspace strict Clippy, formatting, inventory
+and repository checks pass. This is a test/documentation change; native bundles and production
+code were unchanged. Linux ARM64 validation awaits the updated CI run.

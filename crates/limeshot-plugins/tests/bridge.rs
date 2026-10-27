@@ -75,6 +75,29 @@ fn signal(pid: u32, sig: &str) {
     assert!(ok);
 }
 
+fn stop_and_wait(pid: u32) {
+    signal(pid, "-STOP");
+    let pid = i32::try_from(pid).expect("child pid fits pid_t");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let mut status = 0;
+        // SAFETY: pid names this test's bridge child, status is writable, and WNOHANG
+        // bounds each call. Observing a stopped child does not reap it.
+        let result = unsafe { libc::waitpid(pid, &mut status, libc::WUNTRACED | libc::WNOHANG) };
+        if result == pid {
+            assert!(libc::WIFSTOPPED(status), "bridge exited instead of stopping: {status}");
+            assert_eq!(libc::WSTOPSIG(status), libc::SIGSTOP);
+            return;
+        }
+        if result < 0 {
+            let error = std::io::Error::last_os_error();
+            assert_eq!(error.kind(), std::io::ErrorKind::Interrupted, "waitpid: {error}");
+        }
+        assert!(Instant::now() < deadline, "bridge did not stop within five seconds");
+        std::thread::sleep(Duration::from_millis(2));
+    }
+}
+
 #[test]
 fn a_crashed_bridge_leaves_silence_and_the_host_running() {
     let (inst, mut proc) = spawn(&testing::gain_class());
@@ -96,7 +119,9 @@ fn a_crashed_bridge_leaves_silence_and_the_host_running() {
 #[test]
 fn a_hung_bridge_times_out() {
     let (inst, mut proc) = spawn(&testing::gain_class());
-    signal(inst.process_id(), "-STOP");
+    // Sending SIGSTOP is asynchronous; wait for the whole child thread group to stop
+    // before sending audio, or a still-running audio thread can return one more block.
+    stop_and_wait(inst.process_id());
     let mut buf = vec![0.5f32; 2 * 64];
     let t = Instant::now();
     proc.process(&mut buf, &[], &Transport::default());
@@ -104,9 +129,11 @@ fn a_hung_bridge_times_out() {
     assert!(buf.iter().all(|&s| s == 0.0));
     assert!(inst.crashed(), "the hung process is stopped for good");
     // Later blocks do not wait again.
+    buf.fill(0.5);
     let t = Instant::now();
     proc.process(&mut buf, &[], &Transport::default());
     assert!(t.elapsed() < Duration::from_millis(50));
+    assert!(buf.iter().all(|&s| s == 0.0), "later blocks stay silent");
     drop(inst);
 }
 
