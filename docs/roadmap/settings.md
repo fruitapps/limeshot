@@ -55,8 +55,6 @@ Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 | SET-055 | Mixer | Metronome track | field | --- | Options › Audio settings › Mixer › Metronome track | OBSERVED | — | NOT_STARTED | TR-008 |  |
 | SET-056 | Mixer | Play truncated notes on transport | switch | on | Options › Audio settings › Mixer › Play truncated notes on transport | OBSERVED | — | NOT_STARTED | TR-002 |  |
 | SET-057 | Mixer | Reset plugins on transport | switch | off | Options › Audio settings › Mixer › Reset plugins on transport | OBSERVED | — | NOT_STARTED | PLG-002 |  |
-| SET-190 | Input / output | Monitor external input | Off / When armed / On |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | OBSERVED | `ui.record.monitor` | IMPLEMENTED | REC-003 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
-| SET-191 | Input / output | Monitor Mixer track | Mixer destination by position |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | OBSERVED | `ui.record.monitor_track` | IMPLEMENTED | REC-003 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
 
 ## General
 
@@ -278,9 +276,21 @@ Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 |---|---|---|---|---|---|---|---|---|---|---|
 | SET-189 | Switches | Auto scrolling | switch |  | Options › Auto scrolling; toolbar Auto scrolling button (session 15) | OBSERVED | `settings.auto_scroll` | IMPLEMENTED | UI-016 | Off by default. Shared Options/toolbar switch, saved with application settings; no project edit. |
 
+## Mixer
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-190 | Input / Recording pickup | Monitor external input | Off / When armed / On |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | VERIFIED | `ui.record.monitor` | IMPLEMENTED | REC-003 | Documented in the FL manual; also available on linked Playlist Audio Tracks. FL runtime defaults unobserved. LimeShot: Settings › Audio › Monitor external input; session-local. See docs/research/recording-monitoring-and-count-in.md. |
+
+## Playlist
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-191 | Track mode › Audio track | Mixer track assignment | Mixer insert selector |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | VERIFIED | `ui.record.monitor_track` | IMPLEMENTED | REC-003 | Documented in the FL manual: link a Playlist Audio Track to a Mixer insert; hardware input is selected on the Mixer track. FL runtime choices/defaults unobserved. LimeShot: Settings › Audio › Monitor Mixer track selects the single input monitoring destination by position; session-local, not per-track hardware I/O. See docs/research/recording-monitoring-and-count-in.md. |
+
 ## Toolbar
 
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SET-192 | Recording switches | Recording precount | switch |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | OBSERVED | `ui.record.count_in` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
-| SET-193 | Recording switches | Recording precount bars | one/two bars |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | OBSERVED | `ui.record.count_in_bars` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
+| SET-192 | Recording switches | Recording precount | switch |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | VERIFIED | `ui.record.count_in` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
+| SET-193 | Recording switches | Recording precount bars | bar selector (FL choices unobserved) |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | VERIFIED | `ui.record.count_in_bars` | IMPLEMENTED | REC-007 | Documented in the FL manual: right-click Recording precount to choose bars. Exact FL choices and runtime defaults unobserved. LimeShot offers one/two bars; session-local. See docs/research/recording-monitoring-and-count-in.md. |
