@@ -261,3 +261,26 @@ not exercised by this change.
 Work uses branch `codex/hostile-audio-decoders` in the existing primary checkout
 (`~/Developer/limeshot`) with its Cargo caches. Continue there; do not create a routine
 worktree or clone.
+
+
+## 2026-10-27 — Plugin-state corruption and decoded size boundaries
+
+Continued the hostile-input audit on `codex/hostile-audio-decoders` with plugin-state tests.
+The base64 guard previously treated padding as decoded bytes, rejecting a valid state exactly
+at the documented 64 MiB limit. It now counts non-whitespace quartets before allocating,
+allows the final padded quartet, and checks the exact decoded size before retaining the state.
+Small-limit tests cover every padding alignment, whitespace and one/two-byte overruns without
+allocating a 64 MiB fixture. Invalid base64 still restores defaults while retaining plugin
+identity. Host state-container tests reject every truncation and extreme component/controller
+lengths, while preserving opaque payload bytes for the plugin reader.
+
+These checks cover the host container and serialized text; they do not establish robustness
+of arbitrary third-party plugin state readers. PLG-005 evidence and remaining test gaps are
+updated. Work remains in the primary checkout (`~/Developer/limeshot`) with its Cargo caches;
+continue branch work there without a routine worktree or clone.
+
+Local validation on macOS Apple Silicon: rebuilt all twelve debug VST3 bundles; full workspace
+tests pass with `LIMESHOT_LIME_PLUGINS` pointing at `native-plugins/target/debug-bundled`, including
+159 UI tests and 10 hosted VST3 tests. Local-socket permission was enabled for the plugin bridge.
+Native unit suite: 22 passed. Workspace build, strict Clippy, formatting, inventory and repository
+checks pass. Live GUI/audio and other-platform runtime verification remain open.

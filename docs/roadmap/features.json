@@ -5378,7 +5378,10 @@
         "crates/limeshot-core/tests/plugins.rs::plugin_channels_and_effects_survive_json_and_sanitize",
         "crates/limeshot-core/src/plugin.rs::tests::a_plugin_ref_round_trips_through_json",
         "crates/limeshot-app/tests/ui.rs::a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens",
-        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio"
+        "native-plugins/shared/src/processor.rs::tests::unchanged_sample_state_keeps_held_voices_and_decoded_audio",
+        "crates/limeshot-core/src/plugin.rs::tests::plugin_state_limit_accounts_for_padding_and_whitespace",
+        "crates/limeshot-core/src/plugin.rs::tests::corrupted_plugin_state_text_loads_as_empty",
+        "crates/limeshot-plugins/src/instance.rs::tests::corrupt_state_lengths_and_truncations_are_refused"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5388,7 +5391,7 @@
           "HelpAliases.scr (plugins\\wrapper.htm)"
         ]
       },
-      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md)."
+      "notes": "VST support is a mandatory next step (project owner, 2026-10-21; next-steps.md). 2026-10-27: padded base64 at the 64 MiB decoded limit is accepted; whitespace does not count toward the encoded size guard and an exact decoded-size check rejects over-limit payloads. Small-limit tests cover all padding alignments, malformed state text falls back to defaults, and host envelopes reject truncations and hostile component/controller lengths. Opaque third-party plugin payload handling remains unverified."
     },
     {
       "id": "PLG-006",

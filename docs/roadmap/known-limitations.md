@@ -7,8 +7,10 @@ Current as of v0.1.0-alpha.1 (2026-10-25). Everything here is either not impleme
   (16/24-bit PCM and float), FLAC, AIFF and synthetic silent MP3. Successful audio imports are checked for bounded,
   finite stereo PCM. Invalid AIFF headers can panic inside Symphonia; format probing now converts an unwinding panic
   to a decode error. This corpus does not establish exhaustive decoder robustness, memory bounds inside third-party
-  codecs, real-world MP3 fidelity or Windows/Linux results. Plugin state blobs, UI edge cases and `limeshot-audio`
-  device-loss paths still lack corrupt-input tests; coverage and fuzz tooling remain open
+  codecs, real-world MP3 fidelity or Windows/Linux results. Plugin-state tests cover malformed base64, decoded
+  size boundaries and corrupt/truncated host envelopes; arbitrary payloads passed to third-party plugins remain
+  unverified. UI edge cases and `limeshot-audio` device-loss paths still lack corrupt-input tests; coverage and fuzz
+  tooling remain open
   ([next steps](../development/next-steps.md) item 8).
 
 ## Platforms and packages
