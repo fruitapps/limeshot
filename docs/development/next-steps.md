@@ -43,8 +43,9 @@ Current as of 2026-10-25, after v0.1.0-alpha.1. Read the feature record and its 
    arrangements and checked fixtures from older FL versions.
 6. **Plugin formats.** CLAP (PLG-001) and AU (PLG-003); Linux editor embedding (`X11EmbedWindowID`, `IRunLoop`).
 7. **Refresh the README Mixer screenshots** (`mixer.png`, `mixer-eq.png`): they predate the On + Mix insert slots.
-8. **Test-suite gaps from the hostile-input audit** (see [progress](progress.md)): corrupt-file tests for the audio
-   decoders (WAV, MP3, FLAC) and plugin state blobs; UI edge cases (zero-size windows, empty projects in every editor,
+8. **Test-suite gaps from the hostile-input audit** (see [progress](progress.md)): broader audio-decoder corruption
+   coverage beyond the deterministic WAV/MP3/FLAC/AIFF corpus and corrupt plugin state blobs; UI edge cases
+   (zero-size windows, empty projects in every editor,
    extreme zoom); `limeshot-audio` device-loss and stream-error tests; coverage (`cargo-llvm-cov`) and fuzz
    (`cargo-fuzz`) tooling to measure and extend the above; repeat the hostile-input run on Windows and Linux.
 

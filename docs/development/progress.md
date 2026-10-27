@@ -232,3 +232,32 @@ native strict Clippy, both formatting checks and inventory/repository checks pas
 
 Work stays in the existing primary checkout (`~/Developer/limeshot`) on `codex/fix-merge-ci`, using
 its Cargo caches. Continue branch work and validation there; do not create a routine worktree or clone.
+
+
+## 2026-10-27 — Corrupt audio import regression coverage
+
+Added `crates/limeshot-dsp/tests/hostile_audio.rs`: 2,400 deterministic byte mutations,
+truncations, 0xFF runs and header-focused edits across 16/24-bit PCM WAV, float WAV, FLAC, AIFF
+and generated silent MP3. Every original must decode; successful mutations must stay within
+the requested frame limit and produce finite, complete stereo frames with a positive sample rate.
+A separate float-WAV test checks that NaN and infinities become silence.
+
+The corpus exposed a Symphonia 0.5.5 panic in format probing when a corrupt AIFF sample rate
+produces a zero TimeBase. The loader now contains an unwinding third-party probe panic and
+returns `SampleError::Decode`; a direct zero-rate AIFF regression covers the failure. The
+containment surrounds format probing only and does not change audio-thread processing or
+skipped-frame behavior. It does not establish exhaustive robustness or bound allocations
+inside third-party codecs. INS-001/INS-008 evidence and remaining coverage gaps are updated.
+
+Local validation on macOS Apple Silicon: the three new decoder tests pass in debug and release
+profiles; the native unit suite passes all 22 tests. `cargo test --workspace` passes, including
+159 UI tests and 10 hosted VST3 tests. The workspace run required local-socket permission for
+the plugin process bridge after the sandbox refused its listener. `cargo build --workspace`,
+strict workspace Clippy, formatting and inventory/repository checks pass. All twelve release
+VST3 bundles rebuilt successfully; the existing hosted integration-test executable was then
+rerun against those bundles and all 10 tests passed. Live GUI/audio and other platforms were
+not exercised by this change.
+
+Work uses branch `codex/hostile-audio-decoders` in the existing primary checkout
+(`~/Developer/limeshot`) with its Cargo caches. Continue there; do not create a routine
+worktree or clone.
