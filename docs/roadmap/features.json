@@ -6939,7 +6939,8 @@
       ],
       "tests": [
         "CI 39817431504 at ab54402: https://github.com/fruitapps/limeshot/actions/runs/39817431504/job/119960022648",
-        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085936"
+        "CI 39826217710 at 38d9a7b: https://github.com/fruitapps/limeshot/actions/runs/39826217710/job/119990085936",
+        "native-plugins/vendor/nice-plug/src/event_loop/windows.rs::tests::concurrent_event_loops_register_distinct_window_classes"
       ],
       "reference": {
         "application": "FL Studio",
@@ -6948,7 +6949,7 @@
           "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
-      "notes": "Runner evidence is in docs/development/platform-validation.md (latest: 40219529679 at 28d3a41). The owner has run the Windows build by hand (plugin editors, Explorer drops); no systematic GUI/audio-device pass yet."
+      "notes": "Runner evidence is in docs/development/platform-validation.md (latest: 40219529679 at 28d3a41). The owner has run the Windows build by hand (plugin editors, Explorer drops); no systematic GUI/audio-device pass yet. 2026-10-27: patched nice-plug Windows event-loop class names to use a DLL-specific atomic sequence after concurrent creation collided in CI 40463705283 at 586443f; native-plugin CI now runs the vendor regression tests. Hardware verification remains separate."
     },
     {
       "id": "PF-004",
@@ -8433,7 +8434,8 @@
         "crates/limeshot-ui/tests/lime_vst3.rs::converted_delay_uses_project_and_automated_tempo_after_enabling",
         "native-plugins/shared/src/sample.rs::format_tests::mp3_and_flac_import_into_portable_sampler_state",
         "docs/development/live-plugin-checks-2026-10-25.md",
-        "limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads"
+        "limeshot-ui loaded_modules_survive_last_client_and_concurrent_reloads",
+        "native-plugins/vendor/nice-plug/src/event_loop/windows.rs::tests::concurrent_event_loops_register_distinct_window_classes"
       ],
       "reference": {
         "application": "Owner requirement",
@@ -8443,7 +8445,7 @@
           "docs/research/lime-native-ui.md"
         ]
       },
-      "notes": "Twelve release and debug bundles pass the exported-binary verifier on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024; native-plugin CI passes on macOS, Windows and Linux. pluginval 1.0.4 strictness 5 passed the first nine bundles; it has not been rerun on the current twelve. Gate/Drive/Chorus use IDs 9–11; original IDs and control order are stable. Native editor geometry and sampler audio tests are automated. The local egui-baseview patch binds its own GL context during painter destruction, so closing a plugin cannot delete a host's GL objects. Live macOS pass: docs/development/live-plugin-checks-2026-10-25.md (partial). Hands-on checks in other DAWs remain open. Evidence: native-plugins/VALIDATION.md. 2026-10-26: relative drags accumulate locally across parameter quantization/host latency; displayed numeric values accept inline entry. Inactive voice-prefix processing and bounded editor repaints reduce redundant work."
+      "notes": "Twelve release and debug bundles pass the exported-binary verifier on macOS arm64 at 44.1/48/96 kHz and buffers 1/64/333/1024; native-plugin CI passes on macOS, Windows and Linux. pluginval 1.0.4 strictness 5 passed the first nine bundles; it has not been rerun on the current twelve. Gate/Drive/Chorus use IDs 9–11; original IDs and control order are stable. Native editor geometry and sampler audio tests are automated. The local egui-baseview patch binds its own GL context during painter destruction, so closing a plugin cannot delete a host's GL objects. Live macOS pass: docs/development/live-plugin-checks-2026-10-25.md (partial). Hands-on checks in other DAWs remain open. Evidence: native-plugins/VALIDATION.md. 2026-10-26: relative drags accumulate locally across parameter quantization/host latency; displayed numeric values accept inline entry. Inactive voice-prefix processing and bounded editor repaints reduce redundant work. 2026-10-27: patched nice-plug Windows event-loop class names to use a DLL-specific atomic sequence after concurrent creation collided in CI 40463705283 at 586443f; native-plugin CI now runs the vendor regression tests. Hardware verification remains separate."
     },
     {
       "id": "WF-009",

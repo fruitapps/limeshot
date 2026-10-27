@@ -210,3 +210,25 @@ bugs: `u64::MAX` note/clip/marker ticks overflowed tick arithmetic (panic in deb
 `Project::sanitize` now clamps all positions and lengths to `MAX_TICK` (about a million 4/4 bars), with a unit test.
 Result: `cargo test --workspace`, clippy and fmt pass on macOS. Not yet covered: audio file decoders (WAV/MP3/FLAC)
 on corrupt input, plugin state blobs, automation point ticks beyond clamping, and UI-level edge cases.
+
+
+## 2026-10-27 — Windows CI event-loop registration race
+
+CI `40463705283` at main merge `586443f` aborted in Windows UI tests at nice-plug's
+`RegisterClassExA` assertion (`windows.rs:94`), while the other six jobs passed. The framework used
+`QueryPerformanceCounter` alone to name window classes, so concurrent plugin creation could register
+the same class twice. Names now combine a DLL-local atomic sequence with that static's address,
+separating concurrent instances and framework copies in different DLLs. No test serialization is needed.
+
+Added `concurrent_event_loops_register_distinct_window_classes`: eight threads create/destroy 512
+hidden event-loop windows and check name uniqueness and GUI task dispatch. Native-plugin CI now runs
+the patched framework's unit suite on Windows, Linux and macOS. Feature statuses remain IMPLEMENTED;
+headless checks do not verify live GUI/audio behavior.
+
+Local validation on macOS Apple Silicon: rebuilt all twelve debug VST3 bundles; native-plugin suite
+22 passed, vendor suite 8 passed, workspace suite 443 passed; Windows x86-64 vendor test cross-compilation passed.
+Workspace tests ran with local-socket permission for the plugin bridge after the sandbox denied binding. Workspace and
+native strict Clippy, both formatting checks and inventory/repository checks passed.
+
+Work stays in the existing primary checkout (`~/Developer/limeshot`) on `codex/fix-merge-ci`, using
+its Cargo caches. Continue branch work and validation there; do not create a routine worktree or clone.
