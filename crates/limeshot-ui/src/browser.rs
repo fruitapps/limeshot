@@ -34,12 +34,16 @@ pub struct State {
     search_results: Vec<PathBuf>,
     listings: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
     drag_peaks: HashMap<PathBuf, std::sync::Arc<crate::playlist::Peaks>>,
-    pending_preview: Option<PathBuf>,
+    pending_preview: Option<(PathBuf, f32)>,
     pub selected: Option<PathBuf>,
     /// Screen rectangles of the files listed in the last frame (for tests and tools).
     pub file_rects: Vec<(PathBuf, Rect)>,
     /// The preview playing: its file, when it started and how long it lasts (seconds).
     pub preview_started: Option<(PathBuf, std::time::Instant, f64)>,
+    /// Normalized start offset (`0.0..=1.0`) of the active preview.
+    pub preview_start_fraction: f32,
+    /// Active right-click scrub position (`0.0..=1.0`) on the preview waveform before release.
+    pub scrub_fraction: Option<f32>,
     /// The preview panel's waveform: min/max per column of the selected sample.
     preview_peaks: Option<(PathBuf, Vec<(f32, f32)>)>,
     /// The preview panel's waveform rectangle in the last frame (for tests).
@@ -250,19 +254,30 @@ pub fn new_sampler_channel(app: &mut LimeShotApp, path: &Path) -> Option<Channel
 
 /// Play the sample file at `path` (once it has loaded), as the Browser's preview.
 pub fn preview(app: &mut LimeShotApp, path: &Path) {
+    preview_from(app, path, 0.0);
+}
+
+/// Play the sample file at `path` starting at `start_fraction` (`0.0..=1.0`).
+pub fn preview_from(app: &mut LimeShotApp, path: &Path, start_fraction: f32) {
+    let frac = start_fraction.clamp(0.0, 1.0);
     app.samples.request_path(path.to_path_buf());
-    app.ui.browser.pending_preview = Some(path.to_path_buf());
+    app.ui.browser.pending_preview = Some((path.to_path_buf(), frac));
 }
 
 /// Start a requested preview once its sample has loaded (every frame, so previews from the
 /// Playlist's picker play with the Browser hidden too).
 pub fn poll_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
-    if let Some(p) = app.ui.browser.pending_preview.clone() {
+    if let Some((p, frac)) = app.ui.browser.pending_preview.clone() {
         match app.samples.status_of_path(&p) {
             Some(SampleStatus::Ready(s)) => {
                 let s = s.clone();
+                app.ui.browser.preview_start_fraction = frac;
                 app.ui.browser.preview_started = Some((p, std::time::Instant::now(), s.duration_secs()));
-                app.send(Msg::PreviewSample(s));
+                if frac > 0.0 {
+                    app.send(Msg::PreviewSampleFrom(s, frac));
+                } else {
+                    app.send(Msg::PreviewSample(s));
+                }
                 app.ui.browser.pending_preview = None;
             }
             Some(SampleStatus::Failed(e)) => {
@@ -276,7 +291,8 @@ pub fn poll_preview(app: &mut LimeShotApp, ctx: &egui::Context) {
 }
 
 /// FL Studio's preview panel: the selected sample's waveform, the preview's position, its rate
-/// and length. A click on it (or the play button) plays the sample again.
+/// and length. Left-click (or the play button) plays from the start; right-click scrubs the
+/// position and plays from that offset when released.
 fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     app.ui.browser.preview_rect = None;
@@ -297,6 +313,7 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         if icon_button(ui, Icon::Stop, false, 20.0, "Stop sample preview").clicked() {
             app.ui.browser.cancel_preview();
             app.ui.browser.preview_started = None;
+            app.ui.browser.scrub_fraction = None;
             app.send(Msg::StopPreview);
         }
         ui.add(egui::Label::new(RichText::new(file_label(&path)).font(semibold(11.0)).color(t.text)).truncate());
@@ -316,7 +333,7 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
     });
     let (r, resp) = ui.allocate_exact_size(
         vec2(ui.available_width(), ui.available_height().max(24.0)),
-        Sense::click(),
+        Sense::click_and_drag(),
     );
     app.ui.browser.preview_rect = Some(r);
     let painter = ui.painter_at(r);
@@ -371,11 +388,42 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
             );
         }
     }
-    // The preview's position while it plays.
-    if let Some((p, since, secs)) = &app.ui.browser.preview_started
+    let (sec_pressed, sec_down, sec_released, pos) = ui.input(|i| {
+        (
+            i.pointer.button_pressed(egui::PointerButton::Secondary),
+            i.pointer.button_down(egui::PointerButton::Secondary),
+            i.pointer.button_released(egui::PointerButton::Secondary),
+            i.pointer.latest_pos(),
+        )
+    });
+    if sec_pressed
+        && let Some(p) = pos
+        && r.contains(p)
+    {
+        app.ui.browser.cancel_preview();
+        app.ui.browser.preview_started = None;
+        app.send(Msg::StopPreview);
+        let frac = ((p.x - r.left()) / r.width().max(1.0)).clamp(0.0, 1.0);
+        app.ui.browser.scrub_fraction = Some(frac);
+    }
+    if sec_down && app.ui.browser.scrub_fraction.is_some() {
+        if let Some(p) = pos {
+            let frac = ((p.x - r.left()) / r.width().max(1.0)).clamp(0.0, 1.0);
+            app.ui.browser.scrub_fraction = Some(frac);
+        }
+    } else if (sec_released || !sec_down)
+        && let Some(frac) = app.ui.browser.scrub_fraction.take()
+    {
+        preview_from(app, &path, frac);
+    }
+
+    if let Some(frac) = app.ui.browser.scrub_fraction {
+        let x = r.left() + frac * r.width();
+        painter.line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, t.accent));
+    } else if let Some((p, since, secs)) = &app.ui.browser.preview_started
         && *p == path
     {
-        let k = since.elapsed().as_secs_f64() / secs.max(1e-3);
+        let k = f64::from(app.ui.browser.preview_start_fraction) + since.elapsed().as_secs_f64() / secs.max(1e-3);
         if k < 1.0 {
             let x = r.left() + k as f32 * r.width();
             painter.line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.5, t.accent));
@@ -386,7 +434,10 @@ fn preview_panel(app: &mut LimeShotApp, ui: &mut Ui) {
         preview(app, &path);
     }
     if resp.hovered() {
-        app.hint(format!("{} — click to hear it", path.display()));
+        app.hint(format!(
+            "{} — left-click to play from start, right-click and drag to scrub (plays on release)",
+            path.display()
+        ));
     }
 }
 

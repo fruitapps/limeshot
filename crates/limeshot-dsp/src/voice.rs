@@ -514,15 +514,27 @@ impl Voice {
 
     /// Plays a whole sample once at its own pitch (browser preview).
     pub fn preview(sample: Arc<SampleData>, sample_rate: f32) -> Option<Self> {
+        Self::preview_from(sample, 0.0, sample_rate)
+    }
+
+    /// Plays a sample once at its own pitch starting at `start_fraction` (`0.0..=1.0`) of the
+    /// sample's length (browser scrub preview).
+    pub fn preview_from(sample: Arc<SampleData>, start_fraction: f32, sample_rate: f32) -> Option<Self> {
         let frames = sample.frames() as f64;
         if frames < 2.0 {
             return None;
         }
+        let frac = if start_fraction.is_finite() {
+            f64::from(start_fraction.clamp(0.0, 1.0))
+        } else {
+            0.0
+        };
+        let pos = (frac * frames).min((frames - 1.0).max(0.0));
         let step = f64::from(sample.sample_rate) / f64::from(sample_rate);
         Some(Self {
             source: Source::Sampler {
                 sample,
-                pos: 0.0,
+                pos,
                 step,
                 lo: 0.0,
                 hi: frames,

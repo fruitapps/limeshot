@@ -4105,9 +4105,9 @@ fn a_wide_row_does_not_stop_a_window_from_being_resized() {
     assert!(h.query_by_label("LimeSynth").is_none());
 }
 
-/// Drawn/moved notes have timed releases; held piano keys retain the mouse-release safety net.
+/// Drawn/moved notes stay held across frames and release with the pointer.
 #[test]
-fn drawing_auditions_have_a_duration_and_keyboard_auditions_are_held() {
+fn drawing_auditions_follow_mouse_hold_and_release() {
     let (mut h, pat, ch) = empty_piano_roll();
     let g = piano_geometry(&h);
     let p = g.pos(STEP_TICKS * 2, 60);
@@ -4115,13 +4115,16 @@ fn drawing_auditions_have_a_duration_and_keyboard_auditions_are_held() {
     h.step();
     press(&mut h, p, PointerButton::Primary, true);
     assert!(
-        h.state().auditions.is_empty(),
-        "drawn notes use the audio clock, not the mouse lifetime"
+        h.state().auditions.contains(&(ch, 60)),
+        "drawn notes stay held until release"
     );
     // Dragged up two keys: the first audition ends, the new key sounds.
     h.event(Event::PointerMoved(g.pos(STEP_TICKS * 2, 62)));
     h.step();
-    assert!(h.state().auditions.is_empty());
+    assert_eq!(h.state().auditions, vec![(ch, 62)]);
+    h.step();
+    h.step();
+    assert_eq!(h.state().auditions, vec![(ch, 62)]);
     press(&mut h, g.pos(STEP_TICKS * 2, 62), PointerButton::Primary, false);
     h.step();
     assert!(h.state().auditions.is_empty());
@@ -5548,7 +5551,7 @@ fn channel_and_playlist_mute_locks_preserve_state_when_soloing() {
     h.state_mut().ui.workspace.close(Win::ChannelRack);
     h.step();
     let g = h.state().ui.playlist.geometry.unwrap();
-    let mute = egui::pos2(g.grid.left() - 14.0, g.pos(0, 0).y);
+    let mute = h.state().ui.playlist.track_mute_rects[0].1.center();
     click_with(&mut h, mute, PointerButton::Primary, Modifiers::SHIFT);
     assert!(h.state().project().playlist.tracks[0].mute_locked);
     let other = mute + vec2(0.0, g.track_h);
@@ -6638,8 +6641,7 @@ fn locked_rack_and_playlist_tracks_allow_explicit_on_off_clicks() {
     assert!(h.state().project().channel(channel).unwrap().mute_locked);
     h.state_mut().ui.workspace.close(Win::ChannelRack);
     h.step();
-    let g = h.state().ui.playlist.geometry.unwrap();
-    let on = egui::pos2(g.grid.left() - 14.0, g.pos(0, 0).y);
+    let on = h.state().ui.playlist.track_mute_rects[0].1.center();
     click_with(&mut h, on, PointerButton::Primary, Modifiers::SHIFT);
     click(&mut h, on, PointerButton::Primary);
     assert!(h.state().project().playlist.tracks[0].muted);
@@ -7339,4 +7341,234 @@ fn sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized() {
             .path,
         moved_second.to_string_lossy()
     );
+}
+
+#[test]
+fn rev1_pattern_edits_select_the_playlist_source() {
+    let mut h = harness(false);
+    let first = h.state().current_pattern();
+    let second = PatternId(
+        h.state_mut()
+            .exec(Command::AddPattern { name: "Second".into() })
+            .unwrap(),
+    );
+    assert_eq!(h.state().ui.place, Some(ClipSource::Pattern(second)));
+    h.state_mut().set_current_pattern(second);
+    h.state_mut().exec(Command::RenamePattern {
+        pattern: first,
+        name: "First edited".into(),
+    });
+    assert_eq!(h.state().ui.place, Some(ClipSource::Pattern(first)));
+    assert_eq!(
+        h.state().current_pattern(),
+        second,
+        "an old held gesture must not switch editors back"
+    );
+}
+
+#[test]
+fn rev1_browser_scrub_is_silent_until_release() {
+    let mut h = harness(true);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let path = bundled("Lime Hat Open.wav");
+    let pos = h.state().ui.browser.file_pos(&path).unwrap();
+    click(&mut h, pos, PointerButton::Primary);
+    wait_for(&mut h, "preview", |a| a.ui.browser.preview_started.is_some());
+    let r = h.state().ui.browser.preview_rect.unwrap();
+    let from = egui::pos2(r.left() + r.width() * 0.25, r.center().y);
+    h.event(Event::PointerMoved(from));
+    h.step();
+    press(&mut h, from, PointerButton::Secondary, true);
+    assert!(h.state().ui.browser.preview_started.is_none());
+    let to = egui::pos2(r.left() + r.width() * 0.75, r.center().y);
+    h.event(Event::PointerMoved(to));
+    h.step();
+    h.step();
+    assert!(h.state().ui.browser.preview_started.is_none());
+    assert!((h.state().ui.browser.scrub_fraction.unwrap() - 0.75).abs() < 0.01);
+    press(&mut h, to, PointerButton::Secondary, false);
+    wait_for(&mut h, "scrub preview", |a| a.ui.browser.preview_started.is_some());
+    assert!((h.state().ui.browser.preview_start_fraction - 0.75).abs() < 0.01);
+}
+
+#[test]
+fn rev1_playlist_track_selection_grouping_height_and_focus_options() {
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.step();
+    let leds = h.state().ui.playlist.track_leds.clone();
+    click(&mut h, leds[1].1.center(), PointerButton::Primary);
+    assert_eq!(h.state().ui.playlist.selected_tracks, vec![1]);
+    drag(&mut h, leds[1].1.center(), leds[3].1.center());
+    assert_eq!(h.state().ui.playlist.selected_tracks, vec![1, 2, 3]);
+    limeshot_ui::playlist_menu::run(h.state_mut(), limeshot_ui::playlist_menu::Act::GroupTracks);
+    assert!(!h.state().project().playlist.tracks[1].grouped_with_above);
+    assert!(
+        h.state().project().playlist.tracks[2..=3]
+            .iter()
+            .all(|t| t.grouped_with_above)
+    );
+    h.step();
+    let edge = h
+        .state()
+        .ui
+        .playlist
+        .track_resize_rects
+        .iter()
+        .find(|(tr, _)| *tr == 1)
+        .unwrap()
+        .1
+        .center();
+    drag(&mut h, edge, edge + vec2(0.0, 35.0));
+    assert!(h.state().project().playlist.tracks[1].height.is_some_and(|h| h > 60.0));
+    h.state_mut().exec(Command::SetPlaylistTrackGroupCollapsed {
+        track: 1,
+        collapsed: true,
+    });
+    h.step();
+    assert!(
+        !h.state()
+            .ui
+            .playlist
+            .track_leds
+            .iter()
+            .any(|(tr, _)| *tr == 2 || *tr == 3)
+    );
+    let tab = h
+        .state()
+        .ui
+        .playlist
+        .focus_tab_rects
+        .iter()
+        .find(|(f, _)| *f == limeshot_ui::playlist::ClipFocus::Sample)
+        .unwrap()
+        .1
+        .center();
+    click(&mut h, tab, PointerButton::Primary);
+    let opt = h
+        .state()
+        .ui
+        .playlist
+        .focus_option_rects
+        .iter()
+        .find(|(label, _)| *label == "Show fade edit controls")
+        .unwrap()
+        .1
+        .center();
+    click(&mut h, opt, PointerButton::Primary);
+    assert!(!h.state().ui.playlist.audio_show_fades);
+}
+
+#[test]
+fn rev1_clip_drag_scrolls_past_the_playlist_viewport() {
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    let pattern = h.state().current_pattern();
+    let clip = ClipId(
+        h.state_mut()
+            .exec(Command::AddClip {
+                pattern,
+                track: 0,
+                start: 0,
+                length: Some(PPQ * 4),
+            })
+            .unwrap(),
+    );
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let from = g.pos(PPQ, 0);
+    let to = egui::pos2(g.grid.right() + 30.0, from.y);
+    h.event(Event::PointerMoved(from));
+    h.step();
+    press(&mut h, from, PointerButton::Primary, true);
+    h.event(Event::PointerMoved(to));
+    h.step();
+    for _ in 0..12 {
+        h.step();
+    }
+    assert!(h.state().ui.playlist.scroll.x > 100.0);
+    let start = h.state().project().clip(clip).unwrap().start;
+    for _ in 0..4 {
+        h.step();
+    }
+    assert!(h.state().project().clip(clip).unwrap().start > start);
+    press(&mut h, to, PointerButton::Primary, false);
+}
+
+#[test]
+fn rev1_audio_stretch_resamples_and_undo_restores_source_state() {
+    let mut h = playlist_harness();
+    let sample = bundled("Lime Snare.wav");
+    h.state_mut().samples.load_blocking(&sample.to_string_lossy()).unwrap();
+    let id = limeshot_ui::playlist::add_audio_clip(h.state_mut(), &sample, 0, 0).unwrap();
+    h.state_mut().exec(Command::ResizeClip {
+        clip: id,
+        length: PPQ * 2,
+    });
+    h.state_mut().ui.playlist.audio_stretch = true;
+    h.state_mut().ui.playlist.audio_show_fades = false;
+    h.step();
+    let before = h.state().project().clone();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let edge = g.pos(PPQ * 2, 0) - vec2(2.0, 0.0);
+    drag(&mut h, edge, g.pos(PPQ * 4, 0));
+    assert_eq!(h.state().project().clip(id).unwrap().length, PPQ * 4);
+    let ch = h.state().project().clip(id).unwrap().audio_channel().unwrap();
+    assert_ne!(
+        h.state().project().channel(ch).unwrap().instrument,
+        before.channel(ch).unwrap().instrument
+    );
+    h.state_mut().doc.undo();
+    assert_eq!(
+        h.state().project(),
+        &before,
+        "resize plus sampler state is one undo step"
+    );
+}
+
+#[test]
+fn rev1_automation_step_draws_and_slide_moves_remaining_points() {
+    let mut h = playlist_harness();
+    let id = limeshot_ui::automation_ui::create(h.state_mut(), AutomationTarget::MixerVolume(1)).unwrap();
+    h.state_mut().ui.playlist.auto_step = true;
+    h.step();
+    h.step();
+    let c = h.state().project().clip(id).unwrap().clone();
+    let aid = c.automation().unwrap();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let p = g.pos(PPQ, c.track);
+    drag(&mut h, p, g.pos(PPQ * 2, c.track) + vec2(0.0, 6.0));
+    assert!(h.state().project().automation(aid).unwrap().points.len() >= 4);
+    h.state_mut().ui.playlist.auto_step = false;
+    h.state_mut().ui.playlist.auto_slide = true;
+    h.state_mut().exec(Command::SetAutomationPoints {
+        automation: aid,
+        points: vec![
+            AutomationPoint {
+                tick: 0,
+                value: 0.5,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+            AutomationPoint {
+                tick: PPQ,
+                value: 0.5,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+            AutomationPoint {
+                tick: PPQ * 2,
+                value: 0.5,
+                tension: 0.0,
+                mode: PointMode::SingleCurve,
+            },
+        ],
+    });
+    h.step();
+    let point = p + vec2(0.0, 6.5);
+    drag(&mut h, point, point + vec2(g.ppt * PPQ as f32 * 0.5, 0.0));
+    let points = &h.state().project().automation(aid).unwrap().points;
+    assert_eq!(points[1].tick, PPQ + PPQ / 2);
+    assert_eq!(points[2].tick, PPQ * 2 + PPQ / 2);
 }

@@ -69,3 +69,16 @@ Owner-requested interaction and disk-sampler fixes are in `codex/alpha1-polish`;
 and Serum internal-corner shrink/grow. Repeat host-edge resizing with other resizable plugins and long disk-backed
 playback/seek checks on Windows and Linux before promoting the native feature statuses. Disk cache misses and
 smooth fade/crossfade limits remain recorded.
+
+
+## Alpha.1 Rev 1 interaction pass (2026-10-27)
+
+Use rebuilt Lime Native bundles and `live_check` with a disposable temporary project. Live automation
+requires Accessibility/Screen Recording on macOS. Check sustained drawn-note audition across frames,
+rapid placements/release outside the Piano Roll, pattern edits selecting Playlist sources, internal
+sample/pattern drags at all viewport edges, focus toggles, STEP/SLIDE, waveform right-scrub silence
+until release, miniature scrollbar, track selector sweeps, resize/collapse/size lock, groups and
+arrangement clone/switch/merge/delete/save/reopen. Listen to resample resize and check linked uses;
+it changes pitch and shared sampler state. Compare FL behavior separately. Repeat on Windows/Linux.
+See [implementation and limits](../research/alpha1-rev1.md). Native Windows editor sluggishness requires
+a Windows host and remains implementation investigation in next steps, not resolved by macOS tests.

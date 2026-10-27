@@ -32,10 +32,21 @@ use egui::{
 use limeshot_core::*;
 use limeshot_engine::PlayMode;
 
-const HEADER_W: f32 = 118.0;
+const HEADER_W: f32 = 128.0;
+const TOP_PREVIEW_H: f32 = 16.0;
 /// Bar numbers in the top half, time markers in the bottom half.
 const RULER_H: f32 = 32.0;
+const COLLAPSED_TRACK_H: f32 = 16.0;
 const EDGE: f32 = 7.0;
+
+/// The three clip-focus tools in the top-left of the Playlist (FL Studio: Sample, Automation, Patterns).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ClipFocus {
+    #[default]
+    Patterns,
+    Sample,
+    Automation,
+}
 
 #[derive(Debug, Clone)]
 enum Drag {
@@ -52,9 +63,17 @@ enum Drag {
     Resize {
         id: ClipId,
         start: Tick,
+        orig_len: Tick,
+        orig_pitch: Option<f32>,
     },
     ResizeStart {
         id: ClipId,
+    },
+    /// Dragging a track header's bottom border to adjust its height (or collapse it).
+    ResizeTrack {
+        track: u32,
+        grab_y: f32,
+        orig_h: f32,
     },
     /// Dragging an audio clip's fade-in (or fade-out) handle.
     Fade {
@@ -72,6 +91,11 @@ enum Drag {
         clip: ClipId,
         automation: AutomationId,
         index: usize,
+    },
+    /// Step-editing points across an automation clip (`auto_step`).
+    AutoStep {
+        clip: ClipId,
+        automation: AutomationId,
     },
     /// Dragging the tension handle of the segment after point `index`.
     AutoTension {
@@ -117,11 +141,35 @@ pub struct State {
     pub tool: Tool,
     /// Screen rectangles of the tool strip's buttons in the last frame.
     pub tool_rects: Vec<(Tool, Rect)>,
+    /// The top-left clip-focus tool (Sample, Automation, Patterns) and its sub-options.
+    pub clip_focus: ClipFocus,
+    pub focus_tab_rects: Vec<(ClipFocus, Rect)>,
+    pub focus_option_rects: Vec<(&'static str, Rect)>,
+    /// Sample sub-options: Show fade edit controls, Check for zero crossing, Stretch audio when resizing.
+    pub audio_show_fades: bool,
+    pub audio_zero_cross: bool,
+    pub audio_stretch: bool,
+    /// Automation sub-options: Step editing, Slide remaining points.
+    pub auto_step: bool,
+    pub auto_slide: bool,
     /// Pixels per beat.
     pub zoom_x: f32,
     pub track_h: f32,
     pub scroll: Vec2,
     pub selection: Vec<ClipId>,
+    /// Selected Playlist track indices (Channel Rack–style selector bars).
+    pub selected_tracks: Vec<u32>,
+    /// Screen rectangles of the track selector bars in the last frame (for tests).
+    pub track_leds: Vec<(u32, Rect)>,
+    pub track_mute_rects: Vec<(u32, Rect)>,
+    /// Screen rectangles of the track resize bottom borders in the last frame (for tests).
+    pub track_resize_rects: Vec<(u32, Rect)>,
+    /// Screen rectangles of track group fold buttons in the last frame (for tests).
+    pub track_group_rects: Vec<(u32, Rect)>,
+    /// Playback monitoring activity per track (`0.0..=1.0`) in the last frame.
+    pub track_activity: Vec<f32>,
+    /// Where the Arrangement dropdown button in the top bar was drawn in the last frame.
+    pub arrangement_button: Option<Rect>,
     /// The time selection made with Ctrl/Cmd+drag on the ruler; Song mode loops it.
     pub time_sel: Option<(Tick, Tick)>,
     scrub_tick: Option<Tick>,
@@ -157,6 +205,8 @@ pub struct State {
     pub drop_ghost: Option<(u32, Tick, Tick)>,
     /// The length of the sample being dragged, by path (decoded once per drag).
     drop_len: Option<(std::path::PathBuf, Option<Tick>)>,
+    /// Whether an external/Browser drag has entered the Playlist grid during the current drag.
+    dnd_entered_grid: bool,
     /// Where the ⏵ menu button was drawn in the last frame (for tests).
     pub menu_button: Option<Rect>,
 }
@@ -175,10 +225,25 @@ impl Default for State {
         Self {
             tool: Tool::Draw,
             tool_rects: Vec::new(),
+            clip_focus: ClipFocus::Patterns,
+            focus_tab_rects: Vec::new(),
+            focus_option_rects: Vec::new(),
+            audio_show_fades: true,
+            audio_zero_cross: false,
+            audio_stretch: false,
+            auto_step: false,
+            auto_slide: false,
             zoom_x: 24.0,
             track_h: 44.0,
             scroll: Vec2::ZERO,
             selection: Vec::new(),
+            selected_tracks: Vec::new(),
+            track_leds: Vec::new(),
+            track_mute_rects: Vec::new(),
+            track_resize_rects: Vec::new(),
+            track_group_rects: Vec::new(),
+            track_activity: Vec::new(),
+            arrangement_button: None,
             time_sel: None,
             scrub_tick: None,
             scrub_audio: Vec::new(),
@@ -199,9 +264,17 @@ impl Default for State {
             last_len: None,
             drop_ghost: None,
             drop_len: None,
+            dnd_entered_grid: false,
             menu_button: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TrackLayout {
+    y: f32,
+    h: f32,
+    hidden: bool,
 }
 
 struct View {
@@ -209,9 +282,42 @@ struct View {
     ppt: f32,
     track_h: f32,
     scroll: Vec2,
+    layouts: Vec<TrackLayout>,
+    total_h: f32,
 }
 
 impl View {
+    fn new(grid: Rect, ppt: f32, track_h: f32, scroll: Vec2, tracks: &[PlaylistTrack]) -> Self {
+        let mut layouts = Vec::with_capacity(tracks.len());
+        let mut y = 0.0;
+        let mut group_hidden = false;
+        for tr in tracks {
+            if !tr.grouped_with_above {
+                group_hidden = false;
+            }
+            let hidden = tr.grouped_with_above && group_hidden;
+            let h = if hidden {
+                0.0
+            } else if tr.collapsed {
+                COLLAPSED_TRACK_H
+            } else {
+                tr.height.unwrap_or(track_h).clamp(TRACK_H.0, TRACK_H.1)
+            };
+            layouts.push(TrackLayout { y, h, hidden });
+            y += h;
+            if !tr.grouped_with_above && tr.group_collapsed {
+                group_hidden = true;
+            }
+        }
+        Self {
+            grid,
+            ppt,
+            track_h,
+            scroll,
+            layouts,
+            total_h: y,
+        }
+    }
     fn x(&self, t: Tick) -> f32 {
         self.grid.left() + t as f32 * self.ppt - self.scroll.x
     }
@@ -219,17 +325,42 @@ impl View {
         ((x - self.grid.left() + self.scroll.x) / self.ppt).floor() as i64
     }
     fn y(&self, track: u32) -> f32 {
-        self.grid.top() + track as f32 * self.track_h - self.scroll.y
+        let off = if let Some(l) = self.layouts.get(track as usize) {
+            l.y
+        } else {
+            self.total_h + (track as usize).saturating_sub(self.layouts.len()) as f32 * self.track_h
+        };
+        self.grid.top() + off - self.scroll.y
+    }
+    fn track_height(&self, track: u32) -> f32 {
+        self.layouts.get(track as usize).map_or(self.track_h, |l| l.h)
+    }
+    fn is_track_hidden(&self, track: u32) -> bool {
+        self.layouts.get(track as usize).is_some_and(|l| l.hidden)
     }
     fn track_at(&self, y: f32) -> i32 {
-        ((y - self.grid.top() + self.scroll.y) / self.track_h).floor() as i32
+        let rel = y - self.grid.top() + self.scroll.y;
+        if rel < 0.0 {
+            return (rel / self.track_h.max(1.0)).floor() as i32;
+        }
+        for (i, l) in self.layouts.iter().enumerate() {
+            if !l.hidden && rel >= l.y && rel < l.y + l.h {
+                return i as i32;
+            }
+        }
+        if self.layouts.is_empty() {
+            (rel / self.track_h.max(1.0)).floor() as i32
+        } else {
+            self.layouts.len() as i32 + ((rel - self.total_h).max(0.0) / self.track_h.max(1.0)).floor() as i32
+        }
     }
     fn clip_rect(&self, c: &Clip) -> Rect {
+        let h = self.track_height(c.track);
         Rect::from_min_max(
             pos2(self.x(c.start), self.y(c.track) + 1.0),
             pos2(
                 self.x(c.end()).max(self.x(c.start) + 4.0),
-                self.y(c.track) + self.track_h - 1.0,
+                self.y(c.track) + (h - 1.0).max(1.0),
             ),
         )
     }
@@ -254,15 +385,36 @@ pub struct Geometry {
     pub ppt: f32,
     pub track_h: f32,
     pub scroll: Vec2,
+    layouts: [TrackLayout; 500],
+    layout_count: usize,
+    total_h: f32,
 }
 
 impl Geometry {
     /// Screen position of `tick` in the middle of `track`.
-    pub fn pos(&self, tick: Tick, track: u32) -> Pos2 {
+    pub fn pos(self, tick: Tick, track: u32) -> Pos2 {
+        let (y, h) = if (track as usize) < self.layout_count {
+            let l = self.layouts[track as usize];
+            (l.y, l.h)
+        } else {
+            (
+                self.total_h + (track as usize).saturating_sub(self.layout_count) as f32 * self.track_h,
+                self.track_h,
+            )
+        };
         pos2(
             self.grid.left() + tick as f32 * self.ppt - self.scroll.x,
-            self.grid.top() + (track as f32 + 0.5) * self.track_h - self.scroll.y,
+            self.grid.top() + y + 0.5 * h - self.scroll.y,
         )
+    }
+
+    /// Screen height of `track`.
+    pub fn track_height(self, track: u32) -> f32 {
+        if (track as usize) < self.layout_count {
+            self.layouts[track as usize].h
+        } else {
+            self.track_h
+        }
     }
 }
 
@@ -302,7 +454,7 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
             ui.spacing_mut().item_spacing.x = 2.0;
             let menu = ui.menu_button("⏵", |ui| crate::playlist_menu::menu(app, ui)).response;
             app.ui.playlist.menu_button = Some(menu.rect);
-            menu.hint("Playlist options: Edit, Tools, Select, Zoom, Time markers");
+            menu.hint("Playlist options: Edit, Tools, View, Select, Zoom, Time markers, Arrangement");
             app.ui.playlist.tool_rects.clear();
             for tool in Tool::PLAYLIST {
                 let resp = icon_button(ui, tool.icon(), app.ui.playlist.tool == tool, 22.0, tool_tip(tool));
@@ -311,6 +463,25 @@ pub fn panel(app: &mut LimeShotApp, ui: &mut Ui) {
                     app.ui.playlist.tool = tool;
                 }
             }
+            ui.add_space(6.0);
+            let arr_name = app.project().playlist.name.clone();
+            let arr_resp = ui
+                .menu_button(format!("{arr_name}    "), |ui| {
+                    crate::playlist_menu::arrangement_menu(app, ui);
+                })
+                .response;
+            let arrow = arr_resp.rect.right_center() - vec2(8.0, 0.0);
+            ui.painter().add(egui::Shape::convex_polygon(
+                vec![
+                    arrow + vec2(-3.0, -2.0),
+                    arrow + vec2(3.0, -2.0),
+                    arrow + vec2(0.0, 2.0),
+                ],
+                t.text_dim,
+                Stroke::NONE,
+            ));
+            app.ui.playlist.arrangement_button = Some(arr_resp.rect);
+            arr_resp.hint("Playlist arrangement: switch, add, clone, rename, merge or delete arrangements");
         });
     });
     let area = ui.available_rect_before_wrap();
@@ -707,15 +878,18 @@ pub fn pick_source(app: &mut LimeShotApp, source: ClipSource) {
             app.set_current_pattern(p);
             app.ui.place = None;
             app.ui.playlist.picker_tab = PickerTab::Patterns;
+            app.ui.playlist.clip_focus = ClipFocus::Patterns;
         }
         ClipSource::Audio(ch) => {
             app.select_channel(ch);
             app.ui.place = Some(source);
             app.ui.playlist.picker_tab = PickerTab::Audio;
+            app.ui.playlist.clip_focus = ClipFocus::Sample;
         }
         ClipSource::Automation(_) => {
             app.ui.place = Some(source);
             app.ui.playlist.picker_tab = PickerTab::Automation;
+            app.ui.playlist.clip_focus = ClipFocus::Automation;
         }
     }
 }
@@ -832,92 +1006,463 @@ fn scrollbar(ui: &mut Ui, name: &str, rect: Rect, offset: &mut f32, visible: f32
     );
 }
 
+/// FL Studio's translucent track preview bar at the top of the Playlist timeline.
+fn preview_scrollbar(ui: &mut Ui, project: &Project, rect: Rect, offset: &mut f32, visible: f32, total: f32, ppt: f32) {
+    let t = Theme::current();
+    let length = rect.width();
+    let thumb_len = (length * visible / total.max(visible)).clamp(18.0_f32.min(length), length);
+    let max = (total - visible).max(0.0);
+    *offset = offset.clamp(0.0, max);
+    let travel = (length - thumb_len).max(0.0);
+    let start = rect.left() + if max > 0.0 { *offset / max * travel } else { 0.0 };
+    let thumb = Rect::from_min_size(pos2(start, rect.top()), vec2(thumb_len, rect.height()));
+    let response = ui.interact(rect, ui.id().with("playlist-horizontal"), Sense::click_and_drag());
+    ui.ctx()
+        .data_mut(|d| d.insert_temp(egui::Id::new("playlist-horizontal"), rect));
+    if (response.drag_started() || response.clicked())
+        && let Some(pointer) = response.interact_pointer_pos()
+    {
+        let grab = if thumb.contains(pointer) {
+            pointer.x - start
+        } else {
+            thumb_len / 2.0
+        };
+        ui.ctx().data_mut(|d| d.insert_temp(response.id.with("grab"), grab));
+    }
+    if (response.dragged() || response.clicked())
+        && let Some(pointer) = response.interact_pointer_pos()
+    {
+        let grab = ui
+            .ctx()
+            .data(|d| d.get_temp::<f32>(response.id.with("grab")))
+            .unwrap_or(thumb_len / 2.0);
+        *offset = ((pointer.x - rect.left() - grab) / travel.max(1.0)).clamp(0.0, 1.0) * max;
+    }
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 0.0, t.sunken);
+    // Mini clip bars across all tracks.
+    let track_count = project.playlist.tracks.len().max(1) as f32;
+    let total_px = total.max(1.0);
+    for c in &project.playlist.clips {
+        let Some((_, color)) = clip_label(project, c) else {
+            continue;
+        };
+        let x0 = rect.left() + (c.start as f32 * ppt) / total_px * length;
+        let x1 = (rect.left() + (c.end() as f32 * ppt) / total_px * length).max(x0 + 1.5);
+        let y0 = rect.top() + 1.0 + (c.track as f32 / track_count) * (rect.height() - 2.0);
+        let y1 = (y0 + ((rect.height() - 2.0) / track_count).clamp(1.5, 4.0)).min(rect.bottom() - 1.0);
+        painter.rect_filled(
+            Rect::from_min_max(pos2(x0, y0), pos2(x1.min(rect.right()), y1)),
+            0.5,
+            rgb(color).gamma_multiply(if c.muted { 0.4 } else { 0.85 }),
+        );
+    }
+    // Translucent viewport box over the preview bar.
+    let active = response.hovered() || response.dragged();
+    painter.rect_filled(
+        thumb.shrink(1.0),
+        CornerRadius::same(2),
+        t.text.gamma_multiply(if active { 0.24 } else { 0.14 }),
+    );
+    painter.rect_stroke(
+        thumb.shrink(1.0),
+        CornerRadius::same(2),
+        Stroke::new(1.0, if active { t.accent } else { t.text_dim }),
+        egui::StrokeKind::Inside,
+    );
+}
+
+/// FL Studio's three clip-focus tools in the top-left corner of the Playlist (Sample, Automation,
+/// Patterns) and their sub-option toggles below them.
+fn top_left_tools_ui(app: &mut LimeShotApp, ui: &mut Ui, rect: Rect) {
+    let t = Theme::current();
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 0.0, t.surface);
+    painter.line_segment([rect.right_top(), rect.right_bottom()], Stroke::new(1.0, t.border));
+    painter.line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(1.0, t.border));
+    app.ui.playlist.focus_tab_rects.clear();
+    app.ui.playlist.focus_option_rects.clear();
+    let top_h = 22.0;
+    let tabs = [
+        (
+            ClipFocus::Sample,
+            Icon::Wave,
+            "Audio clips focus: show fade, zero-crossing and stretch options",
+        ),
+        (
+            ClipFocus::Automation,
+            Icon::Automation,
+            "Automation clips focus: show step editing and slide options",
+        ),
+        (ClipFocus::Patterns, Icon::PianoRoll, "Pattern clips focus"),
+    ];
+    let tab_w = (rect.width() - 8.0) / 3.0;
+    for (i, (focus, icon, tip)) in tabs.into_iter().enumerate() {
+        let r = Rect::from_min_size(
+            pos2(rect.left() + 4.0 + i as f32 * tab_w, rect.top() + 2.0),
+            vec2(tab_w - 2.0, top_h - 2.0),
+        );
+        let resp = ui.interact(r, ui.id().with(("pl_focus_tab", i)), Sense::click());
+        let on = app.ui.playlist.clip_focus == focus;
+        let fill = if on {
+            mix(t.raised, t.accent, 0.28)
+        } else if resp.hovered() {
+            t.raised_hover
+        } else {
+            t.raised
+        };
+        ui.painter().rect_filled(r, CornerRadius::same(2), fill);
+        if on {
+            ui.painter().rect_stroke(
+                r,
+                CornerRadius::same(2),
+                Stroke::new(1.0, t.accent),
+                egui::StrokeKind::Inside,
+            );
+        }
+        let icon_r = Rect::from_center_size(r.center(), vec2(13.0, 13.0));
+        crate::icons::paint(ui.painter(), icon_r, icon, if on { t.accent } else { t.text_dim });
+        app.ui.playlist.focus_tab_rects.push((focus, r));
+        if resp.clicked() {
+            app.ui.playlist.clip_focus = focus;
+            app.ui.playlist.picker_tab = match focus {
+                ClipFocus::Sample => PickerTab::Audio,
+                ClipFocus::Automation => PickerTab::Automation,
+                ClipFocus::Patterns => PickerTab::Patterns,
+            };
+        }
+        if resp.hovered() {
+            app.hint(tip);
+        }
+        resp.hint(tip);
+    }
+
+    let sub_top = rect.top() + top_h + 2.0;
+    let sub_h = (rect.bottom() - sub_top - 2.0).max(16.0);
+    let toggle = |app: &mut LimeShotApp,
+                  i: usize,
+                  count: usize,
+                  key: &'static str,
+                  short: &str,
+                  on: &mut bool,
+                  tip: &'static str| {
+        let w = (rect.width() - 8.0) / count as f32;
+        let r = Rect::from_min_size(pos2(rect.left() + 4.0 + i as f32 * w, sub_top), vec2(w - 2.0, sub_h));
+        let resp = ui.interact(r, ui.id().with(("pl_focus_opt", key)), Sense::click());
+        let fill = if *on {
+            mix(t.raised, t.accent, 0.28)
+        } else if resp.hovered() {
+            t.raised_hover
+        } else {
+            t.sunken
+        };
+        ui.painter().rect_filled(r, CornerRadius::same(2), fill);
+        if *on {
+            ui.painter().rect_stroke(
+                r,
+                CornerRadius::same(2),
+                Stroke::new(1.0, t.accent),
+                egui::StrokeKind::Inside,
+            );
+        }
+        ui.painter().text(
+            r.center(),
+            Align2::CENTER_CENTER,
+            short,
+            mono(9.0),
+            if *on { t.text } else { t.text_dim },
+        );
+        app.ui.playlist.focus_option_rects.push((key, r));
+        if resp.clicked() {
+            *on = !*on;
+        }
+        if resp.hovered() {
+            app.hint(tip);
+        }
+        resp.hint(tip);
+    };
+    match app.ui.playlist.clip_focus {
+        ClipFocus::Sample => {
+            let mut fades = app.ui.playlist.audio_show_fades;
+            let mut zcross = app.ui.playlist.audio_zero_cross;
+            let mut stretch = app.ui.playlist.audio_stretch;
+            toggle(
+                app,
+                0,
+                3,
+                "Show fade edit controls",
+                "FADE",
+                &mut fades,
+                "Show fade edit controls",
+            );
+            toggle(
+                app,
+                1,
+                3,
+                "Check for zero crossing when editing audio clips",
+                "Z-CROSS",
+                &mut zcross,
+                "Check for zero crossing when editing audio clips",
+            );
+            toggle(
+                app,
+                2,
+                3,
+                "Stretch audio when resizing audio clips",
+                "STRETCH",
+                &mut stretch,
+                "Stretch by resampling (changes pitch and all clips sharing this sampler)",
+            );
+            app.ui.playlist.audio_show_fades = fades;
+            app.ui.playlist.audio_zero_cross = zcross;
+            app.ui.playlist.audio_stretch = stretch;
+        }
+        ClipFocus::Automation => {
+            let mut step = app.ui.playlist.auto_step;
+            let mut slide = app.ui.playlist.auto_slide;
+            toggle(app, 0, 2, "Step editing", "STEP", &mut step, "Step editing");
+            toggle(
+                app,
+                1,
+                2,
+                "Slide remaining points",
+                "SLIDE",
+                &mut slide,
+                "Slide remaining points",
+            );
+            app.ui.playlist.auto_step = step;
+            app.ui.playlist.auto_slide = slide;
+        }
+        ClipFocus::Patterns => {}
+    }
+}
+
+/// Scroll the Playlist viewport when dragging clips or samples near/outside the grid edges.
+fn auto_scroll_on_drag(st: &mut State, ctx: &Context, grid: Rect, max_y: f32) {
+    let dragging_clip = matches!(
+        st.drag,
+        Some(
+            Drag::Move { .. }
+                | Drag::Resize { .. }
+                | Drag::ResizeStart { .. }
+                | Drag::Paint { .. }
+                | Drag::Select { .. }
+                | Drag::AutoPoint { .. }
+                | Drag::AutoStep { .. }
+                | Drag::Slip { .. }
+        )
+    );
+    if !ui_has_active_drag(ctx, dragging_clip, &mut st.dnd_entered_grid, grid) {
+        return;
+    }
+    let Some(pos) = ctx.input(|i| i.pointer.interact_pos().or(i.pointer.hover_pos())) else {
+        return;
+    };
+    let margin = 24.0;
+    let speed = 0.6;
+    let mut dx = 0.0;
+    let mut dy = 0.0;
+    if pos.x > grid.right() - margin {
+        dx = ((pos.x - (grid.right() - margin)) * speed).clamp(2.0, 36.0);
+    } else if pos.x < grid.left() + margin && st.scroll.x > 0.0 {
+        dx = -(((grid.left() + margin) - pos.x) * speed).clamp(2.0, 36.0);
+    }
+    if pos.y > grid.bottom() - margin && st.scroll.y < max_y {
+        dy = ((pos.y - (grid.bottom() - margin)) * speed).clamp(2.0, 28.0);
+    } else if pos.y < grid.top() + margin && st.scroll.y > 0.0 {
+        dy = -(((grid.top() + margin) - pos.y) * speed).clamp(2.0, 28.0);
+    }
+    if dx != 0.0 || dy != 0.0 {
+        st.scroll.x = (st.scroll.x + dx).max(0.0);
+        st.scroll.y = (st.scroll.y + dy).clamp(0.0, max_y);
+        ctx.request_repaint();
+    }
+}
+
+fn ui_has_active_drag(ctx: &Context, dragging_clip: bool, dnd_entered: &mut bool, grid: Rect) -> bool {
+    if !ctx.input(|i| i.pointer.any_down()) {
+        *dnd_entered = false;
+        return false;
+    }
+    if dragging_clip {
+        return true;
+    }
+    let has_dnd = egui::DragAndDrop::has_payload_of_type::<crate::browser::DraggedSample>(ctx)
+        || egui::DragAndDrop::has_payload_of_type::<ClipSource>(ctx);
+    if !has_dnd {
+        *dnd_entered = false;
+        return false;
+    }
+    if ctx
+        .input(|i| i.pointer.interact_pos().or(i.pointer.hover_pos()))
+        .is_some_and(|p| grid.contains(p))
+    {
+        *dnd_entered = true;
+    }
+    *dnd_entered
+}
+
+/// Update `st.track_activity` for tracks that have an unmuted clip sounding at the current Song
+/// playhead or scrub tick.
+fn update_track_activity(app: &mut LimeShotApp) {
+    let tracks_len = app.project().playlist.tracks.len();
+    let playing_song = app.is_playing() && app.ui.mode == PlayMode::Song;
+    let active_tick = if playing_song {
+        Some(app.player.status().position())
+    } else {
+        app.ui.playlist.scrub_tick
+    };
+    let sig = app.project().time_signature;
+    let mut active = vec![false; tracks_len];
+    if let Some(tick) = active_tick {
+        let p = app.project();
+        for c in p
+            .playlist
+            .clips
+            .iter()
+            .filter(|c| !c.muted && c.start <= tick && tick < c.end())
+        {
+            let tr = c.track as usize;
+            if tr >= tracks_len || p.playlist.tracks[tr].muted {
+                continue;
+            }
+            let sounds = match c.source {
+                ClipSource::Pattern(id) => p.pattern(id).is_some_and(|pat| {
+                    let local = tick - c.start + c.offset;
+                    local < pat.length(sig)
+                        && pat.notes.iter().any(|n| {
+                            !n.muted
+                                && n.start <= local
+                                && local < n.end()
+                                && p.channel(n.channel).is_some_and(|ch| !ch.muted)
+                        })
+                }),
+                ClipSource::Audio(ch) => p.channel(ch).is_some_and(|ch| !ch.muted),
+                ClipSource::Automation(_) => true,
+            };
+            if sounds {
+                active[tr] = true;
+            }
+        }
+    }
+    let st = &mut app.ui.playlist;
+    st.track_activity.resize(tracks_len, 0.0);
+    for (tr, on) in active.into_iter().enumerate() {
+        if on {
+            st.track_activity[tr] = 1.0;
+        } else {
+            st.track_activity[tr] = (st.track_activity[tr] - 0.15).max(0.0);
+        }
+    }
+}
+
 /// Draw the arrangement, ruler, and track headers, then handle edits, drops, and scrolling.
 fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     let full = ui.available_rect_before_wrap();
     let (full, _) = ui.allocate_exact_size(full.size(), Sense::hover());
-    let content = Rect::from_min_max(full.min, full.max - vec2(12.0, 12.0));
-    let ruler = Rect::from_min_max(
+    let content = Rect::from_min_max(full.min, pos2(full.right() - 12.0, full.bottom()));
+    let top_h = TOP_PREVIEW_H + RULER_H;
+    let top_left = Rect::from_min_max(content.min, pos2(content.left() + HEADER_W, content.top() + top_h));
+    let preview_rect = Rect::from_min_max(
         pos2(content.left() + HEADER_W, content.top()),
-        pos2(content.right(), content.top() + RULER_H),
+        pos2(content.right(), content.top() + TOP_PREVIEW_H),
+    );
+    let ruler = Rect::from_min_max(
+        pos2(content.left() + HEADER_W, content.top() + TOP_PREVIEW_H),
+        pos2(content.right(), content.top() + top_h),
     );
     let headers = Rect::from_min_max(
-        pos2(content.left(), content.top() + RULER_H),
+        pos2(content.left(), content.top() + top_h),
         pos2(content.left() + HEADER_W, content.bottom()),
     );
     let grid = Rect::from_min_max(
-        pos2(content.left() + HEADER_W, content.top() + RULER_H),
+        pos2(content.left() + HEADER_W, content.top() + top_h),
         content.right_bottom(),
     );
 
-    let tracks = app.project().playlist.tracks.len() as u32;
+    top_left_tools_ui(app, ui, top_left);
+    update_track_activity(app);
+
+    let tracks_vec = app.project().playlist.tracks.clone();
+    let tracks = tracks_vec.len() as u32;
+    app.ui.playlist.selected_tracks.retain(|&tr| tr < tracks);
     let follow = app.settings.auto_scroll && app.is_playing() && app.ui.mode == limeshot_engine::PlayMode::Song;
     let position = app.player.status().position();
-    let song_pixels =
-        app.project().playlist.song_length(app.project().time_signature) as f32 * app.ui.playlist.zoom_x / PPQ as f32;
-    let st = &mut app.ui.playlist;
-    let horizontal_extent = (song_pixels + grid.width()).max(st.scroll.x + grid.width());
-    scrollbar(
+    let ppt = app.ui.playlist.zoom_x / PPQ as f32;
+    let song_pixels = app.project().playlist.song_length(app.project().time_signature) as f32 * ppt;
+    let horizontal_extent = (song_pixels + grid.width()).max(app.ui.playlist.scroll.x + grid.width());
+    let mut scroll_x = app.ui.playlist.scroll.x;
+    preview_scrollbar(
         ui,
-        "playlist-horizontal",
-        Rect::from_min_max(
-            pos2(grid.left(), content.bottom()),
-            pos2(content.right(), full.bottom()),
-        ),
-        &mut st.scroll.x,
+        app.project(),
+        preview_rect,
+        &mut scroll_x,
         grid.width(),
         horizontal_extent,
-        false,
+        ppt,
     );
+    app.ui.playlist.scroll.x = scroll_x;
+
+    let temp_view = View::new(grid, ppt, app.ui.playlist.track_h, app.ui.playlist.scroll, &tracks_vec);
+    let total_y = temp_view.total_h + app.ui.playlist.track_h;
+    let sig = app.project().time_signature;
+    let st = &mut app.ui.playlist;
     scrollbar(
         ui,
         "playlist-vertical",
         Rect::from_min_max(pos2(content.right(), grid.top()), pos2(full.right(), content.bottom())),
         &mut st.scroll.y,
         grid.height(),
-        (tracks as f32 + 1.0) * st.track_h,
+        total_y,
         true,
     );
-    let max_y = ((tracks as f32 + 1.0) * st.track_h - grid.height()).max(0.0);
+    let max_y = (total_y - grid.height()).max(0.0);
+    auto_scroll_on_drag(st, ui.ctx(), grid, max_y);
     st.scroll.y = st.scroll.y.clamp(0.0, max_y);
     st.scroll.x = st.scroll.x.max(0.0);
     if follow && st.drag.is_none() && st.sel_anchor.is_none() && st.marker_drag.is_none() {
         crate::widgets::follow_playhead(&mut st.scroll.x, position as f32 * st.zoom_x / PPQ as f32, grid.width());
     }
-    let view = View {
-        grid,
-        ppt: st.zoom_x / PPQ as f32,
-        track_h: st.track_h,
-        scroll: st.scroll,
-    };
+    let view = View::new(grid, ppt, st.track_h, st.scroll, &tracks_vec);
+    let mut geom_layouts = [TrackLayout {
+        y: 0.0,
+        h: view.track_h,
+        hidden: false,
+    }; 500];
+    let layout_count = view.layouts.len().min(geom_layouts.len());
+    geom_layouts[..layout_count].copy_from_slice(&view.layouts[..layout_count]);
     st.geometry = Some(Geometry {
         grid,
         ppt: view.ppt,
         track_h: view.track_h,
         scroll: view.scroll,
+        layouts: geom_layouts,
+        layout_count,
+        total_h: view.total_h,
     });
-    let sig = app.project().time_signature;
+    let show_fades = st.audio_show_fades;
     let painter = ui.painter_at(full);
 
     painter.rect_filled(grid, 0.0, t.sunken);
     for tr in 0..tracks {
+        if view.is_track_hidden(tr) {
+            continue;
+        }
         let y = view.y(tr);
-        if y > grid.bottom() || y + view.track_h < grid.top() {
+        let h = view.track_height(tr);
+        if y > grid.bottom() || y + h < grid.top() {
             continue;
         }
         if tr % 2 == 1 {
             painter.rect_filled(
-                Rect::from_min_max(pos2(grid.left(), y), pos2(grid.right(), y + view.track_h)).intersect(grid),
+                Rect::from_min_max(pos2(grid.left(), y), pos2(grid.right(), y + h)).intersect(grid),
                 0.0,
                 mix(t.sunken, t.surface, 0.35),
             );
         }
         painter.line_segment(
-            [
-                pos2(grid.left(), y + view.track_h),
-                pos2(grid.right(), y + view.track_h),
-            ],
+            [pos2(grid.left(), y + h), pos2(grid.right(), y + h)],
             Stroke::new(1.0, t.grid_step),
         );
     }
@@ -935,6 +1480,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
     // Clips.
     let clips = app.project().playlist.clips.clone();
     for c in &clips {
+        if view.is_track_hidden(c.track) {
+            continue;
+        }
         let r = view.clip_rect(c);
         if !r.intersects(grid) {
             continue;
@@ -960,7 +1508,8 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         let strip = if muted { mix(t.raised, base, 0.3) } else { base };
         let rr = r.intersect(grid);
         painter.rect_filled(rr, CornerRadius::same(t.radius_sm), fill);
-        let title = Rect::from_min_size(r.min, vec2(r.width(), 14.0))
+        let title_h = 14.0_f32.min(r.height());
+        let title = Rect::from_min_size(r.min, vec2(r.width(), title_h))
             .intersect(r)
             .intersect(grid);
         painter.rect_filled(
@@ -988,7 +1537,9 @@ fn body(app: &mut LimeShotApp, ui: &mut Ui) {
         match c.source {
             ClipSource::Audio(ch) => {
                 draw_waveform(app, &painter, &view, grid, c, ch, body, mix(base, Color32::WHITE, 0.55));
-                draw_fades(&painter.with_clip_rect(rr), &view, c, body, fg);
+                if show_fades {
+                    draw_fades(&painter.with_clip_rect(rr), &view, c, body, fg);
+                }
             }
             ClipSource::Automation(a) => {
                 if let Some(a) = app.project().automation(a) {
@@ -1282,11 +1833,12 @@ fn sample_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
         if let Some((_, Some(len))) = app.ui.playlist.drop_len {
             app.ui.playlist.drop_ghost = Some((track, start, len));
             let t = Theme::current();
+            let h = view.track_height(track);
             let r = Rect::from_min_max(
                 pos2(view.x(start), view.y(track) + 1.0),
                 pos2(
                     view.x(start + len).max(view.x(start) + 4.0),
-                    view.y(track) + view.track_h - 1.0,
+                    view.y(track) + (h - 1.0).max(1.0),
                 ),
             );
             let painter = ui.painter_at(grid);
@@ -1666,51 +2218,199 @@ pub fn add_marker(app: &mut LimeShotApp, tick: Tick) -> Option<MarkerId> {
     app.exec(Command::AddMarker { tick, name }).map(MarkerId)
 }
 
-/// Draw track headers and handle mute locks, solo, renaming, track menus, and adding a track.
+/// Draw track headers and handle mute locks, solo, renaming, track selection, height resizing,
+/// grouping, track menus, and adding a track.
 fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, tracks: u32) {
     let t = Theme::current();
     let painter = ui.painter_at(area);
     painter.rect_filled(area, 0.0, t.surface);
-    let names: Vec<_> = app
-        .project()
-        .playlist
-        .tracks
-        .iter()
-        .map(|tr| (tr.name.clone(), tr.muted, tr.mute_locked, tr.color))
-        .collect();
+    app.ui.playlist.track_leds.clear();
+    app.ui.playlist.track_mute_rects.clear();
+    app.ui.playlist.track_resize_rects.clear();
+    app.ui.playlist.track_group_rects.clear();
+    let tracks_vec: Vec<PlaylistTrack> = app.project().playlist.tracks.clone();
     for tr in 0..tracks {
-        let y = view.y(tr);
-        if y > area.bottom() || y + view.track_h < area.top() {
+        if view.is_track_hidden(tr) {
             continue;
         }
-        let r = Rect::from_min_max(pos2(area.left(), y), pos2(area.right() - 2.0, y + view.track_h - 1.0));
+        let y = view.y(tr);
+        let h = view.track_height(tr);
+        if y > area.bottom() || y + h < area.top() {
+            continue;
+        }
+        let r = Rect::from_min_max(pos2(area.left(), y), pos2(area.right() - 2.0, y + h - 1.0));
         if r.bottom() < area.top() {
             continue;
         }
-        let (name, muted, locked, color) = names.get(tr as usize).cloned().unwrap_or_default();
-        painter.rect_filled(
-            r.intersect(area),
-            CornerRadius::same(2),
-            color.map_or(t.raised, |c| mix(t.raised, rgb(c), 0.25)),
+        let track_data = tracks_vec
+            .get(tr as usize)
+            .cloned()
+            .unwrap_or_else(|| PlaylistTrack::new(format!("Track {}", tr + 1)));
+        let muted = track_data.muted;
+        let locked = track_data.mute_locked;
+        let color = track_data.color;
+        let grouped = track_data.grouped_with_above;
+        let is_parent = !grouped
+            && tracks_vec
+                .get(tr as usize + 1)
+                .is_some_and(|next| next.grouped_with_above);
+        let selected = app.ui.playlist.selected_tracks.contains(&tr);
+        let activity = app.ui.playlist.track_activity.get(tr as usize).copied().unwrap_or(0.0);
+
+        let left_indent = if grouped { 10.0 } else { 0.0 };
+        let header_r = Rect::from_min_max(pos2(r.left() + left_indent, r.top()), r.max);
+        let mut base_fill = color.map_or(t.raised, |c| mix(t.raised, rgb(c), 0.25));
+        if selected {
+            base_fill = mix(base_fill, t.accent, 0.14);
+        }
+        painter.rect_filled(header_r.intersect(area), CornerRadius::same(2), base_fill);
+        if grouped {
+            // Visual group connector bar on the left of a child track.
+            let conn = Rect::from_min_max(pos2(r.left() + 3.0, r.top() - 1.0), pos2(r.left() + 6.0, r.bottom()));
+            painter.rect_filled(
+                conn.intersect(area),
+                CornerRadius::same(1),
+                color.map_or(t.accent_dim, rgb),
+            );
+        }
+
+        // Channel-Rack-style track selector + playback monitoring bar on the right edge.
+        let sel_w = 8.0;
+        let sel_rect = Rect::from_min_max(
+            pos2(r.right() - sel_w - 2.0, r.top() + 3.0),
+            pos2(r.right() - 2.0, (r.bottom() - 3.0).max(r.top() + 7.0)),
         );
-        let led = Rect::from_center_size(pos2(r.right() - 12.0, r.center().y), vec2(10.0, 10.0));
-        if led.top() >= area.top() {
-            let color = if muted { t.text_faint } else { t.accent };
-            if locked {
-                crate::icons::paint(&painter, led.expand(2.0), Icon::Lock, color);
-            } else {
-                painter.circle_filled(led.center(), 4.5, color);
+        app.ui.playlist.track_leds.push((tr, sel_rect));
+        if sel_rect.bottom() > area.top() && sel_rect.top() < area.bottom() {
+            let sr = sel_rect.intersect(area);
+            painter.rect_filled(sr, CornerRadius::same(2), t.sunken);
+            if selected || activity > 0.01 {
+                let inner_c = if activity > 0.01 {
+                    mix(t.sunken, t.accent, 0.45 + 0.55 * activity)
+                } else {
+                    mix(t.sunken, t.accent, 0.35)
+                };
+                painter.rect_filled(sr.shrink(1.5), CornerRadius::same(1), inner_c);
+            }
+            if selected {
+                painter.rect_stroke(
+                    sr,
+                    CornerRadius::same(2),
+                    Stroke::new(1.2, t.accent),
+                    egui::StrokeKind::Inside,
+                );
             }
         }
-        if r.center().y > area.top() {
-            painter.text(
-                pos2(r.left() + 6.0, r.center().y),
+        let sel_resp = ui.interact(
+            sel_rect.intersect(area),
+            ui.id().with(("pl_track_sel", tr)),
+            Sense::click_and_drag(),
+        );
+        let mods = ui.input(|i| i.modifiers);
+        let stroke = egui::Id::new("playlist-track-selection-stroke");
+        if sel_resp.drag_started() {
+            let origin = ui.input(|i| i.pointer.press_origin()).unwrap_or(sel_rect.center()).y;
+            ui.ctx().data_mut(|d| d.insert_temp(stroke, origin));
+            if !mods.command && !mods.shift && !app.ui.playlist.selected_tracks.contains(&tr) {
+                app.ui.playlist.selected_tracks = vec![tr];
+            }
+        }
+        if let Some(origin) = ui.ctx().data(|d| d.get_temp::<f32>(stroke)) {
+            if ui.input(|i| i.pointer.primary_down()) {
+                if let Some(pointer) = ui.input(|i| i.pointer.interact_pos())
+                    && (origin.min(pointer.y)..=origin.max(pointer.y)).contains(&sel_rect.center().y)
+                    && !app.ui.playlist.selected_tracks.contains(&tr)
+                {
+                    app.ui.playlist.selected_tracks.push(tr);
+                }
+            } else {
+                ui.ctx().data_mut(|d| d.remove::<f32>(stroke));
+            }
+        }
+        if sel_resp.secondary_clicked() || (sel_resp.clicked() && mods.command) {
+            if let Some(pos) = app.ui.playlist.selected_tracks.iter().position(|&x| x == tr) {
+                app.ui.playlist.selected_tracks.remove(pos);
+            } else {
+                app.ui.playlist.selected_tracks.push(tr);
+            }
+        } else if sel_resp.clicked() && mods.shift {
+            if let Some(&anchor) = app.ui.playlist.selected_tracks.last() {
+                let (a, b) = (anchor.min(tr), anchor.max(tr));
+                for k in a..=b {
+                    if !app.ui.playlist.selected_tracks.contains(&k) {
+                        app.ui.playlist.selected_tracks.push(k);
+                    }
+                }
+            } else {
+                app.ui.playlist.selected_tracks.push(tr);
+            }
+        } else if sel_resp.clicked() {
+            app.ui.playlist.selected_tracks = vec![tr];
+        }
+        sel_resp.hint("Select track (click: select one, drag: select multiple, Cmd/right-click: toggle, Shift+click: range) · lights up with playback activity");
+
+        // Mute / solo LED to the left of the selector bar.
+        let led = Rect::from_center_size(pos2(sel_rect.left() - 9.0, r.center().y), vec2(10.0, 10.0));
+        if led.top() >= area.top() && led.bottom() <= area.bottom() {
+            let led_color = if activity > 0.01 && !muted {
+                mix(t.accent, Color32::WHITE, 0.35 * activity)
+            } else if muted {
+                t.text_faint
+            } else {
+                t.accent
+            };
+            if locked {
+                crate::icons::paint(&painter, led.expand(2.0), Icon::Lock, led_color);
+            } else {
+                painter.circle_filled(led.center(), 4.5, led_color);
+            }
+        }
+
+        // Group fold chevron on parent tracks.
+        let mut text_left = header_r.left() + 6.0;
+        if is_parent {
+            let grp_rect = Rect::from_center_size(pos2(header_r.left() + 8.0, r.center().y), vec2(12.0, 12.0));
+            app.ui.playlist.track_group_rects.push((tr, grp_rect));
+            text_left = header_r.left() + 16.0;
+            if grp_rect.top() >= area.top() && grp_rect.bottom() <= area.bottom() {
+                painter.text(
+                    grp_rect.center(),
+                    Align2::CENTER_CENTER,
+                    if track_data.group_collapsed { "▸" } else { "▾" },
+                    mono(10.0),
+                    t.text_dim,
+                );
+            }
+            let grp_resp = ui.interact(
+                grp_rect.intersect(area),
+                ui.id().with(("pl_grp_fold", tr)),
+                Sense::click(),
+            );
+            if grp_resp.clicked() {
+                app.exec(Command::SetPlaylistTrackGroupCollapsed {
+                    track: tr,
+                    collapsed: !track_data.group_collapsed,
+                });
+            }
+            grp_resp.hint(if track_data.group_collapsed {
+                "Expand grouped tracks"
+            } else {
+                "Collapse grouped tracks"
+            });
+        }
+
+        if r.center().y > area.top() && r.center().y < area.bottom() {
+            let text_clip =
+                Rect::from_min_max(pos2(text_left, r.top()), pos2(led.left() - 2.0, r.bottom())).intersect(area);
+            painter.with_clip_rect(text_clip).text(
+                pos2(text_left, r.center().y),
                 Align2::LEFT_CENTER,
-                &name,
-                crate::theme::prop(11.5),
+                &track_data.name,
+                crate::theme::prop(if h <= COLLAPSED_TRACK_H + 2.0 { 10.0 } else { 11.5 }),
                 if muted { t.text_dim } else { t.text },
             );
         }
+        app.ui.playlist.track_mute_rects.push((tr, led.intersect(area)));
         let led_resp = ui.interact(led.intersect(area), ui.id().with(("pl_mute", tr)), Sense::click());
         if led_resp.clicked() && ui.input(|i| i.modifiers.shift) {
             app.exec(Command::SetPlaylistTrackMuteLock {
@@ -1726,17 +2426,96 @@ fn headers_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, area: Rect, track
             });
         }
         led_resp.hint("Mute track · right-click: solo · Shift+click: lock mute state");
-        let name_resp = ui.interact(
-            Rect::from_min_max(r.min, pos2(led.left() - 2.0, r.max.y)).intersect(area),
-            ui.id().with(("pl_name", tr)),
-            Sense::click(),
+
+        // Bottom-edge drag handle for resizing/collapsing track height (unless size_locked).
+        let resize_rect = Rect::from_min_max(
+            pos2(header_r.left(), r.bottom() - 3.0),
+            pos2(led.left() - 2.0, r.bottom() + 2.0),
         );
+        app.ui.playlist.track_resize_rects.push((tr, resize_rect));
+        let resize_resp = ui.interact(
+            resize_rect.intersect(area),
+            ui.id().with(("pl_resize_tr", tr)),
+            Sense::click_and_drag(),
+        );
+        if !track_data.size_locked && (resize_resp.hovered() || resize_resp.dragged()) {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+        }
+        if !track_data.size_locked && resize_resp.drag_started() {
+            let gy = resize_resp.interact_pointer_pos().map_or(r.bottom(), |p| p.y);
+            app.doc.begin_gesture();
+            app.ui.playlist.drag = Some(Drag::ResizeTrack {
+                track: tr,
+                grab_y: gy,
+                orig_h: h,
+            });
+        }
+        if !track_data.size_locked && resize_resp.double_clicked() {
+            app.exec(Command::SetPlaylistTrackHeight {
+                track: tr,
+                height: None,
+                collapsed: false,
+            });
+        }
+        resize_resp.hint(if track_data.size_locked {
+            "Track size is locked"
+        } else {
+            "Drag to resize track height (drag to minimum to collapse · double-click to reset)"
+        });
+
+        let name_rect = Rect::from_min_max(
+            pos2(text_left, r.top()),
+            pos2(led.left() - 2.0, (r.bottom() - 3.0).max(r.top() + 1.0)),
+        );
+        let name_resp = ui.interact(name_rect.intersect(area), ui.id().with(("pl_name", tr)), Sense::click());
+        if name_resp.clicked() {
+            if mods.command {
+                if let Some(pos) = app.ui.playlist.selected_tracks.iter().position(|&x| x == tr) {
+                    app.ui.playlist.selected_tracks.remove(pos);
+                } else {
+                    app.ui.playlist.selected_tracks.push(tr);
+                }
+            } else if mods.shift {
+                if let Some(&anchor) = app.ui.playlist.selected_tracks.last() {
+                    let (a, b) = (anchor.min(tr), anchor.max(tr));
+                    for k in a..=b {
+                        if !app.ui.playlist.selected_tracks.contains(&k) {
+                            app.ui.playlist.selected_tracks.push(k);
+                        }
+                    }
+                } else {
+                    app.ui.playlist.selected_tracks.push(tr);
+                }
+            } else {
+                app.ui.playlist.selected_tracks = vec![tr];
+            }
+        }
         if name_resp.double_clicked() {
             app.dialog = Some(crate::dialogs::Dialog::rename_track(app, tr));
         }
         name_resp
-            .hint("Double-click to rename · right-click: track options")
+            .hint("Click to select track · double-click to rename · right-click: track options")
             .context_menu(|ui| track_menu(app, ui, tr));
+    }
+    if let Some(Drag::ResizeTrack { track, grab_y, orig_h }) = app.ui.playlist.drag.clone() {
+        if ui.input(|i| i.pointer.any_down()) {
+            if let Some(p) = ui.input(|i| i.pointer.interact_pos()) {
+                let target_h = orig_h + (p.y - grab_y);
+                let (height, collapsed) = if target_h <= COLLAPSED_TRACK_H + 2.0 {
+                    (Some(COLLAPSED_TRACK_H), true)
+                } else {
+                    (Some(target_h.clamp(TRACK_H.0, TRACK_H.1)), false)
+                };
+                app.exec(Command::SetPlaylistTrackHeight {
+                    track,
+                    height,
+                    collapsed,
+                });
+            }
+        } else {
+            app.doc.end_gesture();
+            app.ui.playlist.drag = None;
+        }
     }
     let y = view.y(tracks);
     let add_rect = Rect::from_min_size(pos2(area.left() + 4.0, y + 4.0), vec2(area.width() - 8.0, 24.0));
@@ -1913,6 +2692,91 @@ fn track_menu(app: &mut LimeShotApp, ui: &mut Ui, track: u32) {
         app.exec(Command::RemovePlaylistTrack { track });
         ui.close();
     }
+    ui.separator();
+    ui.menu_button("Size", |ui| {
+        if ui.button("Reset to default").clicked() {
+            app.exec(Command::SetPlaylistTrackHeight {
+                track,
+                height: None,
+                collapsed: false,
+            });
+            ui.close();
+        }
+        if ui.selectable_label(t.collapsed, "Min size (collapse)").clicked() {
+            app.exec(Command::SetPlaylistTrackHeight {
+                track,
+                height: if t.collapsed { None } else { Some(COLLAPSED_TRACK_H) },
+                collapsed: !t.collapsed,
+            });
+            ui.close();
+        }
+        ui.separator();
+        for (pct, h) in [
+            ("50%", 24.0),
+            ("100%", 44.0),
+            ("150%", 66.0),
+            ("200%", 88.0),
+            ("300%", 132.0),
+        ] {
+            if ui.button(pct).clicked() {
+                app.exec(Command::SetPlaylistTrackHeight {
+                    track,
+                    height: Some(h),
+                    collapsed: false,
+                });
+                ui.close();
+            }
+        }
+    });
+    if ui.selectable_label(t.size_locked, "Lock to this size").clicked() {
+        app.exec(Command::SetPlaylistTrackSizeLock {
+            track,
+            locked: !t.size_locked,
+        });
+        ui.close();
+    }
+    if ui
+        .add_enabled(
+            track > 0,
+            egui::Button::selectable(t.grouped_with_above, "Group with above track"),
+        )
+        .clicked()
+    {
+        app.exec(Command::SetPlaylistTracksGrouped {
+            tracks: vec![track],
+            grouped: !t.grouped_with_above,
+        });
+        ui.close();
+    }
+    let tracks_slice = &app.project().playlist.tracks;
+    let is_in_group = t.grouped_with_above
+        || tracks_slice
+            .get(track as usize + 1)
+            .is_some_and(|next| next.grouped_with_above);
+    if ui
+        .add_enabled(is_in_group, egui::Button::new("Auto color group"))
+        .clicked()
+    {
+        let mut root = track as usize;
+        while root > 0 && tracks_slice[root].grouped_with_above {
+            root -= 1;
+        }
+        let color = tracks_slice[root].color.unwrap_or(PALETTE[root % PALETTE.len()]);
+        let mut cmds = vec![Command::SetPlaylistTrackColor {
+            track: root as u32,
+            color: Some(color),
+        }];
+        let mut k = root + 1;
+        while k < tracks_slice.len() && tracks_slice[k].grouped_with_above {
+            cmds.push(Command::SetPlaylistTrackColor {
+                track: k as u32,
+                color: Some(color),
+            });
+            k += 1;
+        }
+        app.exec(Command::Batch(cmds));
+        ui.close();
+    }
     ui.menu_button("Track mode", |ui| {
         ui.label("Unassigned");
         ui.add_enabled(
@@ -1924,10 +2788,6 @@ fn track_menu(app: &mut LimeShotApp, ui: &mut Ui, track: u32) {
         "Set icon",
         "Auto name clips",
         "Performance settings",
-        "Size",
-        "Lock to this size",
-        "Group with above track",
-        "Auto color group",
         "Lock to content",
         "Consolidate track/s",
     ] {
@@ -1974,16 +2834,25 @@ fn fade_handles(view: &View, c: &Clip) -> Option<(Pos2, Pos2)> {
     Some((pos2(x_in, y), pos2(x_out, y)))
 }
 
-fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
+fn hit(view: &View, clips: &[Clip], p: Pos2, show_fades: bool) -> Option<(Clip, Part)> {
     clips.iter().rev().find_map(|c| {
+        if view.is_track_hidden(c.track) {
+            return None;
+        }
         let r = view.clip_rect(c);
         r.contains(p).then(|| {
             let edge = EDGE.min(r.width() * 0.3);
-            let fades = fade_handles(view, c);
+            let fades = show_fades.then(|| fade_handles(view, c)).flatten();
             let inside_edges = p.x > r.left() + edge && p.x < r.right() - edge;
-            let part = if inside_edges && fade_curve_handle(view, c, false).is_some_and(|h| h.distance(p) <= 6.0) {
+            let part = if show_fades
+                && inside_edges
+                && fade_curve_handle(view, c, false).is_some_and(|h| h.distance(p) <= 6.0)
+            {
                 Part::FadeCurveIn
-            } else if inside_edges && fade_curve_handle(view, c, true).is_some_and(|h| h.distance(p) <= 6.0) {
+            } else if show_fades
+                && inside_edges
+                && fade_curve_handle(view, c, true).is_some_and(|h| h.distance(p) <= 6.0)
+            {
                 Part::FadeCurveOut
             } else if fades.is_some_and(|(a, _)| a.distance(p) <= 5.0) {
                 Part::FadeIn
@@ -2001,6 +2870,68 @@ fn hit(view: &View, clips: &[Clip], p: Pos2) -> Option<(Clip, Part)> {
             (c.clone(), part)
         })
     })
+}
+
+/// Snap an audio clip's local tick offset (`local_tick` from sample start) to the nearest zero
+/// crossing in the channel's sample within a short window (~15 ms), returning the adjusted local tick.
+fn snap_local_to_zero_crossing(app: &LimeShotApp, ch: ChannelId, local_tick: Tick) -> Tick {
+    let Some((_, sample, first, per_tick)) = clip_audio(app, ch) else {
+        return local_tick;
+    };
+    if per_tick <= 0.0 || sample.frames() < 2 {
+        return local_tick;
+    }
+    let center = (first + local_tick as f64 * per_tick).round() as isize;
+    let radius = ((sample.sample_rate as usize) / 60).clamp(16, 2048) as isize;
+    let max_frame = sample.frames().saturating_sub(2) as isize;
+    if max_frame <= 0 {
+        return local_tick;
+    }
+    let mut best_frame = None;
+    let mut best_dist = isize::MAX;
+    let lo = (center - radius).clamp(0, max_frame);
+    let hi = (center + radius).clamp(0, max_frame);
+    for i in lo..=hi {
+        let (l0, r0) = sample.frame(i as usize);
+        let (l1, r1) = sample.frame(i as usize + 1);
+        let m0 = 0.5 * (l0 + r0);
+        let m1 = 0.5 * (l1 + r1);
+        if (m0 <= 0.0 && m1 >= 0.0) || (m0 >= 0.0 && m1 <= 0.0) {
+            let d = (i - center).abs();
+            if d < best_dist {
+                best_dist = d;
+                best_frame = Some(i as f64);
+            }
+        }
+    }
+    if let Some(f) = best_frame {
+        (((f - first) / per_tick).round().max(0.0)) as Tick
+    } else {
+        local_tick
+    }
+}
+
+/// Adjust an audio channel's sampler pitch so the clip stretches from `orig_len` to `new_len`.
+fn apply_audio_stretch(app: &mut LimeShotApp, ch: ChannelId, orig_pitch: f32, orig_len: Tick, new_len: Tick) {
+    if orig_len == 0 || new_len == 0 {
+        return;
+    }
+    let Some(Instrument::Plugin(plugin)) = app.project().channel(ch).map(|c| c.instrument.clone()) else {
+        return;
+    };
+    let Some(spec) = limeshot_core::lime::SAMPLER_CONTROLS.get(1) else {
+        return;
+    };
+    let ratio = orig_len as f32 / new_len as f32;
+    let pitch = (orig_pitch + 12.0 * ratio.log2()).clamp(spec.min, spec.max);
+    let norm = f64::from(limeshot_core::lime::plugin_normalized(spec, pitch));
+    let id = limeshot_core::lime::param_id(1);
+    let target = PluginTarget::Channel(ch);
+    app.plugins.set_param(target, id, norm);
+    let Some(state) = limeshot_core::lime::edited_param_state(&plugin, id, norm) else {
+        return;
+    };
+    app.exec(Command::SetPluginState { plugin: target, state });
 }
 
 /// Make a clicked clip's source the thing being edited and placed (FL Studio selects it in the
@@ -2111,6 +3042,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     let (mods, pointer) = ui.input(|i| (i.modifiers, i.pointer.interact_pos()));
     let snap = if mods.alt { Snap::None } else { app.ui.snap };
     let tool = app.ui.playlist.tool;
+    let show_fades = app.ui.playlist.audio_show_fades;
     app.ui.playlist.cursor = None;
     if let Some(p) = resp.hover_pos() {
         let auto_hit = (app.ui.playlist.drag.is_none())
@@ -2118,7 +3050,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             .flatten();
         let auto_icon = auto_hit.as_ref().map(|_| egui::CursorIcon::None);
         let auto_cursor = match app.ui.playlist.drag {
-            Some(Drag::AutoPoint { .. }) => Some(0),
+            Some(Drag::AutoPoint { .. } | Drag::AutoStep { .. }) => Some(0),
             Some(Drag::AutoTension { .. }) => Some(1),
             _ => auto_hit.map(|(_, _, h)| match h {
                 AutoHit::Point(_) => 0,
@@ -2126,7 +3058,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 AutoHit::Curve(..) => 2,
             }),
         };
-        let special = auto_icon.or(match (tool, hit(view, clips, p).map(|h| h.1)) {
+        let special = auto_icon.or(match (tool, hit(view, clips, p, show_fades).map(|h| h.1)) {
             (Tool::Draw | Tool::Paint, Some(Part::LeftEdge | Part::RightEdge | Part::FadeIn | Part::FadeOut)) => {
                 Some(egui::CursorIcon::ResizeHorizontal)
             }
@@ -2171,6 +3103,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && !mods.command
         && let Some((p, (clip, a, h))) = auto
     {
+        focus_source(app, &clip);
         let points = app
             .project()
             .automation(a)
@@ -2179,11 +3112,18 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         match (h, primary) {
             (AutoHit::Point(i), true) => {
                 app.doc.begin_gesture();
-                app.ui.playlist.drag = Some(Drag::AutoPoint {
-                    clip: clip.id,
-                    automation: a,
-                    index: i,
-                });
+                if app.ui.playlist.auto_step {
+                    app.ui.playlist.drag = Some(Drag::AutoStep {
+                        clip: clip.id,
+                        automation: a,
+                    });
+                } else {
+                    app.ui.playlist.drag = Some(Drag::AutoPoint {
+                        clip: clip.id,
+                        automation: a,
+                        index: i,
+                    });
+                }
             }
             (AutoHit::Point(i), false) => {
                 // FL Studio: a point's right-click menu (Delete and the point modes).
@@ -2206,31 +3146,45 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
             (AutoHit::Curve(tick, value), left) => {
                 let mut pts = points;
+                let step_mode = app.ui.playlist.auto_step && left;
+                let mode = if step_mode { PointMode::Hold } else { Default::default() };
                 let index = pts.partition_point(|x| x.tick < tick);
-                if pts.get(index).is_none_or(|x| x.tick != tick) {
+                if let Some(existing) = pts.get_mut(index).filter(|x| x.tick == tick) {
+                    existing.value = value;
+                    if step_mode {
+                        existing.mode = PointMode::Hold;
+                    }
+                } else {
                     pts.insert(
                         index,
                         AutomationPoint {
                             tick,
                             value,
                             tension: 0.0,
-                            mode: Default::default(),
+                            mode,
                         },
                     );
-                    if left {
-                        app.doc.begin_gesture();
-                    }
-                    app.exec(Command::SetAutomationPoints {
-                        automation: a,
-                        points: pts,
-                    });
-                    if left {
-                        app.ui.playlist.drag = Some(Drag::AutoPoint {
+                }
+                if left {
+                    app.doc.begin_gesture();
+                }
+                app.exec(Command::SetAutomationPoints {
+                    automation: a,
+                    points: pts,
+                });
+                if left {
+                    app.ui.playlist.drag = Some(if step_mode {
+                        Drag::AutoStep {
+                            clip: clip.id,
+                            automation: a,
+                        }
+                    } else {
+                        Drag::AutoPoint {
                             clip: clip.id,
                             automation: a,
                             index,
-                        });
-                    }
+                        }
+                    });
                 }
             }
         }
@@ -2241,7 +3195,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         && let Some(p) = pointer
         && !mods.command
         && !matches!(tool, Tool::Draw | Tool::Paint)
-        && !matches!(hit(view, clips, p), Some((_, Part::Menu)))
+        && !matches!(hit(view, clips, p, show_fades), Some((_, Part::Menu)))
     {
         primary = false;
         match tool {
@@ -2250,7 +3204,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 app.ui.playlist.drag = Some(Drag::Erase);
             }
             Tool::Mute => {
-                if let Some((c, _)) = hit(view, clips, p) {
+                if let Some((c, _)) = hit(view, clips, p, show_fades) {
                     app.doc.begin_gesture();
                     app.ui.playlist.drag = Some(Drag::Mute {
                         muted: !c.muted,
@@ -2259,7 +3213,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 }
             }
             Tool::Slip => {
-                if let Some((c, _)) = hit(view, clips, p) {
+                if let Some((c, _)) = hit(view, clips, p, show_fades) {
                     app.ui.playlist.selection = vec![c.id];
                     app.doc.begin_gesture();
                     app.ui.playlist.drag = Some(Drag::Slip {
@@ -2271,7 +3225,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 }
             }
             Tool::Slice => app.ui.playlist.drag = Some(Drag::Slice { from: p }),
-            Tool::Select => match hit(view, clips, p) {
+            Tool::Select => match hit(view, clips, p, show_fades) {
                 Some((c, _)) => {
                     let st = &mut app.ui.playlist;
                     if mods.shift {
@@ -2312,7 +3266,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     if primary && let Some(p) = pointer {
         let st = &mut app.ui.playlist;
         if mods.command {
-            match hit(view, clips, p) {
+            match hit(view, clips, p, show_fades) {
                 Some((c, _)) => {
                     if let Some(i) = st.selection.iter().position(|x| *x == c.id) {
                         st.selection.remove(i);
@@ -2328,7 +3282,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 }
             }
         } else {
-            match hit(view, clips, p) {
+            match hit(view, clips, p, show_fades) {
                 Some((c, Part::Menu)) => {
                     st.menu = Some((c.id, p, ui.ctx().cumulative_pass_nr()));
                 }
@@ -2340,7 +3294,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     focus_source(app, &c);
                     // Shift+drag moves copies and leaves the originals (FL Studio).
                     let duplicate = mods.shift && part == Part::Body;
+                    let stretching =
+                        part == Part::RightEdge && c.audio_channel().is_some() && app.ui.playlist.audio_stretch;
                     if duplicate
+                        || stretching
                         || matches!(
                             part,
                             Part::FadeIn | Part::FadeOut | Part::FadeCurveIn | Part::FadeCurveOut
@@ -2350,10 +3307,17 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     } else {
                         app.doc.begin_gesture();
                     }
+                    let orig_pitch = c
+                        .audio_channel()
+                        .and_then(|ch| app.project().channel(ch))
+                        .and_then(|ch| limeshot_core::lime::sampler_params(&ch.instrument))
+                        .map(|sp| sp.pitch);
                     app.ui.playlist.drag = Some(match part {
                         Part::RightEdge => Drag::Resize {
                             id: c.id,
                             start: c.start,
+                            orig_len: c.length,
+                            orig_pitch,
                         },
                         Part::LeftEdge => Drag::ResizeStart { id: c.id },
                         Part::FadeCurveIn | Part::FadeCurveOut => Drag::FadeCurve {
@@ -2461,7 +3425,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     } else if secondary {
         // Right-click deletes the clip under the pointer; on empty space it clears the
         // selection (FL Studio).
-        if pointer.is_some_and(|p| hit(view, clips, p).is_none()) {
+        if pointer.is_some_and(|p| hit(view, clips, p, show_fades).is_none()) {
             app.ui.playlist.selection.clear();
         }
         app.doc.begin_gesture();
@@ -2496,12 +3460,33 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     *applied_dtrack = dtrack;
                 }
             }
-            Some(Drag::Resize { id, start }) => {
+            Some(Drag::Resize {
+                id,
+                start,
+                orig_len,
+                orig_pitch,
+            }) => {
                 let end = snap.round(view.tick_at(p.x).max(0) as u64, sig);
                 let min = snap.ticks(sig).unwrap_or(STEP_TICKS).max(1);
-                let len = end.saturating_sub(*start).max(min);
-                if app.project().clip(*id).is_some_and(|c| c.length != len) {
+                let mut len = end.saturating_sub(*start).max(min);
+                let clip_before = app.project().clip(*id).cloned();
+                if let Some(c) = &clip_before
+                    && let Some(ch) = c.audio_channel()
+                    && app.ui.playlist.audio_zero_cross
+                    && !app.ui.playlist.audio_stretch
+                {
+                    let snapped_local = snap_local_to_zero_crossing(app, ch, c.offset + len);
+                    len = snapped_local.saturating_sub(c.offset).max(1);
+                }
+                if clip_before.as_ref().is_some_and(|c| c.length != len) {
                     app.exec(Command::ResizeClip { clip: *id, length: len });
+                    if let Some(c) = &clip_before
+                        && let Some(ch) = c.audio_channel()
+                        && app.ui.playlist.audio_stretch
+                        && let Some(pitch) = *orig_pitch
+                    {
+                        apply_audio_stretch(app, ch, pitch, *orig_len, len);
+                    }
                     app.ui.playlist.last_len = app.project().clip(*id).map(|c| (c.source, c.length));
                 }
             }
@@ -2518,16 +3503,27 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     let area = curve_area(r);
                     let local = (view.tick_at(p.x) - c.start as i64 + c.offset as i64).max(0) as u64;
                     let local = snap.round(local, sig);
+                    let slide = app.ui.playlist.auto_slide;
                     let lo = if *index == 0 { 0 } else { a.points[*index - 1].tick + 1 };
-                    let hi = a.points.get(*index + 1).map_or(Tick::MAX, |x| x.tick.saturating_sub(1));
+                    let hi = if slide {
+                        Tick::MAX / 2
+                    } else {
+                        a.points.get(*index + 1).map_or(Tick::MAX, |x| x.tick.saturating_sub(1))
+                    };
                     let tick = local.clamp(lo, hi.max(lo));
                     let value = ((area.bottom() - p.y) / area.height().max(1.0)).clamp(0.0, 1.0);
                     let mut pts = a.points.clone();
-                    if let Some(pt) = pts.get_mut(*index)
-                        && (pt.tick != tick || pt.value != value)
+                    if let Some(old_pt) = pts.get(*index).copied()
+                        && (old_pt.tick != tick || old_pt.value != value)
                     {
-                        pt.tick = tick;
-                        pt.value = value;
+                        let dt = tick as i64 - old_pt.tick as i64;
+                        pts[*index].tick = tick;
+                        pts[*index].value = value;
+                        if slide && dt != 0 {
+                            for sub in &mut pts[*index + 1..] {
+                                sub.tick = (sub.tick as i64 + dt).max(tick as i64 + 1) as Tick;
+                            }
+                        }
                         app.exec(Command::SetAutomationPoints {
                             automation: *automation,
                             points: pts,
@@ -2535,6 +3531,47 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     }
                     if let Some(m) = a.target.mapping(app.project()) {
                         app.hint(format!("{}: {:.3}", a.name, m.to_value(value)));
+                    }
+                }
+            }
+            Some(Drag::AutoStep { clip, automation }) => {
+                if let (Some(c), Some(a)) = (
+                    app.project().clip(*clip).cloned(),
+                    app.project().automation(*automation).cloned(),
+                ) {
+                    let r = view.clip_rect(&c);
+                    let area = curve_area(r);
+                    let local = (view.tick_at(p.x) - c.start as i64 + c.offset as i64).max(0) as u64;
+                    let step = snap.ticks(sig).unwrap_or(STEP_TICKS).max(1);
+                    let tick = (local / step * step).clamp(c.offset, c.offset + c.length.saturating_sub(1));
+                    let value = ((area.bottom() - p.y) / area.height().max(1.0)).clamp(0.0, 1.0);
+                    let mut pts = a.points.clone();
+                    let idx = pts.partition_point(|x| x.tick < tick);
+                    let changed = if let Some(pt) = pts.get_mut(idx).filter(|x| x.tick == tick) {
+                        if (pt.value - value).abs() > f32::EPSILON || pt.mode != PointMode::Hold {
+                            pt.value = value;
+                            pt.mode = PointMode::Hold;
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        pts.insert(
+                            idx,
+                            AutomationPoint {
+                                tick,
+                                value,
+                                tension: 0.0,
+                                mode: PointMode::Hold,
+                            },
+                        );
+                        true
+                    };
+                    if changed {
+                        app.exec(Command::SetAutomationPoints {
+                            automation: *automation,
+                            points: pts,
+                        });
                     }
                 }
             }
@@ -2609,7 +3646,16 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 }
             }
             Some(Drag::ResizeStart { id }) => {
-                let start = snap.round(view.tick_at(p.x).max(0) as u64, sig);
+                let mut start = snap.round(view.tick_at(p.x).max(0) as u64, sig);
+                if let Some(c) = app.project().clip(*id).cloned()
+                    && let Some(ch) = c.audio_channel()
+                    && app.ui.playlist.audio_zero_cross
+                {
+                    let delta = start as i64 - c.start as i64;
+                    let want_offset = (c.offset as i64 + delta).max(0) as Tick;
+                    let snapped_offset = snap_local_to_zero_crossing(app, ch, want_offset);
+                    start = (c.start as i64 + (snapped_offset as i64 - c.offset as i64)).max(0) as Tick;
+                }
                 if app.project().clip(*id).is_some_and(|c| c.start != start) {
                     app.exec(Command::ResizeClipStart { clip: *id, start });
                     app.ui.playlist.last_len = app.project().clip(*id).map(|c| (c.source, c.length));
@@ -2617,7 +3663,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
             Some(Drag::Erase) => {
                 let current = app.project().playlist.clips.clone();
-                if let Some((c, _)) = hit(view, &current, p) {
+                if let Some((c, _)) = hit(view, &current, p, show_fades) {
                     app.exec(Command::RemoveClips(vec![c.id]));
                     app.ui.playlist.selection.retain(|x| *x != c.id);
                 }
@@ -2625,7 +3671,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             Some(Drag::Select { from }) => {
                 let r = Rect::from_two_pos(*from, p);
                 for c in clips {
-                    if view.clip_rect(c).intersects(r) && !app.ui.playlist.selection.contains(&c.id) {
+                    if !view.is_track_hidden(c.track)
+                        && view.clip_rect(c).intersects(r)
+                        && !app.ui.playlist.selection.contains(&c.id)
+                    {
                         app.ui.playlist.selection.push(c.id);
                     }
                 }
@@ -2654,7 +3703,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
             Some(Drag::Mute { muted, done }) => {
                 let current = app.project().playlist.clips.clone();
-                if let Some((c, _)) = hit(view, &current, p)
+                if let Some((c, _)) = hit(view, &current, p, show_fades)
                     && !done.contains(&c.id)
                 {
                     done.push(c.id);
@@ -2676,12 +3725,18 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                 // source does, but may run past its end (silence, as in FL Studio).
                 let target = (*anchor as i64 + view.tick_at(p.x) - *grab_tick).max(0) as u64;
                 let d = snap.round(target, sig) as i64 - *anchor as i64;
-                let new = (*offset as i64 - d).max(0) as u64;
+                let mut new = (*offset as i64 - d).max(0) as u64;
+                if let Some(c) = app.project().clip(*id)
+                    && let Some(ch) = c.audio_channel()
+                    && app.ui.playlist.audio_zero_cross
+                {
+                    new = snap_local_to_zero_crossing(app, ch, new);
+                }
                 if app.project().clip(*id).is_some_and(|c| c.offset != new) {
                     app.exec(Command::SlipClip { clip: *id, offset: new });
                 }
             }
-            Some(Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback) | None => {}
+            Some(Drag::Slice { .. } | Drag::Zoom { .. } | Drag::Playback | Drag::ResizeTrack { .. }) | None => {}
         }
         app.ui.playlist.drag = drag;
     }
@@ -2734,7 +3789,10 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             _ => {}
         }
     }
-    if app.ui.playlist.drag.is_some() && !ui.input(|i| i.pointer.any_down()) {
+    if app.ui.playlist.drag.is_some()
+        && !matches!(app.ui.playlist.drag, Some(Drag::ResizeTrack { .. }))
+        && !ui.input(|i| i.pointer.any_down())
+    {
         if !matches!(app.ui.playlist.drag, Some(Drag::Select { .. })) {
             app.doc.end_gesture();
         }
@@ -2742,7 +3800,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
     }
     if resp.double_clicked()
         && let Some(p) = pointer
-        && let Some((c, part)) = hit(view, clips, p)
+        && let Some((c, part)) = hit(view, clips, p, show_fades)
         && part != Part::Menu
     {
         focus_source(app, &c);
@@ -2792,19 +3850,36 @@ fn slice_at(app: &mut LimeShotApp, view: &View, from: Pos2, to: Pos2, snap: Snap
         let (a, b) = (view.track_at(from.y), view.track_at(to.y));
         (a.min(b), a.max(b))
     };
-    let crossed: Vec<ClipId> = app
+    let zero_cross = app.ui.playlist.audio_zero_cross;
+    let crossed: Vec<(ClipId, Tick)> = app
         .project()
         .playlist
         .clips
         .iter()
         .filter(|c| (t0..=t1).contains(&(c.track as i32)) && c.start < at && at < c.end())
-        .map(|c| c.id)
+        .map(|c| {
+            let cut = match c.source {
+                ClipSource::Audio(ch) if zero_cross => {
+                    let local = snap_local_to_zero_crossing(app, ch, c.offset + (at - c.start));
+                    (c.start + local.saturating_sub(c.offset)).clamp(c.start + 1, c.end().saturating_sub(1))
+                }
+                _ => at,
+            };
+            (c.id, cut)
+        })
         .collect();
     if crossed.is_empty() {
         return;
     }
     let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
-    app.exec(Command::SliceClips { clips: crossed, at });
+    let cmds = crossed
+        .into_iter()
+        .map(|(clip, cut)| Command::SliceClips {
+            clips: vec![clip],
+            at: cut,
+        })
+        .collect();
+    app.exec(Command::Batch(cmds));
     app.ui.playlist.selection = app
         .project()
         .playlist
@@ -3175,7 +4250,7 @@ fn source_drop(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, trac
     let (name, color) = source_name_color(app, *source);
     let r = Rect::from_min_max(
         pos2(view.x(start), view.y(track)),
-        pos2(view.x(start + length), view.y(track) + view.track_h),
+        pos2(view.x(start + length), view.y(track) + view.track_height(track)),
     );
     let painter = ui.painter_at(grid);
     painter.rect_filled(r, 3.0, rgb(color).gamma_multiply(0.35));
@@ -3265,12 +4340,14 @@ mod tests {
 
     #[test]
     fn short_fade_curve_handles_leave_clip_edges_resizable() {
-        let view = View {
-            grid: Rect::from_min_size(Pos2::ZERO, vec2(500.0, 100.0)),
-            ppt: 1.0,
-            track_h: 60.0,
-            scroll: Vec2::ZERO,
-        };
+        let tracks = vec![limeshot_core::PlaylistTrack::new("Track 1")];
+        let view = View::new(
+            Rect::from_min_size(Pos2::ZERO, vec2(500.0, 100.0)),
+            1.0,
+            60.0,
+            Vec2::ZERO,
+            &tracks,
+        );
         let clip = Clip {
             id: ClipId(1),
             source: ClipSource::Audio(ChannelId(1)),
@@ -3290,7 +4367,7 @@ mod tests {
             } else {
                 view.clip_rect(&clip).left() + 1.0
             };
-            let (_, part) = hit(&view, std::slice::from_ref(&clip), pos2(edge, handle.y)).unwrap();
+            let (_, part) = hit(&view, std::slice::from_ref(&clip), pos2(edge, handle.y), true).unwrap();
             assert!(matches!((out, part), (false, Part::LeftEdge) | (true, Part::RightEdge)));
         }
     }

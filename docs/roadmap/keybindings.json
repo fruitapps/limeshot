@@ -1576,6 +1576,17 @@
       "status": "IMPLEMENTED",
       "feature": "SEQ-013",
       "notes": "Image-Line Channel Rack manual, Zip selected / Unzip all. Headless tests cover both bindings."
+    },
+    {
+      "id": "KB-144",
+      "context": "Playlist",
+      "action": "Group / ungroup selected tracks",
+      "fl_keys": "Shift+G / Alt+G",
+      "confidence": "OBSERVED",
+      "limeshot_keys": "Shift+G / Alt+G",
+      "status": "IMPLEMENTED",
+      "feature": "PL-018",
+      "notes": "Recorded FL menu inventory; selection grouping uses a contiguous span."
     }
   ]
 }

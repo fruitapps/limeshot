@@ -491,3 +491,38 @@ Live GUI A/B verification with FL Studio and native editor interaction remains i
 
 Work remains on `codex/mp3-export-sampler-audit` in the primary checkout (`~/Developer/limeshot`),
 reusing Cargo caches without routine worktrees/clones, direct main pushes or automatic merges.
+
+
+## 2026-10-27 — Alpha.1 Rev 1 continuation
+
+Continued the inherited uncommitted work in `codex/alpha1-rev1-issues` in the existing primary
+checkout (`~/Developer/limeshot`), reusing Cargo caches. No repository lock named Argon was found;
+application-managed thread locks were left untouched. No worktree/clone was created.
+
+Implemented mouse-held Piano Roll auditions, Playlist edge-drag scrolling and pattern-source
+selection, Sample/Automation/Patterns focus controls, clip-preview scrollbar, arrangements and
+track selection/activity/height/collapse/groups, plus release-to-play Browser waveform scrubbing.
+The continuation fixes next-frame audition cancellation, group-parent selection, the arrangement
+limit, geometry above 64 tracks and pattern selection interfering with held Channel Rack strokes.
+It adds core arrangement/height/undo/persistence tests, six UI regressions, held-audition coverage
+and a preview-offset/replacement audio test at block sizes 1/64/333/1024. Roadmap, menu/shortcut
+inventories, architecture and limitations are updated. The requested Windows native-plugin
+responsiveness investigation and FL-style wrapper/Settings research are in next steps.
+
+macOS 26.6.2 (25G83), Apple Silicon: all 480 workspace tests pass across workspace/package runs,
+including 169 UI and 62 engine tests. Workspace build, strict workspace all-target Clippy, rustfmt,
+feature inventories, repository references and whitespace checks pass. All twelve native release
+VST3 bundles rebuilt. The initial sandboxed plugin bridge test could not listen on its local socket;
+permitted tests pass. The new preview test was corrected to account for the existing attack/release
+fades. [Playlist screenshot](../screenshots/current/alpha1-rev1.png) rendered with `ui_shot --rev1`
+and inspected after replacing a missing arrow glyph; offscreen rendering required host GPU access.
+
+[Design, inherited coverage and remaining gaps](../research/alpha1-rev1.md). Stretch is shared-sampler
+resampling on the right edge, changes pitch and is bounded by sampler pitch range; pitch-preserving
+and independent clip stretch remain open. Track lights infer musical activity rather than metering
+actual audio. STEP pulse/tension parity, disk zero crossings, full arrangement merge policies and
+additional FLP arrangements remain open. Live FL/macOS comparisons and Windows/Linux runtime checks
+are recorded in human verification; new features remain IMPLEMENTED rather than VERIFIED.
+
+Push only the feature branch and its PR; do not push main or merge automatically. Continue using the
+primary checkout and shared Cargo cache in handoffs.

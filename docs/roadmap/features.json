@@ -1319,7 +1319,7 @@
       "name": "Add, move, resize, delete notes",
       "description": "Core note editing.",
       "fl_reference": "Draw tool: left add/move, edge resize, right delete.",
-      "limeshot_behavior": "Same mouse conventions; Alt bypasses snap; Delete removes the selection. New notes are two steps long until a note is drawn or resized; after that they take its length (as observed in FL Studio).",
+      "limeshot_behavior": "Same mouse conventions; Alt bypasses snap; Delete removes the selection. New notes are two steps long until a note is drawn or resized; after that they take its length (as observed in FL Studio). Drawn and moved notes audition while the mouse is held; release stops the audition and each new pitch replaces the preceding audition. Note length remains an editing property.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -1336,7 +1336,7 @@
         "limeshot-app tests/ui.rs::piano_roll_click_adds_drag_moves_delete_removes",
         "limeshot-core document::tests::notes_move_resize_and_duplicate",
         "limeshot-app tests/ui.rs::piano_roll_right_edge_resizes_both_ways",
-        "limeshot-engine tests/plugins.rs::timed_auditions_release_on_the_audio_clock_while_stopped"
+        "crates/limeshot-app/tests/ui.rs::drawing_auditions_follow_mouse_hold_and_release"
       ],
       "reference": {
         "application": "FL Studio",
@@ -1345,7 +1345,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
         ]
       },
-      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png). Session 9: dragging a note's edge past its other end stops at one snap step (it collapsed to one tick and the drag then lost track of the note). Session 17: Drawn and moved notes audition for their remembered note length on the audio clock, independent of mouse release; right-delete uses a red cursor."
+      "notes": "Default note length observed live in FL Studio 2026.1.1 (evidence/screenshots/fl-note-length.png). Session 9: dragging a note's edge past its other end stops at one snap step (it collapsed to one tick and the drag then lost track of the note). Session 17: Superseded by Rev 1 mouse-held preview; right-delete uses a red cursor. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "PR-002",
@@ -2167,7 +2167,7 @@
       "name": "Move clips (time and track)",
       "description": "Drag clips.",
       "fl_reference": "Drag; Shift+wheel move track.",
-      "limeshot_behavior": "Drag moves the selection with snap; Shift+arrows nudge. Shift+drag moves copies and leaves the originals (one undo step; a Shift+click without moving copies nothing).",
+      "limeshot_behavior": "Drag moves the selection with snap; Shift+arrows nudge. Shift+drag moves copies and leaves the originals (one undo step; a Shift+click without moving copies nothing). Dragging clips near or beyond the viewport edges scrolls horizontally and vertically while keeping the clip under the pointer.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2182,7 +2182,8 @@
       ],
       "tests": [
         "limeshot-core document::tests::clip_duplicate_and_move",
-        "limeshot-app tests/ui.rs::shift_drag_duplicates_and_right_click_on_empty_space_deselects"
+        "limeshot-app tests/ui.rs::shift_drag_duplicates_and_right_click_on_empty_space_deselects",
+        "crates/limeshot-app/tests/ui.rs::rev1_clip_drag_scrolls_past_the_playlist_viewport"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2191,7 +2192,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 11 (owner's list item 2): Shift+drag duplicates, observed live in FL 2026.1.1."
+      "notes": "Session 11 (owner's list item 2): Shift+drag duplicates, observed live in FL 2026.1.1. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "PL-003",
@@ -2358,7 +2359,7 @@
       "name": "Zoom, scroll, bar/beat ruler",
       "description": "Timeline navigation.",
       "fl_reference": "Zoom, scroll, ruler.",
-      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers. ⏵ menu › Zoom: PgUp / PgDn, Shift+1–5 (4, 16, 64 bars, whole song, selection), Center (Shift+0). Horizontal and vertical scrollbars share the wheel navigation offsets.",
+      "limeshot_behavior": "Cmd+wheel or pinch zoom, wheel/Shift+wheel and arrow keys scroll, ruler with bar numbers. ⏵ menu › Zoom: PgUp / PgDn, Shift+1–5 (4, 16, 64 bars, whole song, selection), Center (Shift+0). Horizontal and vertical scrollbars share the wheel navigation offsets. A translucent viewport thumb overlays a miniature clip preview on the top scrollbar.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -2384,7 +2385,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height. Session 16: the quick-zoom levels are LimeShot's. 2026-10-25: Horizontal zoom now spans 0.25–16,384 pixels per beat, through menu, tool and wheel paths. Vertical track heights span 12–640 pixels."
+      "notes": "Session 7 fixed Cmd+wheel zoom (it never worked: egui reports it as a zoom delta). Plain arrows scroll, inferred from the Piano Roll (not observed in FL's Playlist). Session 9: Opt+wheel / Opt+pinch zooms the track height. Session 16: the quick-zoom levels are LimeShot's. 2026-10-25: Horizontal zoom now spans 0.25–16,384 pixels per beat, through menu, tool and wheel paths. Vertical track heights span 12–640 pixels. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "PL-009",
@@ -2699,7 +2700,7 @@
           "docs/research/evidence/screenshots/fl-playlist-slice.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), zero-cross snapping for audio slices, Right-Shift shortcuts. Session 9: the Playlist's Playback tool scrubs the pattern clips' notes under its line (audio clips are not scrubbed), and each tool shows its icon as the cursor. Session 11 (owner's list item 13): the tools are real cursors — over the grid the system cursor is hidden and the tool is drawn at the pointer (white with a dark outline), its point on the hotspot (pencil, brush, knife, magnifier) or centred; edges, moving and menus keep the standard resize/grab/hand cursors. Differs from FL: the shapes are LimeShot's own icons, not FL's cursor bitmaps."
+      "notes": "Observed live in FL 2026.1.1 (session 8). Not done: Shift+S ripple edit, diagonal (Shift) slicing, slicing without dragging (Shift+click), Right-Shift shortcuts. Session 9: the Playlist's Playback tool scrubs the pattern clips' notes under its line (audio clips are not scrubbed), and each tool shows its icon as the cursor. Session 11 (owner's list item 13): the tools are real cursors — over the grid the system cursor is hidden and the tool is drawn at the pointer (white with a dark outline), its point on the hotspot (pencil, brush, knife, magnifier) or centred; edges, moving and menus keep the standard resize/grab/hand cursors. Differs from FL: the shapes are LimeShot's own icons, not FL's cursor bitmaps. Rev 1 adds bounded zero-cross snapping for decoded audio."
     },
     {
       "id": "PL-018",
@@ -2707,17 +2708,23 @@
       "name": "Track grouping",
       "description": "Group tracks.",
       "fl_reference": "Group with above track.",
-      "limeshot_behavior": "Collapsible track groups.",
+      "limeshot_behavior": "Collapsible track groups. Track selector bars support click, drag, toggle and range selection. Group selected tracks uses the first track as parent and groups the contiguous span through the last selection. Groups collapse without muting children. Track context menus group with above, ungroup and collapse/expand.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-core/tests/arrangements.rs::grouped_tracks_and_custom_heights_survive_save_and_undo",
+        "crates/limeshot-app/tests/ui.rs::rev1_playlist_track_selection_grouping_height_and_focus_options"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2725,7 +2732,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "PL-019",
@@ -2759,17 +2766,22 @@
       "name": "Arrangements",
       "description": "Multiple arrangements per project.",
       "fl_reference": "Arrangement selector.",
-      "limeshot_behavior": "Several playlists sharing channels/mixer.",
+      "limeshot_behavior": "Several playlists sharing channels/mixer. The header arrangement selector adds, clones, renames, switches, deletes and merges arrangements. Tracks, clips and markers are independent; patterns, channels, automations and mixer are shared. Commands support undo and persistence.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-core/tests/arrangements.rs::arrangements_clone_switch_merge_delete_and_roundtrip"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -2777,7 +2789,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Merge currently overlays at the start on matching track indices; FL merge position/track policies and importing additional FLP arrangements remain open."
     },
     {
       "id": "PL-021",
@@ -2849,7 +2861,7 @@
       "name": "Crossfades and time stretching",
       "description": "Audio clip processing.",
       "fl_reference": "Audio focus options.",
-      "limeshot_behavior": "Audio clips have triangular fade length handles and circular tension handles. Horizontal length and vertical curve drags apply relative changes to selected audio clips as one undo step. Saved curves play through Lime Sampler, including chase. Automatic crossfades, smooth S curves and time stretching remain open.",
+      "limeshot_behavior": "Audio clips have triangular fade length handles and circular tension handles. Horizontal length and vertical curve drags apply relative changes to selected audio clips as one undo step. Saved curves play through Lime Sampler, including chase. Automatic crossfades, smooth S curves and pitch-preserving time stretching remain open. Sample focus toggles fade edit controls, zero-crossing snapping and resample stretching on right-edge resize. Stretch changes pitch and all clips sharing the sampler; independent pitch-preserving stretching remains open.",
       "priority": "P2",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -2869,7 +2881,8 @@
       "tests": [
         "limeshot-engine tests/audio.rs::clip_fade_model_clamps_to_the_clip",
         "crates/limeshot-app/tests/ui.rs::audio_clip_fade_handles_set_the_fades",
-        "limeshot-dsp voice::fade_tests::fade_tension_is_monotonic_and_keeps_endpoints"
+        "limeshot-dsp voice::fade_tests::fade_tension_is_monotonic_and_keeps_endpoints",
+        "crates/limeshot-app/tests/ui.rs::rev1_audio_stretch_resamples_and_undo_restores_source_state"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2879,7 +2892,7 @@
           "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
+      "notes": "2026-10-26: independent single-curve blend follows documented FL handle behavior; exact FL tension mathematics is not claimed. Fixed-size native protocol v2 carries tensions; linear clips retain v1. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Zero-crossing searches a bounded decoded sample window; disk-only waveforms are not supported by this path."
     },
     {
       "id": "PL-024",
@@ -4975,7 +4988,7 @@
       "name": "Sample preview",
       "description": "Audition samples.",
       "fl_reference": "Left-click previews.",
-      "limeshot_behavior": "Click a WAV to preview it through the engine (master). The Browser's bottom panel shows the selected sample's waveform with the preview's position, its rate and length; clicking it or its play button plays it again. Audio clips in the Playlist's picker play when clicked (also with the Browser hidden), and pressing the sample's waveform in Channel Settings plays it through the channel until the button is released. Stop while stopped ends a preview (TR-002). The Browser preview has a dedicated Stop button that cancels pending playback and stops the preview without stopping the song.",
+      "limeshot_behavior": "Click a WAV to preview it through the engine (master). The Browser's bottom panel shows the selected sample's waveform with the preview's position, its rate and length; clicking it or its play button plays it again. Audio clips in the Playlist's picker play when clicked (also with the Browser hidden), and pressing the sample's waveform in Channel Settings plays it through the channel until the button is released. Stop while stopped ends a preview (TR-002). The Browser preview has a dedicated Stop button that cancels pending playback and stops the preview without stopping the song. Right-drag the waveform to position the preview silently; release plays from that fraction and replaces the previous preview.",
       "priority": "P0",
       "status": "VERIFIED",
       "mvp": true,
@@ -4992,7 +5005,9 @@
       "tests": [
         "crates/limeshot-app/tests/ui.rs::browser_click_and_double_click_only_preview_samples",
         "limeshot-app tests/ui.rs::samples_preview_from_the_browser_panel_the_picker_and_channel_settings",
-        "crates/limeshot-app/tests/ui.rs::browser_preview_stop_cancels_audio_and_pending_preview"
+        "crates/limeshot-app/tests/ui.rs::browser_preview_stop_cancels_audio_and_pending_preview",
+        "crates/limeshot-app/tests/ui.rs::rev1_browser_scrub_is_silent_until_release",
+        "crates/limeshot-engine/tests/audio.rs::browser_scrub_offset_and_replacement_are_independent_of_block_size"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5001,7 +5016,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm"
         ]
       },
-      "notes": "The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine. Session 11 (owner's list item 11): FL 2026.1.1's Browser shows the clicked sample's waveform and a play button at its bottom (observed live); LimeShot's panel follows it."
+      "notes": "The UI test clicks a bundled sample and waits for a preview voice in the (silent) engine. Session 11 (owner's list item 11): FL 2026.1.1's Browser shows the clicked sample's waveform and a play button at its bottom (observed live); LimeShot's panel follows it. 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "BR-003",
@@ -7109,7 +7124,7 @@
       "name": "Pattern picker",
       "description": "List of patterns beside the Playlist.",
       "fl_reference": "Clip picker panel on the left of the Playlist (observed in fl-main.png).",
-      "limeshot_behavior": "Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern.",
+      "limeshot_behavior": "Patterns column inside the Playlist window, left of the track headers: colour, name, usage count; click to choose what the Playlist places, double-click to edit in the Piano Roll, right-click to rename/clone/delete, + for a new pattern. Creating or editing a pattern selects its source in the Playlist picker without interrupting a held gesture in another pattern.",
       "priority": "P1",
       "status": "VERIFIED",
       "mvp": false,
@@ -7124,7 +7139,8 @@
         "Usage counts match the clips."
       ],
       "tests": [
-        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place"
+        "limeshot-app tests/ui.rs::picker_selects_the_pattern_to_place",
+        "crates/limeshot-app/tests/ui.rs::rev1_pattern_edits_select_the_playlist_source"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7133,7 +7149,7 @@
           "docs/research/evidence/screenshots/fl-main.png"
         ]
       },
-      "notes": ""
+      "notes": " 2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending."
     },
     {
       "id": "PL-026",
@@ -7395,19 +7411,24 @@
       "name": "Automation STEP / SLIDE display options",
       "description": "Playlist header options for automation clips.",
       "fl_reference": "Observed in the Playlist header next to the automation icon: STEP and SLIDE toggles. Their effect has not been observed yet.",
-      "limeshot_behavior": "Not started; research first.",
+      "limeshot_behavior": "Automation focus offers STEP (freehand snapped point placement) and SLIDE (move later points with a dragged point). Patterns focus has no additional options.",
       "priority": "P3",
-      "status": "RESEARCHED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PL-015"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-app/tests/ui.rs::rev1_automation_step_draws_and_slide_moves_remaining_points"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7415,7 +7436,7 @@
           "docs/research/evidence/screenshots/fl-automation-clip.png"
         ]
       },
-      "notes": "UNKNOWN: what STEP and SLIDE change."
+      "notes": "2026-10-27: documented STEP/SLIDE behavior used for independent implementation; Shift pulse drawing and exact tension inheritance remain open. See docs/research/alpha1-rev1.md."
     },
     {
       "id": "SEQ-019",
@@ -9786,6 +9807,38 @@
         ]
       },
       "notes": "2026-10-27 source/documentation audit; no new implementation or live verification."
+    },
+    {
+      "id": "PL-031",
+      "category": "Playlist",
+      "name": "Track height and playback activity",
+      "description": "Per-track sizes, collapse, size lock and playback indicators.",
+      "fl_reference": "Group with above track.",
+      "limeshot_behavior": "Track bottom-edge drag and context menu sizes persist and undo; collapse uses a compact row. Size locks prevent resizing. Selector bars light for active unmuted content under the Song playhead; this is musical activity rather than measured track output.",
+      "priority": "P2",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-ui"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "crates/limeshot-core/tests/arrangements.rs::grouped_tracks_and_custom_heights_survive_save_and_undo",
+        "crates/limeshot-app/tests/ui.rs::rev1_playlist_track_selection_grouping_height_and_focus_options"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
+        ]
+      },
+      "notes": "2026-10-27 alpha.1 Rev 1. Activity is inferred from clip/note position; plugin tails, actual signal and channel solo/mixer audibility are not metered here. Live FL comparison remains pending."
     }
   ]
 }

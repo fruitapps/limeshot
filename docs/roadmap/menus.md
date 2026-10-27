@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **737** — IMPLEMENTED 212, DIFFERENT 97, LIMESHOT_ONLY 14, NOT_STARTED 373, NOT_PLANNED 41
+Tracked: **737** — IMPLEMENTED 215, DIFFERENT 97, LIMESHOT_ONLY 14, NOT_STARTED 370, NOT_PLANNED 41
 
 ## Summary
 
@@ -23,7 +23,7 @@ Tracked: **737** — IMPLEMENTED 212, DIFFERENT 97, LIMESHOT_ONLY 14, NOT_STARTE
 | Toolbar | 52 | 25 | 8 | 16 | 3 | 3 |
 | Channel Rack | 72 | 27 | 12 | 29 | 4 | 2 |
 | Piano Roll | 143 | 55 | 22 | 63 | 3 | 0 |
-| Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
+| Playlist | 139 | 40 | 14 | 85 | 0 | 0 |
 | Mixer | 44 | 9 | 9 | 22 | 4 | 0 |
 | Control | 5 | 5 | 0 | 0 | 0 | 0 |
 
@@ -60,7 +60,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | EXP-006 | P2 | NOT_STARTED | FLAC / OGG export | MENU-024 File › Export › OGG file...<br>MENU-025 File › Export › FLAC file...<br>MENU-027 File › Export › M4A file... |
 | EXP-014 | P2 | NOT_STARTED | Export playlist tracks or track groups | MENU-031 File › Export › All playlist tracks<br>MENU-032 File › Export › All playlist tracks › From song start...<br>MENU-033 File › Export › All playlist tracks › From track start...<br>MENU-034 File › Export › All playlist tracks › Time selection...<br>MENU-035 File › Export › All playlist track groups<br>MENU-036 File › Export › All playlist track groups › From song start...<br>MENU-037 File › Export › All playlist track groups › From track start...<br>MENU-038 File › Export › All playlist track groups › Time selection... |
 | EXP-015 | P2 | NOT_STARTED | Export in the last used format(s) | MENU-028 File › Export › Last exported format(s)... |
-| PL-018 | P2 | NOT_STARTED | Track grouping | MENU-581 Playlist › Options › Tools › Export all playlist track groups<br>MENU-594 Playlist › Options › View › Hide collapsed grouped tracks<br>MENU-621 Playlist › Options › Group › Group<br>MENU-622 Playlist › Options › Group › Ungroup<br>MENU-678 Playlist › Options › Collapse all grouped tracks<br>MENU-679 Playlist › Options › Expand all grouped tracks |
+| PL-018 | P2 | IMPLEMENTED | Track grouping | MENU-581 Playlist › Options › Tools › Export all playlist track groups<br>MENU-594 Playlist › Options › View › Hide collapsed grouped tracks<br>MENU-679 Playlist › Options › Expand all grouped tracks |
 | PL-022 | P2 | IN_PROGRESS | Consolidate / render to audio clip | MENU-098 Patterns › Quick render as audio clip<br>MENU-099 Patterns › Render as audio clip...<br>MENU-100 Patterns › Render and replace...<br>MENU-567 Playlist › Options › Edit › Merge similar pattern clips<br>MENU-579 Playlist › Options › Tools › Consolidate playlist selection |
 | PL-023 | P2 | IN_PROGRESS | Crossfades and time stretching | MENU-250 Tools › Switch all audio clip channels to<br>MENU-251 Tools › Switch selected audio clip channels to<br>MENU-570 Playlist › Options › Edit › Pitch selected audio clips one semitone down<br>MENU-571 Playlist › Options › Edit › Pitch selected audio clips one semitone up<br>MENU-573 Playlist › Options › Edit › Automatic crossfades (current project)<br>MENU-574 Playlist › Options › Edit › Create new clips with manual fades<br>MENU-575 Playlist › Options › Edit › Snap fade handles<br>MENU-576 Playlist › Options › Edit › Create variants when stretching audio clips |
 | PLG-008 | P2 | IMPLEMENTED | Plugin preset management | MENU-070 Add › Browse presets |
@@ -791,8 +791,8 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-618 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Select next time |  | action | `Cmd+Right` | disabled | — | NOT_STARTED |  |  |
 | MENU-619 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Magic lasso |  | toggle |  |  | — | NOT_STARTED |  |  |
 | MENU-620 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Group |  | submenu |  |  | — | NOT_STARTED |  |  |
-| MENU-621 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Group |  | action | `Shift+G` |  | — | NOT_STARTED | PL-018 |  |
-| MENU-622 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Ungroup |  | action | `Opt+G` |  | — | NOT_STARTED | PL-018 |  |
+| MENU-621 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Group |  | action | `Shift+G` |  | Group | IMPLEMENTED | PL-018 | Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View. |
+| MENU-622 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Ungroup |  | action | `Opt+G` |  | Ungroup | IMPLEMENTED | PL-018 | Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View. |
 | MENU-623 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom |  | submenu |  |  | Playlist › ⏵ › Zoom | IMPLEMENTED | PL-008 |  |
 | MENU-624 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom in |  | action | `PgUp` |  | Playlist › ⏵ › Zoom › Zoom in | IMPLEMENTED | PL-008 |  |
 | MENU-625 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Zoom out |  | action | `PgDn` |  | Playlist › ⏵ › Zoom › Zoom out | IMPLEMENTED | PL-008 |  |
@@ -848,7 +848,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-675 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Lock all playlist tracks to content |  | action |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-676 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Unlock all playlist tracks from content |  | action |  |  | — | NOT_STARTED | WF-009 |  |
 | MENU-677 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Reset empty playlist tracks |  | action |  |  | Tools › Reset empty playlist tracks | DIFFERENT | WF-009 | In LimeShot's Tools menu. |
-| MENU-678 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Collapse all grouped tracks |  | action |  |  | — | NOT_STARTED | PL-018 |  |
+| MENU-678 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Collapse all grouped tracks |  | action |  |  | Collapse all grouped tracks | IMPLEMENTED | PL-018 | Rev 1: Group/Ungroup in Playlist Edit; collapse grouped tracks in View. |
 | MENU-679 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Expand all grouped tracks |  | action |  |  | — | NOT_STARTED | PL-018 |  |
 | MENU-680 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Center |  | action | `Shift+0` | disabled | Playlist › ⏵ › Center | DIFFERENT | PL-008 | Session 16: scrolls the song position (Song mode) to the middle; FL's exact behaviour not observed. |
 | MENU-681 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Detached |  | toggle |  |  | Playlist › detach button | DIFFERENT | UI-007 |  |

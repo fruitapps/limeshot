@@ -26,6 +26,10 @@ pub enum Act {
     SliceInsertSpace,
     DeleteSpace,
     MergeClips,
+    GroupTracks,
+    UngroupTracks,
+    CollapseGroupedTracks,
+    ExpandGroupedTracks,
     QuickQuantizeStarts,
     Deselect,
     SelectAll,
@@ -62,6 +66,13 @@ const EDIT: &[(&str, &str, Act)] = &[
     ("Slice & insert space", "Cmd+Alt+Insert", Act::SliceInsertSpace),
     ("Delete space", "Cmd+Delete", Act::DeleteSpace),
     ("Merge selected clips", "Cmd+G", Act::MergeClips),
+    ("Group", "Shift+G", Act::GroupTracks),
+    ("Ungroup", "Alt+G", Act::UngroupTracks),
+];
+
+const VIEW: &[(&str, &str, Act)] = &[
+    ("Collapse all grouped tracks", "", Act::CollapseGroupedTracks),
+    ("Expand all grouped tracks", "", Act::ExpandGroupedTracks),
 ];
 
 const TOOLS: &[(&str, &str, Act)] = &[("Quick quantize start times", "Shift+Q", Act::QuickQuantizeStarts)];
@@ -106,12 +117,69 @@ fn items(app: &mut LimeShotApp, ui: &mut Ui, list: &[(&str, &str, Act)]) {
 pub fn menu(app: &mut LimeShotApp, ui: &mut Ui) {
     ui.menu_button("Edit", |ui| items(app, ui, EDIT));
     ui.menu_button("Tools", |ui| items(app, ui, TOOLS));
+    ui.menu_button("View", |ui| items(app, ui, VIEW));
     ui.menu_button("Select", |ui| items(app, ui, SELECT));
     ui.menu_button("Zoom", |ui| items(app, ui, ZOOM));
     ui.menu_button("Time markers", |ui| items(app, ui, MARKERS));
+    ui.menu_button("Arrangement", |ui| arrangement_menu(app, ui));
     if ui.add(Button::new("Center").shortcut_text(key("Shift+0"))).clicked() {
         ui.close();
         run(app, Act::Center);
+    }
+}
+
+/// The Playlist's Arrangement menu (also shown from the header bar's arrangement selector).
+pub fn arrangement_menu(app: &mut LimeShotApp, ui: &mut Ui) {
+    let cur = app.project().current_arrangement;
+    let count = app.project().arrangement_count();
+    let names: Vec<String> = (0..count)
+        .filter_map(|i| app.project().arrangement(i).map(|a| a.name.clone()))
+        .collect();
+    for (i, name) in names.iter().enumerate() {
+        if ui.selectable_label(i == cur, name).clicked() {
+            app.exec(Command::SelectArrangement { index: i });
+            ui.close();
+        }
+    }
+    ui.separator();
+    if ui.button("Add one…").clicked() {
+        app.dialog = Some(crate::dialogs::Dialog::new_arrangement(app));
+        ui.close();
+    }
+    if ui.button("Clone").clicked() {
+        let base = names.get(cur).cloned().unwrap_or_else(|| "Arrangement".into());
+        let name = format!("{base} (copy)");
+        app.exec(Command::CloneArrangement {
+            index: cur,
+            name: Some(name),
+        });
+        ui.close();
+    }
+    if ui.button("Rename…").clicked() {
+        app.dialog = Some(crate::dialogs::Dialog::rename_arrangement(app, cur));
+        ui.close();
+    }
+    if count > 1 {
+        ui.menu_button("Merge with", |ui| {
+            for (i, name) in names.iter().enumerate() {
+                if i != cur && ui.button(name).clicked() {
+                    app.exec(Command::MergeArrangement { source: i });
+                    ui.close();
+                }
+            }
+        });
+    } else {
+        ui.add_enabled(false, Button::new("Merge with"));
+    }
+    if ui
+        .add_enabled(
+            count > 1,
+            Button::new(egui::RichText::new("Delete").color(crate::theme::Theme::current().danger)),
+        )
+        .clicked()
+    {
+        app.exec(Command::DeleteArrangement { index: cur });
+        ui.close();
     }
 }
 
@@ -231,6 +299,40 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
                 app.ui.playlist.selection = vec![ClipId(id)];
             }
         }
+        Act::GroupTracks | Act::UngroupTracks => {
+            let mut tracks = app.ui.playlist.selected_tracks.clone();
+            if tracks.is_empty() {
+                tracks = clips.iter().filter(|c| sel.contains(&c.id)).map(|c| c.track).collect();
+            }
+            tracks.sort_unstable();
+            tracks.dedup();
+            if act == Act::GroupTracks {
+                if !tracks.is_empty() {
+                    app.exec(Command::SetPlaylistTracksGrouped { tracks, grouped: true });
+                }
+            } else if !tracks.is_empty() {
+                app.exec(Command::SetPlaylistTracksGrouped { tracks, grouped: false });
+            }
+        }
+        Act::CollapseGroupedTracks | Act::ExpandGroupedTracks => {
+            let collapsed = act == Act::CollapseGroupedTracks;
+            let tracks = &app.project().playlist.tracks;
+            let parents: Vec<u32> = (0..tracks.len())
+                .filter(|&i| {
+                    !tracks[i].grouped_with_above
+                        && tracks.get(i + 1).is_some_and(|next| next.grouped_with_above)
+                        && tracks[i].group_collapsed != collapsed
+                })
+                .map(|i| i as u32)
+                .collect();
+            let cmds: Vec<Command> = parents
+                .into_iter()
+                .map(|track| Command::SetPlaylistTrackGroupCollapsed { track, collapsed })
+                .collect();
+            if !cmds.is_empty() {
+                app.exec(Command::Batch(cmds));
+            }
+        }
         Act::QuickQuantizeStarts => {
             let grid = snap.max(1) as Tick;
             let cmds: Vec<Command> = clips
@@ -334,10 +436,12 @@ pub fn run(app: &mut LimeShotApp, act: Act) {
             }
         }
         Act::Center => {
-            let Some(g) = app.ui.playlist.geometry else { return };
+            let Some(grid) = app.ui.playlist.geometry.as_ref().map(|g| g.grid) else {
+                return;
+            };
             let pos = position(app);
             let st = &mut app.ui.playlist;
-            st.scroll.x = (pos as f32 / PPQ as f32 * st.zoom_x - g.grid.width() / 2.0).max(0.0);
+            st.scroll.x = (pos as f32 / PPQ as f32 * st.zoom_x - grid.width() / 2.0).max(0.0);
         }
     }
 }
@@ -346,10 +450,12 @@ pub const MIN_ZOOM: f32 = 0.25;
 pub const MAX_ZOOM: f32 = 16_384.0;
 
 fn fit(app: &mut LimeShotApp, from: Tick, to: Tick) {
-    let Some(g) = app.ui.playlist.geometry else { return };
+    let Some(grid) = app.ui.playlist.geometry.as_ref().map(|g| g.grid) else {
+        return;
+    };
     let beats = to.saturating_sub(from).max(1) as f32 / PPQ as f32;
     let st = &mut app.ui.playlist;
-    st.zoom_x = (g.grid.width() / beats).clamp(MIN_ZOOM, MAX_ZOOM);
+    st.zoom_x = (grid.width() / beats).clamp(MIN_ZOOM, MAX_ZOOM);
     st.scroll.x = from as f32 / PPQ as f32 * st.zoom_x;
 }
 
@@ -402,6 +508,8 @@ pub fn keys(app: &mut LimeShotApp, ctx: &Context) {
         (alt, Key::T, Act::AddMarker),
         (cmd, Key::T, Act::AddMarkerAuto),
         (cmd, Key::G, Act::MergeClips),
+        (shift, Key::G, Act::GroupTracks),
+        (alt, Key::G, Act::UngroupTracks),
         (cmd, Key::Enter, Act::SelectTimeAround),
         (shift, Key::Q, Act::QuickQuantizeStarts),
         (shift, Key::C, Act::SelectSource),

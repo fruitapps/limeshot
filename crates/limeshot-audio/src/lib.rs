@@ -72,6 +72,7 @@ pub enum Msg {
         key: u8,
     },
     PreviewSample(Arc<SampleData>),
+    PreviewSampleFrom(Arc<SampleData>, f32),
     PreviewClip {
         channel: u16,
         playback: limeshot_dsp::ClipPlayback,
@@ -246,6 +247,7 @@ impl AudioState {
                 } => r.preview_note_for(channel, key, velocity, seconds),
                 Msg::NoteOff { channel, key } => r.preview_note_off(channel, key),
                 Msg::PreviewSample(s) => r.preview_sample(s),
+                Msg::PreviewSampleFrom(s, start) => r.preview_sample_from(s, start),
                 Msg::PreviewClip { channel, playback } => r.preview_clip(channel, playback),
                 Msg::StopPreview => r.stop_sample_preview(),
                 Msg::Panic => r.all_notes_off(),

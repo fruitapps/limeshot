@@ -129,9 +129,9 @@ not imply complete FL Sampler parity.
 * Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not
   loop Pattern playback.
 * Playlist: FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or
-  Shift+click slicing, no zero-cross snapping). The ⏵ menu lacks Merge similar pattern clips, Merge automation clips,
-  audio clip pitch/reverse, crossfades, Consolidate, track groups, picker options and performance mode. Track modes,
-  grouping, icons, per-track heights, lock-to-content and consolidation are shown disabled. Cloning a track shares its
+  Shift+click slicing; zero-cross snapping requires decoded PCM). The ⏵ menu lacks Merge similar pattern clips, Merge automation clips,
+  audio clip pitch/reverse, automatic crossfades, Consolidate, picker options and performance mode. Track modes,
+  icons, lock-to-content and consolidation are shown disabled. Track grouping and per-track heights are implemented. Cloning a track shares its
   clip sources; it does not clone instrument channels, plugins or mixer effects. Insert space uses Cmd+Insert, which
   most Mac keyboards lack (the menu works).
 * Markers are plain named points (no loop, key, time-signature or jump markers); the time selection is not saved.
@@ -174,3 +174,15 @@ not imply complete FL Sampler parity.
 ## Research
 * Still unobserved in FL: in-clip automation point dragging, the Playlist's STEP/SLIDE automation options, and
   shortcuts marked INFERRED in [keybindings](keybindings.md).
+
+
+## Alpha.1 Rev 1
+
+See [Rev 1 implementation](../research/alpha1-rev1.md): resample-only right-edge stretch changes pitch
+and all shared-sampler uses; no independent/pitch-preserving stretch. Zero-crossing requires decoded
+PCM and uses tick resolution. STEP pulse drawing/tension inheritance and full arrangement merge
+position/track policies remain open; extra FLP arrangements are not imported. Track selectors display
+musical activity rather than measured signal/tails or complete solo/mixer audibility. New focus options
+are session-local. Live FL/macOS interaction comparison and Windows/Linux runtime verification remain
+pending. Windows native plugin sluggishness and the plugin Settings wrapper overhaul are queued in
+[next steps](../development/next-steps.md#owner-follow-up-alpha1-rev-1).

@@ -228,8 +228,8 @@ check.
 
 ## Editor auditions
 
-Held piano keys and scrub notes use `Msg::NoteOn` / `NoteOff`. Drawn or moved notes and sampler waveform
-previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
+Held piano keys, drawn/moved notes and scrub notes use `Msg::NoteOn` / `NoteOff`; Piano Roll
+auditions end on mouse release or replacement. Sampler waveform previews use `Msg::NoteFor`: the renderer computes an absolute off sample from the duration when it receives
 the message. That deadline runs while transport is stopped, for preview/metronome voices and hosted instruments alike;
 UI mouse release does not cut it short. Durations do not allocate audio-thread objects or depend on UI frame rate.
 
@@ -302,3 +302,6 @@ and locate cancel the lead-in. The audio status publishes remaining beats and a 
 the input callback records only once the gate is open, while monitoring continues independently.
 This flag bridges independent callbacks; physical input alignment is not sample synchronized or
 latency compensated. See [design and limits](../research/recording-monitoring-and-count-in.md).
+
+Browser scrub previews use `PreviewSampleFrom` to replace the preview voice at a normalized source
+offset; source position is set without allocating in the callback.

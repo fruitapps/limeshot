@@ -216,7 +216,6 @@ pub struct State {
     pub last_vel: f32,
     pub tool: Tool,
     audition: Option<(ChannelId, u8)>,
-    timed_audition: Option<(ChannelId, u8)>,
     scrolled_once: bool,
     /// Geometry of the last drawn frame.
     pub geometry: Option<Geometry>,
@@ -255,7 +254,6 @@ impl Default for State {
             last_vel: 0.78,
             tool: Tool::Draw,
             audition: None,
-            timed_audition: None,
             scrolled_once: false,
             geometry: None,
             cursor: None,
@@ -849,7 +847,7 @@ fn keyboard_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, keys: Rect, cid:
             app.preview_on(cid, k, v);
             app.ui.piano.audition = Some((cid, k));
         }
-        (false, _, Some((c, pk))) => {
+        (false, _, Some((c, pk))) if app.ui.piano.drag.is_none() || !ui.input(|i| i.pointer.any_down()) => {
             app.preview_off(c, pk);
             app.ui.piano.audition = None;
         }
@@ -941,15 +939,14 @@ pub fn playback_line(ui: &Ui, grid: Rect, x: f32, held: bool) {
     );
 }
 
-/// Sound `key` on `channel` as the Piano Roll's audition, ending the one before.
-/// Schedule release after the remembered note length at the current project tempo.
+/// Sound `key` on `channel` as the Piano Roll's audition while the mouse button is held,
+/// ending any previous audition immediately so rapid note placements never overlap.
 fn audition(app: &mut LimeShotApp, channel: ChannelId, key: u8, velocity: f32) {
-    if let Some((c, k)) = app.ui.piano.timed_audition.take() {
+    if let Some((c, k)) = app.ui.piano.audition.take() {
         app.preview_off(c, k);
     }
-    let seconds = app.ui.piano.last_len.max(1) as f64 / PPQ as f64 * 60.0 / app.project().tempo.bpm();
-    app.preview_for(channel, key, velocity, seconds);
-    app.ui.piano.timed_audition = Some((channel, key));
+    app.preview_on(channel, key, velocity);
+    app.ui.piano.audition = Some((channel, key));
 }
 
 /// The Playback tool's scrub: start the notes in `want` that are not sounding yet and stop the

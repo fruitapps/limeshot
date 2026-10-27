@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **143** — IMPLEMENTED 111, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 19, NOT_PLANNED 3
+Tracked: **144** — IMPLEMENTED 112, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 19, NOT_PLANNED 3
 
 ## Global
 
@@ -169,6 +169,7 @@ Tracked: **143** — IMPLEMENTED 111, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-137 | Zoom in / out | `PgUp / PgDn` | OBSERVED | `PgUp / PgDn` | IMPLEMENTED | PL-008 | FL 2026.1.1 Playlist menu (menus.json). |
 | KB-138 | Quick zoom 1–3, zoom out far, zoom on selection | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5` | OBSERVED | `Shift+1 / Shift+2 / Shift+3 / Shift+4 / Shift+5` | DIFFERENT | PL-008 | FL 2026.1.1 Playlist menu (menus.json). LimeShot's zoom levels. |
 | KB-139 | Center | `Shift+0` | OBSERVED | `Shift+0` | DIFFERENT | PL-008 | FL 2026.1.1 Playlist menu (menus.json). LimeShot's zoom levels. |
+| KB-144 | Group / ungroup selected tracks | `Shift+G / Alt+G` | OBSERVED | `Shift+G / Alt+G` | IMPLEMENTED | PL-018 | Recorded FL menu inventory; selection grouping uses a contiguous span. |
 
 ## Mixer
 
