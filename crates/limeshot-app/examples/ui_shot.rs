@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--count-in] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -367,6 +367,19 @@ fn main() {
     if args.iter().any(|a| a == "--record") {
         // The record button armed.
         harness.state_mut().ui.record.armed = true;
+        harness.step();
+    }
+    if args.iter().any(|a| a == "--count-in") {
+        harness
+            .state_mut()
+            .exec(limeshot_core::Command::SetTempo(limeshot_core::Tempo::from_bpm(30.0)));
+        harness.state_mut().ui.record.armed = true;
+        harness.state_mut().ui.record.count_in = true;
+        harness.state_mut().toggle_play();
+        let start = std::time::Instant::now();
+        while harness.state().player.status().count_in_beats() == 0 && start.elapsed().as_secs() < 3 {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
         harness.step();
     }
     if args.iter().any(|a| a == "--note-pan") {

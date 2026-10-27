@@ -7125,3 +7125,75 @@ fn failed_audio_import_can_be_requested_again_after_repairing_the_file() {
     h.run_steps(3);
     assert_eq!(h.state().project().playlist.clips.len(), before + 1);
 }
+
+/// Monitoring controls apply immediately without changing the project or opening headless inputs.
+#[test]
+fn audio_settings_monitoring_is_session_local_and_uses_explicit_track() {
+    use limeshot_ui::{recording::MonitorMode, settings_window::Page};
+    let mut h = harness(false);
+    let before = h.state().doc.revision();
+    assert!(!h.state().enable_audio_input);
+    assert_eq!(h.state().ui.record.monitor, MonitorMode::Off);
+    h.state_mut().open_settings(Page::Audio);
+    h.step();
+    h.step();
+    assert!(h.query_by_label("Monitor external input").is_some());
+    h.get_by_label("Input monitoring mode").click();
+    h.step();
+    h.get_by_label("When armed").click();
+    h.step();
+    assert_eq!(h.state().ui.record.monitor, MonitorMode::WhenArmed);
+    assert!(!h.state().ui.record.monitor.active(false, true));
+    assert!(!h.state().ui.record.monitor.active(true, false));
+    assert!(h.state().ui.record.monitor.active(true, true));
+    h.get_by_label("Input monitoring destination").click();
+    h.step();
+    h.get_by_label_contains("2: Insert 2").click();
+    h.step();
+    assert_eq!(h.state().ui.record.monitor_track, 2);
+    assert_eq!(h.state().doc.revision(), before);
+    h.state_mut().new_project();
+    assert_eq!(h.state().ui.record.monitor, MonitorMode::Off);
+    assert_eq!(h.state().ui.record.monitor_track, 1);
+}
+
+#[test]
+fn recording_precount_shortcut_menu_bars_and_note_filter_work() {
+    let (mut h, _, _) = empty_piano_roll();
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::None;
+    h.state_mut().exec(Command::SetTempo(Tempo::from_bpm(60.0)));
+    let pat = h.state().current_pattern();
+    let channel = h.state().project().channels[0].id;
+    let revision = h.state().doc.revision();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::P);
+    h.step();
+    assert!(h.state().ui.record.count_in);
+    h.get_by_label("3.2.1").click_secondary();
+    h.step();
+    h.step();
+    let bars = h.get_by_label("2 bars").rect().center();
+    click(&mut h, bars, PointerButton::Primary);
+    assert_eq!(h.state().ui.record.count_in_bars, 2);
+    assert_eq!(h.state().doc.revision(), revision);
+    h.key_press(Key::Escape);
+    h.step();
+    limeshot_ui::recording::toggle(h.state_mut());
+    wait_for(&mut h, "count-in to start", |a| a.player.status().count_in_beats() > 0);
+    // The audio thread can publish the count-in after wait_for's last UI frame.
+    // Draw that published state before querying the accessibility tree. A slower tempo
+    // leaves ample lead-in time on busy CI runners without delaying this test's stop.
+    h.step();
+    assert_eq!(h.state().player.status().position(), 0);
+    assert!(h.query_by_label_contains("COUNT IN").is_some());
+    limeshot_ui::recording::note_on(h.state_mut(), channel, 60, 1.0);
+    limeshot_ui::recording::note_off(h.state_mut(), channel, 60);
+    assert!(h.state().project().pattern(pat).unwrap().notes.is_empty());
+    h.state_mut().stop();
+    wait_for(&mut h, "count-in to stop", |a| !a.is_playing());
+    assert_eq!(h.state().player.status().count_in_beats(), 0);
+    h.get_by_label("Options").click();
+    h.step();
+    h.get_by_label_contains("Recording precount").click();
+    h.step();
+    assert!(!h.state().ui.record.count_in);
+}

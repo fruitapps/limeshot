@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
+Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
 
 ## MIDI
 
@@ -275,3 +275,22 @@ Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | SET-189 | Switches | Auto scrolling | switch |  | Options › Auto scrolling; toolbar Auto scrolling button (session 15) | OBSERVED | `settings.auto_scroll` | IMPLEMENTED | UI-016 | Off by default. Shared Options/toolbar switch, saved with application settings; no project edit. |
+
+## Mixer
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-190 | Input / Recording pickup | Monitor external input | Off / When armed / On |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | VERIFIED | `ui.record.monitor` | IMPLEMENTED | REC-003 | Documented in the FL manual; also available on linked Playlist Audio Tracks. FL runtime defaults unobserved. LimeShot: Settings › Audio › Monitor external input; session-local. See docs/research/recording-monitoring-and-count-in.md. |
+
+## Playlist
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-191 | Track mode › Audio track | Mixer track assignment | Mixer insert selector |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | VERIFIED | `ui.record.monitor_track` | IMPLEMENTED | REC-003 | Documented in the FL manual: link a Playlist Audio Track to a Mixer insert; hardware input is selected on the Mixer track. FL runtime choices/defaults unobserved. LimeShot: Settings › Audio › Monitor Mixer track selects the single input monitoring destination by position; session-local, not per-track hardware I/O. See docs/research/recording-monitoring-and-count-in.md. |
+
+## Toolbar
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-192 | Recording switches | Recording precount | switch |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | VERIFIED | `ui.record.count_in` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
+| SET-193 | Recording switches | Recording precount bars | bar selector (FL choices unobserved) |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | VERIFIED | `ui.record.count_in_bars` | IMPLEMENTED | REC-007 | Documented in the FL manual: right-click Recording precount to choose bars. Exact FL choices and runtime defaults unobserved. LimeShot offers one/two bars; session-local. See docs/research/recording-monitoring-and-count-in.md. |

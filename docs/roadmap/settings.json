@@ -2649,6 +2649,62 @@
       "status": "IMPLEMENTED",
       "feature": "UI-016",
       "notes": "Off by default. Shared Options/toolbar switch, saved with application settings; no project edit."
+    },
+    {
+      "id": "SET-190",
+      "page": "Mixer",
+      "section": "Input / Recording pickup",
+      "setting": "Monitor external input",
+      "control": "Off / When armed / On",
+      "fl_default": "",
+      "fl_reference": "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm",
+      "confidence": "VERIFIED",
+      "limeshot_setting": "ui.record.monitor",
+      "status": "IMPLEMENTED",
+      "feature": "REC-003",
+      "notes": "Documented in the FL manual; also available on linked Playlist Audio Tracks. FL runtime defaults unobserved. LimeShot: Settings › Audio › Monitor external input; session-local. See docs/research/recording-monitoring-and-count-in.md."
+    },
+    {
+      "id": "SET-191",
+      "page": "Playlist",
+      "section": "Track mode › Audio track",
+      "setting": "Mixer track assignment",
+      "control": "Mixer insert selector",
+      "fl_default": "",
+      "fl_reference": "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm",
+      "confidence": "VERIFIED",
+      "limeshot_setting": "ui.record.monitor_track",
+      "status": "IMPLEMENTED",
+      "feature": "REC-003",
+      "notes": "Documented in the FL manual: link a Playlist Audio Track to a Mixer insert; hardware input is selected on the Mixer track. FL runtime choices/defaults unobserved. LimeShot: Settings › Audio › Monitor Mixer track selects the single input monitoring destination by position; session-local, not per-track hardware I/O. See docs/research/recording-monitoring-and-count-in.md."
+    },
+    {
+      "id": "SET-192",
+      "page": "Toolbar",
+      "section": "Recording switches",
+      "setting": "Recording precount",
+      "control": "switch",
+      "fl_default": "",
+      "fl_reference": "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
+      "confidence": "VERIFIED",
+      "limeshot_setting": "ui.record.count_in",
+      "status": "IMPLEMENTED",
+      "feature": "REC-007",
+      "notes": "Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md."
+    },
+    {
+      "id": "SET-193",
+      "page": "Toolbar",
+      "section": "Recording switches",
+      "setting": "Recording precount bars",
+      "control": "bar selector (FL choices unobserved)",
+      "fl_default": "",
+      "fl_reference": "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
+      "confidence": "VERIFIED",
+      "limeshot_setting": "ui.record.count_in_bars",
+      "status": "IMPLEMENTED",
+      "feature": "REC-007",
+      "notes": "Documented in the FL manual: right-click Recording precount to choose bars. Exact FL choices and runtime defaults unobserved. LimeShot offers one/two bars; session-local. See docs/research/recording-monitoring-and-count-in.md."
     }
   ]
 }

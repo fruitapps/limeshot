@@ -23,6 +23,7 @@
 pub mod assets;
 pub mod devices;
 pub mod midi;
+pub mod monitor;
 pub mod record;
 
 pub use devices::{AudioConfig, DeviceInfo, list_output_devices};
@@ -44,7 +45,9 @@ const METER_SLOTS: usize = limeshot_core::Mixer::MAX_TRACKS;
 /// Control messages for the audio thread.
 pub enum Msg {
     Snapshot(Arc<Snapshot>),
+    Monitor(Box<monitor::Receiver>),
     Play,
+    PlayCountIn(u8),
     Stop,
     Pause,
     Locate(Tick),
@@ -88,6 +91,8 @@ pub enum Msg {
 /// Playback state published by the audio thread.
 pub struct Status {
     position: AtomicU64,
+    count_in: AtomicU32,
+    record_ready: Arc<AtomicBool>,
     playing: AtomicBool,
     song_mode: AtomicBool,
     voices: AtomicU32,
@@ -105,6 +110,8 @@ impl Status {
     fn new() -> Self {
         Self {
             position: AtomicU64::new(0),
+            count_in: AtomicU32::new(0),
+            record_ready: Arc::new(AtomicBool::new(false)),
             playing: AtomicBool::new(false),
             song_mode: AtomicBool::new(false),
             voices: AtomicU32::new(0),
@@ -115,6 +122,14 @@ impl Status {
             clipped: AtomicBool::new(false),
             callbacks: AtomicU64::new(0),
         }
+    }
+
+    pub fn count_in_beats(&self) -> u32 {
+        self.count_in.load(Ordering::Relaxed)
+    }
+
+    pub fn recording_gate(&self) -> Arc<AtomicBool> {
+        self.record_ready.clone()
     }
 
     pub fn position(&self) -> Tick {
@@ -172,6 +187,7 @@ impl Status {
 
 /// Objects the audio thread is done with, returned so the control thread frees them.
 enum Garbage {
+    Monitor(#[allow(dead_code)] Box<monitor::Receiver>),
     Snapshot(#[allow(dead_code)] Arc<Snapshot>),
     Effect(#[allow(dead_code)] Box<dyn limeshot_dsp::effects::Effect>),
     Instrument(#[allow(dead_code)] Box<dyn limeshot_dsp::Instrument>),
@@ -184,6 +200,8 @@ struct AudioState {
     garbage: rtrb::Producer<Garbage>,
     status: Arc<Status>,
     buf: Vec<f32>,
+    monitor: Option<Box<monitor::Receiver>>,
+    input: Vec<f32>,
 }
 
 impl AudioState {
@@ -192,16 +210,26 @@ impl AudioState {
     fn drain(&mut self) {
         // Bounded so a flood of messages cannot stall a callback.
         for _ in 0..256 {
+            // Every replacement can retire one large object. Leave it queued until the
+            // control thread makes room, so callbacks never destroy a monitor ring.
+            if self.garbage.slots() == 0 {
+                break;
+            }
             let Ok(msg) = self.rx.pop() else { break };
             let r = &mut self.renderer;
             match msg {
                 Msg::Snapshot(s) => {
                     let old = r.set_snapshot(s);
-                    // If the return ring is full the old snapshot is dropped here; it only
-                    // happens when the control thread stops collecting.
+                    // The drain loop reserved a return slot before taking this message.
                     let _ = self.garbage.push(Garbage::Snapshot(old));
                 }
+                Msg::Monitor(input) => {
+                    if let Some(old) = self.monitor.replace(input) {
+                        let _ = self.garbage.push(Garbage::Monitor(old));
+                    }
+                }
                 Msg::Play => r.play(),
+                Msg::PlayCountIn(bars) => r.play_with_count_in(bars),
                 Msg::Stop => r.stop(),
                 Msg::Pause => r.pause(),
                 Msg::Locate(t) => r.locate(t),
@@ -252,7 +280,9 @@ impl AudioState {
         while done < frames {
             let n = (frames - done).min(MAX_BLOCK);
             let buf = &mut self.buf[..2 * n];
-            self.renderer.render(buf);
+            let input = &mut self.input[..2 * n];
+            let track = self.monitor.as_mut().and_then(|m| m.read(input));
+            self.renderer.render_with_input(buf, track.map(|t| (t, &input[..])));
             write(done, buf);
             for (i, p) in self.renderer.peaks().iter().enumerate().take(METER_SLOTS) {
                 peaks[i].0 = peaks[i].0.max(p.left);
@@ -277,6 +307,10 @@ impl AudioState {
         if self.renderer.take_master_clipped() {
             s.clipped.store(true, Ordering::Relaxed);
         }
+        let count_in = self.renderer.count_in_beats();
+        s.count_in.store(count_in, Ordering::Relaxed);
+        s.record_ready
+            .store(self.renderer.is_playing() && count_in == 0, Ordering::Release);
         s.position.store(self.renderer.position(), Ordering::Relaxed);
         s.playing.store(self.renderer.is_playing(), Ordering::Relaxed);
         s.song_mode
@@ -347,6 +381,8 @@ impl Player {
                     garbage: gtx,
                     status: status.clone(),
                     buf: vec![0.0; 2 * MAX_BLOCK],
+                    monitor: None,
+                    input: vec![0.0; 2 * MAX_BLOCK],
                 };
                 let name = device.name().unwrap_or_else(|_| "Output".into());
                 let buffer_frames = match stream_config.buffer_size {
@@ -391,6 +427,8 @@ impl Player {
             garbage: gtx,
             status: status.clone(),
             buf: vec![0.0; 2 * MAX_BLOCK],
+            monitor: None,
+            input: vec![0.0; 2 * MAX_BLOCK],
         };
         let stop = Arc::new(AtomicBool::new(false));
         let stop2 = stop.clone();
@@ -429,6 +467,12 @@ impl Player {
         self.tx.push(msg).is_ok()
     }
 
+    /// Connect a new input callback. The old receiver returns through the garbage ring.
+    pub fn monitor_source(&mut self, input_rate: u32) -> Option<monitor::Sender> {
+        let (sender, receiver) = monitor::channel(input_rate, self.sample_rate);
+        self.send(Msg::Monitor(receiver)).then_some(sender)
+    }
+
     pub fn status(&self) -> &Status {
         &self.status
     }
@@ -458,6 +502,7 @@ impl Player {
 
 impl Drop for Player {
     fn drop(&mut self) {
+        self.status.record_ready.store(false, Ordering::Release);
         if let Output::Silent { stop, .. } = &self.output {
             stop.store(true, Ordering::Relaxed);
         }

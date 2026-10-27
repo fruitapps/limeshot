@@ -17,6 +17,7 @@ pub const GLOBAL: &[(&str, &str)] = &[
     ("R", "Record: arm note recording (MIDI input and the typing keyboard)"),
     ("L", "Switch Pattern / Song mode"),
     ("Cmd+M", "Metronome on/off"),
+    ("Cmd+P", "Recording precount on/off"),
     ("Cmd+H", "Stop all sound (panic)"),
     ("F4 / Cmd+F4", "Find next empty pattern (and name it / without naming)"),
     ("Shift+F4", "Find first empty pattern and name it"),
@@ -209,6 +210,9 @@ pub fn handle(app: &mut LimeShotApp, ctx: &Context) {
     }
     if pressed(ctx, cmd, Key::Q) {
         app.request(Pending::Quit);
+    }
+    if pressed(ctx, cmd, Key::P) {
+        app.ui.record.count_in = !app.ui.record.count_in;
     }
     if pressed(ctx, cmd, Key::M) {
         let m = !app.ui.metronome;

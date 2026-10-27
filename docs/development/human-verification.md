@@ -25,8 +25,12 @@ Link the evidence from the relevant [feature record](../roadmap/features.json) a
 4. **Hands-on interaction regression.** Note drawing, sampler previews and drags, waveform drops, rack
    multiselection and scrolling, Mixer selection and insert reordering, mute locks, window raising and the typing
    keyboard. Requires a live GUI session and the relevant input/observation permissions.
-5. **Recording and MIDI.** Audio recording from a real input and a hardware MIDI keyboard; open an exported MIDI
-   file in another application. Requires recording hardware, input permissions and an independent MIDI reader.
+5. **Recording and MIDI.** Complete audible input-monitoring checks (Off / When armed / On, effects/fader/mute,
+   idle/record/stop transitions), measured count-in input alignment, long-run clock drift and device loss;
+   recording with a hardware MIDI keyboard and opening exported MIDI in another application. A partial macOS
+   physical-input take/count-in pass is recorded in [progress](progress.md) (2026-10-27): one finite/nonzero 24 kHz
+   take, monitoring into a muted insert and correct Playlist placement. Requires recording hardware, input
+   permissions, headphones for audible monitoring, and an independent MIDI reader.
 6. **FL Studio behavior observations.** Alt+wheel vertical zoom, in-clip automation point dragging, STEP/SLIDE
    automation options and bindings marked INFERRED. Requires an available FL Studio installation and a live
    observation session. Record clean-room findings in `docs/research/`; do not modify the installed application.

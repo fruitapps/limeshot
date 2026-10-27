@@ -181,6 +181,8 @@ pub struct LimeShotApp {
     /// Write settings changes to the config folder (off for headless apps, so tests leave the
     /// user's settings alone).
     pub persist_settings: bool,
+    /// Real input access is independent of writing preferences (e.g. live_check).
+    pub enable_audio_input: bool,
     /// Where users' effect and instrument presets live (`None` in headless apps: saving is off).
     pub presets_dir: Option<PathBuf>,
     /// Auditioned notes still sounding: (channel, key). Every audition is held by a mouse
@@ -204,6 +206,7 @@ impl LimeShotApp {
         app.send(Msg::SongLoop(true));
         app.autosave = crate::autosave::Autosave::new(crate::autosave::default_dir());
         app.persist_settings = true;
+        app.enable_audio_input = true;
         app.presets_dir = crate::settings::config_dir().map(|d| d.join("presets"));
         app
     }
@@ -310,6 +313,7 @@ impl LimeShotApp {
             cpu: Default::default(),
             autosave: Default::default(),
             persist_settings: false,
+            enable_audio_input: false,
             presets_dir: None,
             auditions: Vec::new(),
             sampler_preview: None,
@@ -519,7 +523,11 @@ impl LimeShotApp {
             self.send(Msg::Pause);
         } else {
             self.sync_engine();
-            self.send(Msg::Play);
+            if self.ui.record.armed && self.ui.record.count_in {
+                self.send(Msg::PlayCountIn(self.ui.record.count_in_bars));
+            } else {
+                self.send(Msg::Play);
+            }
         }
     }
 
@@ -1066,6 +1074,7 @@ impl LimeShotApp {
 
     /// Restart audio output with the current settings.
     pub fn restart_audio(&mut self) {
+        crate::recording::reset_input(self);
         let snap = self.snapshot.clone();
         self.player = Player::start(&self.settings.audio, snap);
         // The new stream has a new renderer (possibly at a new rate): rebuild every processor.
