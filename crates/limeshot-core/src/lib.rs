@@ -29,4 +29,4 @@ pub use lime::{EmbeddedAudio, LimePlugin};
 pub use model::*;
 pub use note_tools::NoteTool;
 pub use plugin::{PluginRef, PluginState, PluginWindow};
-pub use time::{BarBeatTick, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};
+pub use time::{BarBeatTick, MAX_TICK, PPQ, STEP_TICKS, Snap, Tempo, Tick, TimeSignature, Timeline};

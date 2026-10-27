@@ -3,6 +3,11 @@
 Notable changes per release. Feature details and evidence are in the
 [feature inventory](docs/roadmap/features.md); open issues are in [known limitations](docs/roadmap/known-limitations.md).
 
+## Unreleased
+
+* Retired `START.md` (the original brief); its binding rules are condensed in
+  [project principles](docs/development/principles.md).
+
 ## v0.1.0-alpha.1 — 2026-10-25
 
 First prerelease. Installers for Windows x64 (setup and portable ZIP), macOS Apple Silicon and Intel (PKG and DMG)

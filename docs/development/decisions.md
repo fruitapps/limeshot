@@ -6,7 +6,7 @@ Each entry: decision, alternatives, reasoning. Newest last.
 `core` → `project`, `dsp` → `sequencer` → `engine` → `audio` → `ui` → `app`. Nothing below `ui` depends on egui, and
 nothing below `audio` touches a device. **Why:** headless tests and the CLI drive the whole product. The layers follow
 SoundCraft's (see `docs/research/artcraft-architecture.md`), but there are fewer crates: there is no plugin hosting or
-video yet, and START.md asks for "a small number of well-defined crates". MIDI devices and platform helpers did not
+video yet, and the original brief asked for "a small number of well-defined crates". MIDI devices and platform helpers did not
 justify their own crates yet: the MIDI note model lives in `core`, and config directories in `ui::settings`.
 
 ### D2. egui/eframe 0.36 for the UI, glow renderer
@@ -44,7 +44,7 @@ for note-sized projects. Merge keys plus explicit gestures make drags one undo s
 
 ### D9. Steps are notes
 **Alternative:** a separate step grid per channel. **Why:** FL Studio's manual states that on-beat notes appear as
-steps. One note list means the Channel Rack and Piano Roll edit the same data, as START.md §8.2 asks.
+steps. One note list means the Channel Rack and Piano Roll edit the same data, as the original brief asked.
 
 ### D10. `.lime` = versioned JSON envelope with unknown-field preservation
 **Alternatives:** a binary format, a zip bundle. **Why:** easy to diff and debug, and serde makes forward compatibility
@@ -72,16 +72,18 @@ is silent after its pattern ends (`fl-studio-analysis.md` §4).
 declick mode. A fade-in option can be added per channel.
 
 ### D16. Clean-room research; no decompilation provider installed
-REA was installed and used for static metadata (plist, Mach-O). Ghidra and Hopper were not installed: START.md §3.3
+REA was installed and used for static metadata (plist, Mach-O). Ghidra and Hopper were not installed: the clean-room rules in [principles.md](principles.md)
 forbids reusing decompiled code, and the behaviour we need is documented. Live UI observation needs Screen Recording
 permission, which only the user can grant (see `docs/research/rea-findings.md`).
 
-### D17. No network service for agent control
-SoundCraft's TCP control channel was not copied (START.md forbids network services). `limeshot-cli run` (typed command
-scripts), `render` and `play`, plus the offscreen `ui_shot` renderer, cover headless and agent use.
+### D17. CLI for agent control
+SoundCraft's TCP control channel was not copied. [Principles](principles.md) forbid mandatory network services;
+optional local network services are allowed if the application remains fully usable offline without them.
+`limeshot-cli run` (typed command scripts), `render` and `play`, plus the offscreen `ui_shot` renderer, cover
+headless and agent use.
 
 ### D18. CI on every push for macOS (arm64 + Intel), Windows, Linux (x86-64 + ARM64), plus a Windows ARM64 cross build
-**Why:** START.md treats all three platforms as first class. Platform status is recorded only after a job has actually
+**Why:** the original brief treated all three platforms as first class. Platform status is recorded only after a job has actually
 passed.
 
 ### D19. Docked layout instead of floating editor windows (session 2) — superseded by D24

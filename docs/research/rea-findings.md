@@ -21,7 +21,7 @@
 
 ### Analysis providers
 
-`rea doctor` reports no deep-analysis provider (Ghidra, Hopper, IDA, Kuna are not installed or configured). **Decompilation was deliberately not set up.** Clean-room rules (START.md §3.3) prohibit using decompiled proprietary code, and the information LimeShot needs is behavioural. Only static metadata and observation were used.
+`rea doctor` reports no deep-analysis provider (Ghidra, Hopper, IDA, Kuna are not installed or configured). **Decompilation was deliberately not set up.** Clean-room rules ([principles](../development/principles.md)) prohibit using decompiled proprietary code, and the information LimeShot needs is behavioural. Only static metadata and observation were used.
 
 ## Evidence collected
 

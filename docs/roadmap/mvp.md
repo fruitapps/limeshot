@@ -2,7 +2,7 @@
 
 The MVP is a functional music-production foundation: a user can create a short composition from scratch.
 
-## Central acceptance workflow (START.md §13)
+## Central acceptance workflow
 
 | # | Step | How it is done in LimeShot | Verified by |
 |---|---|---|---|
@@ -34,9 +34,9 @@ Windows, Linux and macOS. On macOS the GUI and realtime audio were exercised by 
 steps is still to be recorded ([progress log](../development/progress.md)).
 
 **MVP status: complete on macOS and shipped in v0.1.0-alpha.1. Hands-on GUI/audio verification on Windows and Linux
-is open** (PF-003, PF-004). By START.md's definition of done, the MVP is finished once those platforms are verified.
+is open** (PF-003, PF-004). By the [definition of done](../development/principles.md), the MVP is finished once those platforms are verified.
 
-## Mandatory components (§13.1)
+## Mandatory components
 
 All present: native window, LimeShot identity, toolbar, transport, tempo and time signature, Pattern and Song modes,
 Channel Rack with step sequencer, Piano Roll, Playlist, basic Browser, Mixer, sampler, synth, realtime audio, note
