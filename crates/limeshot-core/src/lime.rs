@@ -359,8 +359,14 @@ pub fn sync_sampler_metadata(channel: &mut Channel, previous: Option<&PluginStat
     if disk || !pcm.is_empty() {
         if let Some(source) = source {
             plugin.extra.insert("lime-sample-path".into(), json!(source));
-        } else if previous.is_some() && previous_sample.as_deref() != Some(text) {
-            plugin.extra.remove("lime-sample-path");
+        } else if previous.is_some() {
+            let old_pcm = previous_sample
+                .as_deref()
+                .and_then(|t| serde_json::from_str::<Value>(t).ok())
+                .and_then(|v| v["pcm"].as_str().map(str::to_owned));
+            if old_pcm.as_deref() != Some(pcm) {
+                plugin.extra.remove("lime-sample-path");
+            }
         }
         plugin.extra.remove("lime-sample-pending");
     } else {

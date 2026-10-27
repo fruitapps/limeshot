@@ -276,15 +276,15 @@ fn write_mp3(path: &Path, sample_rate: u32, bitrate_kbps: u32, audio: &mut [f32]
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
+    let existing_permissions = std::fs::metadata(path).ok().map(|meta| meta.permissions());
     #[cfg(unix)]
-    let mut temporary = tempfile::Builder::new()
-        .permissions(std::os::unix::fs::PermissionsExt::from_mode(0o666))
-        .tempfile_in(parent)?;
-    #[cfg(not(unix))]
+    let default_permissions = {
+        let probe = tempfile::Builder::new()
+            .permissions(std::os::unix::fs::PermissionsExt::from_mode(0o666))
+            .tempfile_in(parent)?;
+        probe.as_file().metadata()?.permissions()
+    };
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-    if let Ok(meta) = std::fs::metadata(path) {
-        let _ = temporary.as_file().set_permissions(meta.permissions());
-    }
     {
         let mut writer = BufWriter::new(temporary.as_file_mut());
         loop {
@@ -297,6 +297,12 @@ fn write_mp3(path: &Path, sample_rate: u32, bitrate_kbps: u32, audio: &mut [f32]
         writer.flush()?;
     }
     temporary.as_file().sync_all()?;
+    if let Some(permissions) = existing_permissions {
+        let _ = temporary.as_file().set_permissions(permissions);
+    } else {
+        #[cfg(unix)]
+        let _ = temporary.as_file().set_permissions(default_permissions);
+    }
     temporary.persist(path).map_err(|error| error.error)?;
     Ok(())
 }

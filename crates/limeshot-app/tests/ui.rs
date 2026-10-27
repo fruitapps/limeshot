@@ -7303,8 +7303,9 @@ fn sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized() {
     let saved_path = dir.path().join("project.lime");
     assert!(h.state_mut().save_to(&saved_path));
     let moved_dir = dir.path().join("moved");
+    let moved_second = moved_dir.join("samples").join("second.wav");
     std::fs::create_dir_all(moved_dir.join("samples")).unwrap();
-    std::fs::copy(&second, moved_dir.join("samples/second.wav")).unwrap();
+    std::fs::copy(&second, &moved_second).unwrap();
     std::fs::copy(&saved_path, moved_dir.join("project.lime")).unwrap();
     h.state_mut().open_path(&moved_dir.join("project.lime"));
     h.step();
@@ -7315,7 +7316,7 @@ fn sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized() {
             .sample
             .unwrap()
             .path,
-        moved_dir.join("samples/second.wav").to_string_lossy()
+        moved_second.to_string_lossy()
     );
 
     // Native clear removes the sample source so stale waveforms/drag payloads do not remain, and undo restores it.
@@ -7336,6 +7337,6 @@ fn sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized() {
             .sample
             .unwrap()
             .path,
-        moved_dir.join("samples/second.wav").to_string_lossy()
+        moved_second.to_string_lossy()
     );
 }

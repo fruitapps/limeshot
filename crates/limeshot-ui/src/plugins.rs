@@ -798,13 +798,11 @@ impl PluginHost {
                 continue; // A host edit has not reached this instance yet.
             }
             if l.sampler_state.is_some() {
-                // Saving during a native drag is an explicit commit boundary; preserve undo.
-                if l.sampler_edit_pending {
-                    if let Err(error) = l.capture_sampler_state(*target, doc) {
-                        log::warn!("could not capture sampler edit: {error}");
-                    }
-                    l.sampler_edit_pending = false;
+                // Saving is an explicit commit boundary. An unchanged state makes no undo step.
+                if let Err(error) = l.capture_sampler_state(*target, doc) {
+                    log::warn!("could not capture sampler edit: {error}");
                 }
+                l.sampler_edit_pending = false;
             } else {
                 match l.instance.state() {
                     Ok(s) => {
