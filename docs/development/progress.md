@@ -568,3 +568,177 @@ tools. Live endpoint/DSP comparisons and standalone-in-FL testing remain in huma
 Work uses `codex/sampler-loop-filter-parity` atop `codex/alpha1-rev1-issues` (PR #23 still open at the
 start of delivery), in the primary checkout `~/Developer/limeshot`, reusing Cargo caches. No routine
 worktree/clone; push only the feature branch/PR, never main, and do not merge automatically.
+
+## 2026-10-27 — Prepared sampling, arrangement crossfades and UI consistency
+
+Implemented the fixed-duration sampling/arrangement workflow on
+`codex/prepared-sampling-arrangement`. [Design, comparison and limits](../research/prepared-sampling.md).
+Compared pinned independent Rust `wsola` 0.1.0 and `timestretch` 0.15.0 against synthetic
+stereo tones, impulses, percussion and polyphonic fixtures before integration. Their source,
+licenses, allocation, reset/flush and output-length behavior were inspected. Neither became
+a product dependency: their length/priming and DJ low-bass semantics respectively do not
+fit the uniform sampler contract. An independent bounded, stereo-linked Rust WSOLA path
+with worker-only sinc resampling supplies exact-length preparation. Numeric evidence is
+not listening-quality certification; reproducible comparison tooling and its pinned lockfile
+are under `tools/stretch-eval`.
+
+Host/native Time stretching controls offer Resample / Stretch, duration multiplier and
+independent prepared pitch; the host also fits beats at the current tempo. Originals and
+recipe remain in versioned portable state, reprepare starts from the original, and Restore
+original works without its source file. Existing parameter IDs/defaults and old-song
+resampling behavior remain. Clip preparation gives only the selected clip a separate sampler
+channel, preserving shared notes/clips, controls, root and routing. Trim/loops use normalized
+prepared positions; reverse, output-time slip/chase, duration, waveform, audition, fit and export
+share the prepared result. Workers cancel/discard stale jobs. Embedded source/result/intermediate
+and state limits, bounded preview/weak PCM caches and control-thread retirement preserve the
+render-thread contract. Long disk preparation and realtime tempo following remain open.
+
+Arrangement adds saved cubic smoothstep fades and automatic adjacent two-clip, same-track
+crossfades. A persisted toggle recalculates overlaps in the edit's undo step; moving clips
+apart restores manual base fades. Nested, coincident-start, muted and triple overlaps are
+skipped. Clip protocol v3 retains v1/v2 semantics and the 96-byte bounded event size.
+
+At the owner's request, reviewed UI consistency and replaced the initial ad-hoc layout:
+the host now reuses the centered dialog helper, aligned two-column grid, secondary typography,
+units and primary action style. Native controls sit in a sampler panel with existing flat
+buttons/accent; Keep on disk is beside source information. Mode labels are Resample / Stretch,
+invalid prerequisites have actionable guidance, and Restore original is disabled until useful.
+[Host dialog](../screenshots/current/sampler-time-stretch.png) and
+[native sampler](../screenshots/current/native/lime-sampler.png) were rendered and visually
+inspected after the review. No live GUI/listening result is inferred from these PNGs.
+
+Local evidence on macOS 26.6.2 arm64:
+
+* Full workspace suite: **479 passed**, including 163 app UI and 12 hosted-native tests.
+  The first sandboxed pass hit the existing bridge listener restriction; the permitted
+  local-socket run passes. After the UI polish, the three preparation/arrangement worker
+  tests were rerun successfully.
+* Native workspace suite: **23 passed**, including shared immutable prepared PCM,
+  native persistence, reverse/trim/loops/seek and callback allocation assertions.
+* Hosted prepared/crossfaded clips save/reopen/undo, sum to the expected stereo gain and
+  chase inside overlaps identically at blocks 1/64/333/1024. Existing linear/tension fade
+  coverage also exercises smooth v3. An early run against an outdated native bundle failed;
+  the rebuilt-bundle run passes.
+* DSP duration/pitch tests pass at 0.5/1/2× and −12/0/+12 st for 13 source rates from
+  8–384 kHz; invalid/extreme ratios, cancellation, identity, tiny and silent input are covered.
+  Portable recipe tests prove reprepare uses the original and refuses implicit disk reads.
+* All twelve release bundles were built, then final debug bundles rebuilt with allocation
+  assertions. Exported-binary verification passed every bundle at 44.1/48/96 kHz ×
+  1/64/333/1024, covering load, native editor creation, MIDI offsets, automation and state.
+* Workspace build, strict workspace/native Clippy, both workspace formatting checks,
+  feature inventories, local links/evidence and whitespace checks pass.
+
+INS-007 / PL-023 retain IN_PROGRESS for remaining parity/verification work. Listening on
+real music, FL A/B, standalone recall and physical/cross-platform runtime checks are queued
+in [human verification](human-verification.md). Generic VST3 state/preset/parameter/editor
+paths remain; preparation helpers require explicit Lime Sampler identity. Pre-existing
+hosting gaps from the sanitation report were not promoted or broadened into this change.
+
+Work uses the existing primary checkout `/Users/sebastian/Developer/limeshot` and its Cargo
+caches. Continue there without routine worktrees/clones; push only the feature branch and
+its PR, never main, and do not merge automatically.
+
+### PR #25 — integration with current main
+
+Main advanced to `c38615c` during implementation (Rev 1 Playlist/arrangements and sampler
+ping-pong/filter work). Integrated it on the feature branch and retained both implementations.
+The sampler panel now sits beneath the newer loop/filter controls; its combined 760×780
+layout and the current Playlist/dialog PNGs were rendered and visually inspected. Private
+channel reuse checks inactive arrangements as well as active clips/notes; its worker test
+proves a clip edit leaves an inactive arrangement's shared sampler unchanged. Automatic fade
+cleanup restores manual bases across arrangements before edits. The prepared hosted test also
+runs with ping-pong enabled. Legacy right-edge stretch retains its existing shared-channel
+resampling behavior; independent fixed-duration preparation is the Time stretching action.
+
+Combined local macOS 26.6.2 arm64 validation: **493 workspace tests passed**, including 169
+app UI and 13 hosted-native tests; **27 native tests passed**. Rebuilt all twelve debug bundles;
+exported-binary verification passed all twelve at three rates/four block sizes. Workspace build,
+strict Clippy in both workspaces, formatting, 301-feature inventories, repository references
+(247 links, 6 embedded assets, 251 evidence paths) and whitespace checks pass. Original
+source/restore bounds and generic VST3 identity gates remain enforced. The previous 479/23
+counts above describe the pre-integration stage. Listening/live/platform gaps remain unchanged.
+
+[PR #25](https://github.com/fruitapps/limeshot/pull/25) carries the DSP comparison, integrated
+workflow, UI consistency review and main integration. Only the feature branch is pushed;
+main is not pushed or the PR merged automatically. Continue using the primary checkout and
+its Cargo caches without routine worktrees/clones.
+
+## 2026-10-27 — PR #25 preview ownership and fade review follow-up
+
+Continued from PR #25 on `codex/sampler-preview-fade-fixes` in the existing primary checkout
+`/Users/sebastian/Developer/limeshot`, reusing Cargo caches. The follow-up PR targets
+`codex/prepared-sampling-arrangement`; no worktree/clone, main push or automatic merge.
+
+Fixed the preview ownership issue identified independently by Codex and CodeRabbit: channel
+source mappings now retain their decoded PCM, so cache eviction cannot leave published virtual
+paths without audio. Changed/removed source mappings release pins before new previews are
+inserted. Raised the entry ceiling from 32 to 4096 while retaining the 256 MiB PCM budget;
+large projects can show more than 32 small embedded sources. A full pinned budget refuses
+additional previews, and embedded state never substitutes an external reload hint. Normal
+file-cache requests remain available to existing asynchronous Playlist import helpers.
+
+Smooth S fades is disabled with an explanatory hover hint for active automatic crossfade
+pairs. The control reads current document state after the automatic toggle, so disabling
+crossfades immediately restores the manual curve and enables editing; nonoverlapping clips
+remain editable. The [menu PNG](../screenshots/current/automatic-crossfade-menu.png) was
+rendered with `ui_shot --audio --crossfade-menu` and visually inspected. Research confidence
+labels and the Time stretching… action name are corrected; INS-007 no longer incorrectly
+calls ping-pong/fixed preparation unimplemented. Feature statuses remain unchanged.
+
+Local validation: macOS 26.6.2 (25G83), Apple Silicon, debug. Rebuilt all twelve debug Lime
+VST3 bundles. **495 workspace tests passed**, including 171 app UI tests. Added a final
+cache-exhaustion/source-hint recovery regression afterward: the three embedded-preview UI
+cases pass together (496 distinct tests covered overall). The 40-source regression forces
+cache collection, checks PCM identity after unrelated edits and verifies source replacement/
+removal releases pins. The cache unit test fills/pins all 4096 entries, rejects overflow,
+then reclaims released buffers. Workspace build, strict all-target Clippy, formatting,
+feature inventories, repository references and whitespace checks pass. The first full pass
+caught two import-helper regressions from skipping raw-file cache requests; restored those
+requests and the complete rerun passed. Live GUI/listening and Windows/Linux runtime checks
+remain in human verification; offscreen tests do not establish those results.
+
+PR #25 CI was green when reviewed. All five remaining inline findings are addressed in this
+stacked follow-up: the two duplicate preview findings, curve checkbox, research labels/action
+name and stale sampler notes. Its advisory docstring-coverage warning does not describe a
+runtime failure; existing broad documentation coverage was not rewritten in this bug fix.
+Continue implementation in the primary checkout/cache, push feature branches/PRs only, and
+pass the owner's issue → implementation → previous-PR review/CI fixes → stacked PR → new
+session workflow forward until the current usage window is exhausted; do not wait for a reset.
+
+## 2026-10-28 — Address all remaining PR #25 review findings
+
+Audited the full PR #25 discussion, seven inline threads, and seven outside-diff findings
+on `codex/prepared-sampling-arrangement` in the existing primary checkout/Cargo cache.
+Fast-forwarded to `da9c654` before editing. The two preview-eviction threads already have
+an implemented fix: published sampler source mappings retain strong PCM references, and
+capacity refusal cannot substitute a source-file hint. The existing 40-source pressure,
+replacement/removal and full-budget recovery regressions pass. The disabled Smooth S fades
+checkbox, research confidence labels/menu name, duplicate limitation phrase and stale
+ping-pong note are also already addressed; no duplicate implementation was added.
+
+Fixed the still-valid outside-diff findings: stationary fade-curve handle clicks preserve
+smooth fades and history; zero-crossing searches map through reverse playback from the high
+trim endpoint, including pitch; New/Open/Recover/FLP import cancel preparation and reset its
+target; channel preparation recalls its multiplier and derives fresh beats instead of reusing
+clip beat mode. New regression tests cover both fade handles, forward/reverse snapping,
+recipe recall and all four project replacement paths with idle/busy preparation. Both host
+and native completion pollers now release busy state on worker disconnection, with tests;
+ordinary empty channels remain pending and stale/cancelled results remain rejected.
+
+Corrected the remaining limitation text (only the Smooth S fades checkbox is disabled for
+an automatic pair; manual curve handles still exist), qualified the realtime stretching gap,
+removed leading spaces from PL-018/020/025 notes and clarified zero-based sampler indices
+in PLG-015/016. Regenerated the roadmap, recorded new evidence for INS-007/PL-023 and added
+API/helper/test documentation in response to the docstring warning. No feature status was
+promoted; the external reviewer's coverage percentage has not been rerun locally.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug. **501 workspace tests passed**, including
+173 app UI tests and 13 hosted-native tests; **28 native library tests passed**. Rebuilt all
+twelve debug Lime VST3 bundles and used them through
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`. Workspace build, strict
+workspace/native all-target Clippy, both formatting checks, feature inventories, repository
+references and whitespace checks pass. Rendered and visually inspected the preparation
+dialog with `ui_shot --audio --prepare` (`/tmp/limeshot-pr25-preparation.png`). No audio-thread
+or DSP behavior was changed. Live listening/FL equivalence and Windows/Linux behavior remain
+in human verification. Continue using the primary checkout and its Cargo caches; push only
+the feature branch and its PR, never directly to main or merge automatically.

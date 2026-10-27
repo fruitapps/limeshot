@@ -2145,6 +2145,7 @@ version = "0.1.0"
 dependencies = [
  "limeshot-core",
  "limeshot-dsp",
+ "serde_json",
 ]
 
 [[package]]

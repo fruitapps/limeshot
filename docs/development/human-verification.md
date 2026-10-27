@@ -96,3 +96,40 @@ sources and standalone sampler hosting in FL. Repeat Windows/Linux. Prerequisite
 GUI observation/input permissions and an audible output/headphones. See
 [control inventory](../research/sampler-controls-2026-10-27.md); recording a control's presence does
 not verify its sound or complete the sampler feature.
+
+## Prepared sampling and crossfades (2026-10-27)
+
+* On this branch/build, audition generated comparison WAVs with
+  `cargo run --release --manifest-path tools/stretch-eval/Cargo.toml -- <temporary-folder>`.
+  Listen on headphones to tone, impulse, percussion and polyphonic fixtures at 0.5/1/2×,
+  then owner-provided drums, bass, vocals and wide stereo music. Check attacks, tails,
+  modulation, low-frequency pitch and stereo image. Numeric results alone do not establish quality.
+* In LimeShot, load an embedded sample, Time stretching in Channel Settings, choose
+  Stretch and 0.5/1/2× with −12/0/+12 st. Check native controls/recipe, waveform, root audition,
+  Restore original, presets, undo/redo, source relocation and save/reopen without the source file.
+  Place two clips and notes using that channel; Time stretching from its clip menu and verify only that clip changes.
+  Test trim/reverse/held loops, slip offset, beat fit, starting inside a clip/fade, playback and WAV.
+* Enable Automatic crossfades on overlaps from an audio clip menu. Move two audio clips on the
+  same track into/out of overlap, inspect S fades and listen through the overlap, then undo/reopen.
+  Check independent recordings for perceived dips; the implemented law is complementary gain.
+  Nested/triple overlaps are intentionally skipped. Compare documented FL behavior separately.
+* Repeat native plugin recipe/preset recall standalone in another VST3 host and runtime checks
+  on Windows/Linux/Intel macOS. Requires the rebuilt bundles, relevant machines/host, audio hardware
+  and listening; local automated/macOS offscreen evidence is not live/platform certification.
+  See [design and bounds](../research/prepared-sampling.md).
+
+## PR #25 preview and fade review follow-up
+
+With rebuilt Lime Native bundles and `live_check` using a disposable temporary project, create
+more than 32 distinct short embedded samples. Inspect Rack/Playlist/Channel Settings waveforms
+and audition older channels after editing/replacing/removing other samples. Check that a full
+preview budget leaves existing mapped previews available, without substituting source files.
+Enable automatic crossfades for an overlapping audio pair: Smooth S fades is disabled with a
+hint, becomes editable when automatic crossfades are turned off, and remains editable for
+nonoverlapping clips. Automated UI/cache tests and the rendered menu cover local behavior;
+physical GUI/audio and Windows/Linux checks remain open. Also check a stationary click on each
+smooth-fade curve handle, reverse/trim/pitch zero-crossing edits, clip-to-channel preparation dialog
+switching and New/Open/Recover/FLP import with preparation idle or busy. Automated regressions
+cover these paths locally; standalone/native worker-failure recovery remains a live-host check.
+Requires an audible output and the
+platform's GUI input/observation permissions. See [prepared sampling](../research/prepared-sampling.md).

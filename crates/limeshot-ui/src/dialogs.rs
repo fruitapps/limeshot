@@ -291,14 +291,19 @@ pub fn poll_export(app: &mut LimeShotApp) {
 
 /// Show `add` in a centered, fixed-width dialog window under the shared dialog id.
 fn modal(ctx: &Context, title: &str, add: impl FnOnce(&mut egui::Ui)) {
+    modal_with_id(ctx, "dialog", title, 320., add);
+}
+
+/// Shared geometry and typography for fixed-size application dialogs.
+pub(crate) fn modal_with_id(ctx: &Context, id: &str, title: &str, width: f32, add: impl FnOnce(&mut egui::Ui)) {
     egui::Window::new(RichText::new(title).strong())
-        .id(egui::Id::new("dialog"))
+        .id(egui::Id::new(id))
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
-        .default_width(320.0)
+        .anchor(Align2::CENTER_CENTER, vec2(0., 0.))
+        .default_width(width)
         .show(ctx, |ui| {
-            ui.set_width(320.0);
+            ui.set_width(width);
             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
             add(ui);
         });

@@ -9,6 +9,7 @@ rust-version.workspace = true
 [dependencies]
 limeshot-core.workspace = true
 limeshot-dsp.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

@@ -436,6 +436,9 @@ fn is_zero_tick(t: &Tick) -> bool {
 impl Clip {
     /// Saved fade tension; absent or invalid values retain the original linear ramp.
     pub fn fade_curve(&self, out: bool) -> f32 {
+        if self.extra.get("fade-smooth-v1").and_then(serde_json::Value::as_bool) == Some(true) {
+            return 2.0;
+        }
         self.extra
             .get(if out { "fade-out-curve" } else { "fade-in-curve" })
             .and_then(serde_json::Value::as_f64)

@@ -7580,3 +7580,237 @@ fn rev1_automation_step_draws_and_slide_moves_remaining_points() {
     assert_eq!(points[1].tick, PPQ + PPQ / 2);
     assert_eq!(points[2].tick, PPQ * 2 + PPQ / 2);
 }
+
+/// Published embedded sources retain their PCM across cache pressure and document edits.
+#[test]
+fn embedded_sampler_previews_survive_more_than_32_sources_and_release_replaced_audio() {
+    use limeshot_audio::assets::SampleStatus;
+    use std::sync::Arc;
+    let mut app = LimeShotApp::new_silent(Settings::default(), None);
+    let mut channels = Vec::new();
+    for i in 0..40 {
+        let audio = EmbeddedAudio {
+            name: format!("Embedded {i}.wav"),
+            sample_rate: 48000,
+            stereo: vec![i as f32 / 40.; 32],
+        };
+        let plugin = LimePlugin::SAMPLER.with_values(
+            &lime::sampler_values(&SamplerParams::default(), 60),
+            false,
+            Some(&audio),
+        );
+        channels.push(ChannelId(
+            app.exec(Command::AddChannel {
+                name: audio.name.clone(),
+                instrument: Instrument::Plugin(plugin),
+            })
+            .unwrap(),
+        ));
+    }
+    app.sync_engine();
+    let sources: Vec<_> = channels
+        .iter()
+        .map(|&id| {
+            let path = app.sampler_source(id).expect("each embedded channel has a preview");
+            let Some(SampleStatus::Ready(audio)) = app.samples.status_of_path(&path) else {
+                panic!("PCM missing")
+            };
+            assert_eq!(Arc::strong_count(audio), 2, "cache and source mapping both retain PCM");
+            (path, Arc::downgrade(audio))
+        })
+        .collect();
+    // Force a collection while channel mappings are the only owners besides the cache.
+    for i in 0..4096 {
+        assert!(app.samples.insert_embedded(
+            std::path::PathBuf::from(format!("/.limeshot-embedded/pressure-{i}.wav")),
+            Arc::new(limeshot_dsp::SampleData::from_stereo(48000, vec![0.; 4])),
+        ));
+    }
+    app.exec(Command::SetChannelVolume {
+        channel: channels[0],
+        volume: 0.5,
+    });
+    app.sync_engine();
+    for (&id, (path, original)) in channels.iter().zip(&sources) {
+        assert_eq!(app.sampler_source(id).as_ref(), Some(path));
+        let Some(SampleStatus::Ready(audio)) = app.samples.status_of_path(path) else {
+            panic!("PCM evicted")
+        };
+        assert!(
+            original.ptr_eq(&Arc::downgrade(audio)),
+            "unchanged sources are not decoded again"
+        );
+    }
+    let empty = LimePlugin::SAMPLER.with_values(&lime::sampler_values(&SamplerParams::default(), 60), false, None);
+    app.exec(Command::SetPluginState {
+        plugin: PluginTarget::Channel(channels[0]),
+        state: empty.state,
+    });
+    app.sync_engine();
+    assert!(app.sampler_source(channels[0]).is_none());
+    assert_eq!(sources[0].1.strong_count(), 1, "replacing a source releases its pin");
+    app.exec(Command::RemoveChannel(channels[1]));
+    app.sync_engine();
+    assert!(app.sampler_source(channels[1]).is_none());
+    assert_eq!(sources[1].1.strong_count(), 1, "removing a channel releases its pin");
+}
+
+/// Automatic pairs own their curve; disabling them restores editable manual fades immediately.
+#[test]
+fn automatic_crossfade_curve_control_disables_only_for_active_pairs() {
+    use egui_kittest::kittest::NodeT;
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    let channel = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Audio".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .unwrap(),
+    );
+    let mut clips = Vec::new();
+    for start in [0, 2 * PPQ, 8 * PPQ] {
+        clips.push(ClipId(
+            h.state_mut()
+                .exec(Command::PlaceClip {
+                    source: ClipSource::Audio(channel),
+                    offset: 0,
+                    track: 0,
+                    start,
+                    length: 4 * PPQ,
+                })
+                .unwrap(),
+        ));
+    }
+    h.state_mut().exec(Command::SetAutoCrossfades(true));
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let menu = |tick| egui::pos2(g.pos(tick, 0).x + 6., g.pos(tick, 0).y - g.track_h * 0.5 + 6.);
+    click(&mut h, menu(0), PointerButton::Primary);
+    let smooth = h.get_by_label("Smooth S fades");
+    assert!(smooth.accesskit_node().is_disabled());
+    let disabled_pos = smooth.rect().center();
+    click(&mut h, disabled_pos, PointerButton::Primary);
+    assert_eq!(h.state().project().clip(clips[0]).unwrap().fade_curve(false), 2.);
+    h.get_by_label("Automatic crossfades on overlaps").click();
+    h.step();
+    assert!(!h.get_by_label("Smooth S fades").accesskit_node().is_disabled());
+    h.get_by_label("Smooth S fades").click();
+    h.step();
+    assert_eq!(h.state().project().clip(clips[0]).unwrap().fade_curve(false), 2.);
+    h.state_mut().exec(Command::SetAutoCrossfades(true));
+    click(&mut h, menu(8 * PPQ), PointerButton::Primary);
+    assert!(
+        !h.get_by_label("Smooth S fades").accesskit_node().is_disabled(),
+        "nonoverlapping clips remain editable"
+    );
+}
+
+/// Exhausting the preview budget never substitutes a reload hint for embedded playback audio.
+#[test]
+fn embedded_preview_budget_refuses_source_fallback_and_recovers_after_unpinning() {
+    use limeshot_audio::assets::SampleStatus;
+    use std::sync::Arc;
+    let mut app = LimeShotApp::new_silent(Settings::default(), None);
+    let pins: Vec<_> = (0..4096)
+        .map(|i| {
+            let audio = Arc::new(limeshot_dsp::SampleData::from_stereo(48000, vec![0.; 4]));
+            assert!(app.samples.insert_embedded(
+                std::path::PathBuf::from(format!("/.limeshot-embedded/pinned-{i}.wav")),
+                audio.clone(),
+            ));
+            audio
+        })
+        .collect();
+    let dir = tempfile::tempdir().unwrap();
+    let hint = dir.path().join("reload.wav");
+    limeshot_dsp::write_wav(&hint, 48000, &[-0.2; 32], limeshot_dsp::BitDepth::Float32).unwrap();
+    let audio = EmbeddedAudio {
+        name: "Embedded.wav".into(),
+        sample_rate: 48000,
+        stereo: vec![0.7; 32],
+    };
+    let mut plugin = LimePlugin::SAMPLER.with_values(
+        &lime::sampler_values(&SamplerParams::default(), 60),
+        false,
+        Some(&audio),
+    );
+    assert!(lime::set_sample_source(&mut plugin, &hint.to_string_lossy()));
+    let channel = ChannelId(
+        app.exec(Command::AddChannel {
+            name: "Embedded".into(),
+            instrument: Instrument::Plugin(plugin),
+        })
+        .unwrap(),
+    );
+    app.samples.load_blocking(&hint.to_string_lossy()).unwrap();
+    app.sync_engine();
+    assert!(
+        app.sampler_source(channel).is_none(),
+        "even a cached reload hint must not replace embedded audio"
+    );
+    drop(pins);
+    app.exec(Command::SetChannelVolume { channel, volume: 0.5 });
+    app.sync_engine();
+    let path = app
+        .sampler_source(channel)
+        .expect("preview recovers after capacity is released");
+    assert_ne!(path, hint);
+    let Some(SampleStatus::Ready(sample)) = app.samples.status_of_path(&path) else {
+        panic!("preview missing")
+    };
+    assert_eq!(sample.data, audio.stereo);
+}
+
+/// Pressing a smooth curve handle without moving it is not an edit.
+#[test]
+fn smooth_fade_handle_click_preserves_curve_and_undo_history() {
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.playlist.zoom_x = 100.;
+    let channel = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Audio".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .unwrap(),
+    );
+    let clip = ClipId(
+        h.state_mut()
+            .exec(Command::PlaceClip {
+                source: ClipSource::Audio(channel),
+                track: 0,
+                start: 0,
+                length: 4 * PPQ,
+                offset: 0,
+            })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetClipFades {
+        clip,
+        fade_in: PPQ,
+        fade_out: PPQ,
+    });
+    h.state_mut().exec(Command::SetClipSmoothFade { clip, smooth: true });
+    h.step();
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let top = g.grid.top() - g.scroll.y;
+    for tick in [PPQ / 2, 4 * PPQ - PPQ / 2] {
+        let handle = egui::pos2(g.pos(tick, 0).x, top + (g.track_h + 17.) / 2.);
+        let revision = h.state().doc.revision();
+        click(&mut h, handle, PointerButton::Primary);
+        assert_eq!(h.state().project().clip(clip).unwrap().fade_curve(false), 2.);
+        assert_eq!(h.state().project().clip(clip).unwrap().fade_curve(true), 2.);
+        assert_eq!(h.state().doc.revision(), revision);
+        drag(&mut h, handle, handle - vec2(0., 20.));
+        assert!(
+            h.state().doc.revision() > revision,
+            "moving the same handle still edits"
+        );
+        assert!(h.state_mut().doc.undo());
+        h.step();
+    }
+}

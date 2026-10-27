@@ -60,7 +60,7 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   scattered concurrent offsets may underrun; the native editor reports missed frames. Live disk stress and
   platform checks remain open. See [implementation and FL research](../research/alpha1-sampler-and-fades.md).
 * Fades support independent single curves, with selected-clip length/tension gestures. Smooth S curves and
-  automatic crossfades remain open; the new native bundles are required for curved fade playback.
+  automatic same-track pair crossfades and smooth S fades are implemented; nested/triple overlaps remain open; the new native bundles are required for curved fade playback.
 * Opening a `.lime` file, a recovery copy or an `.flp` does not embed audio from outside the project folder
   (symlinks included): choose the source in the GUI, or pass `--allow-external-samples` to the CLI.
 * Plugins receive tempo at block boundaries; a tempo change inside a block reaches synced effects in the next block.
@@ -69,8 +69,9 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * Automation runs in Song mode. Effect automation from projects older than the Lime VST3 switch follows the plugin
   closely but not bit for bit (smoothing and interpolation); automation of the old compressor sidechain selector
   warns instead of converting.
-* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, time
-  stretching or multisampling. Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
+* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, realtime
+  tempo-following stretch or multisampling. Fixed-duration Resample/Stretch preparation is available; see
+  [prepared sampling](../research/prepared-sampling.md). Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
   12 dB/oct and key tracking; its LFO restarts per voice; no mono/glide.
 * Each Lime instrument has 128 voices and steals the oldest abruptly. Third-party plugins without Lime telemetry
   contribute zero to the voice count.
@@ -102,18 +103,19 @@ The [sampler audit](../research/sampler-parity-audit.md) distinguishes documente
 Lime source findings, existing tests and unverified live behavior. Hosted P0 field migration does
 not imply complete FL Sampler parity.
 
-* No time stretching, source BPM lock/detection, formants, ping-pong/crossfaded loops, precomputed
-  sample processing, extended declick modes, metadata-driven sampler setup or interpolation quality
-  selection. Sampler has volume ADSR and one low-pass, without extended envelopes, sampler LFOs,
-  filter selection/tracking, configurable polyphony/mono/porta or cross-channel cut groups.
+* Fixed-duration preparation is available; no realtime tempo following, source BPM lock/detection,
+  formants, crossfaded loop seams, extended declick modes, metadata-driven sampler setup or
+  selectable interpolation quality. Sampler has volume ADSR, ping-pong/loop gestures and
+  low-/band-/high-pass outputs, without extended envelopes/LFOs, further filter families/tracking,
+  configurable polyphony/mono/porta or cross-channel cut groups.
 * Host and native root/source synchronization, preset sample preservation and gesture-coalesced undoable
   native sampler state capture are implemented and covered by headless/hosted tests (INS-021), but live
-  GUI interaction verification remains open. Audio clips share sampler channel state; FL uses a distinct
-  Audio Clip generator.
+  GUI interaction verification remains open. Audio clips normally share sampler channel state; fixed-duration preparation isolates the
+  selected clip, including across inactive arrangements. FL uses a distinct Audio Clip generator.
 * FLP import defaults advanced sampler settings, including root/pitch, loops, envelopes, filter,
   stretch, declick and precomputed processing, without detailed per-setting warnings (APP-022).
-* FL live A/B and Lime Sampler in other DAWs remain unverified. The current computer-use FL
-  selection timed out despite owner authorization for Accessibility/Screen Recording.
+* Exact audible FL parity and Lime Sampler in other DAWs remain unverified. Partial FL control
+  observations are recorded in the [control inventory](../research/sampler-controls-2026-10-27.md).
 
 ## Editing
 * The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not
@@ -179,7 +181,8 @@ not imply complete FL Sampler parity.
 ## Alpha.1 Rev 1
 
 See [Rev 1 implementation](../research/alpha1-rev1.md): resample-only right-edge stretch changes pitch
-and all shared-sampler uses; no independent/pitch-preserving stretch. Zero-crossing requires decoded
+and all shared-sampler uses. Use Time stretching for fixed-duration independent/pitch-preserving
+preparation; edge dragging retains its existing resampling behavior. Zero-crossing requires decoded
 PCM and uses tick resolution. STEP pulse drawing/tension inheritance and full arrangement merge
 position/track policies remain open; extra FLP arrangements are not imported. Track selectors display
 musical activity rather than measured signal/tails or complete solo/mixer audibility. New focus options
@@ -197,3 +200,16 @@ modulation yet. Loop chase preserves position/direction but does not reconstruct
 Disk realtime cache misses remain possible at extreme pitch or short loops. Native loop gestures,
 state/undo/reopen and standalone hosting still need live checks. See the
 [control inventory and implementation](../research/sampler-controls-2026-10-27.md).
+
+* [Prepared sampling](../research/prepared-sampling.md): WSOLA can repeat/smear transients and
+  modulate polyphonic material; music listening and live FL/standalone/cross-platform checks remain
+  unverified. Clip preparations create separate channels, reused for repeated private edits; removing clips
+  can leave unused channels for explicit Rack removal. Ordinary channel Pitch/keyboard transposition still resample prepared audio. No long disk
+  stretching; original, result and pitch intermediate each have a 3 million frame limit. Beat fitting
+  captures the current tempo once. Host embedded previews cap at 4096 buffers/256 MiB and may be
+  unavailable when mapped channel sources or active voices pin that budget. Existing mapped
+  previews retain their PCM; replacing/removing sources releases their pins. Embedded states
+  never use external reload hints as a fallback for unavailable previews. Active automatic pairs disable only the Smooth S fades checkbox; curve handles remain available,
+  but automatic crossfades must be turned off before editing the saved manual curve.
+  Automatic crossfades use complementary gain, not
+  equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.

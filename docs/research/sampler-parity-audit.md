@@ -91,7 +91,7 @@ None establishes full sampler parity.
 
 ## Time-stretch implementation scope
 
-**DESIGN PROPOSAL, not implemented.** Start with fixed-duration offline preparation, then treat
+**Original design proposal; fixed-duration preparation is now integrated in [prepared sampling](prepared-sampling.md).** Start with fixed-duration offline preparation, then treat
 realtime tempo automation as a separate milestone. Preserve existing parameter IDs/defaults and
 version the new state/protocol. Existing songs must retain their current resampling behavior.
 
@@ -131,3 +131,11 @@ live A/B checks remain necessary; numeric tone tests alone are insufficient.
 owner-assisted FL UI observation, stable appended sampler parameters, ping-pong loops, independent
 filter outputs and waveform loop gestures. DSP endpoint conventions and transfer functions remain
 independent; this does not establish full FL audio parity.
+
+## Prepared sampling update
+
+Fixed-duration Resample/Stretch, independent prepared pitch, target multiplier/host beats,
+per-clip channel isolation and saved automatic pair/S fades are now integrated. Ordinary
+channel Pitch still resamples; realtime tempo following remains separate. See
+[prepared sampling](prepared-sampling.md) for ownership, frame mapping, state, limits,
+comparison evidence and listening/live gaps. This extends the ping-pong/filter stage above.

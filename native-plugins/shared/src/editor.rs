@@ -5,6 +5,7 @@ use crate::{
 };
 use egui::{self, *};
 use limeshot_project::preset::{self, Content, Slot};
+use nice_plug::params::persist::PersistentField;
 use nice_plug::{context::gui::GuiContext, prelude::*};
 use nice_plug_egui::NiceEguiApp;
 use std::{sync::Arc, time::Duration};
@@ -18,7 +19,7 @@ use style::{Canvas, Theme};
 
 pub const EDITOR_SIZES: [(f32, f32); 12] = [
     (850.0, 600.0),
-    (760.0, 720.0),
+    (760.0, 780.0),
     (520.0, 300.0),
     (940.0, 580.0),
     (650.0, 370.0),
@@ -98,6 +99,12 @@ pub struct NativeEditor {
     entry: String,
     editing: Option<usize>,
     sample_loading: Option<std::sync::mpsc::Receiver<Result<String, String>>>,
+    prepare_recipe: Option<(f64, f64, bool)>,
+    prepare_ratio: f64,
+    prepare_pitch: f64,
+    prepare_stretch: bool,
+    sample_cancel: Arc<std::sync::atomic::AtomicBool>,
+    sample_expected: Option<String>,
     sample_name: String,
     sample: Option<Arc<limeshot_dsp::SampleData>>,
     waveform: [f32; 256],
@@ -120,6 +127,12 @@ impl NativeEditor {
             entry: String::new(),
             editing: None,
             sample_loading: None,
+            prepare_recipe: None,
+            prepare_ratio: 1.,
+            prepare_pitch: 0.,
+            prepare_stretch: true,
+            sample_cancel: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            sample_expected: None,
             sample_name: String::new(),
             sample: None,
             waveform: [0.0; 256],
@@ -156,19 +169,43 @@ impl NativeEditor {
     /// File actions may open dialogs and perform I/O; failures appear in the status text.
     /// Host parameter/state edits require an attached context. Requests a repaint after 33 ms.
     pub fn draw(&mut self, ui: &mut Ui) {
-        if let Some(result) = self.sample_loading.as_ref().and_then(|rx| rx.try_recv().ok()) {
+        if let Some(result) = self.sample_loading.as_ref().and_then(|rx| match rx.try_recv() {
+            Ok(result) => Some(result),
+            Err(std::sync::mpsc::TryRecvError::Empty) => None,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => Some(Err("Sample worker stopped; retry".into())),
+        }) {
             self.sample_loading = None;
-            match result {
-                Ok(sample) => {
-                    if let Some(context) = &self.context {
-                        let mut state = context.get_state();
-                        state.fields.insert("sample-v1".into(), sample);
-                        context.set_state(state);
-                        self.status = "Sample loaded".into();
+            let expected = self.sample_expected.take();
+            let stale = expected
+                .is_some_and(|old| self.params.sample.map(|sample| serde_json::to_string(sample).ok()) != Some(old));
+            if self.sample_cancel.load(std::sync::atomic::Ordering::Relaxed) || stale {
+                self.status = "Preparation cancelled or source changed".into();
+            } else {
+                match result {
+                    Ok(sample) => {
+                        if let Some(context) = &self.context {
+                            let mut state = context.get_state();
+                            state.fields.insert("sample-v1".into(), sample);
+                            context.set_state(state);
+                            self.status = "Sample loaded".into();
+                        }
                     }
+                    Err(error) => self.status = error,
                 }
-                Err(error) => self.status = error,
             }
+        }
+        let recipe = self.params.sample.map(|s| {
+            s.preparation.as_ref().map(|p| {
+                (
+                    p["ratio"].as_f64().unwrap_or(1.),
+                    p["pitch"].as_f64().unwrap_or(0.),
+                    p["mode"].as_str() != Some("Resample"),
+                )
+            })
+        });
+        if self.sample_loading.is_none() && recipe != self.prepare_recipe {
+            self.prepare_recipe = recipe;
+            (self.prepare_ratio, self.prepare_pitch, self.prepare_stretch) = recipe.unwrap_or((1., 0., true));
         }
         if let Some(disk) = self.params.sample.audio().as_ref().and_then(|s| s.disk.clone()) {
             if disk.failed() {
@@ -314,10 +351,16 @@ impl NativeEditor {
         self.load_sample_mode(path, None);
     }
 
+    /// Load embedded or disk-backed audio off the editor thread when no worker is active.
     fn load_sample_mode(&mut self, path: &std::path::Path, disk: Option<bool>) {
         if self.context.is_none() {
             return;
         }
+        if self.sample_loading.is_some() {
+            return;
+        }
+        self.sample_cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        self.sample_expected = None;
         let path = path.to_path_buf();
         let (tx, rx) = std::sync::mpsc::channel();
         self.sample_loading = Some(rx);
@@ -335,6 +378,42 @@ impl NativeEditor {
     }
 }
 
+impl NativeEditor {
+    /// Prepare or restore the captured source off-thread; draw rejects stale results.
+    fn prepare_sample(&mut self, restore: bool) {
+        if self.sample_loading.is_some() || self.context.is_none() {
+            return;
+        }
+        let Some(text) = self.params.sample.map(|s| serde_json::to_string(s).ok()) else {
+            return;
+        };
+        self.sample_expected = Some(text.clone());
+        self.sample_cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let cancel = self.sample_cancel.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (ratio, pitch, stretch) = (
+            self.prepare_ratio,
+            if self.prepare_stretch { self.prepare_pitch } else { 0. },
+            self.prepare_stretch,
+        );
+        match std::thread::Builder::new()
+            .name("lime-native-prepare".into())
+            .spawn(move || {
+                let result = if restore {
+                    limeshot_sequencer::preparation::restore_sample(&text)
+                } else {
+                    limeshot_sequencer::preparation::prepare_sample(&text, ratio, pitch, stretch, &cancel)
+                };
+                let _ = tx.send(result);
+            }) {
+            Ok(_) => {
+                self.sample_loading = Some(rx);
+                self.status = "Preparing…".into();
+            }
+            Err(e) => self.status = e.to_string(),
+        }
+    }
+}
 impl NiceEguiApp for NativeEditor {
     fn build(
         &mut self,
@@ -353,6 +432,7 @@ impl NiceEguiApp for NativeEditor {
     fn editor_closed(&mut self) {
         self.meters.preview_note.store(0, std::sync::atomic::Ordering::Relaxed);
         self.context = None;
+        self.sample_cancel.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -501,6 +581,25 @@ fn save_preset_file(path: &std::path::Path, preset: &preset::Preset) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// A disconnected load/preparation worker must release its slot and stale expectation.
+    #[test]
+    fn disconnected_sample_worker_clears_busy_state() {
+        let mut editor = NativeEditor::preview(1);
+        let (tx, rx) = std::sync::mpsc::channel();
+        editor.sample_loading = Some(rx);
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(vec2(900., 700.))
+            .build_ui_state(|ui, editor| editor.draw(ui), editor);
+        harness.step();
+        assert!(harness.state().sample_loading.is_some());
+
+        drop(tx);
+        harness.step();
+        assert!(harness.state().sample_loading.is_none());
+        assert!(harness.state().sample_expected.is_none());
+        assert!(harness.state().status.contains("worker stopped"));
+    }
+
     #[test]
     fn native_presets_round_trip_through_limeshots_reader() {
         let folder = tempfile::tempdir().unwrap();

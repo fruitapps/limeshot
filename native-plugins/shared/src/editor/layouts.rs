@@ -137,7 +137,7 @@ impl NativeEditor {
             .params
             .sample
             .map(|sample| (sample.source.clone(), sample.keep_on_disk));
-        ui.scope_builder(UiBuilder::new().max_rect(c.r(12.0, c.h - 57.0, 185.0, 25.0)), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(c.r(550.0, 543.0, 185.0, 25.0)), |ui| {
             if ui
                 .add_enabled(
                     source.is_some() && self.sample_loading.is_none(),
@@ -177,12 +177,12 @@ impl NativeEditor {
             let mut state = context.get_state();
             state.fields.insert("sample-v1".into(), sample);
             context.set_state(state);
-            self.sample_loading = None;
+            self.sample_cancel.store(true, std::sync::atomic::Ordering::Relaxed);
             self.status = "Sample cleared".into();
         }
         panel(ui.painter(), c.r(12.0, 103.0, 359.0, 153.0), "PLAYBACK", t, c.s);
         self.slider(ui, c, c.r(22.0, 135.0, 339.0, 34.0), 0, "Gain", t);
-        self.slider(ui, c, c.r(22.0, 174.0, 339.0, 34.0), 1, "Pitch", t);
+        self.slider(ui, c, c.r(22.0, 174.0, 339.0, 34.0), 1, "Pitch / speed", t);
         self.lamp(ui, c, c.r(22.0, 219.0, 145.0, 25.0), 6, "One-shot", t);
         self.lamp(ui, c, c.r(185.0, 219.0, 150.0, 25.0), 5, "Reverse", t);
         panel(
@@ -239,7 +239,96 @@ impl NativeEditor {
             t.dim,
         );
         self.keyboard(ui, c, c.r(12.0, 610.0, 736.0, 48.0), t);
+        panel(ui.painter(), c.r(12., 667., 736., 80.), "TIME STRETCHING", t, c.s);
+        let busy = self.sample_loading.is_some();
+        let controls = if busy { Theme { text: t.dim, ..*t } } else { *t };
+        ui.add_enabled_ui(!busy, |ui| {
+            for (stretch, x, label) in [(false, 22., "Resample"), (true, 104., "Stretch")] {
+                let mode = if self.prepare_stretch == stretch {
+                    Theme {
+                        header: t.accent.gamma_multiply(0.2),
+                        border: t.accent,
+                        ..controls
+                    }
+                } else {
+                    controls
+                };
+                if self.button(ui, c, c.r(x, 693., 76., 24.), label, &mode) {
+                    self.prepare_stretch = stretch;
+                }
+            }
+            ui.scope_builder(UiBuilder::new().max_rect(c.r(212., 693., 526., 24.)), |ui| {
+                ui.style_mut().override_font_id = Some(FontId::proportional(11. * c.s));
+                ui.horizontal(|ui| {
+                    ui.label("Duration");
+                    ui.add(
+                        egui::DragValue::new(&mut self.prepare_ratio)
+                            .range(0.5..=2.)
+                            .speed(0.01)
+                            .fixed_decimals(2)
+                            .suffix(" ×"),
+                    );
+                    ui.add_space(12. * c.s);
+                    ui.label("Pitch");
+                    ui.add_enabled(
+                        self.prepare_stretch,
+                        egui::DragValue::new(&mut self.prepare_pitch)
+                            .range(-12. ..=12.)
+                            .speed(0.1)
+                            .fixed_decimals(1)
+                            .suffix(" st"),
+                    )
+                    .on_hover_text("Independent prepared pitch. Pitch / speed above still changes playback speed.");
+                });
+            });
+        });
+        let available = self.sample.as_ref().is_some_and(|s| s.disk.is_none());
+        if busy {
+            if self.button(ui, c, c.r(22., 721., 90., 22.), "Cancel", t) {
+                self.sample_cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        } else {
+            let disabled = Theme { text: t.dim, ..*t };
+            ui.add_enabled_ui(available, |ui| {
+                if self.button(
+                    ui,
+                    c,
+                    c.r(22., 721., 76., 22.),
+                    "Prepare",
+                    if available { t } else { &disabled },
+                ) {
+                    self.prepare_sample(false);
+                }
+            });
+            let has_original = self.prepare_recipe.is_some();
+            ui.add_enabled_ui(has_original, |ui| {
+                if self.button(
+                    ui,
+                    c,
+                    c.r(104., 721., 118., 22.),
+                    "Restore original",
+                    if has_original { t } else { &disabled },
+                ) {
+                    self.prepare_sample(true);
+                }
+            });
+        }
+        let info = if disk {
+            "Turn off Keep on disk to prepare"
+        } else if available {
+            "Original preserved · Fixed duration"
+        } else {
+            "Load a sample to prepare"
+        };
+        ui.painter().text(
+            c.p(240., 732.),
+            Align2::LEFT_CENTER,
+            info,
+            FontId::proportional(10. * c.s),
+            t.dim,
+        );
     }
+
     fn utility(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
         panel(ui.painter(), c.r(10.0, 54.0, 500.0, 210.0), "STEREO UTILITY", t, c.s);
         self.knob(ui, c, c.r(22.0, 88.0, 128.0, 153.0), 1, "STEREO WIDTH", t.accent, t);

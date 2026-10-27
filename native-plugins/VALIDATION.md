@@ -76,3 +76,18 @@ sampler layout was rendered offscreen and inspected. See
 [screenshot](../docs/screenshots/current/lime-sampler-loops.png). Exact FL DSP/endpoint equivalence,
 live Lime gestures, standalone-in-FL and Windows/Linux runtime remain unverified. This section refers
 to newly built debug bundles; prior release hashes do not identify this build.
+
+## Prepared sampling and smooth fades, 2026-10-27
+
+macOS 26.6.2 arm64: native suite 23 passed; exported-binary verification passes all twelve
+bundles at the three rates/four block sizes above. Prepared PCM sharing, persistence,
+reverse/trim/loop/seek and allocation assertions are covered. The sampler's updated Time
+stretching panel was rendered and visually inspected; live interaction/listening and other
+hosts/platforms remain open. See [prepared sampling](../docs/research/prepared-sampling.md).
+
+After integrating current main's ping-pong/filter and Playlist work for PR #25, the combined
+native suite passes **27 tests**, with all twelve rebuilt debug bundles passing the exported
+verifier at three rates/four block sizes. Strict native Clippy passes. The combined 760×780
+sampler layout retains loop/filter controls above the Time stretching panel; its PNG was
+rendered and inspected. This supersedes the pre-integration 23-test count above, without
+establishing live listening or other-platform runtime evidence.

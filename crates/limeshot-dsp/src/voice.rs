@@ -221,6 +221,9 @@ pub struct ClipFade {
 /// Monotonic quartic fade blend. Zero tension preserves linear gain exactly.
 pub fn fade_curve(value: f32, tension: f32) -> f32 {
     let t = value.clamp(0.0, 1.0);
+    if tension == 2.0 {
+        return t * t * (3.0 - 2.0 * t);
+    }
     let bend = if tension >= 0.0 {
         1.0 - (1.0 - t).powi(4)
     } else {

@@ -317,3 +317,15 @@ frames. Near-integer seek offsets are rounded only within floating-point precisi
 outputs use the existing stereo TPT SVFs; LP bypass defaults remain unchanged and BP/HP stay active
 at maximum cutoff. No allocation or I/O is introduced in the voice path. These are independent DSP
 choices; filter-history reconstruction on seek and exact FL responses remain unverified.
+
+## Fixed-duration prepared samples
+
+Lime Sampler's optional `sample-v1.preparation-v1` retains original embedded audio and a
+preparation recipe; the outer PCM is the immutable playable result. Host/native workers run
+bounded stereo-linked WSOLA and sinc resampling before changing state. Channel preparation
+changes all uses; per-clip preparation clones the sampler channel in a document command.
+The renderer still schedules ordinary clip events against prepared PCM, preserving trim/loop
+fractions, reverse and output-time offset/chase/fades. Smooth S fades use native clip protocol
+v3 (96 bytes; v1/v2 meanings retained). Automatic same-track two-clip crossfades are resolved
+in document edits, never in `render`. This is fixed-duration preparation, not realtime tempo
+following. See [design, limits and evidence](../research/prepared-sampling.md).

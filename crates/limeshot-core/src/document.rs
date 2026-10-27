@@ -191,7 +191,17 @@ impl Document {
         let label = cmd.label();
         let merge = cmd.merge_key();
         let mut next = self.project.clone();
+        crate::command::clear_auto_crossfades(&mut next);
         let out = cmd.apply(&mut next)?;
+        if next
+            .extra
+            .get("auto-crossfades-v1")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true)
+        {
+            let ids = next.playlist.clips.iter().map(|c| c.id).collect::<Vec<_>>();
+            crate::command::apply_crossfades(&mut next, &ids, true);
+        }
         for clip in &mut next.playlist.clips {
             if clip.offset != 0 || clip.extra.get("length-manual").and_then(serde_json::Value::as_bool) == Some(true) {
                 continue;

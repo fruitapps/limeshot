@@ -1630,6 +1630,7 @@ dependencies = [
  "limeshot-dsp",
  "limeshot-plugins",
  "limeshot-project",
+ "limeshot-sequencer",
  "nice-assert-no-alloc",
  "nice-plug",
  "nice-plug-egui",
@@ -1726,6 +1727,7 @@ version = "0.1.0"
 dependencies = [
  "limeshot-core",
  "limeshot-dsp",
+ "serde_json",
 ]
 
 [[package]]

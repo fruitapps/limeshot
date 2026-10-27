@@ -1,0 +1,36 @@
+tone,0.5,wsola,frames=24480,rms=0.34699,stereo_error=0.0000000,ms=129
+tone,0.5,timestretch,frames=24000,rms=0.34990,stereo_error=0.0000000,ms=60
+tone,0.5,Lime WSOLA,frames=24000,rms=0.35351,stereo_error=0.0000000,ms=2
+tone,1,wsola,frames=48240,rms=0.35024,stereo_error=0.0000000,ms=251
+tone,1,timestretch,frames=48000,rms=0.35355,stereo_error=0.0000000,ms=0
+tone,1,Lime WSOLA,frames=48000,rms=0.35355,stereo_error=0.0000000,ms=0
+tone,2,wsola,frames=95040,rms=0.35187,stereo_error=0.0000000,ms=503
+tone,2,timestretch,frames=96000,rms=0.35052,stereo_error=0.0000000,ms=60
+tone,2,Lime WSOLA,frames=96000,rms=0.35303,stereo_error=0.0000000,ms=7
+impulses,0.5,wsola,frames=24480,rms=0.00678,stereo_error=0.0000000,ms=125
+impulses,0.5,timestretch,frames=24000,rms=0.00453,stereo_error=0.0000000,ms=36
+impulses,0.5,Lime WSOLA,frames=24000,rms=0.00913,stereo_error=0.0000000,ms=1
+impulses,1,wsola,frames=48240,rms=0.00789,stereo_error=0.0000000,ms=251
+impulses,1,timestretch,frames=48000,rms=0.00913,stereo_error=0.0000000,ms=0
+impulses,1,Lime WSOLA,frames=48000,rms=0.00913,stereo_error=0.0000000,ms=0
+impulses,2,wsola,frames=95040,rms=0.00764,stereo_error=0.0000000,ms=509
+impulses,2,timestretch,frames=96000,rms=0.00532,stereo_error=0.0000000,ms=37
+impulses,2,Lime WSOLA,frames=96000,rms=0.00722,stereo_error=0.0000000,ms=7
+percussion,0.5,wsola,frames=24480,rms=0.08916,stereo_error=0.0000000,ms=125
+percussion,0.5,timestretch,frames=24000,rms=0.08776,stereo_error=0.0000000,ms=49
+percussion,0.5,Lime WSOLA,frames=24000,rms=0.08355,stereo_error=0.0000000,ms=1
+percussion,1,wsola,frames=48240,rms=0.09495,stereo_error=0.0000000,ms=264
+percussion,1,timestretch,frames=48000,rms=0.10154,stereo_error=0.0000000,ms=0
+percussion,1,Lime WSOLA,frames=48000,rms=0.10154,stereo_error=0.0000000,ms=0
+percussion,2,wsola,frames=95040,rms=0.09247,stereo_error=0.0000000,ms=503
+percussion,2,timestretch,frames=96000,rms=0.08136,stereo_error=0.0000000,ms=49
+percussion,2,Lime WSOLA,frames=96000,rms=0.09233,stereo_error=0.0000000,ms=7
+polyphonic,0.5,wsola,frames=24480,rms=0.19968,stereo_error=0.0000000,ms=125
+polyphonic,0.5,timestretch,frames=24000,rms=0.19521,stereo_error=0.0000000,ms=62
+polyphonic,0.5,Lime WSOLA,frames=24000,rms=0.19990,stereo_error=0.0000000,ms=1
+polyphonic,1,wsola,frames=48240,rms=0.20202,stereo_error=0.0000000,ms=251
+polyphonic,1,timestretch,frames=48000,rms=0.20428,stereo_error=0.0000000,ms=0
+polyphonic,1,Lime WSOLA,frames=48000,rms=0.20428,stereo_error=0.0000000,ms=0
+polyphonic,2,wsola,frames=95040,rms=0.20262,stereo_error=0.0000000,ms=502
+polyphonic,2,timestretch,frames=96000,rms=0.19789,stereo_error=0.0000000,ms=62
+polyphonic,2,Lime WSOLA,frames=96000,rms=0.19811,stereo_error=0.0000000,ms=7

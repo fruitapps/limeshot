@@ -2881,7 +2881,20 @@ fn snap_local_to_zero_crossing(app: &LimeShotApp, ch: ChannelId, local_tick: Tic
     if per_tick <= 0.0 || sample.frames() < 2 {
         return local_tick;
     }
-    let center = (first + local_tick as f64 * per_tick).round() as isize;
+    let Some(params) = app
+        .project()
+        .channel(ch)
+        .and_then(|c| limeshot_core::lime::sampler_params(&c.instrument))
+    else {
+        return local_tick;
+    };
+    let origin = if params.reverse {
+        f64::from(params.start.max(params.end)) * sample.frames() as f64 - 1.0
+    } else {
+        first
+    };
+    let step = if params.reverse { -per_tick } else { per_tick };
+    let center = (origin + local_tick as f64 * step).round() as isize;
     let radius = ((sample.sample_rate as usize) / 60).clamp(16, 2048) as isize;
     let max_frame = sample.frames().saturating_sub(2) as isize;
     if max_frame <= 0 {
@@ -2905,7 +2918,7 @@ fn snap_local_to_zero_crossing(app: &LimeShotApp, ch: ChannelId, local_tick: Tic
         }
     }
     if let Some(f) = best_frame {
-        (((f - first) / per_tick).round().max(0.0)) as Tick
+        (((f - origin) / step).round().max(0.0)) as Tick
     } else {
         local_tick
     }
@@ -3601,9 +3614,14 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     ));
                 }
             }
-            Some(Drag::FadeCurve { out, originals, grab_y }) => {
+            Some(Drag::FadeCurve { out, originals, grab_y }) if p.y != *grab_y => {
                 for clip in originals {
-                    let tension = (clip.fade_curve(*out) + (*grab_y - p.y) / 80.0).clamp(-1.0, 1.0);
+                    let tension = (if clip.fade_curve(*out) == 2.0 {
+                        0.0
+                    } else {
+                        clip.fade_curve(*out)
+                    } + (*grab_y - p.y) / 80.0)
+                        .clamp(-1.0, 1.0);
                     app.exec(Command::SetClipFadeCurve {
                         clip: clip.id,
                         out: *out,
@@ -3611,6 +3629,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
                     });
                 }
             }
+            Some(Drag::FadeCurve { .. }) => {}
             Some(Drag::Fade { id, out, originals }) => {
                 if let Some(anchor) = originals.iter().find(|c| c.id == *id) {
                     let tick = view.tick_at(p.x).clamp(anchor.start as i64, anchor.end() as i64) as Tick;
@@ -4012,6 +4031,48 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                     }
                     close = true;
                 }
+                if clip.audio_channel().is_some() {
+                    if ui.button("Time stretching…").clicked() {
+                        crate::preparation::open(app, crate::preparation::Target::Clip(id));
+                        close = true;
+                    }
+                    let mut automatic = app
+                        .project()
+                        .extra
+                        .get("auto-crossfades-v1")
+                        .and_then(serde_json::Value::as_bool)
+                        == Some(true);
+                    if ui
+                        .checkbox(&mut automatic, "Automatic crossfades on overlaps")
+                        .changed()
+                    {
+                        app.exec(Command::SetAutoCrossfades(automatic));
+                    }
+                    // The automatic toggle can change this clip's fades during this frame.
+                    let current = app.project().clip(id).unwrap_or(&clip);
+                    let paired = current.extra.contains_key("auto-crossfade-base-v1");
+                    let mut smooth = current.fade_curve(false) == 2.0;
+                    if ui
+                        .add_enabled(!paired, egui::Checkbox::new(&mut smooth, "Smooth S fades"))
+                        .on_disabled_hover_text("Turn off Automatic crossfades on overlaps to edit this curve")
+                        .changed()
+                    {
+                        app.exec(Command::SetClipSmoothFade { clip: id, smooth });
+                    }
+                    if ui.button("Crossfade overlapping audio clips on this track").clicked() {
+                        let ids = app
+                            .project()
+                            .playlist
+                            .clips
+                            .iter()
+                            .filter(|c| c.track == clip.track)
+                            .map(|c| c.id)
+                            .collect();
+                        app.exec(Command::AutoCrossfadeClips(ids));
+                        app.toast("Crossfades applied to adjacent audio pairs; nested and triple overlaps are skipped");
+                        close = true;
+                    }
+                }
                 if ui.button("Duplicate").clicked() {
                     app.exec(Command::DuplicateClips(vec![id]));
                     close = true;
@@ -4337,6 +4398,57 @@ fn automation_cursor(ctx: &Context, at: Pos2, kind: u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Reverse edits search from the audible high endpoint and map crossings back to time.
+    #[test]
+    fn zero_crossing_snap_follows_reverse_trim_and_pitch() {
+        use limeshot_core::{EmbeddedAudio, Instrument, LimePlugin, SamplerParams, lime};
+        for reverse in [false, true] {
+            let mut app = LimeShotApp::new_silent(crate::settings::Settings::default(), None);
+            // Two far-apart crossings distinguish the forward and reverse edit points.
+            let audio = EmbeddedAudio {
+                name: "crossings".into(),
+                sample_rate: 8000,
+                stereo: (0..8000)
+                    .flat_map(|i| [if (1300..6500).contains(&i) { -1. } else { 1. }; 2])
+                    .collect(),
+            };
+            let params = SamplerParams {
+                start: 0.1,
+                end: 0.9,
+                pitch: 12.,
+                reverse,
+                ..Default::default()
+            };
+            let channel = ChannelId(
+                app.exec(Command::AddChannel {
+                    name: "audio".into(),
+                    instrument: Instrument::Plugin(LimePlugin::SAMPLER.with_values(
+                        &lime::sampler_values(&params, 60),
+                        false,
+                        Some(&audio),
+                    )),
+                })
+                .unwrap(),
+            );
+            app.sync_engine();
+            let (_, _, first, per_tick) = clip_audio(&app, channel).unwrap();
+            let origin = if reverse {
+                f64::from(params.end) * 8000. - 1.
+            } else {
+                first
+            };
+            let step = if reverse { -per_tick } else { per_tick };
+            let crossing = if reverse { 6499. } else { 1299. };
+            let expected = ((crossing - origin) / step).round() as Tick;
+            let nearby = expected + 3;
+            assert_eq!(
+                snap_local_to_zero_crossing(&app, channel, nearby),
+                expected,
+                "reverse {reverse}"
+            );
+        }
+    }
 
     #[test]
     fn short_fade_curve_handles_leave_clip_edges_resizable() {

@@ -32,6 +32,7 @@ pub mod playlist;
 pub mod playlist_menu;
 pub mod plugin_window;
 pub mod plugins;
+pub mod preparation;
 pub mod presets_ui;
 pub mod rack_menu;
 pub mod recording;

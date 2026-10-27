@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--count-in] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--crossfade-menu] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--count-in] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -262,6 +262,35 @@ fn main() {
         // Without multi-viewport support the detached window renders embedded; this checks it draws.
         app.ui.workspace.state_mut(Win::ChannelRack).detached = true;
     }
+    if args.iter().any(|a| a == "--crossfade-menu")
+        && let Some(clip) = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .find(|c| c.audio_channel().is_some())
+            .cloned()
+    {
+        app.exec(limeshot_core::Command::PlaceClip {
+            source: clip.source,
+            track: clip.track,
+            start: clip.start + clip.length / 2,
+            length: clip.length,
+            offset: 0,
+        });
+        app.exec(limeshot_core::Command::SetAutoCrossfades(true));
+    }
+    if args.iter().any(|a| a == "--prepare")
+        && let Some(c) = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .find(|c| c.audio_channel().is_some())
+            .map(|c| c.id)
+    {
+        limeshot_ui::preparation::open(&mut app, limeshot_ui::preparation::Target::Clip(c));
+    }
     if let Some(dialog) = args.iter().find_map(|a| a.strip_prefix("--dialog=")) {
         use limeshot_ui::dialogs::Dialog;
         app.dialog = match dialog {
@@ -475,6 +504,34 @@ fn main() {
                 harness.step();
             }
         }
+    }
+    if args.iter().any(|a| a == "--crossfade-menu")
+        && let Some(clip) = harness
+            .state()
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .find(|c| c.audio_channel().is_some())
+            .cloned()
+        && let Some(g) = harness.state().ui.playlist.geometry
+    {
+        let p = egui::pos2(
+            g.pos(clip.start, clip.track).x + 6.,
+            g.pos(clip.start, clip.track).y - g.track_h * 0.5 + 6.,
+        );
+        harness.event(egui::Event::PointerMoved(p));
+        harness.step();
+        for pressed in [true, false] {
+            harness.event(egui::Event::PointerButton {
+                pos: p,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+            harness.step();
+        }
+        harness.step();
     }
     match harness.render() {
         Ok(img) => match img.save(&out) {

@@ -145,12 +145,19 @@ pub struct Toast {
     pub until: Instant,
 }
 
+struct SamplerSource {
+    state: limeshot_core::PluginState,
+    path: PathBuf,
+    // A published path must retain its PCM until the source mapping is replaced.
+    _audio: Option<Arc<limeshot_dsp::SampleData>>,
+}
+
 pub struct LimeShotApp {
     pub doc: Document,
     pub path: Option<PathBuf>,
     pub player: Player,
     pub samples: SampleCache,
-    sampler_sources: std::collections::HashMap<ChannelId, (limeshot_core::PluginState, PathBuf)>,
+    sampler_sources: std::collections::HashMap<ChannelId, SamplerSource>,
     /// The plugin database and the project's running plugins.
     pub plugins: crate::plugins::PluginHost,
     pub settings: Settings,
@@ -195,6 +202,7 @@ pub struct LimeShotApp {
     pub midi: Option<limeshot_audio::midi::MidiIn>,
     pub midi_notes: Vec<(u8, ChannelId)>,
     midi_opened: bool,
+    pub preparation: crate::preparation::State,
     pub sampler_preview: Option<(ChannelId, std::time::Instant, f64)>,
 }
 
@@ -317,6 +325,7 @@ impl LimeShotApp {
             presets_dir: None,
             auditions: Vec::new(),
             sampler_preview: None,
+            preparation: Default::default(),
             keyboard_notes: false,
             typing_notes: Vec::new(),
             midi: None,
@@ -659,18 +668,24 @@ impl LimeShotApp {
         }
     }
 
-    /// Rebuild and send the playback snapshot when the project, the current pattern or the loaded
-    /// samples changed.
     /// Runtime source for waveform/audition, using the same embedded PCM as hosted playback.
     pub fn sampler_source(&self, channel: ChannelId) -> Option<PathBuf> {
         self.sampler_sources
             .get(&channel)
-            .map(|(_, path)| path.clone())
+            .filter(|source| self.samples.status_of_path(&source.path).is_some())
+            .map(|source| source.path.clone())
             .or_else(|| {
+                // Embedded state is authoritative, even when its preview does not fit the budget.
+                if let limeshot_core::Instrument::Plugin(p) = &self.project().channel(channel)?.instrument
+                    && limeshot_core::lime::sample_state(p).is_some()
+                {
+                    return None;
+                }
                 let sampler = limeshot_core::lime::sampler_params(&self.project().channel(channel)?.instrument)?;
                 Some(self.samples.resolve(&sampler.sample?.path))
             })
     }
+    /// Rebuild the playback snapshot and source previews after project, pattern or sample changes.
     pub fn sync_engine(&mut self) {
         self.samples.auto_keep_long_audio_on_disk = self.settings.auto_keep_long_audio_on_disk;
         let loaded = self.samples.poll();
@@ -736,14 +751,24 @@ impl LimeShotApp {
             })
             .collect();
         self.sampler_sources
-            .retain(|id, _| sources.iter().any(|(c, _)| c == id));
+            .retain(|id, source| sources.iter().any(|(c, state)| c == id && *state == source.state));
         for (id, state) in sources {
-            if self.sampler_sources.get(&id).is_some_and(|(old, _)| *old == state) {
+            if self.sampler_sources.contains_key(&id) {
                 continue;
             }
-            self.sampler_sources.remove(&id);
             if let Some(path) = crate::lime::cache_embedded_sample(&state, &mut self.samples) {
-                self.sampler_sources.insert(id, (state, path));
+                let audio = match self.samples.status_of_path(&path) {
+                    Some(limeshot_audio::assets::SampleStatus::Ready(audio)) => Some(audio.clone()),
+                    _ => None,
+                };
+                self.sampler_sources.insert(
+                    id,
+                    SamplerSource {
+                        state,
+                        path,
+                        _audio: audio,
+                    },
+                );
             }
         }
         self.send_effect_processors();
@@ -849,6 +874,7 @@ impl LimeShotApp {
 
     pub fn new_project(&mut self) {
         self.send(Msg::Stop);
+        self.preparation = Default::default();
         self.doc.replace(Project::new());
         self.path = None;
         self.samples.set_project_dir(None);
@@ -872,6 +898,7 @@ impl LimeShotApp {
                 let mut project = absolutize_samples(&project, path.parent());
                 crate::lime::restrict_loaded_sources(&mut project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
                 self.ui = self.fresh_ui_state();
@@ -978,6 +1005,7 @@ impl LimeShotApp {
                 self.send(Msg::Stop);
                 let mut project = absolutize_samples(&project, self.autosave.dir.as_deref());
                 crate::lime::restrict_loaded_sources(&mut project, info.original.as_deref().and_then(Path::parent));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = info.original.clone();
@@ -1007,6 +1035,7 @@ impl LimeShotApp {
                 self.send(Msg::Stop);
                 let project = absolutize_samples(&project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = None;
@@ -1193,6 +1222,7 @@ impl LimeShotApp {
         crate::browser::poll_preview(self, ctx);
         crate::autosave::tick(self);
         dialogs::poll_export(self);
+        crate::preparation::poll(self);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.allow_close && self.doc.is_modified() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -1322,6 +1352,7 @@ impl LimeShotApp {
         crate::settings_window::show(self, &ctx);
         crate::toolbar::tapper(self, &ctx);
         dialogs::show(self, &ctx);
+        crate::preparation::show(self, &ctx);
         dialogs::toasts(self, &ctx);
         crate::browser::drag_preview(self, &ctx);
     }

@@ -12,6 +12,8 @@ const MAX_PCM_TEXT: usize = (MAX_FRAMES * 8).div_ceil(3) * 4;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct EmbeddedSample {
+    #[serde(default, rename = "preparation-v1", skip_serializing_if = "Option::is_none")]
+    pub preparation: Option<serde_json::Value>,
     pub name: String,
     pub sample_rate: u32,
     pub pcm: String,
@@ -60,6 +62,7 @@ impl EmbeddedSample {
             pcm: String::new(),
             source: Some(path.to_string_lossy().into_owned()),
             keep_on_disk: true,
+            preparation: None,
         })
     }
 
@@ -80,6 +83,7 @@ impl EmbeddedSample {
             pcm: STANDARD.encode(bytes),
             source: Some(path.to_string_lossy().into_owned()),
             keep_on_disk: false,
+            preparation: None,
         })
     }
 
@@ -108,12 +112,47 @@ impl EmbeddedSample {
         if bytes.len() % 8 != 0 || bytes.len() < 16 {
             return Err(SampleError::Invalid);
         }
+        // Weak entries share immutable PCM between private clip channels. Decode, compare and
+        // eviction run only on the control thread; SampleStore owns every active strong reference.
+        use std::{
+            hash::{Hash, Hasher},
+            sync::{Mutex, OnceLock, Weak},
+        };
+        type Entry = (u64, Weak<SampleData>);
+        static CACHE: OnceLock<Mutex<Vec<Entry>>> = OnceLock::new();
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+        self.sample_rate.hash(&mut hash);
+        bytes.hash(&mut hash);
+        let key = hash.finish();
+        let mut cache = CACHE
+            .get_or_init(|| Mutex::new(Vec::new()))
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        cache.retain(|(_, audio)| audio.strong_count() > 0);
+        for (_, weak) in cache.iter().filter(|(k, _)| *k == key) {
+            if let Some(audio) = weak.upgrade()
+                && audio.sample_rate == self.sample_rate
+                && audio.data.len() * 4 == bytes.len()
+                && audio
+                    .data
+                    .iter()
+                    .zip(bytes.as_chunks::<4>().0)
+                    .all(|(a, b)| a.to_bits() == f32::from_le_bytes(*b).to_bits())
+            {
+                return Ok(Some(audio));
+            }
+        }
         let mut data = Vec::with_capacity(bytes.len() / 4);
         for b in bytes.as_chunks::<4>().0 {
             let v = f32::from_le_bytes([b[0], b[1], b[2], b[3]]);
             data.push(if v.is_finite() { v } else { 0.0 });
         }
-        Ok(Some(Arc::new(SampleData::from_stereo(self.sample_rate, data))))
+        let audio = Arc::new(SampleData::from_stereo(self.sample_rate, data));
+        if cache.len() == 32 {
+            cache.remove(0);
+        }
+        cache.push((key, Arc::downgrade(&audio)));
+        Ok(Some(audio))
     }
 }
 
@@ -169,6 +208,7 @@ impl<'a> PersistentField<'a, EmbeddedSample> for SampleStore {
             && state.0.pcm == sample.pcm
             && state.0.source == sample.source
             && state.0.keep_on_disk == sample.keep_on_disk
+            && state.0.preparation == sample.preparation
         {
             return;
         }

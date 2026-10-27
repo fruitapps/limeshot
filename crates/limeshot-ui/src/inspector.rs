@@ -114,12 +114,16 @@ fn sampler_source(app: &mut LimeShotApp, ui: &mut Ui, ch: &Channel, params: &Sam
             crate::browser::assign_sample(app, ch.id, &path);
         }
     });
+    if ui.button("Time stretching…").clicked() {
+        crate::preparation::open(app, crate::preparation::Target::Channel(ch.id));
+    }
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), Sense::click_and_drag());
     ui.painter().rect_filled(rect, 3.0, Theme::current().sunken);
     if let Some(path) = app.sampler_source(ch.id) {
         crate::browser::paint_sample_wave(app, ui.painter(), rect, &path, Theme::current().accent);
         if response.drag_started() {
             if let Some(sample) = &params.sample
+                && !matches!(&ch.instrument,Instrument::Plugin(p) if lime::sample_state(p).is_some_and(|s|s.contains("preparation-v1")))
                 && std::path::Path::new(&sample.path).is_file()
             {
                 response.dnd_set_drag_payload(crate::browser::DraggedSample(app.samples.resolve(&sample.path)));
