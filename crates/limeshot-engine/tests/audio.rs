@@ -1931,3 +1931,136 @@ fn playlist_clip_audition_uses_the_source_offset_at_every_block_size() {
         assert!(out.iter().all(|v| v.abs() < 1e-6));
     }
 }
+
+/// REC-003: input is audible while stopped and uses the same insert/fader/pan/mute path.
+#[test]
+fn live_input_runs_through_mixer_effects_fader_pan_routes_and_mute() {
+    let mut doc = Document::default();
+    doc.execute(Command::SetMixerVolume { track: 0, volume: 1.0 }).unwrap();
+    doc.execute(Command::SetMixerVolume { track: 1, volume: 0.5 }).unwrap();
+    doc.execute(Command::SetMixerPan { track: 1, pan: 0.5 }).unwrap();
+    let id = doc
+        .execute(Command::AddEffect {
+            track: 1,
+            kind: EffectKind::Utility,
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    doc.execute(Command::SetEffectParam {
+        track: 1,
+        effect: id,
+        index: 2,
+        value: 1.0,
+    })
+    .unwrap();
+    let pat = doc.project().patterns[0].id;
+    for block in [1, 64, 333, 1024] {
+        let mut s = compile(doc.project(), pat, &NoSamples);
+        // Inject a reference processor into the production insert path; Document normalizes
+        // legacy Utility commands to a plugin, whose real host is tested separately.
+        s.inner.mixer[1].effects[0].params = vec![0.0, 1.0, 1.0];
+        let mut r = Renderer::new(SR, Arc::new(s));
+        r.adopt_effect(id, fx::build(EffectKind::Utility, SR, &[0.0, 1.0, 1.0]));
+        r.rearrange();
+        let input = vec![0.5; block * 2];
+        let mut out = vec![0.0; block * 2];
+        r.render_with_input(&mut out, Some((1, &input)));
+        for frame in out.as_chunks::<2>().0 {
+            assert!((frame[0] + 0.125).abs() < 1e-6);
+            assert!((frame[1] + 0.25).abs() < 1e-6);
+        }
+        assert_eq!(r.position(), 0);
+        assert!(!r.is_playing());
+        assert!(r.peaks()[1].right > 0.24);
+        // A regular render (including an export) has no input or retained input samples.
+        r.render(&mut out);
+        assert!(out.iter().all(|s| *s == 0.0));
+        r.render_with_input(&mut out, Some((127, &input)));
+        assert!(out.iter().all(|s| *s == 0.0));
+    }
+    doc.execute(Command::SetMixerMute { track: 1, muted: true }).unwrap();
+    let mut r = Renderer::new(SR, Arc::new(compile(doc.project(), pat, &NoSamples)));
+    let mut out = [9.0; 128];
+    r.render_with_input(&mut out, Some((1, &[0.5; 128])));
+    assert!(out.iter().all(|s| *s == 0.0));
+}
+
+/// REC-007: the lead-in freezes the musical position and starts the same program sample at
+/// exactly the requested bar boundary, even when that boundary splits a render block.
+#[test]
+fn count_in_is_sample_exact_across_blocks_tempos_and_time_signatures() {
+    const RATE: u32 = 8000;
+    for (bpm, sig, bars) in [
+        (137.123, TimeSignature::new(4, 4), 1),
+        (222.0, TimeSignature::new(7, 8), 2),
+    ] {
+        let mut f = fixture();
+        f.doc.execute(Command::SetTempo(Tempo::from_bpm(bpm))).unwrap();
+        f.doc.execute(Command::SetTimeSignature(sig)).unwrap();
+        f.doc
+            .execute(Command::SetStep {
+                pattern: f.pat,
+                channel: f.drum,
+                step: 0,
+                on: true,
+            })
+            .unwrap();
+        let snapshot = snapshot(&f);
+        let length =
+            Timeline::new(f.doc.project().tempo, RATE).sample_of_tick(sig.ticks_per_bar() * bars as u64) as usize;
+        let mut reference = Renderer::new(RATE, snapshot.clone());
+        reference.play();
+        let mut expected = vec![0.0; 1000];
+        reference.render(&mut expected);
+        for block in [1, 64, 333, 1024] {
+            let mut r = Renderer::new(RATE, snapshot.clone());
+            r.play_with_count_in(bars);
+            assert_eq!(r.count_in_beats(), u32::from(sig.numerator) * u32::from(bars));
+            let mut audio = vec![0.0; (length + 500) * 2];
+            for (i, chunk) in audio.chunks_mut(block * 2).enumerate() {
+                r.render(chunk);
+                if (i + 1) * block < length {
+                    assert_eq!(r.position(), 0);
+                    assert!(r.count_in_beats() > 0);
+                }
+            }
+            assert_eq!(r.count_in_beats(), 0);
+            assert_eq!(&audio[2 * length..], &expected, "{bpm} {sig} {bars} bars block {block}");
+            assert!(
+                audio[..2 * length].iter().any(|s| s.abs() > 0.01),
+                "clicks must sound with metronome disabled"
+            );
+        }
+    }
+}
+
+#[test]
+fn stopping_pausing_and_locating_cancel_count_in() {
+    for action in 0..3 {
+        let mut r = Renderer::new(SR, Arc::new(compile(&Project::new(), PatternId(1), &NoSamples)));
+        r.locate(240);
+        r.play_with_count_in(2);
+        let mut out = [0.0; 128];
+        r.render(&mut out);
+        assert_eq!(r.position(), 240);
+        match action {
+            0 => r.stop(),
+            1 => r.pause(),
+            _ => r.locate(480),
+        }
+        assert_eq!(r.count_in_beats(), 0);
+        if action < 2 {
+            // The existing silence path declicks over 5 ms.
+            for _ in 0..8 {
+                r.render(&mut out);
+            }
+            assert!(out.iter().all(|s| *s == 0.0));
+            assert_eq!(r.position(), 240);
+            r.play();
+            assert_eq!(r.count_in_beats(), 0);
+        } else {
+            assert_eq!(r.position(), 480);
+        }
+    }
+}

@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **143** — IMPLEMENTED 109, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 21, NOT_PLANNED 3
+Tracked: **143** — IMPLEMENTED 110, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 20, NOT_PLANNED 3
 
 ## Global
 
@@ -56,7 +56,7 @@ Tracked: **143** — IMPLEMENTED 109, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | KB-110 | Close all plugin windows | `Alt+F12` | OBSERVED | `Alt+F12` | IMPLEMENTED | UI-013 | View › Close all plugin windows (MENU-124). |
 | KB-111 | Close all unfocused windows | `Ctrl+F12` | OBSERVED | `Cmd+F12` | IMPLEMENTED | UI-013 | View › Close all unfocused windows (MENU-125): keeps the focused editor; closes the plugin windows too. |
 | KB-112 | Align all channel editors | `Shift+F12` | OBSERVED | `Shift+F12` | IMPLEMENTED | UI-013 | View › Align all channel editors (MENU-126): LimeShot stacks the open plugin windows at the main window's top left. |
-| KB-113 | Recording precount | `Ctrl+P` | OBSERVED | — | NOT_STARTED | REC-007 | Options › Recording precount (MENU-168). |
+| KB-113 | Recording precount | `Ctrl+P` | OBSERVED | `Cmd+P` | IMPLEMENTED | REC-007 | Session-local Recording precount toggle; toolbar context menu chooses one or two bars. Engine lead-in applies when playback starts armed. |
 | KB-114 | Start on input | `Ctrl+I` | OBSERVED | — | NOT_STARTED | REC-010 | Options › Start on input (MENU-169). |
 | KB-115 | Enable groups | `Alt+Shift+G` | OBSERVED | — | NOT_STARTED | WF-013 | Options › Enable groups (MENU-174). |
 | KB-116 | Multilink to controllers | `Ctrl+J` | OBSERVED | — | NOT_STARTED | WF-004 | Options › Multilink to controllers (MENU-175). |

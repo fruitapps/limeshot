@@ -288,7 +288,7 @@ fn audio(app: &mut LimeShotApp, ui: &mut Ui) {
                         }
                     });
                 ui.end_row();
-                ui.label("Input (recording)");
+                ui.label("Input (recording / monitoring)");
                 let inputs = app
                     .ui
                     .settings
@@ -317,6 +317,54 @@ fn audio(app: &mut LimeShotApp, ui: &mut Ui) {
                 if choice != app.settings.audio_input {
                     app.settings.audio_input = choice;
                     app.save_settings();
+                }
+                ui.end_row();
+                ui.label("Monitor external input");
+                let mode = &mut app.ui.record.monitor;
+                ComboBox::from_id_salt("settings-input-monitor")
+                    .selected_text(mode.label())
+                    .show_ui(ui, |ui| {
+                        for value in [
+                            crate::recording::MonitorMode::Off,
+                            crate::recording::MonitorMode::WhenArmed,
+                            crate::recording::MonitorMode::On,
+                        ] {
+                            ui.selectable_value(mode, value, value.label());
+                        }
+                    })
+                    .response
+                    .widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Input monitoring mode")
+                    });
+                ui.end_row();
+                ui.label("Monitor Mixer track");
+                let tracks: Vec<_> = app
+                    .project()
+                    .mixer
+                    .tracks
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| (i as u16, format!("{i}: {}", t.name)))
+                    .collect();
+                let selected = tracks
+                    .iter()
+                    .find(|(i, _)| *i == app.ui.record.monitor_track)
+                    .map_or("Unavailable — select a track", |(_, name)| name.as_str());
+                ComboBox::from_id_salt("settings-input-monitor-track")
+                    .selected_text(selected)
+                    .show_ui(ui, |ui| {
+                        for (i, name) in &tracks {
+                            ui.selectable_value(&mut app.ui.record.monitor_track, *i, name);
+                        }
+                    })
+                    .response
+                    .widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Input monitoring destination")
+                    });
+                ui.end_row();
+                ui.label("Input connection");
+                if ui.button("Retry input").clicked() {
+                    crate::recording::reset_input(app);
                 }
                 ui.end_row();
                 let dev = devices
@@ -377,6 +425,7 @@ fn audio(app: &mut LimeShotApp, ui: &mut Ui) {
             .color(Theme::current().text_dim),
         );
     });
+    ui.label(RichText::new("Monitoring is session-only. When armed requires Record + Audio. Input passes through the chosen track's effects and fader; use headphones to avoid feedback.").small().color(Theme::current().text_dim));
     // Settings apply at once, as in FL Studio.
     if cfg != app.settings.audio {
         app.settings.audio = cfg;

@@ -9,6 +9,29 @@ use crate::app::LimeShotApp;
 use limeshot_core::*;
 use limeshot_engine::PlayMode;
 
+/// FL's external-input monitoring policy. Session-local: opening a project never enables a mic.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum MonitorMode {
+    #[default]
+    Off,
+    WhenArmed,
+    On,
+}
+
+impl MonitorMode {
+    pub fn active(self, armed: bool, audio: bool) -> bool {
+        self == Self::On || (self == Self::WhenArmed && armed && audio)
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Off => "Off",
+            Self::WhenArmed => "When armed",
+            Self::On => "On",
+        }
+    }
+}
+
 /// The record button's state and options.
 pub struct State {
     pub armed: bool,
@@ -21,10 +44,16 @@ pub struct State {
     pub quantize_end: bool,
     /// Record audio from the input too (the Recording filter's Audio).
     pub audio: bool,
+    pub monitor: MonitorMode,
+    pub count_in: bool,
+    pub count_in_bars: u8,
+    /// Session-local Mixer position; independent of the selected track.
+    pub monitor_track: u16,
+    monitor_input: Option<limeshot_audio::record::InputRecorder>,
+    monitor_control: Option<limeshot_audio::monitor::Control>,
+    attempted: Option<(Option<String>, bool, bool)>,
     /// The running audio recording and the song tick it started at.
     recorder: Option<(limeshot_audio::record::InputRecorder, Tick)>,
-    /// Whether the transport was playing in the last frame (audio recording follows it).
-    was_playing: bool,
     /// Notes being held: channel, key, start (pattern ticks), velocity.
     held: Vec<(ChannelId, u8, Tick, f32)>,
     /// The current take: its pattern, notes, and the revision after its last step.
@@ -42,8 +71,14 @@ impl Default for State {
             quantize_start: true,
             quantize_end: false,
             audio: false,
+            monitor: MonitorMode::Off,
+            count_in: false,
+            count_in_bars: 1,
+            monitor_track: 1,
+            monitor_input: None,
+            monitor_control: None,
+            attempted: None,
             recorder: None,
-            was_playing: false,
             held: Vec::new(),
             take: Vec::new(),
             take_pattern: None,
@@ -84,7 +119,7 @@ fn position(app: &LimeShotApp) -> Tick {
 }
 
 fn recording(app: &LimeShotApp) -> bool {
-    app.ui.record.armed && app.is_playing()
+    app.ui.record.armed && app.is_playing() && app.player.status().count_in_beats() == 0
 }
 
 /// A note started on `channel` (MIDI input or typing keyboard).
@@ -211,39 +246,111 @@ fn take_path(app: &LimeShotApp) -> Option<std::path::PathBuf> {
         .find(|p| !p.exists())
 }
 
-/// Called every frame: audio recording starts and stops with the transport while armed with the
-/// Audio filter on.
+/// Stop input before restarting the output device. Finished audio remains a normal take.
+pub fn reset_input(app: &mut LimeShotApp) {
+    if let Some(c) = app.ui.record.monitor_control.take() {
+        c.set_track(None);
+    }
+    app.ui.record.monitor_input = None;
+    stop_audio(app);
+    app.ui.record.attempted = None;
+}
+
+/// Called every frame: share one input stream between monitoring and recording. Failed opens
+/// are retried only after a configuration change or an explicit retry, never every UI frame.
 pub fn tick(app: &mut LimeShotApp) {
     let playing = app.is_playing();
-    let was = std::mem::replace(&mut app.ui.record.was_playing, playing);
-    if playing && !was && app.ui.record.armed && app.ui.record.audio && app.ui.record.recorder.is_none() {
-        start_audio(app);
+    let recording = playing && app.ui.record.armed && app.ui.record.audio;
+    let monitoring = app.ui.record.monitor.active(app.ui.record.armed, app.ui.record.audio);
+    let key = (app.settings.audio_input.clone(), recording, monitoring);
+    let failed = app.ui.record.recorder.as_ref().is_some_and(|(r, _)| r.failed())
+        || app.ui.record.monitor_input.as_ref().is_some_and(|r| r.failed());
+    if failed {
+        reset_input(app);
+        app.ui.record.attempted = Some(key.clone());
+        app.toast_error("Audio input stopped. Check the device, then use Retry input in Audio settings.");
     }
-    if !playing && was {
-        stop_audio(app);
+    let device_changed = app.ui.record.attempted.as_ref().is_some_and(|k| k.0 != key.0);
+    if device_changed || (app.ui.record.recorder.is_some() && !recording) {
+        reset_input(app);
+    }
+    if recording && app.ui.record.recorder.is_none() && app.ui.record.attempted.as_ref() != Some(&key) {
+        reset_input(app);
+        app.ui.record.attempted = Some(key.clone());
+        start_input(app, true);
+    } else if !recording
+        && monitoring
+        && app.ui.record.monitor_input.is_none()
+        && app.ui.record.attempted.as_ref() != Some(&key)
+    {
+        reset_input(app);
+        app.ui.record.attempted = Some(key.clone());
+        start_input(app, false);
+    } else if !recording && !monitoring {
+        reset_input(app);
+    }
+    // Recordings keep their stream when only monitoring policy/destination changes.
+    if app.ui.record.recorder.is_some() || app.ui.record.monitor_input.is_some() {
+        app.ui.record.attempted = Some(key);
+    }
+    let track = app.ui.record.monitor_track;
+    let valid = usize::from(track) < app.project().mixer.tracks.len();
+    if let Some(c) = &app.ui.record.monitor_control {
+        c.set_track((monitoring && valid).then_some(track));
     }
 }
 
-fn start_audio(app: &mut LimeShotApp) {
-    if !app.persist_settings {
-        // Headless apps (tests) never open a real input.
+fn start_input(app: &mut LimeShotApp, record: bool) {
+    if !app.enable_audio_input {
+        // Headless apps never open a real input; live_check can, without saving preferences.
         return;
     }
-    let Some(path) = take_path(app) else {
-        app.toast_error("No folder to record into".to_string());
-        return;
+    let path = if record {
+        let Some(path) = take_path(app) else {
+            app.toast_error("No folder to record into".to_string());
+            return;
+        };
+        Some(path)
+    } else {
+        None
     };
     let start = if app.ui.mode == PlayMode::Song {
         app.player.status().position()
     } else {
         0
     };
-    match limeshot_audio::record::InputRecorder::start(app.settings.audio_input.as_deref(), path) {
+    let gate = app.player.status().recording_gate();
+    let mut control = None;
+    let player = &mut app.player;
+    let source = |rate| {
+        let sender = player.monitor_source(rate);
+        control = sender.as_ref().map(|s| s.control());
+        sender
+    };
+    let result = match path {
+        Some(path) => limeshot_audio::record::InputRecorder::start_monitored(
+            app.settings.audio_input.as_deref(),
+            path,
+            Some(gate),
+            source,
+        ),
+        None => limeshot_audio::record::InputRecorder::monitor(app.settings.audio_input.as_deref(), source),
+    };
+    match result {
         Ok(r) => {
-            app.hint(format!("Recording audio from {}", r.device));
-            app.ui.record.recorder = Some((r, start));
+            app.ui.record.monitor_control = control;
+            if app.ui.record.monitor_control.is_none() {
+                app.toast_error("Input monitoring could not connect: retry input.");
+            }
+            if record {
+                app.hint(format!("Recording audio from {}", r.device));
+                app.ui.record.recorder = Some((r, start));
+            } else {
+                app.hint(format!("Monitoring input from {}", r.device));
+                app.ui.record.monitor_input = Some(r);
+            }
         }
-        Err(e) => app.toast_error(format!("Audio recording: {e}")),
+        Err(e) => app.toast_error(format!("Audio input: {e}")),
     }
 }
 
@@ -257,9 +364,23 @@ fn stop_audio(app: &mut LimeShotApp) {
     }
 }
 
-/// The input level of the running audio recording (for the toolbar's meter).
+/// The recent input peak while recording or monitoring.
 pub fn input_level(app: &LimeShotApp) -> Option<f32> {
-    app.ui.record.recorder.as_ref().map(|(r, _)| r.level())
+    app.ui
+        .record
+        .recorder
+        .as_ref()
+        .map(|(r, _)| r)
+        .or(app.ui.record.monitor_input.as_ref())
+        .map(|r| r.level())
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        if let Some(c) = &self.monitor_control {
+            c.set_track(None);
+        }
+    }
 }
 
 /// Put a finished take on the Playlist at `start`, on the first track free for its length.

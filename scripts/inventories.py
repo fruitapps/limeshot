@@ -26,6 +26,7 @@ MN_JSON, MN_MD = ROADMAP / "menus.json", ROADMAP / "menus.md"
 UI_SRC = ROOT / "crates/limeshot-ui/src"
 SHORTCUTS_RS = ROOT / "crates/limeshot-ui/src/shortcuts.rs"
 FIELD_SOURCES = {
+    "ui.record.": ROOT / "crates/limeshot-ui/src/recording.rs",
     "settings.audio.": ROOT / "crates/limeshot-audio/src/devices.rs",
     "settings.": ROOT / "crates/limeshot-ui/src/settings.rs",
     "ui.": ROOT / "crates/limeshot-ui/src/app.rs",

@@ -326,3 +326,50 @@ debug VST3 bundles; the hang regression passes 100/100 runs with eight concurren
 Tests used local-socket/child-process permission. Workspace strict Clippy, formatting, inventory
 and repository checks pass. This is a test/documentation change; native bundles and production
 code were unchanged. Linux ARM64 validation awaits the updated CI run.
+
+
+## 2026-10-27 — Input monitoring and recording count-in
+
+Implemented REC-003 monitoring in Audio settings and the Record menu: Off / When armed / On,
+with an explicit Mixer destination by position. When armed requires Record + Audio and includes
+stopped transport. One input stream feeds raw-WAV recording and a bounded stereo monitor ring;
+output performs linear rate conversion into preallocated scratch and mixes before the destination's
+inserts/EQ/fader/routes. Muting/rerouting invalidates queued input; missing frames are silent and
+overflow recovery discards backlog. Replaced rings are destroyed on the control thread. Capture
+errors report once and need explicit retry/configuration change. Starting/ending a take reopens
+an idle monitoring stream; monitoring policy changes during a take preserve its writer.
+
+REC-007 adds toolbar 3.2.1, Options > Recording precount and Cmd/Ctrl+P, with a one/two-bar context
+menu. The renderer schedules accented clicks at the starting tempo/signature, freezes the program
+position and splits a block at the exact lead-in boundary. Stop/pause/locate cancel it; loops do not
+repeat it. MIDI/typing notes during the lead-in are auditioned without recording. Raw input is
+prepared during the lead-in and gated by the output-transport atomic. Independent device callbacks
+and UI input startup still impose alignment uncertainty; this is not REC-006 latency compensation.
+Monitoring and count-in are session-local, default Off, and do not edit the project. Physical-input
+routing remains the existing single device/first stereo pair, rather than per-track hardware I/O.
+[Research, behavior and limits](../research/recording-monitoring-and-count-in.md).
+
+Local macOS Apple Silicon validation: rebuilt all twelve debug VST3 bundles; workspace suite
+457 passed, including 161 UI and 10 hosted VST3 tests; native suite 22 passed. New tests cover
+monitor rate conversion across block sizes, overflow/underflow/stale frames, raw capture gating,
+non-finite/mono/multichannel input, Mixer inserts/fader/pan/mute, sample-exact count-in at fractional
+BPM in 4/4 and 7/8, cancellation, and actual settings/menu/shortcut/bar controls. Workspace build,
+strict Clippy, formatting and inventory/repository checks pass. The final readout adjustment was
+also checked by the count-in UI test and an inspected offscreen render. Offscreen renders required
+host GPU access; plugin bridge tests used local-socket/child-process permission.
+
+Live `live_check` on macOS 26.6.2 arm64: a temporary app bundle supplied the microphone usage
+string; preferences/autosave remained disabled. The main app was not used. Output opened AirPods
+Pro at 48 kHz; the system-default input produced 24 kHz stereo float WAV. With insert 1 muted,
+monitoring On worked through the idle/record/stop lifecycle. Cmd+P enabled count-in; the live
+readout showed remaining beats. Stop produced a 15.14 s take (363,360 frames, finite/nonzero PCM,
+peak 0.08263), placed as one clip at tick 0 in a saved disposable `/tmp` project. Monitoring was
+then set Off and both test processes were closed. No microphone prompt appeared. Accessibility
+reads temporarily timed out on settings, but a process sample and screenshots showed the app
+still processing frames, and subsequent settings interactions succeeded. This does not establish
+audible monitoring quality, measured latency, long-run clock drift/device-loss behavior, every
+mode transition, or other-platform runtime behavior. Feature statuses stay IMPLEMENTED.
+
+Work uses `codex/input-monitoring` in the primary checkout (`~/Developer/limeshot`), preserving
+its Cargo caches. Continue there without routine worktrees/clones; push only the feature branch
+and its PR, never main, and do not merge automatically.

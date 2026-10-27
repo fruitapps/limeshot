@@ -1242,10 +1242,10 @@
       "action": "Recording precount",
       "fl_keys": "Ctrl+P",
       "confidence": "OBSERVED",
-      "limeshot_keys": "",
-      "status": "NOT_STARTED",
+      "limeshot_keys": "Cmd+P",
+      "status": "IMPLEMENTED",
       "feature": "REC-007",
-      "notes": "Options › Recording precount (MENU-168)."
+      "notes": "Session-local Recording precount toggle; toolbar context menu chooses one or two bars. Engine lead-in applies when playback starts armed."
     },
     {
       "id": "KB-114",

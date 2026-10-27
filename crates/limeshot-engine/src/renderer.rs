@@ -56,6 +56,14 @@ enum Action {
     },
 }
 
+struct CountIn {
+    timeline: Timeline,
+    beat: Tick,
+    beats_per_bar: u32,
+    beats: u32,
+    next: u32,
+}
+
 pub struct Renderer {
     sample_rate: u32,
     snapshot: Arc<Snapshot>,
@@ -74,6 +82,7 @@ pub struct Renderer {
     /// Song mode: a time selection that playback loops (FL Studio's Playlist time selection).
     loop_range: Option<(Tick, Tick)>,
     metronome: bool,
+    count_in: Option<CountIn>,
     /// Engine sample counter (advances whether or not the transport plays).
     now: u64,
     timeline: Timeline,
@@ -125,6 +134,7 @@ impl Renderer {
             song_loop: true,
             loop_range: None,
             metronome: false,
+            count_in: None,
             now: 0,
             timeline: Timeline::new(tempo, sample_rate),
             start_tick: 0,
@@ -275,9 +285,62 @@ impl Renderer {
         }
     }
 
+    /// Start a one- or two-bar metronome lead-in, keeping the program position fixed.
+    /// Only the caller knows whether recording is armed; ordinary Play has no lead-in.
+    pub fn play_with_count_in(&mut self, bars: u8) {
+        if self.playing {
+            return;
+        }
+        self.play();
+        self.apply_controls(0);
+        let sig = self.snapshot.time_signature;
+        let mut timeline = Timeline::new(self.timeline.tempo, self.sample_rate);
+        timeline.origin_sample = self.now;
+        self.count_in = Some(CountIn {
+            timeline,
+            beat: sig.ticks_per_beat(),
+            beats_per_bar: u32::from(sig.numerator.max(1)),
+            beats: u32::from(sig.numerator.max(1)) * u32::from(bars.clamp(1, 2)),
+            next: 0,
+        });
+    }
+
+    /// Beats remaining, including the currently sounding beat; zero outside the lead-in.
+    pub fn count_in_beats(&self) -> u32 {
+        self.count_in.as_ref().map_or(0, |c| {
+            let elapsed = c.timeline.tick_at_sample(self.now) / c.beat;
+            c.beats.saturating_sub(elapsed as u32)
+        })
+    }
+
+    fn schedule_count_in(&mut self, max: usize) -> usize {
+        let Some(c) = &mut self.count_in else {
+            return max;
+        };
+        let end = c.timeline.sample_of_tick(u64::from(c.beats) * c.beat);
+        let chunk_end = (self.now + max as u64).min(end);
+        while c.next < c.beats {
+            let at = c.timeline.sample_of_tick(u64::from(c.next) * c.beat);
+            if at >= chunk_end {
+                break;
+            }
+            self.actions.push((
+                (at.saturating_sub(self.now)) as usize,
+                Action::Click {
+                    downbeat: c.next.is_multiple_of(c.beats_per_bar),
+                },
+            ));
+            c.next += 1;
+        }
+        (chunk_end - self.now) as usize
+    }
+
     /// Stop and return to where playback started. Stopping while stopped silences everything
     /// (sample previews, auditions, effect tails).
     pub fn stop(&mut self) {
+        if self.count_in.take().is_some() {
+            self.silence();
+        }
         if !self.playing {
             self.silence();
         }
@@ -289,11 +352,17 @@ impl Renderer {
 
     /// Stop without moving the playhead.
     pub fn pause(&mut self) {
+        if self.count_in.take().is_some() {
+            self.silence();
+        }
         self.playing = false;
         self.release_sequenced();
     }
 
     pub fn locate(&mut self, tick: Tick) {
+        if self.count_in.take().is_some() {
+            self.silence();
+        }
         let tick = if tick >= self.program_length() {
             self.active_loop().map_or(0, |r| r.0)
         } else {
@@ -473,6 +542,12 @@ impl Renderer {
 
     /// Render `out.len() / 2` stereo frames (at most [`MAX_BLOCK`]) of interleaved audio.
     pub fn render(&mut self, out: &mut [f32]) {
+        self.render_with_input(out, None);
+    }
+
+    /// Mix live stereo input into a track before its inserts, EQ, fader and routing.
+    /// Offline renders call `render` and never receive a device input.
+    pub fn render_with_input(&mut self, out: &mut [f32], input: Option<(u16, &[f32])>) {
         let frames = (out.len() / 2).min(MAX_BLOCK);
         let block_start = self.now;
         let mut transport = self.transport();
@@ -496,7 +571,14 @@ impl Renderer {
             } else {
                 frames - done
             };
-            let chunk = if self.playing { self.schedule(max) } else { max };
+            let counting = self.count_in.is_some();
+            let chunk = if counting {
+                self.schedule_count_in(max)
+            } else if self.playing {
+                self.schedule(max)
+            } else {
+                max
+            };
             let chunk = chunk.max(1).min(frames - done);
             // Render voices between actions; `actions` holds offsets relative to `done`.
             let mut cursor = 0;
@@ -524,7 +606,18 @@ impl Renderer {
             }
             done += chunk;
             self.now += chunk as u64;
-            if self.playing {
+            if counting {
+                // Move the program's time origin by the lead-in samples, preserving its tick
+                // and fractional phase. A block may continue with notes immediately after this.
+                self.timeline.origin_sample += chunk as u64;
+                if self
+                    .count_in
+                    .as_ref()
+                    .is_some_and(|c| self.now >= c.timeline.sample_of_tick(u64::from(c.beats) * c.beat))
+                {
+                    self.count_in = None;
+                }
+            } else if self.playing {
                 self.wrap_if_at_end();
             } else {
                 // Stopped: the playhead stays where it is.
@@ -542,6 +635,15 @@ impl Renderer {
             self.pdc.voices(t, &mut self.buses[t][..2 * frames]);
         }
         self.render_instruments(block_start, frames, tracks, &transport);
+        if let Some((track, input)) = input
+            && usize::from(track) < tracks
+        {
+            for (sample, live) in self.buses[usize::from(track)][..2 * frames].iter_mut().zip(input) {
+                if live.is_finite() {
+                    *sample += live;
+                }
+            }
+        }
         self.fx.set_transport(&transport);
         self.mix(tracks, frames, out);
     }

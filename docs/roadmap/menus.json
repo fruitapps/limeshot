@@ -2913,10 +2913,10 @@
       "fl_keys": "Cmd+P",
       "fl_state": "checked",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Options › Recording precount",
+      "status": "IMPLEMENTED",
       "feature": "REC-007",
-      "notes": ""
+      "notes": "One/two-bar lead-in while starting armed. Right-click toolbar switch selects bars; session-local, default off."
     },
     {
       "id": "MENU-169",
@@ -5267,10 +5267,10 @@
       "fl_keys": "Cmd+P",
       "fl_state": "",
       "confidence": "OBSERVED",
-      "limeshot": "",
-      "status": "NOT_STARTED",
+      "limeshot": "Toolbar › 3.2.1",
+      "status": "IMPLEMENTED",
       "feature": "REC-007",
-      "notes": "Shown as '3.2.1'."
+      "notes": "One/two-bar lead-in while starting armed. Right-click toolbar switch selects bars; session-local, default off."
     },
     {
       "id": "MENU-302",

@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
+Tracked: **193** — IMPLEMENTED 28, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED 15
 
 ## MIDI
 
@@ -55,6 +55,8 @@ Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 | SET-055 | Mixer | Metronome track | field | --- | Options › Audio settings › Mixer › Metronome track | OBSERVED | — | NOT_STARTED | TR-008 |  |
 | SET-056 | Mixer | Play truncated notes on transport | switch | on | Options › Audio settings › Mixer › Play truncated notes on transport | OBSERVED | — | NOT_STARTED | TR-002 |  |
 | SET-057 | Mixer | Reset plugins on transport | switch | off | Options › Audio settings › Mixer › Reset plugins on transport | OBSERVED | — | NOT_STARTED | PLG-002 |  |
+| SET-190 | Input / output | Monitor external input | Off / When armed / On |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | OBSERVED | `ui.record.monitor` | IMPLEMENTED | REC-003 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
+| SET-191 | Input / output | Monitor Mixer track | Mixer destination by position |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm | OBSERVED | `ui.record.monitor_track` | IMPLEMENTED | REC-003 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
 
 ## General
 
@@ -275,3 +277,10 @@ Tracked: **189** — IMPLEMENTED 24, IN_PROGRESS 1, NOT_STARTED 149, NOT_PLANNED
 | ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | SET-189 | Switches | Auto scrolling | switch |  | Options › Auto scrolling; toolbar Auto scrolling button (session 15) | OBSERVED | `settings.auto_scroll` | IMPLEMENTED | UI-016 | Off by default. Shared Options/toolbar switch, saved with application settings; no project edit. |
+
+## Toolbar
+
+| ID | Section | Setting | Control | FL default | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| SET-192 | Recording switches | Recording precount | switch |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | OBSERVED | `ui.record.count_in` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |
+| SET-193 | Recording switches | Recording precount bars | one/two bars |  | https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm | OBSERVED | `ui.record.count_in_bars` | IMPLEMENTED | REC-007 | Manual-based evidence; FL runtime defaults unobserved. Session-local. See docs/research/recording-monitoring-and-count-in.md. |

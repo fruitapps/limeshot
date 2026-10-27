@@ -614,6 +614,9 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                     let m = !app.ui.metronome;
                     app.set_metronome(m);
                 }
+                if toggle(ui, app.ui.record.count_in, "Recording precount", &key("Cmd+P")) {
+                    app.ui.record.count_in = !app.ui.record.count_in;
+                }
                 if toggle(ui, app.settings.auto_scroll, "Auto scrolling", "") {
                     app.set_auto_scroll(!app.settings.auto_scroll);
                 }

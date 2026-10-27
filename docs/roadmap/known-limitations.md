@@ -38,9 +38,12 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   the default device.
 * MIDI input plays the selected channel from one device; it was checked with a virtual port, not a hardware
   keyboard. Controllers, pitch bend, MIDI output and sync are not used yet.
-* Recording takes notes and (with the Audio filter) the audio input. Audio recording has not been tried with a real
-  input, has no latency compensation or input monitoring, and there is no automation or clip recording, count-in or
-  loop takes. A recorded note appears when it ends.
+* Recording takes notes and (with the Audio filter) raw audio input. Session-local monitoring supports Off / When
+  armed / On into a chosen Mixer position; one/two-bar count-in is available. Linear rate conversion can underflow
+  or discard overflow; switching idle monitoring/recording reopens the input. Device latency and independent input/
+  output callback clocks are not compensated; sample-exact playback count-in does not establish physical input
+  alignment. No automation/clip recording, punch or loop takes. A recorded note appears when it ends. Physical
+  input/platform checks remain open; see [recording research](../research/recording-monitoring-and-count-in.md).
 * Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV only, stereo only, without stems.
   Integer WAV export is clipped, not dithered.
 * Instruments and inserts are the twelve Lime Native VST3s. Missing bundles abort export and show errors in the GUI;

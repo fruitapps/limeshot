@@ -30,7 +30,7 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
    lock-to-content and consolidation; Mixer groups, docking and multiselection; Channel Rack display options. Document
    FL's Browser top bar, context menus and floating View windows in `docs/research/` before implementing them.
 2. **Audio and automation.** Crossfades and time stretching (PL-023), a larger automation editing surface.
-3. **Recording.** Input monitoring, latency compensation and count-in.
+3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.
 4. **Workspace and shortcuts.** Remappable shortcuts (UI-011), remaining INFERRED bindings, automatic layout
    persistence.
 5. **Distribution (PF-006).** `.lime` opening from Finder and an embedded Windows icon;

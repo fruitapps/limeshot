@@ -6,7 +6,7 @@
 
 One record per menu item, in FL's order. path = FL's labels from the menu bar down (FL writes '...' for dialogs). section = the grey header the item sits under in-window. kind: action | dialog (opens a dialog or window) | submenu | toggle (checkmark) | radio | list (filled from data; static contents in `lists`) | link (opens a web page). fl_keys in macOS notation as FL shows them. fl_state = the state seen on a fresh default project (checked, selected, disabled). limeshot = where LimeShot has it (Menu › Item). status: IMPLEMENTED (same item), DIFFERENT (LimeShot has the action under another label or place, or without the key), LIMESHOT_ONLY (LimeShot menu item with no FL counterpart in that menu), NOT_STARTED, NOT_PLANNED (Image-Line services, FL's own plugins). Records added after the session 13 capture keep the order of FL's menus; LimeShot-only items follow the FL items of their menu. Toolbar records (menu 'Toolbar', session 15) use kind control (button, knob, field) or display (readout, meter) as well; their right-click menus are child paths. Editor menus (session 15) use the pseudo-menus 'Channel Rack', 'Piano Roll', 'Playlist' and 'Mixer'; LimeShot places in lower case ("channel menu") are descriptions, not checked labels.
 
-Tracked: **737** — IMPLEMENTED 210, DIFFERENT 96, LIMESHOT_ONLY 14, NOT_STARTED 376, NOT_PLANNED 41
+Tracked: **737** — IMPLEMENTED 212, DIFFERENT 96, LIMESHOT_ONLY 14, NOT_STARTED 374, NOT_PLANNED 41
 
 ## Summary
 
@@ -17,10 +17,10 @@ Tracked: **737** — IMPLEMENTED 210, DIFFERENT 96, LIMESHOT_ONLY 14, NOT_STARTE
 | Add | 26 | 1 | 14 | 10 | 1 | 2 |
 | Patterns | 23 | 10 | 5 | 8 | 0 | 0 |
 | View | 48 | 16 | 1 | 26 | 5 | 4 |
-| Options | 24 | 9 | 0 | 13 | 2 | 2 |
+| Options | 24 | 10 | 0 | 12 | 2 | 2 |
 | Tools | 82 | 8 | 3 | 64 | 7 | 0 |
 | Help | 16 | 0 | 1 | 6 | 9 | 1 |
-| Toolbar | 52 | 24 | 8 | 17 | 3 | 3 |
+| Toolbar | 52 | 25 | 8 | 16 | 3 | 3 |
 | Channel Rack | 72 | 27 | 12 | 29 | 4 | 2 |
 | Piano Roll | 143 | 55 | 22 | 63 | 3 | 0 |
 | Playlist | 139 | 37 | 14 | 88 | 0 | 0 |
@@ -68,7 +68,6 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | PR-015 | P2 | IMPLEMENTED | Chords, arpeggiator, strum, humanize, legato | MENU-458 Piano Roll › Options › Tools › Claw machine... |
 | PR-016 | P2 | IN_PROGRESS | Note properties: pan, release, mod X/Y, fine pitch | MENU-531 Piano Roll › Options › Target control › Note release<br>MENU-532 Piano Roll › Options › Target control › Note filter cutoff frequency<br>MENU-533 Piano Roll › Options › Target control › Note filter resonance (Q)<br>MENU-534 Piano Roll › Options › Target control › Note fine pitch<br>MENU-535 Piano Roll › Options › Target control › Note repeat |
 | REC-005 | P2 | NOT_STARTED | Loop recording / takes | MENU-172 Options › Loop record<br>MENU-302 Toolbar › Loop record |
-| REC-007 | P2 | NOT_STARTED | Count-in | MENU-168 Options › Recording precount<br>MENU-301 Toolbar › Recording precount |
 | REC-010 | P2 | NOT_STARTED | Start on input and blend recorded notes | MENU-169 Options › Start on input<br>MENU-170 Options › Blend recorded notes |
 | SEQ-012 | P2 | VERIFIED | Channel filter groups | MENU-359 Channel Rack › Options › Auto switch display filter |
 | SEQ-014 | P2 | VERIFIED | Fill / rotate / advanced fill | MENU-395 Channel Rack › Channel menu › Advanced fill...<br>MENU-396 Channel Rack › Channel menu › Auto fill |
@@ -303,7 +302,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-165 | Enable MIDI master sync | MIDI | toggle |  |  | — | NOT_STARTED | WF-012 |  |
 | MENU-166 | Typing keyboard to piano | Switches | toggle | `Cmd+T` | checked | Options › Typing keyboard to piano | IMPLEMENTED | WF-002 | Session 17: toolbar button; Cmd+T outside Playlist. |
 | MENU-167 | Metronome | Switches | toggle | `Cmd+M` |  | Options › Metronome | IMPLEMENTED | TR-008 |  |
-| MENU-168 | Recording precount | Switches | toggle | `Cmd+P` | checked | — | NOT_STARTED | REC-007 |  |
+| MENU-168 | Recording precount | Switches | toggle | `Cmd+P` | checked | Options › Recording precount | IMPLEMENTED | REC-007 | One/two-bar lead-in while starting armed. Right-click toolbar switch selects bars; session-local, default off. |
 | MENU-169 | Start on input | Switches | toggle | `Cmd+I` |  | — | NOT_STARTED | REC-010 |  |
 | MENU-170 | Blend recorded notes | Switches | toggle | `Cmd+B` |  | — | NOT_STARTED | REC-010 |  |
 | MENU-171 | Step edit | Switches | toggle | `Cmd+E` |  | — | NOT_STARTED | REC-009 |  |
@@ -452,7 +451,7 @@ Menu items LimeShot does not have yet (NOT_STARTED), grouped by the feature that
 | MENU-298 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Mode | Song position menu | radio |  |  | Toolbar › Bar : Beat : Tick / Minute : Second : Centisecond | DIFFERENT | TR-008 | LimeShot has two of FL's modes; no SMPTE. |
 | MENU-299 | &nbsp;&nbsp;&nbsp;&nbsp;↳ Middle unit | Song position menu | radio |  |  | — | NOT_STARTED | TR-008 | Step (selected) / Beat. |
 | MENU-300 | Typing keyboard to piano | Recording switches | toggle | `Cmd+T` |  | Options › Typing keyboard to piano | IMPLEMENTED | WF-002 | Session 17: toolbar button; Cmd+T outside Playlist. |
-| MENU-301 | Recording precount | Recording switches | toggle | `Cmd+P` |  | — | NOT_STARTED | REC-007 | Shown as '3.2.1'. |
+| MENU-301 | Recording precount | Recording switches | toggle | `Cmd+P` |  | Toolbar › 3.2.1 | IMPLEMENTED | REC-007 | One/two-bar lead-in while starting armed. Right-click toolbar switch selects bars; session-local, default off. |
 | MENU-302 | Loop record | Recording switches | toggle |  |  | — | NOT_STARTED | REC-005 |  |
 | MENU-303 | Metronome | Recording switches | toggle | `Cmd+M` |  | Toolbar › Metronome | IMPLEMENTED | TR-006 |  |
 | MENU-304 | Detected chord | Info | display |  |  | — | NOT_STARTED |  | Names the chord being played ('---' when none). |

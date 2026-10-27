@@ -4685,7 +4685,7 @@
           "HelpAliases.scr (recording_*.htm)"
         ]
       },
-      "notes": "Session 16. Not checked with a real input yet (that asks macOS for microphone access, which is the owner's to grant). No latency compensation (REC-006), count-in, punch or loop takes; the packaged app carries NSMicrophoneUsageDescription."
+      "notes": "Count-in and input monitoring are implemented (REC-007/REC-003). Raw input capture still has callback/startup uncertainty and no measured latency compensation (REC-006), punch or loop takes. Physical-input verification remains separately recorded; see docs/research/recording-monitoring-and-count-in.md."
     },
     {
       "id": "REC-002",
@@ -4717,7 +4717,7 @@
           "HelpAliases.scr (recording_*.htm)"
         ]
       },
-      "notes": "Session 16. Not: audio, automation and clip recording, loop record / takes, count-in, recording latency compensation."
+      "notes": "Count-in is implemented in REC-007; lead-in notes are excluded. Automation/clip recording, loop takes and recording latency compensation remain pending."
     },
     {
       "id": "REC-003",
@@ -4725,13 +4725,14 @@
       "name": "Input selection and monitoring",
       "description": "Input selection and monitoring.",
       "fl_reference": "Record button (R), recording filter, count-in (Ctrl+P).",
-      "limeshot_behavior": "Settings › Audio › Input chooses the recording input; while recording, a level bar under the record button shows its peak (red at 0 dBFS). No input monitoring through the mixer yet.",
+      "limeshot_behavior": "Audio settings selects the single recording input and Monitor external input Off / When armed / On, with an explicit Mixer destination. When armed requires Record + Audio and works while stopped. Monitoring is session-local and defaults Off; input passes through destination effects, EQ, fader and routing while raw input recording remains independent. Input errors are reported with explicit retry.",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
       "modules": [
         "limeshot-audio",
+        "limeshot-engine",
         "limeshot-ui"
       ],
       "acceptance_criteria": [
@@ -4739,17 +4740,23 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-app/tests/ui.rs::an_audio_take_becomes_an_audio_clip"
+        "crates/limeshot-app/tests/ui.rs::an_audio_take_becomes_an_audio_clip",
+        "crates/limeshot-app/tests/ui.rs::audio_settings_monitoring_is_session_local_and_uses_explicit_track",
+        "crates/limeshot-engine/tests/audio.rs::live_input_runs_through_mixer_effects_fader_pan_routes_and_mute",
+        "limeshot-audio monitor::tests::conversion_is_continuous_across_output_block_sizes",
+        "limeshot-audio monitor::tests::mute_reroute_overflow_and_underflow_do_not_replay_stale_frames"
       ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
-          "HelpAliases.scr (recording_*.htm)"
+          "HelpAliases.scr (recording_*.htm)",
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/recording_audio.htm",
+          "docs/research/recording-monitoring-and-count-in.md"
         ]
       },
-      "notes": "Session 16."
+      "notes": "One input device, first stereo pair (mono duplicated); per-track hardware I/O remains MIX-016. Basic linear rate conversion, bounded overflow/underflow behavior and positional Mixer destination; changing between idle monitoring and recording reopens the input. Physical-device/platform evidence and limitations: docs/research/recording-monitoring-and-count-in.md."
     },
     {
       "id": "REC-004",
@@ -4838,26 +4845,36 @@
       "name": "Count-in",
       "description": "Count-in.",
       "fl_reference": "Record button (R), recording filter, count-in (Ctrl+P).",
-      "limeshot_behavior": "Planned. The toolbar Record button is shown disabled with a 'not implemented' hint.",
+      "limeshot_behavior": "Toolbar 3.2.1 / Options > Recording precount / Cmd+P (Ctrl+P elsewhere) toggles a one- or two-bar lead-in; right-click selects bars. Starting playback while Record is armed schedules metronome clicks at the starting tempo/signature with a fixed playhead, then starts the program on the exact sample boundary. MIDI notes during count-in are excluded; raw audio capture is prepared and gated until the lead-in finishes. Stop/pause/locate cancel it.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-audio",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-engine/tests/audio.rs::count_in_is_sample_exact_across_blocks_tempos_and_time_signatures",
+        "crates/limeshot-engine/tests/audio.rs::stopping_pausing_and_locating_cancel_count_in",
+        "crates/limeshot-app/tests/ui.rs::recording_precount_shortcut_menu_bars_and_note_filter_work",
+        "limeshot-audio record::tests::count_in_gate_only_blocks_recording_and_sanitizes_input"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm",
-          "HelpAliases.scr (recording_*.htm)"
+          "HelpAliases.scr (recording_*.htm)",
+          "docs/research/recording-monitoring-and-count-in.md"
         ]
       },
-      "notes": ""
+      "notes": "Manual-based implementation; exact FL bar choices/defaults unobserved. One/two-bar options are session-local and default off/one bar. Playback timing is sample-exact, physical input gating retains callback/startup uncertainty and is not recording latency compensation. See docs/research/recording-monitoring-and-count-in.md."
     },
     {
       "id": "REC-008",

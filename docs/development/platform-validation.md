@@ -25,3 +25,17 @@ and both tarballs contained the twelve VST3 bundles and their install scripts. I
 | macOS Intel | An early Rosetta render matched arm64; GUI and audio devices not exercised |
 | Linux x86-64 / ARM64 | GUI and audio devices not exercised |
 | Windows ARM64 | Cross-build only; no package |
+
+## 2026-10-27 — Recording monitoring/count-in local pass
+
+`codex/input-monitoring`, macOS 26.6.2 arm64, primary checkout debug build and twelve debug Lime
+VST3 bundles. Full workspace: 457 tests (161 UI, 10 hosted VST3); native suite: 22. Build/strict
+Clippy/fmt/inventory/reference checks pass. Audio settings and active-count-in renders inspected.
+
+Disposable `live_check`: AirPods Pro output at 48 kHz, system-default input capture at 24 kHz;
+input monitoring On into muted insert 1, Record + Audio with Cmd+P count-in, Stop and successful
+Playlist take placement at tick 0. The raw float WAV has 363,360 stereo frames (15.14 s), finite
+nonzero PCM and no writer drop warning. Preferences/autosave were disabled; monitoring was turned
+Off before exit. See [progress](progress.md) and [research](../research/recording-monitoring-and-count-in.md).
+Audible monitoring, latency alignment, sustained drift/device loss, hardware MIDI and Windows/
+Linux/Intel macOS behavior remain unverified; REC-003 and REC-007 remain IMPLEMENTED.

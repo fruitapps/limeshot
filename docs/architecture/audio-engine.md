@@ -281,3 +281,21 @@ on project opening. The decoded stereo float cap is 2,000,000,000 bytes. See the
 Native instruments process only their occupied voice prefix while retaining the full 128-voice pool.
 Fade counters are f64 and the bounded clip protocol carries curve tensions. Audio callback load remains
 render time / deadline; it does not measure total application CPU.
+
+## Live input monitoring and count-in (REC-003, REC-007)
+
+One cpal input stream feeds the raw-WAV writer and an optional bounded SPSC monitor ring.
+`AudioState` converts the monitor rate into a preallocated input block and calls
+`Renderer::render_with_input`: input enters its explicit Mixer destination before inserts/EQ,
+fader and routing. Offline render uses `render` without input. Muting/rerouting invalidates queued
+frames; underruns are silent and overflow recovery discards backlog. Old receivers return through
+`Garbage::Monitor`; message draining waits when the garbage ring is full, rather than freeing a
+replaced ring/snapshot in the callback. Monitoring uses session state and starts Off.
+
+`play_with_count_in` uses a separate exact Timeline for one/two bars of accented clicks. The
+program's timeline origin moves forward by each lead-in chunk so its musical position is fixed.
+A block can split at the lead-in end and schedule notes immediately on that sample. Stop, pause
+and locate cancel the lead-in. The audio status publishes remaining beats and a capture gate;
+the input callback records only once the gate is open, while monitoring continues independently.
+This flag bridges independent callbacks; physical input alignment is not sample synchronized or
+latency compensated. See [design and limits](../research/recording-monitoring-and-count-in.md).

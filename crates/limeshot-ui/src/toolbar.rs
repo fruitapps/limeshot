@@ -135,7 +135,7 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
     if r.clicked() {
         crate::recording::toggle(app);
     }
-    // While recording audio: the input's level under the button.
+    // Input level while recording or monitoring.
     if let Some(level) = crate::recording::input_level(app) {
         let t = Theme::current();
         let bar = egui::Rect::from_min_size(
@@ -149,9 +149,9 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
             0.0,
             if level >= 1.0 { t.danger } else { t.accent },
         );
-        ui.ctx().request_repaint();
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
     }
-    // FL Studio's record menu (only notes are recorded; the other filters are not in yet).
+    // FL Studio's record menu; unsupported filters remain disabled.
     r.context_menu(|ui| {
         let t = Theme::current();
         ui.label(RichText::new("Recording filter").small().color(t.text_faint));
@@ -165,6 +165,16 @@ fn transport(app: &mut LimeShotApp, ui: &mut Ui) {
             app.ui.record.audio = !app.ui.record.audio;
         }
         ui.add_enabled(false, egui::Button::selectable(false, "Clips"));
+        ui.separator();
+        ui.menu_button("Monitor external input", |ui| {
+            for mode in [
+                crate::recording::MonitorMode::Off,
+                crate::recording::MonitorMode::WhenArmed,
+                crate::recording::MonitorMode::On,
+            ] {
+                ui.selectable_value(&mut app.ui.record.monitor, mode, mode.label());
+            }
+        });
         ui.separator();
         ui.label(RichText::new("Options").small().color(t.text_faint));
         let st = &mut app.ui.record;
@@ -246,7 +256,10 @@ fn tempo_and_time(app: &mut LimeShotApp, ui: &mut Ui) {
     let tempo = automated.map_or(app.project().tempo, |b| Tempo::from_bpm(f64::from(b)));
     let secs = Timeline::new(tempo, 48_000).seconds(pos);
     let mss = format!("{}:{:05.2}", (secs / 60.0) as u32, secs % 60.0);
-    let (main, caption) = if app.ui.toolbar.time_in_seconds {
+    let beats = app.player.status().count_in_beats();
+    let (main, caption) = if beats > 0 {
+        (beats.to_string(), "COUNT IN".to_string())
+    } else if app.ui.toolbar.time_in_seconds {
         (mss, format!("M:S:CS   {bbt}"))
     } else {
         (bbt.to_string(), format!("B:B:T   {mss}"))
@@ -367,6 +380,21 @@ fn snap_and_options(app: &mut LimeShotApp, ui: &mut Ui) {
         let m = !app.ui.metronome;
         app.set_metronome(m);
     }
+    let precount = ui
+        .add(egui::Button::selectable(app.ui.record.count_in, "3.2.1"))
+        .hint("Recording precount (Cmd+P). Right-click: choose bars");
+    if precount.clicked() {
+        app.ui.record.count_in = !app.ui.record.count_in;
+    }
+    precount.context_menu(|ui| {
+        for bars in [1, 2] {
+            ui.selectable_value(
+                &mut app.ui.record.count_in_bars,
+                bars,
+                format!("{bars} bar{}", if bars == 1 { "" } else { "s" }),
+            );
+        }
+    });
     if icon_button(
         ui,
         Icon::AutoScroll,

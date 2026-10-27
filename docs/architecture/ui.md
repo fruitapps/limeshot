@@ -210,3 +210,18 @@ falls back to egui's last hover position, which has not been checked against a r
 Native egui-baseview teardown binds its own retained GL context before deleting painter resources.
 The host additionally suspends its current GL context during editor removal and restores its context
 around logic/UI frames. The native backend patch is an isolated dependency with upstream licenses.
+
+## Recording monitoring and precount
+
+Audio settings offers Monitor external input Off / When armed / On and a Mixer destination by
+position. The Record menu mirrors the monitoring policy. These controls live in `recording::State`
+and reset with the session/project. When armed requires Record and the Audio filter, including
+while stopped. Device errors toast once; Retry input or a configuration change retries the stream.
+Input access has its own `enable_audio_input` flag: real apps/live_check enable it, headless apps
+leave it disabled, independently of preference persistence.
+
+Toolbar 3.2.1, Options > Recording precount and Cmd/Ctrl+P share a session-local toggle. Right-click
+3.2.1 chooses one/two bars. Remaining beats occupy the existing time readout during the lead-in,
+so the toolbar does not change width. `ui_shot --count-in` renders that state. Count-in notes are
+only auditioned; audio capture is prepared and gated until playback begins. Exact input alignment
+and broader device/platform validation remain separate from the renderer timing tests.

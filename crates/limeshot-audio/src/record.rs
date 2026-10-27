@@ -37,6 +37,7 @@ struct Shared {
     /// The last block's peak (f32 bits), for the input meter.
     level: AtomicU32,
     dropped: AtomicU32,
+    failed: AtomicBool,
 }
 
 /// A running recording.
@@ -52,6 +53,33 @@ impl InputRecorder {
     /// Start recording from the input device called `device` (`None`: the default input) into
     /// `path`.
     pub fn start(device: Option<&str>, path: PathBuf) -> Result<Self, String> {
+        Self::open(device, Some(path), None, |_| None)
+    }
+
+    /// A single input stream feeds both the recording writer and optional live monitoring.
+    pub fn start_monitored(
+        device: Option<&str>,
+        path: PathBuf,
+        gate: Option<Arc<AtomicBool>>,
+        monitor: impl FnOnce(u32) -> Option<crate::monitor::Sender>,
+    ) -> Result<Self, String> {
+        Self::open(device, Some(path), gate, monitor)
+    }
+
+    /// Monitor without creating a recording file.
+    pub fn monitor(
+        device: Option<&str>,
+        monitor: impl FnOnce(u32) -> Option<crate::monitor::Sender>,
+    ) -> Result<Self, String> {
+        Self::open(device, None, None, monitor)
+    }
+
+    fn open(
+        device: Option<&str>,
+        path: Option<PathBuf>,
+        gate: Option<Arc<AtomicBool>>,
+        monitor: impl FnOnce(u32) -> Option<crate::monitor::Sender>,
+    ) -> Result<Self, String> {
         let host = cpal::default_host();
         let dev = match device {
             Some(name) => host
@@ -66,40 +94,57 @@ impl InputRecorder {
         let format = supported.sample_format();
         let config: cpal::StreamConfig = supported.into();
         let rate = config.sample_rate.0.max(1);
-        let (producer, consumer) = rtrb::RingBuffer::new(2 * rate as usize * RING_SECONDS);
         let shared = Arc::new(Shared {
             stop: AtomicBool::new(false),
             level: AtomicU32::new(0),
             dropped: AtomicU32::new(0),
+            failed: AtomicBool::new(false),
         });
-        let writer = spawn_writer(consumer, path, rate, shared.clone())?;
+        let (producer, writer) = if let Some(path) = path {
+            let (producer, consumer) = rtrb::RingBuffer::new(2 * rate as usize * RING_SECONDS);
+            let writer = spawn_writer(consumer, path, rate, shared.clone())?;
+            (Some(producer), Some(writer))
+        } else {
+            (None, None)
+        };
+        let monitor = monitor(rate);
         let stream = match format {
-            cpal::SampleFormat::I16 => build::<i16>(&dev, &config, producer, shared.clone()),
-            cpal::SampleFormat::I32 => build::<i32>(&dev, &config, producer, shared.clone()),
-            cpal::SampleFormat::U16 => build::<u16>(&dev, &config, producer, shared.clone()),
-            _ => build::<f32>(&dev, &config, producer, shared.clone()),
+            cpal::SampleFormat::I16 => build::<i16>(&dev, &config, producer, monitor, gate, shared.clone()),
+            cpal::SampleFormat::I32 => build::<i32>(&dev, &config, producer, monitor, gate, shared.clone()),
+            cpal::SampleFormat::U16 => build::<u16>(&dev, &config, producer, monitor, gate, shared.clone()),
+            cpal::SampleFormat::F32 => build::<f32>(&dev, &config, producer, monitor, gate, shared.clone()),
+            cpal::SampleFormat::F64 => build::<f64>(&dev, &config, producer, monitor, gate, shared.clone()),
+            _ => Err(cpal::BuildStreamError::StreamConfigNotSupported),
         }
         .map_err(|e| e.to_string());
         let stream = match stream {
             Ok(s) => s,
             Err(e) => {
                 shared.stop.store(true, Ordering::Release);
-                let _ = writer.join();
+                if let Some(w) = writer {
+                    let _ = w.join();
+                }
                 return Err(e);
             }
         };
         if let Err(e) = stream.play() {
             shared.stop.store(true, Ordering::Release);
-            let _ = writer.join();
+            if let Some(w) = writer {
+                let _ = w.join();
+            }
             return Err(e.to_string());
         }
         Ok(InputRecorder {
             _stream: Some(stream),
             shared,
-            writer: Some(writer),
+            writer,
             sample_rate: rate,
             device: name,
         })
+    }
+
+    pub fn failed(&self) -> bool {
+        self.shared.failed.load(Ordering::Relaxed)
     }
 
     /// The input's recent peak level (linear).
@@ -120,45 +165,79 @@ impl InputRecorder {
     }
 }
 
+impl Drop for InputRecorder {
+    fn drop(&mut self) {
+        self._stream = None;
+        self.shared.stop.store(true, Ordering::Release);
+        if let Some(writer) = self.writer.take() {
+            let _ = writer.join();
+        }
+    }
+}
+
 fn build<T: SizedSample + Send + 'static>(
     dev: &cpal::Device,
     config: &cpal::StreamConfig,
-    mut producer: rtrb::Producer<f32>,
+    mut producer: Option<rtrb::Producer<f32>>,
+    mut monitor: Option<crate::monitor::Sender>,
+    gate: Option<Arc<AtomicBool>>,
     shared: Arc<Shared>,
 ) -> Result<cpal::Stream, cpal::BuildStreamError>
 where
     f32: FromSample<T>,
 {
     let channels = usize::from(config.channels.max(1));
+    let errors = shared.clone();
     dev.build_input_stream(
         config,
         move |data: &[T], _| {
             // Real-time: no allocation, no locks; frames that do not fit are counted, not kept.
-            let mut peak = 0.0f32;
-            let mut dropped = 0u32;
-            for frame in data.chunks(channels) {
-                let l: f32 = frame.first().map_or(0.0, |s| s.to_sample());
-                let r = if channels > 1 {
-                    frame.get(1).map_or(l, |s| s.to_sample())
-                } else {
-                    l
-                };
-                peak = peak.max(l.abs()).max(r.abs());
-                if producer.slots() >= 2 {
-                    let _ = producer.push(l);
-                    let _ = producer.push(r);
-                } else {
-                    dropped += 1;
-                }
-            }
-            shared.level.store(peak.to_bits(), Ordering::Relaxed);
-            if dropped > 0 {
-                shared.dropped.fetch_add(dropped, Ordering::Relaxed);
-            }
+            let record = gate.as_ref().is_none_or(|g| g.load(Ordering::Acquire));
+            copy_input(data, channels, &mut producer, &mut monitor, record, &shared);
         },
-        |e| log::error!("audio input error: {e}"),
+        move |_| errors.failed.store(true, Ordering::Relaxed),
         None,
     )
+}
+
+fn copy_input<T: SizedSample>(
+    data: &[T],
+    channels: usize,
+    producer: &mut Option<rtrb::Producer<f32>>,
+    monitor: &mut Option<crate::monitor::Sender>,
+    record: bool,
+    shared: &Shared,
+) where
+    f32: FromSample<T>,
+{
+    let mut peak = 0.0f32;
+    let mut dropped = 0u32;
+    for frame in data.chunks(channels) {
+        let l: f32 = frame.first().map_or(0.0, |s| s.to_sample());
+        let r = if channels > 1 {
+            frame.get(1).map_or(l, |s| s.to_sample())
+        } else {
+            l
+        };
+        let l = if l.is_finite() { l } else { 0.0 };
+        let r = if r.is_finite() { r } else { 0.0 };
+        peak = peak.max(l.abs()).max(r.abs());
+        if let Some(m) = monitor {
+            m.push([l, r]);
+        }
+        if record && let Some(p) = producer {
+            if p.slots() >= 2 {
+                let _ = p.push(l);
+                let _ = p.push(r);
+            } else {
+                dropped = dropped.saturating_add(1);
+            }
+        }
+    }
+    shared.level.store(peak.to_bits(), Ordering::Relaxed);
+    if dropped > 0 {
+        shared.dropped.fetch_add(dropped, Ordering::Relaxed);
+    }
 }
 
 /// The writer thread: drains `consumer` into a stereo 32-bit float WAV at `path` until
@@ -224,6 +303,7 @@ mod tests {
             stop: AtomicBool::new(false),
             level: AtomicU32::new(0),
             dropped: AtomicU32::new(0),
+            failed: AtomicBool::new(false),
         });
         let writer = spawn_writer(c, path.clone(), 48_000, shared.clone()).unwrap();
         let mut sent = Vec::new();
@@ -239,5 +319,50 @@ mod tests {
         assert_eq!((take.frames, take.sample_rate, take.dropped), (1500, 48_000, 0));
         let back = limeshot_dsp::load_wav(&path).unwrap();
         assert_eq!(back.data, sent);
+    }
+    #[test]
+    fn count_in_gate_only_blocks_recording_and_sanitizes_input() {
+        let shared = Shared {
+            stop: AtomicBool::new(false),
+            level: AtomicU32::new(0),
+            dropped: AtomicU32::new(0),
+            failed: AtomicBool::new(false),
+        };
+        let (tx, mut rx) = rtrb::RingBuffer::new(4);
+        let mut writer = Some(tx);
+        let (sender, mut receiver) = crate::monitor::channel(48_000, 48_000);
+        let control = sender.control();
+        control.set_track(Some(1));
+        let mut monitor = Some(sender);
+        copy_input(&[0.25f32, f32::NAN], 1, &mut writer, &mut monitor, false, &shared);
+        assert_eq!(rx.slots(), 0, "count-in must not enter the WAV");
+        let mut out = [0.0; 4];
+        assert_eq!(receiver.read(&mut out), Some(1));
+        assert_eq!(out, [0.25, 0.25, 0.0, 0.0], "monitoring continues during count-in");
+        copy_input(&[0.5f32, -0.5, 123.0], 3, &mut writer, &mut monitor, true, &shared);
+        copy_input(
+            &[f32::INFINITY, f32::NEG_INFINITY],
+            2,
+            &mut writer,
+            &mut monitor,
+            true,
+            &shared,
+        );
+        copy_input(&[1.0f32, 1.0], 2, &mut writer, &mut monitor, true, &shared);
+        assert_eq!(
+            shared.dropped.load(Ordering::Relaxed),
+            1,
+            "drop whole frames at capacity"
+        );
+        assert_eq!(
+            (
+                rx.pop().unwrap(),
+                rx.pop().unwrap(),
+                rx.pop().unwrap(),
+                rx.pop().unwrap()
+            ),
+            (0.5, -0.5, 0.0, 0.0)
+        );
+        assert_eq!(f32::from_bits(shared.level.load(Ordering::Relaxed)), 1.0);
     }
 }
