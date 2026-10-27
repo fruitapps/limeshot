@@ -3316,6 +3316,121 @@ fn the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor() {
     assert!(!h.state().can_clipboard(limeshot_ui::app::ClipOp::Paste));
 }
 
+/// PL-026: complete clip snapshots survive cut/paste through the real Playlist shortcuts.
+#[test]
+fn playlist_clipboard_preserves_properties_and_undoes_once() {
+    let mut h = harness(true);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    h.state_mut().ui.mode = limeshot_engine::PlayMode::Pattern;
+    let ids: Vec<_> = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .take(2)
+        .map(|c| c.id)
+        .collect();
+    for id in &ids {
+        h.state_mut().exec(Command::SetClipMuted { clip: *id, muted: true });
+        h.state_mut().exec(Command::SetClipFades {
+            clip: *id,
+            fade_in: 120,
+            fade_out: 240,
+        });
+        h.state_mut().exec(Command::SetClipFadeCurve {
+            clip: *id,
+            out: true,
+            tension: -0.4,
+        });
+    }
+    let before = h.state().project().clone();
+    let copied: Vec<_> = before
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| ids.contains(&c.id))
+        .cloned()
+        .collect();
+    h.state_mut().ui.playlist.selection = ids.clone();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::X);
+    h.step();
+    assert!(ids.iter().all(|id| h.state().project().clip(*id).is_none()));
+    let cut = h.state().project().clone();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::V);
+    h.step();
+    let selected = h.state().ui.playlist.selection.clone();
+    assert_eq!(selected.len(), copied.len());
+    for (original, id) in copied.iter().zip(&selected) {
+        assert!(!ids.contains(id));
+        let mut expected = original.clone();
+        expected.id = *id;
+        assert_eq!(h.state().project().clip(*id), Some(&expected));
+    }
+    let pasted = h.state().project().clone();
+    assert_eq!(h.state().doc.undo_label(), Some("Paste clips"));
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &cut);
+    h.state_mut().doc.redo();
+    assert_eq!(h.state().project(), &pasted);
+    h.state_mut().doc.undo();
+    h.state_mut().doc.undo();
+    assert_eq!(h.state().project(), &before);
+}
+
+#[test]
+fn playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing() {
+    use limeshot_ui::app::ClipOp;
+    let mut h = harness(true);
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    h.state_mut().ui.mode = limeshot_engine::PlayMode::Song;
+    let clips: Vec<_> = h
+        .state()
+        .project()
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| c.start > 0)
+        .take(2)
+        .cloned()
+        .collect();
+    assert_eq!(clips.len(), 2);
+    let origin = clips.iter().map(|c| c.start).min().unwrap();
+    assert_eq!(h.state().player.status().position(), 0);
+    h.state_mut().ui.playlist.selection = clips.iter().map(|c| c.id).collect();
+    h.state_mut().clipboard_op(ClipOp::Copy);
+    h.state_mut().clipboard_op(ClipOp::Paste);
+    assert_eq!(h.state().ui.playlist.selection.len(), clips.len());
+    for (original, id) in clips.iter().zip(&h.state().ui.playlist.selection) {
+        let mut expected = original.clone();
+        expected.id = *id;
+        expected.start -= origin;
+        assert_eq!(h.state().project().clip(*id), Some(&expected));
+    }
+}
+
+#[test]
+fn playlist_failed_paste_keeps_selection_and_clipboard() {
+    use limeshot_ui::app::{ClipOp, Clipboard};
+    let mut h = harness(true);
+    let id = h.state().project().playlist.clips[0].id;
+    let mut clip = h.state().project().clip(id).unwrap().clone();
+    clip.source = ClipSource::Pattern(PatternId(u32::MAX));
+    let clipboard = Clipboard::Clips(vec![clip]);
+    h.state_mut().clipboard = Some(clipboard.clone());
+    h.state_mut().ui.focus = limeshot_ui::app::Focus::Playlist;
+    h.state_mut().ui.playlist.selection = vec![id];
+    let before = h.state().project().clone();
+    h.state_mut().clipboard_op(ClipOp::Paste);
+    assert_eq!(h.state().project(), &before);
+    assert_eq!(h.state().ui.playlist.selection, vec![id]);
+    assert_eq!(h.state().clipboard, Some(clipboard.clone()));
+    // A stale selection must not erase a useful clipboard with an empty copy.
+    h.state_mut().ui.playlist.selection = vec![ClipId(u32::MAX)];
+    h.state_mut().clipboard_op(ClipOp::Copy);
+    assert_eq!(h.state().clipboard, Some(clipboard));
+}
+
 /// APP-006: navigate retained undo and redo snapshots from Edit › History.
 #[test]
 fn history_menu_navigates_backward_forward_and_oldest_state() {
