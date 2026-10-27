@@ -157,8 +157,40 @@ impl SampleCache {
     }
 
     /// Retain a decoded embedded source on the control thread, just like a file load.
-    pub fn insert_embedded(&mut self, path: PathBuf, sample: Arc<SampleData>) {
-        self.entries.entry(path).or_insert(SampleStatus::Ready(sample));
+    pub fn insert_embedded(&mut self, path: PathBuf, sample: Arc<SampleData>) -> bool {
+        if self.entries.contains_key(&path) {
+            return true;
+        }
+        let embedded = |key: &PathBuf| key.starts_with("/.limeshot-embedded");
+        let usage = |entries: &HashMap<PathBuf, SampleStatus>| {
+            entries
+                .iter()
+                .filter(|(key, _)| embedded(key))
+                .fold((0, 0usize), |(count, bytes), (_, status)| {
+                    (
+                        count + 1,
+                        bytes
+                            + match status {
+                                SampleStatus::Ready(s) => s.data.len() * 4,
+                                _ => 0,
+                            },
+                    )
+                })
+        };
+        let (count, bytes) = usage(&self.entries);
+        if count >= 32 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
+            // Snapshot/voice references keep active audio pinned. Only the control thread
+            // releases an unused buffer, preserving the callback's no-large-free contract.
+            self.entries.retain(|key, status| {
+                !embedded(key) || !matches!(status,SampleStatus::Ready(audio) if Arc::strong_count(audio)==1)
+            });
+        }
+        let (count, bytes) = usage(&self.entries);
+        if count >= 32 || bytes + sample.data.len() * 4 > 256 * 1024 * 1024 {
+            return false;
+        }
+        self.entries.insert(path, SampleStatus::Ready(sample));
+        true
     }
     pub fn status(&self, stored: &str) -> Option<&SampleStatus> {
         self.entries.get(&self.resolve(stored))
@@ -265,5 +297,24 @@ mod tests {
         };
         assert!(!c.remove_failed(&path));
         assert!(matches!(c.status_of_path(&path), Some(SampleStatus::Ready(s)) if Arc::ptr_eq(s, &sample)));
+    }
+    #[test]
+    fn embedded_preview_budget_pins_active_audio_and_collects_unused_buffers() {
+        let mut cache = SampleCache::new();
+        let mut active = Vec::new();
+        for i in 0..32 {
+            let audio = Arc::new(SampleData::from_stereo(48000, vec![0.; 4]));
+            assert!(cache.insert_embedded(PathBuf::from(format!("/.limeshot-embedded/{i}.wav")), audio.clone()));
+            active.push(audio);
+        }
+        let next = PathBuf::from("/.limeshot-embedded/next.wav");
+        let audio = Arc::new(SampleData::from_stereo(48000, vec![0.; 4]));
+        assert!(!cache.insert_embedded(next.clone(), audio.clone()));
+        assert_eq!(cache.entries.len(), 32);
+        let old = Arc::downgrade(&active[0]);
+        active.clear();
+        assert!(cache.insert_embedded(next, audio));
+        assert!(old.upgrade().is_none());
+        assert_eq!(cache.entries.len(), 1);
     }
 }

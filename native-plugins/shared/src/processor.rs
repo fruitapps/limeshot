@@ -830,6 +830,73 @@ mod tests {
         }
     }
 
+    #[test]
+    fn prepared_audio_is_shared_and_renders_without_allocating_after_seek() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("tone.wav");
+        let data: Vec<f32> = (0..24000).flat_map(|i| [(i as f32 * 0.05).sin() * 0.3; 2]).collect();
+        limeshot_dsp::write_wav(&source, 48000, &data, limeshot_dsp::BitDepth::Float32).unwrap();
+        let original = EmbeddedSample::load(&source).unwrap();
+        let text = limeshot_sequencer::preparation::prepare_sample(
+            &serde_json::to_string(&original).unwrap(),
+            2.,
+            12.,
+            true,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+        .unwrap();
+        let prepared: EmbeddedSample = serde_json::from_str(&text).unwrap();
+        let mut first = LimePlugin::<1>::default();
+        first.params.sample.set(prepared.clone());
+        first.prepare(48000.);
+        let mut second = LimePlugin::<1>::default();
+        second.params.sample.set(prepared);
+        second.prepare(48000.);
+        assert!(Arc::ptr_eq(
+            first.sample.as_ref().unwrap(),
+            second.sample.as_ref().unwrap()
+        ));
+        assert_eq!(first.sample.as_ref().unwrap().frames(), 48000);
+        for reverse in [0., 1.] {
+            for block in [1, 64, 333, 1024] {
+                let mut values = first.params.values();
+                values[5] = reverse;
+                values[2] = 0.1;
+                values[3] = 0.9;
+                values[13] = 1.;
+                values[14] = 0.2;
+                values[15] = 0.6;
+                first.reset();
+                second.reset();
+                first.event(on(1, 60), &values);
+                second.event(on(1, 60), &values);
+                first.voices[0].voice.skip(0.15, 48000.);
+                second.voices[0].voice.skip(0.15, 48000.);
+                nice_assert_no_alloc::assert_no_alloc(|| {
+                    for start in (0..4096).step_by(block) {
+                        for _ in start..(start + block).min(4096) {
+                            assert_eq!(
+                                first.frame([0.; 2], None, &values, 120.),
+                                second.frame([0.; 2], None, &values, 120.)
+                            );
+                        }
+                    }
+                });
+            }
+        }
+        // Recipe survives native persistence, including its original PCM.
+        let fields = first.params.serialize_fields();
+        first.params.deserialize_fields(&fields);
+        assert_eq!(
+            first.params.sample.map(|s| s.preparation.clone()),
+            original
+                .preparation
+                .or_else(|| serde_json::from_str::<serde_json::Value>(&text)
+                    .ok()
+                    .and_then(|s| s.get("preparation-v1").cloned()))
+        );
+    }
+
     fn parity<const ID: u8>() {
         for sr in [44100, 48000, 96000] {
             for block in [1, 64, 333, 1024] {

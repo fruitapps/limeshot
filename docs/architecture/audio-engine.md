@@ -302,3 +302,15 @@ and locate cancel the lead-in. The audio status publishes remaining beats and a 
 the input callback records only once the gate is open, while monitoring continues independently.
 This flag bridges independent callbacks; physical input alignment is not sample synchronized or
 latency compensated. See [design and limits](../research/recording-monitoring-and-count-in.md).
+
+## Fixed-duration prepared samples
+
+Lime Sampler's optional `sample-v1.preparation-v1` retains original embedded audio and a
+preparation recipe; the outer PCM is the immutable playable result. Host/native workers run
+bounded stereo-linked WSOLA and sinc resampling before changing state. Channel preparation
+changes all uses; per-clip preparation clones the sampler channel in a document command.
+The renderer still schedules ordinary clip events against prepared PCM, preserving trim/loop
+fractions, reverse and output-time offset/chase/fades. Smooth S fades use native clip protocol
+v3 (96 bytes; v1/v2 meanings retained). Automatic same-track two-clip crossfades are resolved
+in document edits, never in `render`. This is fixed-duration preparation, not realtime tempo
+following. See [design, limits and evidence](../research/prepared-sampling.md).

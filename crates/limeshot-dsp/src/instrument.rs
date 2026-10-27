@@ -121,11 +121,13 @@ impl ClipMessage {
         raw[33..37].copy_from_slice(&self.playback.fade_in_secs.to_le_bytes());
         raw[37..41].copy_from_slice(&self.playback.fade_out_secs.to_le_bytes());
         raw[41..43]
-            .copy_from_slice(&((self.playback.fade_in_curve.clamp(-1.0, 1.0) * 1000.0).round() as i16).to_le_bytes());
+            .copy_from_slice(&((self.playback.fade_in_curve.clamp(-1.0, 2.0) * 1000.0).round() as i16).to_le_bytes());
         raw[43..45]
-            .copy_from_slice(&((self.playback.fade_out_curve.clamp(-1.0, 1.0) * 1000.0).round() as i16).to_le_bytes());
+            .copy_from_slice(&((self.playback.fade_out_curve.clamp(-1.0, 2.0) * 1000.0).round() as i16).to_le_bytes());
         let mut out = [0u8; CLIP_MESSAGE_LEN];
-        let version = if self.playback.fade_in_curve == 0.0 && self.playback.fade_out_curve == 0.0 {
+        let version = if self.playback.fade_in_curve == 2.0 || self.playback.fade_out_curve == 2.0 {
+            3
+        } else if self.playback.fade_in_curve == 0.0 && self.playback.fade_out_curve == 0.0 {
             1
         } else {
             2
@@ -142,7 +144,7 @@ impl ClipMessage {
     pub fn decode(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != CLIP_MESSAGE_LEN
             || bytes[..4] != [0xf0, 0x7d, b'L', b'C']
-            || !(1..=2).contains(&bytes[4])
+            || !(1..=3).contains(&bytes[4])
             || bytes[95] != 0xf7
             || bytes[5..95].iter().any(|b| *b > 15)
         {
@@ -160,18 +162,21 @@ impl ClipMessage {
             remaining_secs: f64_at(25)?,
             fade_in_secs: f32_at(33)?,
             fade_out_secs: f32_at(37)?,
-            fade_in_curve: if bytes[4] == 2 {
+            fade_in_curve: if bytes[4] >= 2 {
                 f32::from(i16::from_le_bytes([raw[41], raw[42]])) / 1000.0
             } else {
                 0.0
             },
-            fade_out_curve: if bytes[4] == 2 {
+            fade_out_curve: if bytes[4] >= 2 {
                 f32::from(i16::from_le_bytes([raw[43], raw[44]])) / 1000.0
             } else {
                 0.0
             },
         };
-        if playback.fade_in_curve.abs() > 1.0 || playback.fade_out_curve.abs() > 1.0 {
+        if [playback.fade_in_curve, playback.fade_out_curve]
+            .iter()
+            .any(|v| v.abs() > 1.0 && !(bytes[4] == 3 && *v == 2.0))
+        {
             return None;
         }
         let velocity = f32_at(1)?;
@@ -296,6 +301,14 @@ mod protocol_tests {
         };
         let bytes = message.encode();
         assert_eq!(ClipMessage::decode(&bytes), Some(message));
+        let mut smooth = message;
+        smooth.playback.fade_in_curve = 2.;
+        smooth.playback.fade_out_curve = 2.;
+        let mut encoded = smooth.encode();
+        assert_eq!(encoded[4], 3);
+        assert_eq!(ClipMessage::decode(&encoded), Some(smooth));
+        encoded[4] = 2;
+        assert!(ClipMessage::decode(&encoded).is_none());
         for length in 0..bytes.len() {
             assert!(ClipMessage::decode(&bytes[..length]).is_none());
         }

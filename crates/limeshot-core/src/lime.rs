@@ -921,6 +921,13 @@ pub fn set_sample_source(plugin: &mut PluginRef, source: &str) -> bool {
         return false;
     };
     sample["source"] = json!(source);
+    if let Some(original) = sample
+        .get_mut("preparation-v1")
+        .and_then(|p| p.get_mut("original"))
+        .filter(|p| p.is_object())
+    {
+        original["source"] = json!(source);
+    }
     component["fields"]["sample-v1"] = Value::String(sample.to_string());
     plugin.state = PluginState::new(host_state(component.to_string().as_bytes()));
     true
@@ -1382,4 +1389,26 @@ mod sampler_metadata_tests {
         doc.execute(Command::SetPluginState { plugin: target, state }).unwrap();
         assert_eq!(doc.project().channel(id).unwrap().root_key, 52);
     }
+}
+
+/// Raw portable sample field, available only for explicit Lime Sampler identity.
+pub fn sample_state(plugin: &PluginRef) -> Option<String> {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return None;
+    }
+    let component: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
+    component["fields"]["sample-v1"].as_str().map(str::to_owned)
+}
+/// Replace portable audio without changing parameter IDs, controls, root or opaque host fields.
+pub fn with_sample_state(plugin: &PluginRef, text: &str) -> Option<PluginState> {
+    if LimePlugin::of(plugin) != Some(LimePlugin::SAMPLER) {
+        return None;
+    }
+    let mut component: Value = serde_json::from_slice(component_state(&plugin.state)?).ok()?;
+    component
+        .get_mut("fields")?
+        .as_object_mut()?
+        .insert("sample-v1".into(), Value::String(text.into()));
+    let bytes = component.to_string();
+    (bytes.len() + 12 <= crate::plugin::MAX_STATE_BYTES).then(|| PluginState::new(host_state(bytes.as_bytes())))
 }

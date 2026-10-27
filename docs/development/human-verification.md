@@ -69,3 +69,24 @@ Owner-requested interaction and disk-sampler fixes are in `codex/alpha1-polish`;
 and Serum internal-corner shrink/grow. Repeat host-edge resizing with other resizable plugins and long disk-backed
 playback/seek checks on Windows and Linux before promoting the native feature statuses. Disk cache misses and
 smooth fade/crossfade limits remain recorded.
+
+## Prepared sampling and crossfades (2026-10-27)
+
+* On this branch/build, audition generated comparison WAVs with
+  `cargo run --release --manifest-path tools/stretch-eval/Cargo.toml -- <temporary-folder>`.
+  Listen on headphones to tone, impulse, percussion and polyphonic fixtures at 0.5/1/2×,
+  then owner-provided drums, bass, vocals and wide stereo music. Check attacks, tails,
+  modulation, low-frequency pitch and stereo image. Numeric results alone do not establish quality.
+* In LimeShot, load an embedded sample, Time stretching in Channel Settings, choose
+  Stretch and 0.5/1/2× with −12/0/+12 st. Check native controls/recipe, waveform, root audition,
+  Restore original, presets, undo/redo, source relocation and save/reopen without the source file.
+  Place two clips and notes using that channel; Time stretching from its clip menu and verify only that clip changes.
+  Test trim/reverse/held loops, slip offset, beat fit, starting inside a clip/fade, playback and WAV.
+* Enable Automatic crossfades on overlaps from an audio clip menu. Move two audio clips on the
+  same track into/out of overlap, inspect S fades and listen through the overlap, then undo/reopen.
+  Check independent recordings for perceived dips; the implemented law is complementary gain.
+  Nested/triple overlaps are intentionally skipped. Compare documented FL behavior separately.
+* Repeat native plugin recipe/preset recall standalone in another VST3 host and runtime checks
+  on Windows/Linux/Intel macOS. Requires the rebuilt bundles, relevant machines/host, audio hardware
+  and listening; local automated/macOS offscreen evidence is not live/platform certification.
+  See [design and bounds](../research/prepared-sampling.md).

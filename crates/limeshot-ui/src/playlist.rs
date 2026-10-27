@@ -2566,7 +2566,12 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
             }
             Some(Drag::FadeCurve { out, originals, grab_y }) => {
                 for clip in originals {
-                    let tension = (clip.fade_curve(*out) + (*grab_y - p.y) / 80.0).clamp(-1.0, 1.0);
+                    let tension = (if clip.fade_curve(*out) == 2.0 {
+                        0.0
+                    } else {
+                        clip.fade_curve(*out)
+                    } + (*grab_y - p.y) / 80.0)
+                        .clamp(-1.0, 1.0);
                     app.exec(Command::SetClipFadeCurve {
                         clip: clip.id,
                         out: *out,
@@ -2936,6 +2941,41 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                         });
                     }
                     close = true;
+                }
+                if clip.audio_channel().is_some() {
+                    if ui.button("Time stretching…").clicked() {
+                        crate::preparation::open(app, crate::preparation::Target::Clip(id));
+                        close = true;
+                    }
+                    let mut automatic = app
+                        .project()
+                        .extra
+                        .get("auto-crossfades-v1")
+                        .and_then(serde_json::Value::as_bool)
+                        == Some(true);
+                    if ui
+                        .checkbox(&mut automatic, "Automatic crossfades on overlaps")
+                        .changed()
+                    {
+                        app.exec(Command::SetAutoCrossfades(automatic));
+                    }
+                    let mut smooth = clip.fade_curve(false) == 2.0;
+                    if ui.checkbox(&mut smooth, "Smooth S fades").changed() {
+                        app.exec(Command::SetClipSmoothFade { clip: id, smooth });
+                    }
+                    if ui.button("Crossfade overlapping audio clips on this track").clicked() {
+                        let ids = app
+                            .project()
+                            .playlist
+                            .clips
+                            .iter()
+                            .filter(|c| c.track == clip.track)
+                            .map(|c| c.id)
+                            .collect();
+                        app.exec(Command::AutoCrossfadeClips(ids));
+                        app.toast("Crossfades applied to adjacent audio pairs; nested and triple overlaps are skipped");
+                        close = true;
+                    }
                 }
                 if ui.button("Duplicate").clicked() {
                     app.exec(Command::DuplicateClips(vec![id]));

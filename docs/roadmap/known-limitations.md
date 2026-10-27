@@ -60,7 +60,8 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   scattered concurrent offsets may underrun; the native editor reports missed frames. Live disk stress and
   platform checks remain open. See [implementation and FL research](../research/alpha1-sampler-and-fades.md).
 * Fades support independent single curves, with selected-clip length/tension gestures. Smooth S curves and
-  automatic crossfades remain open; the new native bundles are required for curved fade playback.
+  same-track pair crossfades and smooth S curves are available; nested/triple overlaps are skipped.
+  New native bundles are required for protocol-v3 smooth fade playback.
 * Opening a `.lime` file, a recovery copy or an `.flp` does not embed audio from outside the project folder
   (symlinks included): choose the source in the GUI, or pass `--allow-external-samples` to the CLI.
 * Plugins receive tempo at block boundaries; a tempo change inside a block reaches synced effects in the next block.
@@ -69,8 +70,8 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * Automation runs in Song mode. Effect automation from projects older than the Lime VST3 switch follows the plugin
   closely but not bit for bit (smoothing and interpolation); automation of the old compressor sidechain selector
   warns instead of converting.
-* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, time
-  stretching or multisampling. Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
+* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes or multisampling. Fixed-duration
+  Resample/Stretch preparation is available; realtime tempo following remains open. Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
   12 dB/oct and key tracking; its LFO restarts per voice; no mono/glide.
 * Each Lime instrument has 128 voices and steals the oldest abruptly. Third-party plugins without Lime telemetry
   contribute zero to the voice count.
@@ -102,7 +103,8 @@ The [sampler audit](../research/sampler-parity-audit.md) distinguishes documente
 Lime source findings, existing tests and unverified live behavior. Hosted P0 field migration does
 not imply complete FL Sampler parity.
 
-* No time stretching, source BPM lock/detection, formants, ping-pong/crossfaded loops, precomputed
+* Fixed-duration preparation supports 0.5–2×, ±12 st and 3 million embedded stereo frames; sources
+  below 20 ms resample. No source BPM lock/detection, realtime tempo following, formants, ping-pong/crossfaded loops, precomputed
   sample processing, extended declick modes, metadata-driven sampler setup or interpolation quality
   selection. Sampler has volume ADSR and one low-pass, without extended envelopes, sampler LFOs,
   filter selection/tracking, configurable polyphony/mono/porta or cross-channel cut groups.
@@ -130,7 +132,7 @@ not imply complete FL Sampler parity.
   loop Pattern playback.
 * Playlist: FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or
   Shift+click slicing, no zero-cross snapping). The ⏵ menu lacks Merge similar pattern clips, Merge automation clips,
-  audio clip pitch/reverse, crossfades, Consolidate, track groups, picker options and performance mode. Track modes,
+  Consolidate, track groups, picker options and performance mode. Track modes,
   grouping, icons, per-track heights, lock-to-content and consolidation are shown disabled. Cloning a track shares its
   clip sources; it does not clone instrument channels, plugins or mixer effects. Insert space uses Cmd+Insert, which
   most Mac keyboards lack (the menu works).
@@ -174,3 +176,12 @@ not imply complete FL Sampler parity.
 ## Research
 * Still unobserved in FL: in-clip automation point dragging, the Playlist's STEP/SLIDE automation options, and
   shortcuts marked INFERRED in [keybindings](keybindings.md).
+
+* [Prepared sampling](../research/prepared-sampling.md): WSOLA can repeat/smear transients and
+  modulate polyphonic material; music listening and live FL/standalone/cross-platform checks remain
+  unverified. Clip preparations create separate channels, reused for repeated private edits; removing clips
+  can leave unused channels for explicit Rack removal. Ordinary channel Pitch/keyboard transposition still resample prepared audio. No long disk
+  stretching; original, result and pitch intermediate each have a 3 million frame limit. Beat fitting
+  captures the current tempo once. Host embedded previews cap at 32 buffers/256 MiB and may be
+  unavailable when active voices pin that budget. Automatic crossfades use complementary gain, not
+  equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.

@@ -30,9 +30,11 @@ IMPLEMENTED to VERIFIED until the required evidence exists.
    lock-to-content and consolidation; Mixer groups, docking and multiselection; Channel Rack display options. Document
    FL's Browser top bar, context menus and floating View windows in `docs/research/` before implementing them.
 2. **Audio and automation.** Sampler host/native root, source, preset and undo synchronization (INS-021) is
-   implemented (live GUI A/B check in [human verification](human-verification.md)); next pursue
-   sampler/clip time stretching (INS-007, PL-023), crossfades and a larger automation editing
-   surface. Start with the [sampler parity audit and stretch scope](../research/sampler-parity-audit.md);
+   implemented (live GUI A/B check in [human verification](human-verification.md)); fixed-duration
+   sampler/clip preparation and same-track pair crossfades (INS-007, PL-023)
+   are implemented with bounds in [prepared sampling](../research/prepared-sampling.md); next pursue
+   listening/live verification, longer disk preparation, realtime tempo following and a larger
+   automation editing surface. Start with the [sampler parity audit](../research/sampler-parity-audit.md);
    keep source metadata paths, host duration/chase and FLP settings losses explicit rather than assuming
    hosted P0 field migration establishes FL Sampler parity.
 3. **Recording.** Latency compensation, punch/loop takes and per-track hardware I/O; sustained input-monitoring/drift and count-in alignment verification.

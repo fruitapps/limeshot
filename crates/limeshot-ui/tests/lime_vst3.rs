@@ -298,7 +298,7 @@ fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
     let wav = dir.path().join("ramp.wav");
     let samples: Vec<f32> = (0..48_000).flat_map(|i| [0.1 + i as f32 / 96_000.0; 2]).collect();
     limeshot_dsp::write_wav(&wav, SR, &samples, limeshot_dsp::BitDepth::Float32).unwrap();
-    for (in_curve, out_curve) in [(0.0, 0.0), (0.375, -0.625)] {
+    for (in_curve, out_curve) in [(0.0, 0.0), (0.375, -0.625), (2.0, 2.0)] {
         let mut doc = Document::default();
         doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
         let clip = ClipId(
@@ -335,6 +335,9 @@ fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
             tension: out_curve,
         })
         .unwrap();
+        if in_curve == 2.0 {
+            doc.execute(Command::SetClipSmoothFade { clip, smooth: true }).unwrap();
+        }
         let channel = doc.project().clip(clip).unwrap().audio_channel().unwrap();
         doc.execute(Command::SetChannelVolume { channel, volume: 1.0 }).unwrap();
         doc.execute(Command::SetMixerVolume { track: 1, volume: 1.0 }).unwrap();
@@ -1003,4 +1006,137 @@ fn hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo() {
     assert!(app.doc.undo());
     app.sync_engine();
     assert_eq!(app.project().channel(channel).unwrap().root_key, 64);
+}
+
+#[test]
+fn prepared_clips_crossfade_reopen_and_chase_at_every_block_size() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {
+        return;
+    }
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.))).unwrap();
+    let sampler = LimePlugin::SAMPLER.with_values(
+        &lime::sampler_values(
+            &SamplerParams {
+                start: 0.1,
+                end: 0.9,
+                reverse: true,
+                looping: true,
+                loop_start: 0.2,
+                loop_end: 0.8,
+                release_ms: 0.,
+                ..Default::default()
+            },
+            60,
+        ),
+        false,
+        Some(&EmbeddedAudio {
+            name: "constant stereo".into(),
+            sample_rate: 48000,
+            stereo: [0.2, -0.1].repeat(48000),
+        }),
+    );
+    let original = sampler.state.clone();
+    let prepared = limeshot_sequencer::preparation::prepare_sample(
+        &lime::sample_state(&sampler).unwrap(),
+        2.,
+        0.,
+        true,
+        &std::sync::atomic::AtomicBool::new(false),
+    )
+    .unwrap();
+    let state = lime::with_sample_state(&sampler, &prepared).unwrap();
+    let channel = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "Original".into(),
+            instrument: Instrument::Plugin(sampler),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    doc.execute(Command::SetChannelVolume { channel, volume: 1. }).unwrap();
+    let route = doc.project().channel(channel).unwrap().mixer_track;
+    doc.execute(Command::SetMixerVolume {
+        track: route,
+        volume: 1.,
+    })
+    .unwrap();
+    let mut clips = Vec::new();
+    for start in [0, 1920] {
+        let clip = ClipId(
+            doc.execute(Command::PlaceClip {
+                source: ClipSource::Audio(channel),
+                track: 0,
+                start,
+                length: 2880,
+                offset: 120,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        doc.execute(Command::PrepareAudioClip {
+            clip,
+            expected: original.clone(),
+            state: state.clone(),
+            length: None,
+        })
+        .unwrap();
+        clips.push(clip);
+    }
+    let Instrument::Plugin(unchanged) = &doc.project().channel(channel).unwrap().instrument else {
+        panic!()
+    };
+    assert_eq!(unchanged.state, original);
+    doc.execute(Command::AutoCrossfadeClips(clips.clone())).unwrap();
+    assert_eq!(doc.project().clip(clips[0]).unwrap().fade_out, 960);
+    assert_eq!(doc.project().clip(clips[1]).unwrap().fade_in, 960);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("crossfade.lime");
+    limeshot_project::save(doc.project(), &path).unwrap();
+    let project = limeshot_project::load(&path).unwrap();
+    assert_eq!(&project, doc.project());
+    assert!(doc.undo());
+    assert_eq!(doc.project().clip(clips[0]).unwrap().fade_out, 0);
+    assert!(doc.redo());
+    assert_eq!(&project, doc.project());
+    let snapshot = Arc::new(compile(
+        &project,
+        project.patterns[0].id,
+        &limeshot_sequencer::NoSamples,
+    ));
+    let render = |block, from| {
+        let host = PluginHost::new(None);
+        let (processors, _keep) = host.offline(&project, SR).unwrap();
+        render_offline_with(
+            snapshot.clone(),
+            &RenderSettings {
+                sample_rate: SR,
+                range: limeshot_engine::ExportRange::Selection { from, to: 4800 },
+                max_tail_secs: 0.,
+                block,
+            },
+            processors,
+        )
+        .unwrap()
+        .0
+    };
+    let baseline = render(64, 0);
+    for block in [1, 64, 333, 1024] {
+        assert_eq!(render(block, 0), baseline);
+        for tick in [100, 1920, 2000, 2400, 2879, 3000, 4700] {
+            let sample = tick * 25;
+            assert!(
+                (baseline[sample * 2] - 0.2).abs() < 1e-5,
+                "tick {tick}: {}",
+                baseline[sample * 2]
+            );
+            assert!((baseline[sample * 2 + 1] + 0.1).abs() < 1e-5);
+        }
+        let chased = render(block, 2400);
+        for i in [0, 1, 100, 1000, 11999, 20000] {
+            assert!((chased[i] - baseline[2400 * 25 * 2 + i]).abs() < 1e-5);
+        }
+    }
 }

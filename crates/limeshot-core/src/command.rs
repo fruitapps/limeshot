@@ -372,6 +372,19 @@ pub enum Command {
     },
     /// Give the clip its own copy of its pattern.
     MakeClipUnique(ClipId),
+    /// Replace only this audio clip with a private copy of its sampler channel.
+    PrepareAudioClip {
+        clip: ClipId,
+        expected: crate::plugin::PluginState,
+        state: crate::plugin::PluginState,
+        length: Option<Tick>,
+    },
+    AutoCrossfadeClips(Vec<ClipId>),
+    SetAutoCrossfades(bool),
+    SetClipSmoothFade {
+        clip: ClipId,
+        smooth: bool,
+    },
     SetClipMuted {
         clip: ClipId,
         muted: bool,
@@ -768,6 +781,10 @@ impl Command {
             SliceClips { .. } => "Slice clips",
             DuplicateClipsBy { .. } | DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
+            PrepareAudioClip { .. } => "Prepare audio clip",
+            AutoCrossfadeClips(_) => "Crossfade audio clips",
+            SetAutoCrossfades(_) => "Automatic crossfades",
+            SetClipSmoothFade { .. } => "Smooth clip fades",
             SetClipMuted { .. } => "Mute clip",
             SetClipFades { .. } | SetClipFadeCurve { .. } => "Clip fade",
             InsertSpace { .. } => "Insert space",
@@ -1547,6 +1564,77 @@ impl Command {
                 length,
                 offset,
             } => return place_clip(p, source, track, start, length, offset),
+            PrepareAudioClip {
+                clip,
+                expected,
+                state,
+                length,
+            } => {
+                if state.len() > crate::plugin::MAX_STATE_BYTES {
+                    return Err(CommandError::Invalid("Plugin state exceeds limit".into()));
+                }
+                let source = p
+                    .clip(clip)
+                    .ok_or(CommandError::NoClip(clip))?
+                    .audio_channel()
+                    .ok_or_else(|| CommandError::Invalid("Select an audio clip".into()))?;
+                let mut channel = p.channel(source).cloned().ok_or(CommandError::NoChannel(source))?;
+                let Instrument::Plugin(plugin) = &mut channel.instrument else {
+                    return Err(CommandError::Invalid("Requires Lime Sampler".into()));
+                };
+                if crate::lime::LimePlugin::of(plugin) != Some(crate::lime::LimePlugin::SAMPLER)
+                    || plugin.state != expected
+                {
+                    return Err(CommandError::Invalid("Sampler changed while preparing; retry".into()));
+                }
+                plugin.state = state;
+                crate::lime::sync_sampler_metadata(&mut channel, None);
+                let private = channel
+                    .extra
+                    .get("prepared-clip-owner-v1")
+                    .and_then(serde_json::Value::as_u64)
+                    == Some(u64::from(clip.0))
+                    && p.playlist
+                        .clips
+                        .iter()
+                        .filter(|c| c.audio_channel() == Some(source))
+                        .count()
+                        == 1
+                    && p.patterns
+                        .iter()
+                        .all(|pattern| pattern.notes.iter().all(|note| note.channel != source));
+                if !private {
+                    channel.id = ChannelId(p.alloc_id());
+                    channel.name = format!("{} (prepared)", channel.name);
+                }
+                channel
+                    .extra
+                    .insert("prepared-clip-owner-v1".into(), serde_json::json!(clip.0));
+                let id = channel.id;
+                if private {
+                    *p.channel_mut(id).ok_or(CommandError::NoChannel(id))? = channel;
+                } else {
+                    p.channels.push(channel);
+                }
+                let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
+                c.source = ClipSource::Audio(id);
+                if let Some(length) = length {
+                    c.length = length.max(1);
+                }
+                return Ok(Created(Some(id.0)));
+            }
+            SetClipSmoothFade { clip, smooth } => {
+                let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
+                if c.audio_channel().is_some() {
+                    c.extra.insert("fade-smooth-v1".into(), serde_json::json!(smooth));
+                }
+            }
+            SetAutoCrossfades(enabled) => {
+                p.extra.insert("auto-crossfades-v1".into(), serde_json::json!(enabled));
+            }
+            AutoCrossfadeClips(ids) => {
+                apply_crossfades(p, &ids, false);
+            }
             SetClipFadeCurve { clip, out, tension } => {
                 let c = p.clip_mut(clip).ok_or(CommandError::NoClip(clip))?;
                 if c.audio_channel().is_some() {
@@ -1555,6 +1643,7 @@ impl Command {
                     } else {
                         0.0
                     };
+                    c.extra.remove("fade-smooth-v1");
                     c.extra.insert(
                         if out { "fade-out-curve" } else { "fade-in-curve" }.into(),
                         serde_json::json!(tension),
@@ -2310,4 +2399,80 @@ fn clone_pattern(p: &mut Project, i: usize) -> PatternId {
     }
     p.patterns.insert(i + 1, pat);
     new_id
+}
+
+/// Restore the manual fades before recalculating automatic overlap envelopes.
+pub(crate) fn clear_auto_crossfades(project: &mut Project) {
+    for c in &mut project.playlist.clips {
+        if let Some(saved) = c.extra.remove("auto-crossfade-base-v1")
+            && let Ok((fade_in, fade_out, smooth)) =
+                serde_json::from_value::<(Tick, Tick, Option<serde_json::Value>)>(saved)
+        {
+            c.fade_in = fade_in;
+            c.fade_out = fade_out;
+            if let Some(smooth) = smooth {
+                c.extra.insert("fade-smooth-v1".into(), smooth);
+            } else {
+                c.extra.remove("fade-smooth-v1");
+            }
+        }
+    }
+}
+pub(crate) fn apply_crossfades(p: &mut Project, ids: &[ClipId], remember: bool) {
+    let ids: std::collections::HashSet<_> = ids.iter().copied().collect();
+    let indices: std::collections::HashMap<_, _> =
+        p.playlist.clips.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+    let mut clips: Vec<_> = p
+        .playlist
+        .clips
+        .iter()
+        .filter(|c| ids.contains(&c.id) && c.audio_channel().is_some() && !c.muted)
+        .cloned()
+        .collect();
+    clips.sort_by_key(|c| (c.track, c.start, c.id));
+    let mut prefix = Vec::with_capacity(clips.len());
+    let mut end = 0;
+    let mut track = None;
+    for c in &clips {
+        if track != Some(c.track) {
+            end = 0;
+            track = Some(c.track);
+        }
+        end = end.max(c.end());
+        prefix.push(end);
+    }
+    for (i, pair) in clips.windows(2).enumerate() {
+        let (a, b) = (&pair[0], &pair[1]);
+        if a.track != b.track || a.start >= b.start || a.end() <= b.start || a.end() >= b.end() {
+            continue;
+        }
+        let third_before = i > 0 && clips[i - 1].track == a.track && prefix[i - 1] > b.start;
+        let third_after = clips
+            .get(i + 2)
+            .is_some_and(|c| c.track == a.track && c.start < a.end());
+        if third_before || third_after {
+            continue;
+        }
+        let overlap = a.end() - b.start;
+        for (id, out) in [(a.id, true), (b.id, false)] {
+            let Some(&index) = indices.get(&id) else { continue };
+            let Some(c) = p.playlist.clips.get_mut(index) else {
+                continue;
+            };
+            if remember && !c.extra.contains_key("auto-crossfade-base-v1") {
+                c.extra.insert(
+                    "auto-crossfade-base-v1".into(),
+                    serde_json::json!([c.fade_in, c.fade_out, c.extra.get("fade-smooth-v1")]),
+                );
+            }
+            if out {
+                c.fade_in = c.fade_in.min(c.length - overlap);
+                c.fade_out = overlap;
+            } else {
+                c.fade_out = c.fade_out.min(c.length - overlap);
+                c.fade_in = overlap;
+            }
+            c.extra.insert("fade-smooth-v1".into(), serde_json::json!(true));
+        }
+    }
 }

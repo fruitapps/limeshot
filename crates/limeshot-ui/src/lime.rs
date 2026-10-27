@@ -157,10 +157,12 @@ pub fn cache_embedded_sample(
             if v.is_finite() { v } else { 0.0 }
         })
         .collect();
-    cache.insert_embedded(
+    if !cache.insert_embedded(
         path.clone(),
         std::sync::Arc::new(limeshot_dsp::SampleData::from_stereo(rate, data)),
-    );
+    ) {
+        return None;
+    }
     Some(path)
 }
 

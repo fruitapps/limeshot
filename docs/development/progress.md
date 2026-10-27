@@ -491,3 +491,72 @@ Live GUI A/B verification with FL Studio and native editor interaction remains i
 
 Work remains on `codex/mp3-export-sampler-audit` in the primary checkout (`~/Developer/limeshot`),
 reusing Cargo caches without routine worktrees/clones, direct main pushes or automatic merges.
+
+## 2026-10-27 — Prepared sampling, arrangement crossfades and UI consistency
+
+Implemented the fixed-duration sampling/arrangement workflow on
+`codex/prepared-sampling-arrangement`. [Design, comparison and limits](../research/prepared-sampling.md).
+Compared pinned independent Rust `wsola` 0.1.0 and `timestretch` 0.15.0 against synthetic
+stereo tones, impulses, percussion and polyphonic fixtures before integration. Their source,
+licenses, allocation, reset/flush and output-length behavior were inspected. Neither became
+a product dependency: their length/priming and DJ low-bass semantics respectively do not
+fit the uniform sampler contract. An independent bounded, stereo-linked Rust WSOLA path
+with worker-only sinc resampling supplies exact-length preparation. Numeric evidence is
+not listening-quality certification; reproducible comparison tooling and its pinned lockfile
+are under `tools/stretch-eval`.
+
+Host/native Time stretching controls offer Resample / Stretch, duration multiplier and
+independent prepared pitch; the host also fits beats at the current tempo. Originals and
+recipe remain in versioned portable state, reprepare starts from the original, and Restore
+original works without its source file. Existing parameter IDs/defaults and old-song
+resampling behavior remain. Clip preparation gives only the selected clip a separate sampler
+channel, preserving shared notes/clips, controls, root and routing. Trim/loops use normalized
+prepared positions; reverse, output-time slip/chase, duration, waveform, audition, fit and export
+share the prepared result. Workers cancel/discard stale jobs. Embedded source/result/intermediate
+and state limits, bounded preview/weak PCM caches and control-thread retirement preserve the
+render-thread contract. Long disk preparation and realtime tempo following remain open.
+
+Arrangement adds saved cubic smoothstep fades and automatic adjacent two-clip, same-track
+crossfades. A persisted toggle recalculates overlaps in the edit's undo step; moving clips
+apart restores manual base fades. Nested, coincident-start, muted and triple overlaps are
+skipped. Clip protocol v3 retains v1/v2 semantics and the 96-byte bounded event size.
+
+At the owner's request, reviewed UI consistency and replaced the initial ad-hoc layout:
+the host now reuses the centered dialog helper, aligned two-column grid, secondary typography,
+units and primary action style. Native controls sit in a sampler panel with existing flat
+buttons/accent; Keep on disk is beside source information. Mode labels are Resample / Stretch,
+invalid prerequisites have actionable guidance, and Restore original is disabled until useful.
+[Host dialog](../screenshots/current/sampler-time-stretch.png) and
+[native sampler](../screenshots/current/native/lime-sampler.png) were rendered and visually
+inspected after the review. No live GUI/listening result is inferred from these PNGs.
+
+Local evidence on macOS 26.6.2 arm64:
+
+* Full workspace suite: **479 passed**, including 163 app UI and 12 hosted-native tests.
+  The first sandboxed pass hit the existing bridge listener restriction; the permitted
+  local-socket run passes. After the UI polish, the three preparation/arrangement worker
+  tests were rerun successfully.
+* Native workspace suite: **23 passed**, including shared immutable prepared PCM,
+  native persistence, reverse/trim/loops/seek and callback allocation assertions.
+* Hosted prepared/crossfaded clips save/reopen/undo, sum to the expected stereo gain and
+  chase inside overlaps identically at blocks 1/64/333/1024. Existing linear/tension fade
+  coverage also exercises smooth v3. An early run against an outdated native bundle failed;
+  the rebuilt-bundle run passes.
+* DSP duration/pitch tests pass at 0.5/1/2× and −12/0/+12 st for 13 source rates from
+  8–384 kHz; invalid/extreme ratios, cancellation, identity, tiny and silent input are covered.
+  Portable recipe tests prove reprepare uses the original and refuses implicit disk reads.
+* All twelve release bundles were built, then final debug bundles rebuilt with allocation
+  assertions. Exported-binary verification passed every bundle at 44.1/48/96 kHz ×
+  1/64/333/1024, covering load, native editor creation, MIDI offsets, automation and state.
+* Workspace build, strict workspace/native Clippy, both workspace formatting checks,
+  feature inventories, local links/evidence and whitespace checks pass.
+
+INS-007 / PL-023 retain IN_PROGRESS for remaining parity/verification work. Listening on
+real music, FL A/B, standalone recall and physical/cross-platform runtime checks are queued
+in [human verification](human-verification.md). Generic VST3 state/preset/parameter/editor
+paths remain; preparation helpers require explicit Lime Sampler identity. Pre-existing
+hosting gaps from the sanitation report were not promoted or broadened into this change.
+
+Work uses the existing primary checkout `/Users/sebastian/Developer/limeshot` and its Cargo
+caches. Continue there without routine worktrees/clones; push only the feature branch and
+its PR, never main, and do not merge automatically.

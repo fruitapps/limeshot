@@ -195,6 +195,7 @@ pub struct LimeShotApp {
     pub midi: Option<limeshot_audio::midi::MidiIn>,
     pub midi_notes: Vec<(u8, ChannelId)>,
     midi_opened: bool,
+    pub preparation: crate::preparation::State,
     pub sampler_preview: Option<(ChannelId, std::time::Instant, f64)>,
 }
 
@@ -317,6 +318,7 @@ impl LimeShotApp {
             presets_dir: None,
             auditions: Vec::new(),
             sampler_preview: None,
+            preparation: Default::default(),
             keyboard_notes: false,
             typing_notes: Vec::new(),
             midi: None,
@@ -637,6 +639,12 @@ impl LimeShotApp {
             .get(&channel)
             .map(|(_, path)| path.clone())
             .or_else(|| {
+                // Never display/audition an unprepared file when the bounded preview cache is full.
+                if let limeshot_core::Instrument::Plugin(p) = &self.project().channel(channel)?.instrument
+                    && limeshot_core::lime::sample_state(p).is_some_and(|text| text.contains("preparation-v1"))
+                {
+                    return None;
+                }
                 let sampler = limeshot_core::lime::sampler_params(&self.project().channel(channel)?.instrument)?;
                 Some(self.samples.resolve(&sampler.sample?.path))
             })
@@ -1163,6 +1171,7 @@ impl LimeShotApp {
         crate::browser::poll_preview(self, ctx);
         crate::autosave::tick(self);
         dialogs::poll_export(self);
+        crate::preparation::poll(self);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.allow_close && self.doc.is_modified() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -1292,6 +1301,7 @@ impl LimeShotApp {
         crate::settings_window::show(self, &ctx);
         crate::toolbar::tapper(self, &ctx);
         dialogs::show(self, &ctx);
+        crate::preparation::show(self, &ctx);
         dialogs::toasts(self, &ctx);
         crate::browser::drag_preview(self, &ctx);
     }

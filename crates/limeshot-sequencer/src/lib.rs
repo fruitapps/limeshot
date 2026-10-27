@@ -17,6 +17,8 @@
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod preparation;
+
 use limeshot_core::automation::{AutomationPoint, curve_value};
 use limeshot_core::{
     AutomationTarget, ClipSource, Instrument, Mapping, PPQ, PatternId, PluginTarget, Project, STEP_TICKS, Tempo, Tick,

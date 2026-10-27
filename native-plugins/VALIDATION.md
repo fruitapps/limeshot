@@ -59,3 +59,11 @@ the host wrapper aligned and its origin stable. Headless native tests include di
 PCM parity across four block sizes and seeks, with realtime allocation assertions. The DAW hosted suite adds
 curved-fade/chase parity and disk-backed offline seeks. nice-plug's VST3 activation-mode setup is patched locally
 (see vendor/nice-plug/LIMESHOT-PATCH.md). These checks do not establish Windows/Linux runtime verification.
+
+## Prepared sampling and smooth fades, 2026-10-27
+
+macOS 26.6.2 arm64: native suite 23 passed; exported-binary verification passes all twelve
+bundles at the three rates/four block sizes above. Prepared PCM sharing, persistence,
+reverse/trim/loop/seek and allocation assertions are covered. The sampler's updated Time
+stretching panel was rendered and visually inspected; live interaction/listening and other
+hosts/platforms remain open. See [prepared sampling](../docs/research/prepared-sampling.md).

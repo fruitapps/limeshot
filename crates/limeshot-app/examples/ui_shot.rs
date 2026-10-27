@@ -248,6 +248,17 @@ fn main() {
         // Without multi-viewport support the detached window renders embedded; this checks it draws.
         app.ui.workspace.state_mut(Win::ChannelRack).detached = true;
     }
+    if args.iter().any(|a| a == "--prepare")
+        && let Some(c) = app
+            .project()
+            .playlist
+            .clips
+            .iter()
+            .find(|c| c.audio_channel().is_some())
+            .map(|c| c.id)
+    {
+        limeshot_ui::preparation::open(&mut app, limeshot_ui::preparation::Target::Clip(c));
+    }
     if let Some(dialog) = args.iter().find_map(|a| a.strip_prefix("--dialog=")) {
         use limeshot_ui::dialogs::Dialog;
         app.dialog = match dialog {
