@@ -129,6 +129,8 @@ impl NativeEditor {
         self.scope(ui.painter(), c, c.r(536.0, 453.0, 210.0, 86.0), t.accent, t);
         self.meters(ui.painter(), c, c.r(758.0, 446.0, 65.0, 105.0), t);
     }
+    /// Draw sampler controls, waveform handles, and the audition keyboard. File actions
+    /// can open a dialog, request asynchronous loading, or clear the sample through the host.
     fn sampler(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
         use nice_plug::params::persist::PersistentField;
         let (source, mut disk) = self
@@ -202,6 +204,16 @@ impl NativeEditor {
         self.lamp(ui, c, c.r(12.0, 484.0, 96.0, 25.0), 13, "Loop", t);
         self.slider(ui, c, c.r(112.0, 480.0, 316.0, 34.0), 14, "Loop start", t);
         self.slider(ui, c, c.r(432.0, 480.0, 316.0, 34.0), 15, "Loop end", t);
+        self.lamp(ui, c, c.r(12.0, 516.0, 170.0, 25.0), 16, "Ping-pong loop", t);
+        self.choices(
+            ui,
+            c,
+            c.r(200.0, 516.0, 548.0, 25.0),
+            17,
+            &["Low-pass", "Band-pass", "High-pass"],
+            t.accent,
+            t,
+        );
         let info = if let Some(sample) = &self.sample {
             format!(
                 "{:.2} seconds  ·  {} Hz  ·  Stereo",
@@ -212,21 +224,21 @@ impl NativeEditor {
             "Sample player  ·  Drag a file onto the waveform".into()
         };
         ui.painter().text(
-            c.p(24.0, 523.0),
+            c.p(24.0, 552.0),
             Align2::LEFT_CENTER,
             info,
             FontId::monospace(10.0 * c.s),
             t.dim,
         );
-        self.slider(ui, c, c.r(12.0, 533.0, 367.0, 32.0), 7, "Root key", t);
+        self.slider(ui, c, c.r(12.0, 566.0, 367.0, 32.0), 7, "Root key", t);
         ui.painter().text(
-            c.p(736.0, 549.0),
+            c.p(736.0, 582.0),
             Align2::RIGHT_CENTER,
             "CLICK: AUDITION    RIGHT-CLICK: ROOT",
             FontId::monospace(9.0 * c.s),
             t.dim,
         );
-        self.keyboard(ui, c, c.r(12.0, 575.0, 736.0, 48.0), t);
+        self.keyboard(ui, c, c.r(12.0, 610.0, 736.0, 48.0), t);
     }
     fn utility(&mut self, ui: &mut Ui, c: Canvas, t: &Theme) {
         panel(ui.painter(), c.r(10.0, 54.0, 500.0, 210.0), "STEREO UTILITY", t, c.s);

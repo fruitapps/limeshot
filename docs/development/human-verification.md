@@ -82,3 +82,17 @@ arrangement clone/switch/merge/delete/save/reopen. Listen to resample resize and
 it changes pitch and shared sampler state. Compare FL behavior separately. Repeat on Windows/Linux.
 See [implementation and limits](../research/alpha1-rev1.md). Native Windows editor sluggishness requires
 a Windows host and remains implementation investigation in next steps, not resolved by macOS tests.
+
+
+## Sampler loops and filters (2026-10-27)
+
+FL 26.1.1 build 5313 Sample and Envelope/Instrument control presence was observed with the owner
+opening the pages. Pointer automation still returned `noWindowsAvailable`; screenshots and keyboard
+input worked. The filter popup was closed in the captured view; no FL audio parity is claimed.
+With rebuilt debug bundles, use a disposable project and generated ramp/tone samples to compare
+forward/reverse/ping-pong endpoint turns and fractional endpoints, Shift-drag pair bounds, note-off,
+filter outputs and held edits. In Lime check native loop drags, host undo, preset/load/reopen, disk
+sources and standalone sampler hosting in FL. Repeat Windows/Linux. Prerequisites: both applications,
+GUI observation/input permissions and an audible output/headphones. See
+[control inventory](../research/sampler-controls-2026-10-27.md); recording a control's presence does
+not verify its sound or complete the sampler feature.

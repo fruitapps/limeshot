@@ -8,7 +8,7 @@ FL keys use Windows notation (Ctrl = Cmd on macOS). confidence: VERIFIED = in th
 **DIFFERENT** = LimeShot has the action on another key or with other behaviour; **LIMESHOT_ONLY** = no FL
 equivalent. Every binding LimeShot has is checked against the Help › Keyboard shortcuts list.
 
-Tracked: **144** — IMPLEMENTED 112, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 19, NOT_PLANNED 3
+Tracked: **145** — IMPLEMENTED 113, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 19, NOT_PLANNED 3
 
 ## Global
 
@@ -193,3 +193,9 @@ Tracked: **144** — IMPLEMENTED 112, DIFFERENT 8, LIMESHOT_ONLY 2, NOT_STARTED 
 | ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
 |---|---|---|---|---|---|---|---|
 | KB-094 | Zoom vertically | `Alt+Mouse wheel` | INFERRED | `Opt+wheel / Opt+pinch` | IMPLEMENTED | PR-005 | Session 9 (owner's hands-on test: no vertical zoom). Not checked live in FL this session; test alt_wheel_zooms_vertically. |
+
+## Lime Sampler
+
+| ID | Action | FL Studio | Conf. | LimeShot | Status | Feature | Notes |
+|---|---|---|---|---|---|---|---|
+| KB-145 | Move both waveform loop endpoints | `Shift+drag` | INFERRED | `Shift+drag` | IMPLEMENTED | INS-007 | Official Sampler manual describes Shift moving both loop endpoints; gesture bounds/routing are tested, live FL comparison remains open. |

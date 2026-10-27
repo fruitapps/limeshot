@@ -3676,7 +3676,7 @@
       "name": "Sampler loop points, time stretch, filter",
       "description": "Advanced sampler.",
       "fl_reference": "Loop points, stretch modes, CUT/RES.",
-      "limeshot_behavior": "Channel Settings › Loop: Loop while held repeats loop start…end (shaded on the waveform) for as long as the note lasts, also on one-shot samplers; reversed samples loop backwards. Filter: a resonant low-pass (cutoff, resonance) per voice. Not yet: time stretching, ping-pong loops, crossfaded loop points.",
+      "limeshot_behavior": "Held forward, reverse and ping-pong loops use numeric endpoints and dedicated native waveform handles; Shift-drag moves both endpoints. Independent TPT low-pass, band-pass and high-pass outputs have cutoff/resonance controls. Native parameter IDs/defaults remain backward compatible. Pitch-preserving stretching and crossfaded loop seams remain open.",
       "priority": "P1",
       "status": "IN_PROGRESS",
       "mvp": false,
@@ -3685,14 +3685,20 @@
         "limeshot-core",
         "limeshot-sequencer",
         "limeshot-engine",
-        "limeshot-ui"
+        "limeshot-ui",
+        "limeshot-dsp"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "limeshot-engine tests/audio.rs::sampler_loops_and_filters"
+        "limeshot-engine tests/audio.rs::sampler_loops_and_filters",
+        "limeshot-dsp voice::sampler_loop_tests::ping_pong_turns_without_duplicate_endpoints_and_survives_parameter_polling",
+        "limeshot-dsp voice::sampler_loop_tests::loop_seek_matches_rendering_and_extreme_steps_stay_bounded",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_ping_pong_and_filter_modes_match_reference_across_rates_and_blocks",
+        "native-plugins/shared/src/processor.rs::tests::ping_pong_disk_and_memory_match_without_realtime_allocation",
+        "native-plugins/shared/src/editor.rs::loop_gesture_tests::waveform_loop_handles_latch_shift_and_do_not_audition"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3700,10 +3706,11 @@
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_sampler.htm",
           "Plugins/Fruity/Generators listing (rea-findings.md)",
-          "docs/research/sampler-parity-audit.md"
+          "docs/research/sampler-parity-audit.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
+      "notes": "Session 16. FL's sampler (Channel Settings › Sample) also has crossfade, ping-pong and time stretch; those are not in. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. 2026-10-27 loop/filter continuation: fresh owner-assisted Sample and Envelope/Instrument UI observation; exact FL loop endpoint conventions and audio A/B remain unverified. See sampler-controls-2026-10-27.md."
     },
     {
       "id": "INS-008",
@@ -7667,7 +7674,8 @@
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/chansettings_ins.htm",
-          "docs/research/sampler-parity-audit.md"
+          "docs/research/sampler-parity-audit.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
       "notes": "Session 16. FL's sampler envelope also has delay and hold stages and envelopes for cutoff, resonance and pitch, plus LFOs (including pan); those are not in. Settings are sanitized on load; missing fields preserve older projects. Audio tested at block sizes 1, 64, 333 and 1024. 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence."
@@ -9022,10 +9030,11 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/decisions.md"
+          "docs/development/decisions.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. Loop enable/range edits update held voices without retriggering."
+      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. Loop enable/range edits update held voices without retriggering. 2026-10-27: ping-pong and filter type append sampler controls 16/17. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
     },
     {
       "id": "PLG-016",
@@ -9056,10 +9065,11 @@
         "application": "Owner requirement",
         "version": "2026-10-22",
         "evidence": [
-          "docs/development/decisions.md"
+          "docs/development/decisions.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW."
+      "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. 2026-10-27: ping-pong and filter type append sampler controls 16/17. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
     },
     {
       "id": "PLG-017",
@@ -9629,7 +9639,8 @@
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "docs/research/sampler-parity-audit.md"
+          "docs/research/sampler-parity-audit.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
       "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
@@ -9667,26 +9678,35 @@
       "name": "Sampler modulation and expanded envelopes",
       "description": "Delay/hold/tension, tempo envelopes, sampler LFOs and filter/tracking choices.",
       "fl_reference": "Delay/hold/tension, tempo envelopes, sampler LFOs and filter/tracking choices.",
-      "limeshot_behavior": "Sampler has volume ADSR and one resonant low-pass. No extended envelopes, sampler LFOs, other filter types or key/velocity modulation.",
+      "limeshot_behavior": "Volume ADSR and independent TPT low-pass, band-pass and high-pass filter outputs. Filter type appends a stable native parameter and works during held notes. Expanded envelopes, LFOs, additional FL filter families and key/velocity tracking remain open.",
       "priority": "P2",
-      "status": "RESEARCHED",
+      "status": "IN_PROGRESS",
       "mvp": false,
       "dependencies": [
         "INS-014"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-dsp",
+        "limeshot-ui",
+        "limeshot-plugins"
+      ],
       "acceptance_criteria": [
         "Sampler state and automation expose the implemented destinations with stable parameter IDs; old projects preserve their sound."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp voice::sampler_loop_tests::sampler_high_pass_is_active_and_removes_low_frequency_content",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_ping_pong_and_filter_modes_match_reference_across_rates_and_blocks"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
-          "docs/research/sampler-parity-audit.md"
+          "docs/research/sampler-parity-audit.md",
+          "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified. 2026-10-27: filter outputs implemented; no claim of FL-specific filter algorithms or full modulation parity."
     },
     {
       "id": "INS-021",

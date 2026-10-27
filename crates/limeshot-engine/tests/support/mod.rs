@@ -69,7 +69,13 @@ pub fn compile(project: &Project, pattern: PatternId, samples: &dyn SampleLookup
                         let (a, b) = (p.loop_start.clamp(0.0, 1.0), p.loop_end.clamp(0.0, 1.0));
                         (a.min(b), a.max(b))
                     }),
-                    filter: (p.cutoff_hz < 19_999.0 || p.resonance > 0.0)
+                    ping_pong: p.ping_pong,
+                    filter_mode: match p.filter_mode {
+                        FilterMode::LowPass => limeshot_dsp::filter::Mode::LowPass,
+                        FilterMode::BandPass => limeshot_dsp::filter::Mode::BandPass,
+                        FilterMode::HighPass => limeshot_dsp::filter::Mode::HighPass,
+                    },
+                    filter: (p.cutoff_hz < 19_999.0 || p.resonance > 0.0 || p.filter_mode != FilterMode::LowPass)
                         .then(|| (p.cutoff_hz.clamp(20.0, 20_000.0), p.resonance.clamp(0.0, 0.95))),
                 },
                 Instrument::Synth(p) => VoiceInstrument::Synth {
