@@ -6,6 +6,9 @@ verification are separate open work. No FL code, assets, or C++ DSP are used.
 
 ## Candidate gate
 
+**VERIFIED (source):** the package inspection below records the pinned sources.
+**OBSERVED (local runs):** numeric results describe the recorded synthetic fixtures only.
+
 Source packages inspected before integration: `wsola` 0.1.0 and `timestretch` 0.15.0,
 with their normalized Cargo manifests and implementation sources. Both declare MIT;
 `timestretch` includes its license text, while the published `wsola` package does not
@@ -44,14 +47,15 @@ are from macOS arm64 release builds; timing is fixture-specific, not a benchmark
 References: [WSOLA paper](https://www.isca-archive.org/eurospeech_1993/roelands93_eurospeech.html),
 [wsola API/source](https://docs.rs/wsola/0.1.0/wsola/),
 [timestretch source](https://docs.rs/crate/timestretch/0.15.0/source/src/engine/offline.rs).
-Numeric tone, RMS and polarity results do **not** establish listening quality. WSOLA
-can repeat/smear transients and produce modulation on polyphonic material. No formant
+**UNKNOWN (listening quality and FL equivalence):** numeric tone, RMS and polarity results
+do **not** establish listening quality. WSOLA can repeat/smear transients and produce modulation on polyphonic material. No formant
 preservation, transient markers, source BPM detection, or realtime tempo locking is claimed.
 
 ## Ownership and portable state
 
-The host Channel Settings dialog changes all uses of that channel. Playlist's Prepare
-this clip action instead clones the channel, including root, controls and mixer route,
+**VERIFIED (implementation/tests):** the host Channel Settings dialog changes all uses of
+that channel. Playlist's **Time stretching…** action instead clones the channel, including
+root, controls and mixer route,
 then assigns only the chosen clip to it in one undoable command. Other clips and pattern
 notes keep their original channel. The generated channel remains editable in the Rack.
 Repeated preparation reuses a private channel while no other clips or notes use it, including clips in inactive arrangements. Removing
@@ -70,6 +74,9 @@ portable field. Control-only sampler presets retain the audio/recipe, as before.
 
 ## Coordinates, fitting and arrangement
 
+**VERIFIED (implementation/tests):** these are LimeShot semantics.
+**UNKNOWN:** exact FL DSP, endpoint conventions and listening equivalence.
+
 Trim and loop endpoints are fractions of the buffer: an original frame at fraction `u`
 maps to prepared fraction `u`, with rounding at the playback boundary. Reverse traverses
 the prepared region backwards. This is a proportional coordinate mapping, not a claim of
@@ -86,11 +93,15 @@ Native clip protocol v3 adds the smooth sentinel without changing the 96-byte en
 v1 linear and v2 tension messages retain their meaning. New native bundles are required.
 Playlist can calculate paired crossfades on request, or persist Automatic crossfades on
 overlaps. With the latter enabled, document edits recalculate same-track, two-clip overlaps
-in the same undo step; moving clips apart restores their manual base fades. Nested,
+in the same undo step; moving clips apart restores their manual base fades. The Smooth S fades
+checkbox is disabled for active automatic pairs with guidance to turn off automatic crossfades
+before editing their curve. Nonoverlapping clips remain editable. Nested,
 coincident-start, muted and triple overlaps are skipped. This is a complementary gain
 crossfade, not an equal-power law; unrelated material can dip in perceived loudness.
 
 ## Bounds and lifetime
+
+**VERIFIED (source/tests):** the resource bounds and ownership below are enforced locally.
 
 Each preparation admits 2–3,000,000 finite stereo frames at 8–384 kHz, duration 0.5–2×
 and pitch ±12 st. Original, result and pitch intermediate must each meet the frame bound;
@@ -107,9 +118,12 @@ prepared output only replaces state after success. Threads end and release their
 on success/error/cancel. No prepared cache files or orphan temporary audio files are created.
 Native PCM caches share equal buffers via at most 32 weak entries; SampleStore/retirement
 queues retain strong ownership until control-thread collection. Host embedded previews
-are capped at 32 buffers / 256 MiB, evicting only unused buffers on the control thread;
-when active previews pin the entire budget a further preview is unavailable. The existing
-nonembedded/disk loader cache has its prior lifetime policy. No DSP preparation, locks,
+are capped at 4096 buffers / 256 MiB. Published channel source mappings retain their PCM;
+source changes/removals release these pins before new previews are decoded. Only unused
+buffers are evicted on the control thread. Projects with more than 32 small sources retain
+their waveforms/auditions. When mapped sources or active voices pin the entire budget a
+further preview is unavailable; embedded states never fall back to their external reload hints.
+The existing nonembedded/disk loader cache has its prior lifetime policy. No DSP preparation, locks,
 file access or large frees were added to process/render.
 
 ## Evidence and remaining checks
@@ -123,6 +137,8 @@ in [human verification](../development/human-verification.md). These checks requ
 and the relevant host/machine; headless rendering does not substitute for them.
 
 ## UI consistency review
+
+**OBSERVED (rendered PNGs):** layout review only; live GUI behavior remains unverified.
 
 The host uses the same centered fixed dialog helper, strong title, two-column grid,
 small secondary text, numeric units and primary action styling as Export audio. Host and

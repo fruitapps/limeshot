@@ -4034,8 +4034,15 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                     {
                         app.exec(Command::SetAutoCrossfades(automatic));
                     }
-                    let mut smooth = clip.fade_curve(false) == 2.0;
-                    if ui.checkbox(&mut smooth, "Smooth S fades").changed() {
+                    // The automatic toggle can change this clip's fades during this frame.
+                    let current = app.project().clip(id).unwrap_or(&clip);
+                    let paired = current.extra.contains_key("auto-crossfade-base-v1");
+                    let mut smooth = current.fade_curve(false) == 2.0;
+                    if ui
+                        .add_enabled(!paired, egui::Checkbox::new(&mut smooth, "Smooth S fades"))
+                        .on_disabled_hover_text("Turn off Automatic crossfades on overlaps to edit this curve")
+                        .changed()
+                    {
                         app.exec(Command::SetClipSmoothFade { clip: id, smooth });
                     }
                     if ui.button("Crossfade overlapping audio clips on this track").clicked() {

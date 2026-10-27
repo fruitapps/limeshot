@@ -662,3 +662,45 @@ counts above describe the pre-integration stage. Listening/live/platform gaps re
 workflow, UI consistency review and main integration. Only the feature branch is pushed;
 main is not pushed or the PR merged automatically. Continue using the primary checkout and
 its Cargo caches without routine worktrees/clones.
+
+## 2026-10-27 — PR #25 preview ownership and fade review follow-up
+
+Continued from PR #25 on `codex/sampler-preview-fade-fixes` in the existing primary checkout
+`/Users/sebastian/Developer/limeshot`, reusing Cargo caches. The follow-up PR targets
+`codex/prepared-sampling-arrangement`; no worktree/clone, main push or automatic merge.
+
+Fixed the preview ownership issue identified independently by Codex and CodeRabbit: channel
+source mappings now retain their decoded PCM, so cache eviction cannot leave published virtual
+paths without audio. Changed/removed source mappings release pins before new previews are
+inserted. Raised the entry ceiling from 32 to 4096 while retaining the 256 MiB PCM budget;
+large projects can show more than 32 small embedded sources. A full pinned budget refuses
+additional previews, and embedded state never substitutes an external reload hint. Normal
+file-cache requests remain available to existing asynchronous Playlist import helpers.
+
+Smooth S fades is disabled with an explanatory hover hint for active automatic crossfade
+pairs. The control reads current document state after the automatic toggle, so disabling
+crossfades immediately restores the manual curve and enables editing; nonoverlapping clips
+remain editable. The [menu PNG](../screenshots/current/automatic-crossfade-menu.png) was
+rendered with `ui_shot --audio --crossfade-menu` and visually inspected. Research confidence
+labels and the Time stretching… action name are corrected; INS-007 no longer incorrectly
+calls ping-pong/fixed preparation unimplemented. Feature statuses remain unchanged.
+
+Local validation: macOS 26.6.2 (25G83), Apple Silicon, debug. Rebuilt all twelve debug Lime
+VST3 bundles. **495 workspace tests passed**, including 171 app UI tests. Added a final
+cache-exhaustion/source-hint recovery regression afterward: the three embedded-preview UI
+cases pass together (496 distinct tests covered overall). The 40-source regression forces
+cache collection, checks PCM identity after unrelated edits and verifies source replacement/
+removal releases pins. The cache unit test fills/pins all 4096 entries, rejects overflow,
+then reclaims released buffers. Workspace build, strict all-target Clippy, formatting,
+feature inventories, repository references and whitespace checks pass. The first full pass
+caught two import-helper regressions from skipping raw-file cache requests; restored those
+requests and the complete rerun passed. Live GUI/listening and Windows/Linux runtime checks
+remain in human verification; offscreen tests do not establish those results.
+
+PR #25 CI was green when reviewed. All five remaining inline findings are addressed in this
+stacked follow-up: the two duplicate preview findings, curve checkbox, research labels/action
+name and stale sampler notes. Its advisory docstring-coverage warning does not describe a
+runtime failure; existing broad documentation coverage was not rewritten in this bug fix.
+Continue implementation in the primary checkout/cache, push feature branches/PRs only, and
+pass the owner's issue → implementation → previous-PR review/CI fixes → stacked PR → new
+session workflow forward until the current usage window is exhausted; do not wait for a reset.
