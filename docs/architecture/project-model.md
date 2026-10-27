@@ -67,6 +67,15 @@ when another is soloed. Track colors are optional. `InsertPlaylistTrack`, `Remov
 sharing source patterns, audio channels and automations; it does not duplicate instruments or effects.
 `crates/limeshot-core/tests/playlist_tracks.rs` covers index remapping, undo, save/reload and clone metadata.
 
+## Playlist clipboard
+
+The UI clipboard keeps complete `Clip` snapshots. `PasteClips` validates referenced sources and
+tracks through the same placement path, assigns fresh IDs and offsets each start from the earliest
+copied start to the destination. It retains mute, fades and extra metadata. Cached automatic
+crossfade envelopes restore their manual bases before `Document` recalculates destination overlaps.
+A failed paste leaves the document/history unchanged; the UI keeps its previous selection. The
+clipboard references current-project source entities and does not transfer assets across projects.
+
 ## Commands, undo and gestures
 
 Every mutation is a variant of `limeshot_core::Command` (serde-serialisable, including `Batch`).
@@ -84,6 +93,11 @@ and NaN is rejected.
 
 Snapshot undo was chosen over inverse commands because projects mostly contain notes and settings. Embedded plugin state uses shared blobs, so undo clones do not copy PCM.
 A clone costs microseconds for typical projects, and snapshots cannot drift from the forward path.
+
+Edit › History lists the full retained undo/redo timeline. `seek_history` navigates existing
+snapshots, ends an active gesture on a real jump, and preserves redo until a new edit.
+Position zero means the oldest retained snapshot, which may follow discarded edits at the
+200-step cap. Navigation uses the same revisions and saved-state identity as undo/redo.
 
 **Modified state.** Each distinct content state gets an id. `mark_saved` records the current id, and undoing back to
 it makes the document unmodified again.

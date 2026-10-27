@@ -20,7 +20,8 @@ Folder enumeration now runs on the same background worker that launches per-bund
 scans. The UI first shows Finding VST3 bundles, then the scanned/total count. Each scan owns
 a copy of its roots; folder editing is disabled while it runs. Canonical filesystem identities
 deduplicate overlapping roots, repeated bundles and symlink aliases and stop directory cycles.
-The database retains the discovered path spelling. Directory traversal retains the eight-level
+The database stores canonical bundle paths. This preserves the actual bundle stem used to find
+Linux/Windows binaries when a renamed symlink alias is encountered first (PR #27 review). Directory traversal retains the eight-level
 recursion limit; a later shallower root can still discover children beyond the earlier root's
 limit. A selected bundle itself is accepted without descending into its contents.
 

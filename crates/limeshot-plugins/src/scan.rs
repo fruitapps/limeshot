@@ -57,13 +57,14 @@ fn walk(
     out: &mut Vec<PathBuf>,
 ) {
     // Canonical identities avoid rescanning overlapping roots, aliases and symlink cycles.
-    // Keep the selected spelling for loading and for the persisted plugin database.
+    // Load the canonical bundle: Linux/Windows derive its binary name from the bundle stem,
+    // so a renamed symlink cannot be used as the representative path.
     let Ok(identity) = std::fs::canonicalize(path) else {
         return;
     };
     if is_bundle(path) {
-        if bundles.insert(identity) {
-            out.push(path.to_path_buf());
+        if bundles.insert(identity.clone()) {
+            out.push(identity);
         }
         return;
     }
@@ -98,17 +99,18 @@ mod tests {
 
     #[test]
     fn finds_bundles_but_not_inside_them() {
-        let dir = tempfile::tempdir().unwrap();
-        let a = dir.path().join("A.vst3/Contents/MacOS");
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().canonicalize().unwrap();
+        let a = dir.as_path().join("A.vst3/Contents/MacOS");
         std::fs::create_dir_all(&a).unwrap();
-        std::fs::create_dir_all(dir.path().join("A.vst3/Contents/Nested.vst3")).unwrap();
-        std::fs::create_dir_all(dir.path().join("Vendor/B.VST3")).unwrap();
-        std::fs::write(dir.path().join("C.vst3"), b"").unwrap();
-        std::fs::write(dir.path().join("readme.txt"), b"").unwrap();
-        let found = find_bundles(&[dir.path().to_owned(), dir.path().join("missing")]);
+        std::fs::create_dir_all(dir.as_path().join("A.vst3/Contents/Nested.vst3")).unwrap();
+        std::fs::create_dir_all(dir.as_path().join("Vendor/B.VST3")).unwrap();
+        std::fs::write(dir.as_path().join("C.vst3"), b"").unwrap();
+        std::fs::write(dir.as_path().join("readme.txt"), b"").unwrap();
+        let found = find_bundles(&[dir.as_path().to_owned(), dir.as_path().join("missing")]);
         let names: Vec<_> = found
             .iter()
-            .map(|p| p.strip_prefix(dir.path()).unwrap().to_path_buf())
+            .map(|p| p.strip_prefix(dir.as_path()).unwrap().to_path_buf())
             .collect();
         assert_eq!(
             names,
@@ -122,11 +124,17 @@ mod tests {
 
     #[test]
     fn overlapping_custom_roots_and_bundle_roots_scan_once() {
-        let dir = tempfile::tempdir().unwrap();
-        let vendor = dir.path().join("Vendor");
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().canonicalize().unwrap();
+        let vendor = dir.as_path().join("Vendor");
         let bundle = vendor.join("Custom.vst3");
         std::fs::create_dir_all(bundle.join("Contents/Hidden.vst3")).unwrap();
-        let roots = [dir.path().to_owned(), vendor, bundle.clone(), dir.path().to_owned()];
+        let roots = [
+            dir.as_path().to_owned(),
+            vendor,
+            bundle.clone(),
+            dir.as_path().to_owned(),
+        ];
         assert_eq!(find_bundles(&roots), std::slice::from_ref(&bundle));
         assert_eq!(find_bundles(std::slice::from_ref(&bundle)), [bundle]);
     }
@@ -134,26 +142,28 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn symlink_aliases_and_cycles_do_not_duplicate_bundles() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().join("Plugins");
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().canonicalize().unwrap();
+        let root = dir.as_path().join("Plugins");
         let bundle = root.join("Custom.vst3");
         std::fs::create_dir_all(&bundle).unwrap();
         std::os::unix::fs::symlink(&root, root.join("Cycle")).unwrap();
-        let alias = dir.path().join("Alias");
+        let alias = dir.as_path().join("Alias");
         std::os::unix::fs::symlink(&root, &alias).unwrap();
         assert_eq!(find_bundles(&[root, alias]), std::slice::from_ref(&bundle));
-        let bundle_alias = dir.path().join("BundleAlias");
+        let bundle_alias = dir.as_path().join("Renamed.vst3");
         std::os::unix::fs::symlink(&bundle, &bundle_alias).unwrap();
         assert_eq!(find_bundles(&[bundle_alias, bundle.clone()]), [bundle]);
     }
 
     #[test]
     fn a_shallower_extra_root_can_reach_beyond_an_earlier_depth_limit() {
-        let dir = tempfile::tempdir().unwrap();
-        let deep = dir.path().join("1/2/3/4/5/6/7/8");
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().canonicalize().unwrap();
+        let deep = dir.as_path().join("1/2/3/4/5/6/7/8");
         let bundle = deep.join("9/Custom.vst3");
         std::fs::create_dir_all(&bundle).unwrap();
-        assert_eq!(find_bundles(&[dir.path().to_owned(), deep]), [bundle]);
+        assert_eq!(find_bundles(&[dir.as_path().to_owned(), deep]), [bundle]);
     }
 
     #[test]

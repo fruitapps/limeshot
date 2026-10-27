@@ -141,3 +141,33 @@ roots and a plugin that fails scanning; standard plugins must remain available. 
 platform folder picker, GUI input permissions and suitable VST3 bundles. Repeat on Windows/Linux.
 Automated discovery/settings/worker/UI checks and an offscreen settings capture do not establish
 live picker/rescan or cross-platform runtime behavior.
+
+## Navigable undo history (APP-006)
+
+Using `live_check` with a disposable project and GUI input/observation permissions, make
+several note, tempo and hosted-parameter edits, save midway, and select earlier/later rows
+in Edit › History. Confirm the selected state, modified indicator, audible plugin state
+and sequential Undo/Redo. Make a new edit after jumping backward and check redo disappears.
+Repeat on Windows/Linux. Headless core/UI tests and the offscreen menu capture establish
+local snapshot behavior, not live audio/plugin or other-platform runtime verification.
+
+## Playlist clipboard properties (PL-026)
+
+With `live_check` and a disposable project, select pattern, audio and automation clips on several
+tracks with different offsets, lengths and relative times. Mute clips, set manual fades/curves,
+then Copy/Paste and Cut/Paste in Pattern and Song modes. Confirm fresh selected clips retain
+properties, Song placement uses the transport's bar, and one Undo reverses the whole paste.
+Enable automatic crossfades, paste a pair together and a single clip elsewhere, and listen/check
+that only destination overlaps get automatic envelopes while isolated copies retain manual fades.
+Save/reopen and repeat on Windows/Linux. Requires the platform GUI permissions and audible output;
+automated core/UI tests and an offscreen image do not establish live audio/platform behavior.
+
+## Windows executable icons (PF-006)
+
+On a Windows desktop with the current x64 build, inspect `limeshot.exe` and `limeshot-cli.exe`
+in Explorer at small and large icon sizes. Launch LimeShot and check its taskbar and Alt+Tab
+icon. Repeat using the portable ZIP and installed Start/Desktop shortcuts; note the Windows
+version, display scaling and build commit. Use a fresh folder if Explorer retains an old icon.
+CI and packaging compare all six embedded icon images to the bundled ICO, without launching
+the binaries; this does not establish shell rendering or icon-cache refresh behavior. ARM64
+remains a cross-build/resource check until verified on ARM64 hardware.

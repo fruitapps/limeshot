@@ -24,6 +24,31 @@ using a tilde in the filename lets GitHub rename the asset and breaks checksum-m
 Each script builds the release binaries and the release VST3 bundles (`native-plugins/build.py`) and then renders
 the demo song with the staged `limeshot-cli` through the staged bundles; a silent render stops the build.
 
+### Windows executable resources
+
+Both Windows binaries embed `packaging/windows/LimeShot.ico` (16, 24, 32, 48, 64 and 256 px)
+and Cargo-version metadata through `crates/limeshot-app/build.rs`. Only Windows targets invoke
+the resource compiler; the standard MSVC build uses the Windows SDK's `rc.exe` discovered by
+`winresource`. ARM64 builds on an x64 Windows host use the host SDK tool. GNU Windows builds
+need the matching MinGW `windres` and `ar`; cross-compiling MSVC from Unix requires `llvm-rc`
+and a configured Windows SDK. Those cross-host paths are not locally verified.
+
+The installer and portable ZIP use the same checked-in ICO. After changing `icon_rgba`, regenerate:
+
+```sh
+cargo run -p limeshot-app --example make_icon -- packaging/windows/LimeShot.ico
+cargo test -p limeshot-app --example make_icon
+```
+
+`scripts/check-windows-icons.ps1 -Executables <exe>,<exe>` checks the application's group icon
+and every embedded image against this ICO. It maps the binaries with
+[`LoadLibraryEx` as resource data](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa),
+without executing them. Windows x64 CI checks both debug binaries; the ARM64 cross-build checks
+its two binaries using the same host-side script. Packaging checks both staged release binaries,
+including with `-SkipBuild`, so a stale binary without the current artwork fails packaging.
+The Rust example test checks regeneration against the bundled ICO. Resource presence does not
+establish Explorer icon-cache behavior or taskbar appearance; see human verification.
+
 ## Release workflow
 
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) runs the three scripts on Windows x86-64,

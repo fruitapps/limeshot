@@ -739,3 +739,118 @@ workflow remains: implement eligible roadmap work, inspect the preceding PR/CI/r
 a stacked feature PR, and hand off to a new local session until the current usage window is
 exhausted. Never wait for its reset or spend reset credits; keep using the primary checkout
 and Cargo caches, and never push main or merge automatically.
+
+## 2026-10-27 — Navigable undo history and PR #27 review fix
+
+Continued from #27 in the primary checkout `/Users/sebastian/Developer/limeshot`, reusing
+Cargo caches, on `codex/navigable-undo-history`. Edit › History now shows all retained
+undo/redo edits in a scrollable list with the current state selected. Clicking restores the
+state after an edit; Oldest retained state restores the first retained snapshot. Forward
+navigation preserves redo, saved-state identity and revision updates; a new edit branches
+normally. The existing 200-step cap and new/open reset remain. See
+[reference, semantics and evidence](../research/undo-history.md). APP-006 stays IMPLEMENTED;
+headless evidence does not establish live audio/plugin or cross-platform runtime behavior.
+
+Addressed the valid Codex review finding on #27: canonical bundle paths now represent
+symlink aliases during discovery. Renamed aliases no longer cause Linux/Windows binary
+resolution to use the wrong bundle stem. The Unix test visits `Renamed.vst3` before the
+real bundle and verifies only the canonical bundle is retained. Discovery tests use
+canonical temporary roots, and the worker test compares canonical failure paths. The first
+full suite caught that worker test's `/var` versus `/private/var` expectation after the
+intentional canonical-path change; corrected the expectation and reran the full suite.
+CodeRabbit skipped #27 review because its target is a feature branch; that is not a pass.
+
+Local validation: macOS 26.6.2 (25G83), arm64, debug, using existing matching debug Lime
+VST3 bundles via `LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`; no native/DSP
+production changes. Core navigation and real-menu UI tests pass. Workspace build, strict
+all-target Clippy, formatting, feature inventories, repository references and whitespace
+checks pass. The [History menu PNG](../screenshots/current/undo-history.png) was rendered
+with `ui_shot --history --menu=Edit/History` and visually inspected. Full-suite final result
+is recorded below. Live/plugin/audio and other-platform checks remain in human verification.
+
+At review time, #26 CI run 40590120668 still had Linux x64/ARM64 and Intel macOS unfinished;
+other jobs passed. #27 CI run 40591035650 was still running without a reported failure.
+Continue checking these and the new PR during the next session. Keep using the primary
+checkout/cache, push feature branches only, never push main or merge automatically. The
+owner's continuing chain remains authorized until the current 300-minute usage window
+is exhausted; do not wait for reset or consume reset credits.
+
+Final rerun: **504 workspace tests passed**, including **174 app UI tests** and 13
+hosted-native tests. Bridge tests ran with local-socket access. No test failures remained.
+Usage was 46% in the current primary window at the delivery check; ordinary usage remains
+allowed and no reset credit was used.
+
+## 2026-10-27 — Preserve Playlist clipboard properties (PL-026)
+
+Continued from #28 in the existing primary checkout/Cargo cache on
+`codex/preserve-clip-clipboard-properties`. The P1 clipboard workflow previously reconstructed
+clips from source/track/timing only, silently losing mute, manual fades, curves and extra metadata.
+The internal clipboard now retains full clip snapshots. `PasteClips` assigns fresh IDs through
+validated placement, retains properties and relative timing, and restores cached automatic fade
+bases before destination overlap recalculation. Document execution makes a mixed paste atomic
+and undoable as one action. A failed paste preserves selection/clipboard; an entirely stale copy
+selection leaves the clipboard intact. Sources remain linked current-project entities.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug, matching existing debug Lime bundles via
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`. **511 workspace tests passed**
+(including **177 UI tests**, four new core clipboard tests and 13 hosted-native tests), with bridge
+local-socket access. Targeted tests were rerun after strengthening selection count and unordered
+clipboard-origin assertions. Workspace build, strict all-target Clippy, formatting, feature inventories,
+repository references and whitespace checks pass. Rendered and inspected the Playlist and Edit
+menu with `ui_shot --audio --menu=Edit` (temporary `/tmp/limeshot-clipboard-playlist.png`). No layout,
+audio-thread or native/DSP production changes. Core coverage includes every clip kind, serialization,
+saved-state undo/redo, invalid sources/tracks, empty/extreme placement and automatic crossfades.
+Real Playlist shortcuts cover cut/paste properties and single undo; Song placement and failed-paste
+selection are also tested. PL-026 remains IMPLEMENTED: headless tests do not establish live audio,
+FL equivalence or other-platform runtime behavior. See human-verification and known limitations.
+
+Inspected #28: Codex review completed at `75c1ff0` with no findings; inline review threads empty.
+CodeRabbit skipped the feature-branch base, not a pass. #26 CI run 40590120668 at `18952da` is now
+all green (five native OS/architecture jobs, Windows ARM64 cross-build and rustfmt). #27 run
+40591035650 still has Intel macOS and Linux x64/ARM64 running; other jobs green. #28 CI
+40591729991 and native-plugin run 40591729889 remain running without reported failures at this
+check. Continue inspecting them and the new PR in the next local session. The #27 renamed-symlink
+review finding is already fixed in #28; its original thread remains unresolved on #27's branch.
+
+The owner's local-session chain remains authorized until this current 300-minute usage window
+is exhausted (reset Unix 1793153182); do not wait for reset or consume reset credits. At the latest
+check usage was 54%, ordinary usage allowed. Keep using the primary checkout and Cargo caches,
+push feature branches/stacked PRs only, never push main or merge automatically.
+
+## 2026-10-27 — Embedded Windows executable icons (PF-006)
+
+Continued from #29 in the existing primary checkout `/Users/sebastian/Developer/limeshot`,
+reusing Cargo caches, on `codex/windows-executable-icons`. Both Windows app/CLI binaries now
+embed the existing LimeShot icon at six sizes and Cargo version metadata. A build script uses
+unmodified build-only `winresource` with target-specific links, leaving libraries/tests/examples
+without resources. The checked-in ICO is generated by the existing Rust icon painter; a
+regeneration test guards artwork drift. Packaging copies that same ICO rather than regenerating
+an unrelated staged file. Attribution and packaging prerequisites are documented.
+
+The Windows resource verifier maps each executable as data, checks application group icon 1
+and compares each referenced image byte-for-byte to the ICO. Windows x64 and ARM64 cross-build
+CI check both debug binaries; packaging checks the staged release binaries, including SkipBuild,
+so stale or mismatched resources fail before an archive/installer is produced. Resource checks
+on Windows are pending until CI runs; no Windows desktop appearance is claimed. Explorer,
+taskbar, Alt+Tab and installed/portable checks remain in human verification. PF-006 stays
+IMPLEMENTED, with Finder document opening and signing/notarisation still open.
+
+Local validation: macOS 26.6.2 (25G83), arm64/debug. **511 workspace tests passed** (177 UI,
+13 hosted-native), using the existing matching debug Lime bundles via
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled` and local-socket access.
+The additional icon regeneration test passes (512 total including this example test).
+Workspace build, strict all-target Clippy, formatting, feature inventory, repository links
+and whitespace checks pass. The verifier's C# helper compiles with the local compiler;
+PowerShell/Windows APIs are unavailable here. No native/DSP/audio-thread or UI layout changes;
+the icon artwork itself is unchanged.
+
+Inspected #29: Codex review completed at `065ed21` with no findings, inline review threads empty;
+CodeRabbit skipped its feature-branch base, not a pass. CI 40592530958 and native run 40592530952
+were still running without reported failures. #27/#28 Windows, ARM64 cross-build and Apple Silicon
+jobs pass; Intel macOS has completed validation and is saving cache, while Linux jobs remain
+running. These partial results do not establish a green overall run. Keep future work in the
+primary checkout/cache, push feature branches only and never merge automatically.
+
+The owner explicitly requested stopping after this session, superseding the earlier ongoing
+local-session chain. Do not create another session or automation. Usage at the latest check was
+63% in the same authorized window; no reset credit was used.

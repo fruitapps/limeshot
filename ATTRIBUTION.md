@@ -7,6 +7,7 @@ Every file LimeShot ships besides source code is listed here.
 | `assets/samples/Lime *.wav` (6 drum sounds) | LimeShot contributors | Synthesised by `crates/limeshot-dsp/examples/make_samples.rs` (oscillators + seeded noise); regenerate with `cargo run -p limeshot-dsp --example make_samples` | MIT OR Apache-2.0 |
 | `crates/limeshot-dsp/tests/fixtures/sine.aiff`, `sine.flac` (test fixtures, not shipped) | LimeShot contributors | A 0.1 s sine written by a script, converted with `afconvert` (AIFF) and a hand-written verbatim FLAC encoder (session 16) | MIT OR Apache-2.0 |
 | App icon, logo, all UI icons | LimeShot contributors | Drawn in code: `crates/limeshot-ui/src/icons.rs`, `crates/limeshot-app/src/lib.rs` (`icon_rgba`) | MIT OR Apache-2.0 |
+| `packaging/windows/LimeShot.ico` | LimeShot contributors | Generated from `icon_rgba` by `cargo run -p limeshot-app --example make_icon -- packaging/windows/LimeShot.ico`; six PNG sizes, embedded in the Windows executables and shipped with the installer | MIT OR Apache-2.0 |
 | `docs/screenshots/*.png` | LimeShot contributors | Offscreen renders (`ui_shot`) and live macOS captures of LimeShot | MIT OR Apache-2.0 |
 | `assets/fonts/Inter-Regular.ttf`, `Inter-SemiBold.ttf` | The Inter Project Authors (Rasmus Andersson) | https://github.com/rsms/inter/releases/tag/v4.1 — licence text in `assets/fonts/OFL-Inter.txt` | SIL OFL 1.1 |
 | `assets/fonts/JetBrainsMono-Regular.ttf` | The JetBrains Mono Project Authors | https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304 — licence text in `assets/fonts/OFL-JetBrainsMono.txt` | SIL OFL 1.1 |
@@ -38,6 +39,10 @@ Copyright 2026 Mata Network (https://github.com/Remade-With-Rust/remade_ffmpeg_r
 Default features are disabled; it is pure Rust with no runtime dependencies. Its Apache-2.0
 license text is the same license shipped in `LICENSE-APACHE`; the package contains no NOTICE file.
 No FL Studio or LAME encoder binary is bundled.
+
+Windows executable resources use build-time-only `winresource` 0.1.34 (MIT, unmodified;
+https://github.com/BenjaminRi/winresource). It invokes the installed Windows SDK resource
+compiler; neither the compiler nor winresource is shipped as a runtime dependency.
 
 ## Vendored editor backend
 

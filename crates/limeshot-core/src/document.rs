@@ -289,6 +289,37 @@ impl Document {
     pub fn history(&self) -> Vec<&'static str> {
         self.undo.iter().map(|s| s.label).collect()
     }
+
+    /// All retained edit labels, oldest first, including edits available for redo.
+    /// Position zero is the oldest retained state; position N is the state after N edits.
+    pub fn history_timeline(&self) -> Vec<&'static str> {
+        self.undo
+            .iter()
+            .map(|s| s.label)
+            .chain(self.redo.iter().rev().map(|s| s.0))
+            .collect()
+    }
+
+    /// Current position within [`Document::history_timeline`].
+    pub fn history_position(&self) -> usize {
+        self.undo.len()
+    }
+
+    /// Navigate retained snapshots without creating an edit or discarding redo.
+    /// Invalid and already-current positions leave the document and open gesture unchanged.
+    pub fn seek_history(&mut self, position: usize) -> bool {
+        if position > self.undo.len() + self.redo.len() || position == self.undo.len() {
+            return false;
+        }
+        self.end_gesture();
+        while self.undo.len() > position {
+            self.undo();
+        }
+        while self.undo.len() < position {
+            self.redo();
+        }
+        true
+    }
 }
 
 #[cfg(test)]
@@ -313,6 +344,62 @@ mod tests {
             .unwrap();
         let pat = d.project().patterns[0].id;
         (d, ChannelId(id), pat)
+    }
+
+    #[test]
+    fn history_navigation_retains_redo_saved_state_and_branches() {
+        let mut d = Document::default();
+        let original = d.project().clone();
+        d.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+        d.mark_saved();
+        let saved = d.project().clone();
+        d.execute(Command::SetTitle("Second".into())).unwrap();
+        let latest = d.project().clone();
+        let labels = d.history_timeline();
+        let revision = d.revision();
+        assert!(!d.seek_history(3));
+        assert!(!d.seek_history(2));
+        assert_eq!(d.revision(), revision);
+        assert!(d.seek_history(0));
+        assert_eq!(d.project(), &original);
+        assert!(d.is_modified());
+        assert_eq!(d.history_timeline(), labels);
+        assert!(d.seek_history(1));
+        assert_eq!(d.project(), &saved);
+        assert!(!d.is_modified());
+        assert!(d.seek_history(2));
+        assert_eq!(d.project(), &latest);
+        assert!(d.seek_history(1));
+        d.execute(Command::SetTitle("Branch".into())).unwrap();
+        assert!(d.redo_label().is_none());
+        assert_eq!(d.history_position(), 2);
+        assert!(d.seek_history(1));
+        assert_eq!(d.project(), &saved);
+        d.replace(original);
+        assert!(d.history_timeline().is_empty());
+        assert!(!d.seek_history(1));
+    }
+
+    #[test]
+    fn history_navigation_respects_retention_and_ends_compound_gestures() {
+        let mut d = Document::default();
+        for i in 0..UNDO_LIMIT + 5 {
+            d.execute(Command::SetTitle(format!("Edit {i}"))).unwrap();
+        }
+        assert_eq!(d.history_timeline().len(), UNDO_LIMIT);
+        assert!(d.seek_history(0));
+        assert_eq!(d.project().title, "Edit 4");
+        assert!(d.seek_history(UNDO_LIMIT));
+        d.begin_compound_gesture();
+        d.execute(Command::SetTitle("Gesture".into())).unwrap();
+        d.execute(Command::SetTempo(Tempo::from_bpm(100.0))).unwrap();
+        assert!(d.seek_history(UNDO_LIMIT - 1));
+        assert_ne!(d.project().title, "Gesture");
+        assert!(d.seek_history(UNDO_LIMIT));
+        assert_eq!(d.project().title, "Gesture");
+        d.execute(Command::SetTitle("Separate edit".into())).unwrap();
+        assert!(d.undo());
+        assert_eq!(d.project().title, "Gesture");
     }
 
     #[test]

@@ -2440,7 +2440,7 @@
       "limeshot": "Edit › History",
       "status": "DIFFERENT",
       "feature": "APP-006",
-      "notes": "FL shows the history in the Browser; LimeShot lists it in an Edit submenu."
+      "notes": "FL shows the history in the Browser; LimeShot uses a scrollable Edit submenu with current-state selection and backward/forward snapshot navigation."
     },
     {
       "id": "MENU-141",

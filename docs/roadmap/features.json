@@ -176,7 +176,7 @@
       "name": "Undo history list",
       "description": "Browse past edits.",
       "fl_reference": "Browser › Current project › History.",
-      "limeshot_behavior": "Edit › History lists the last 30 steps (read-only).",
+      "limeshot_behavior": "Edit › History shows all retained edits (up to 200) in a scrollable list, newest first, with the current state selected. Click a numbered edit to return to the state after it, or Oldest retained state to undo all retained edits. Undone edits stay listed for forward navigation until a new edit discards redo.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -188,16 +188,21 @@
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core document::tests::history_navigation_retains_redo_saved_state_and_branches",
+        "limeshot-core document::tests::history_navigation_respects_retention_and_ends_compound_gestures",
+        "limeshot-app tests/ui.rs::history_menu_navigates_backward_forward_and_oldest_state"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
         "evidence": [
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/menu_file.htm",
-          "docs/research/rea-findings.md"
+          "docs/research/rea-findings.md",
+          "docs/research/undo-history.md"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-27: navigable undo/redo timeline, saved-state restoration, retained-history bounds and branching covered by automated core/UI tests. UI remains in Edit rather than FL’s Browser. History is session-local, capped at 200 snapshots, and clears on new/open; generic native/third-party parameter edits still do not create undo steps. Live/platform checks remain pending; IMPLEMENTED is not VERIFIED."
     },
     {
       "id": "APP-007",
@@ -5412,7 +5417,7 @@
           "docs/research/custom-vst3-folders.md"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion. PR #27 review follow-up: discovery returns canonical bundle paths so renamed symlink aliases cannot hide loadable Linux/Windows bundles; alias-first discovery is covered on Unix."
     },
     {
       "id": "PLG-005",
@@ -7109,7 +7114,7 @@
       "name": "Packaging (DMG, MSI, AppImage/deb)",
       "description": "Installers.",
       "fl_reference": "Installers per platform.",
-      "limeshot_behavior": "scripts/package-windows.ps1 builds a portable ZIP and an Inno Setup installer (LimeShot and the twelve Lime Native VST3 bundles in the shared VST3 folder, or private in <app>/plugins; per-machine or per-user; .lime association; uninstaller). scripts/package-macos.sh builds dist/LimeShot.app (with the Lime VST3s in Contents/PlugIns), a DMG and a PKG installer (/Applications/LimeShot.app + /Library/Audio/Plug-Ins/VST3). scripts/package-linux.sh builds a tarball with install.sh/uninstall.sh (/opt/limeshot + /usr/local/lib/vst3, or --user in ~/.local/opt/limeshot + ~/.vst3, or --private-plugins) and a .deb (/opt/limeshot + /usr/lib/vst3). .github/workflows/release.yml builds all platforms and attaches them to a draft GitHub release on v* tags; v0.1.0-alpha.1 was published this way.",
+      "limeshot_behavior": "scripts/package-windows.ps1 builds a portable ZIP and an Inno Setup installer (LimeShot and the twelve Lime Native VST3 bundles in the shared VST3 folder, or private in <app>/plugins; per-machine or per-user; .lime association; uninstaller). scripts/package-macos.sh builds dist/LimeShot.app (with the Lime VST3s in Contents/PlugIns), a DMG and a PKG installer (/Applications/LimeShot.app + /Library/Audio/Plug-Ins/VST3). scripts/package-linux.sh builds a tarball with install.sh/uninstall.sh (/opt/limeshot + /usr/local/lib/vst3, or --user in ~/.local/opt/limeshot + ~/.vst3, or --private-plugins) and a .deb (/opt/limeshot + /usr/lib/vst3). .github/workflows/release.yml builds all platforms and attaches them to a draft GitHub release on v* tags; v0.1.0-alpha.1 was published this way. Windows app and CLI executables embed the six-size LimeShot icon and Cargo version metadata; packaging verifies their icon resources against the bundled ICO.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -7119,7 +7124,9 @@
         "scripts/package-windows.ps1",
         "scripts/package-macos.sh",
         "scripts/package-linux.sh",
-        ".github/workflows/release.yml"
+        ".github/workflows/release.yml",
+        "crates/limeshot-app/build.rs",
+        "scripts/check-windows-icons.ps1"
       ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
@@ -7130,7 +7137,8 @@
         "Windows 11 x64 (2026-10-25): scripts/package-windows.ps1 builds LimeShot-0.1.0-alpha.1-windows-x64-portable.zip and LimeShot-0.1.0-alpha.1-windows-x64-setup.exe; silent /CURRENTUSER install places limeshot.exe, samples and all 12 Lime VST3 bundles in %LOCALAPPDATA%\\Programs\\Common\\VST3, installed limeshot-cli renders demo (-3.7 dBFS) with checkout dist hidden, /TYPE=app installs private plugins, and unins000.exe removes everything cleanly.",
         "Linux script check (2026-10-25): packaging/linux/install.sh --user and --private-plugins and uninstall.sh verified in isolated temp root.",
         "2026-10-25: release run 40211718081 passes all five packaging jobs; all ten downloaded assets match SHA-256 after draft manifest filename repair, both DMGs pass hdiutil verify, Windows ZIP CRCs pass, Linux tarballs contain 12 VST3s and installers. See docs/development/platform-validation.md.",
-        "2026-10-25: release run 40219554203 at 28d3a41 builds the published v0.1.0-alpha.1 assets; the Linux jobs install and uninstall the .deb and the tarball and render the demo with the installed CLI. See docs/development/platform-validation.md."
+        "2026-10-25: release run 40219554203 at 28d3a41 builds the published v0.1.0-alpha.1 assets; the Linux jobs install and uninstall the .deb and the tarball and render the demo with the installed CLI. See docs/development/platform-validation.md.",
+        "2026-10-27: crates/limeshot-app/examples/make_icon.rs::tests::bundled_windows_icon_matches_generated_artwork checks the six-size bundled ICO against regenerated artwork. Windows x64/ARM64 CI and release packaging invoke scripts/check-windows-icons.ps1 on both built executables; Windows runtime/resource results remain pending until those jobs pass."
       ],
       "reference": {
         "application": "FL Studio",
@@ -7139,7 +7147,7 @@
           "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
-      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1. 2026-10-27: embedded Windows executable icons and version metadata implemented. Local macOS generation/build checks pass; native resource checks are integrated in Windows x64/ARM64 CI and staged packaging. Explorer/taskbar appearance remains unverified; see human-verification.md."
     },
     {
       "id": "PL-025",
@@ -7180,7 +7188,7 @@
       "name": "Copy / cut / paste clips",
       "description": "Clipboard for clips.",
       "fl_reference": "Ctrl+C / X / V in the Playlist.",
-      "limeshot_behavior": "Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.",
+      "limeshot_behavior": "Cmd+C/X/V copies complete clip snapshots for every kind: linked source, track, relative timing, offset, length, mute, manual fades, curves and extra metadata. Song mode pastes the earliest clip at the transport position snapped to a bar; Pattern mode retains original times. Paste allocates fresh IDs, selects the new clips and undoes as one step. Automatic crossfades are recalculated for the destination. Invalid sources/tracks reject the entire paste and preserve selection.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -7193,7 +7201,13 @@
       "acceptance_criteria": [
         "Copied clips paste with the same tracks, lengths and relative timing."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-core/tests/clip_clipboard.rs",
+        "crates/limeshot-app/tests/ui.rs::playlist_clipboard_preserves_properties_and_undoes_once",
+        "crates/limeshot-app/tests/ui.rs::playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing",
+        "crates/limeshot-app/tests/ui.rs::playlist_failed_paste_keeps_selection_and_clipboard",
+        "crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7201,7 +7215,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "No automated test yet."
+      "notes": "2026-10-27: fixed paste losing mute, fades, curves and extra metadata. Core tests cover all clip kinds, new IDs, relative timing, serialization, undo/redo, invalid sources/tracks, empty paste, overflow and automatic overlap recalculation. UI tests cover real cut/paste shortcuts, Song placement and failure selection. Clipboard is internal and references current-project sources; cross-project asset transfer and live/other-platform runtime verification remain open. IMPLEMENTED is not VERIFIED."
     },
     {
       "id": "UI-009",

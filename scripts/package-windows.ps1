@@ -66,7 +66,8 @@ Copy-Item native-plugins\dist\licenses\* "$stage\licenses\plugins" -Recurse
 $now = Get-Date
 Get-ChildItem $stage -Recurse -File | Where-Object { $_.LastWriteTime.Year -lt 1980 } | ForEach-Object { $_.LastWriteTime = $now }
 Copy-Item packaging\windows\README.txt "$stage\README.txt"
-Invoke-Checked 'make_icon' { cargo run --release --locked -q -p limeshot-app --example make_icon -- "$stage\LimeShot.ico" }
+Copy-Item packaging\windows\LimeShot.ico "$stage\LimeShot.ico"
+& "$PSScriptRoot\check-windows-icons.ps1" -Executables @("$stage\limeshot.exe", "$stage\limeshot-cli.exe")
 
 # Smoke test: the staged CLI renders the demo through the staged bundles.
 $check = Join-Path $dist 'windows\check'

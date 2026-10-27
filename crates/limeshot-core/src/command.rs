@@ -337,6 +337,11 @@ pub enum Command {
     },
     /// Delete an automation and all its clips.
     RemoveAutomation(AutomationId),
+    /// Paste snapshots with fresh IDs, preserving properties and relative timing.
+    PasteClips {
+        clips: Vec<Clip>,
+        start: Tick,
+    },
     RemoveClips(Vec<ClipId>),
     MoveClips {
         clips: Vec<ClipId>,
@@ -816,6 +821,7 @@ impl Command {
             ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
             SlipClip { .. } => "Slip clip",
             SliceClips { .. } => "Slice clips",
+            PasteClips { .. } => "Paste clips",
             DuplicateClipsBy { .. } | DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             PrepareAudioClip { .. } => "Prepare audio clip",
@@ -1854,6 +1860,32 @@ impl Command {
                 for pl in p.all_playlists_mut() {
                     pl.clips.retain(|c| c.automation() != Some(id));
                 }
+            }
+            PasteClips { clips, start } => {
+                let Some(origin) = clips.iter().map(|c| c.start).min() else {
+                    return ok();
+                };
+                let mut created = Created(None);
+                for c in clips {
+                    created = place_clip(
+                        p,
+                        c.source,
+                        c.track,
+                        start.saturating_add(c.start - origin),
+                        c.length,
+                        c.offset,
+                    )?;
+                    if let Some(clip) = p.playlist.clips.last_mut() {
+                        clip.muted = c.muted;
+                        clip.fade_in = c.fade_in;
+                        clip.fade_out = c.fade_out;
+                        clip.extra = c.extra;
+                    }
+                }
+                // Copied automatic envelopes belong to the old overlap. Restore the manual
+                // fades before Document recalculates overlaps at the destination.
+                clear_auto_crossfades(p);
+                return Ok(created);
             }
             RemoveClips(ids) => p.playlist.clips.retain(|c| !ids.contains(&c.id)),
             MoveClips { clips, dt, dtrack } => {

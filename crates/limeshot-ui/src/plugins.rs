@@ -1439,7 +1439,7 @@ mod tests {
         assert_eq!(scan.done, 1);
         assert!(db.entries.is_empty());
         assert_eq!(db.failed.len(), 1);
-        assert_eq!(Path::new(&db.failed[0].0), bundle);
+        assert_eq!(Path::new(&db.failed[0].0), bundle.canonicalize().unwrap());
         assert!(!db.failed[0].1.is_empty());
     }
 

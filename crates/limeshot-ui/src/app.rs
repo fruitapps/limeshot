@@ -119,16 +119,7 @@ pub enum Clipboard {
     Notes(Vec<(u8, Tick, Tick, f32)>),
     /// Clips, pasted at the song position in Song mode (so the earliest clip lands there),
     /// otherwise at their original times.
-    Clips(Vec<CopiedClip>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct CopiedClip {
-    pub source: limeshot_core::ClipSource,
-    pub track: u32,
-    pub start: Tick,
-    pub length: Tick,
-    pub offset: Tick,
+    Clips(Vec<limeshot_core::Clip>),
 }
 
 /// A file action waiting for "save changes?" to be answered.
