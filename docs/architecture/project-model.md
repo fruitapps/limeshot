@@ -67,6 +67,15 @@ when another is soloed. Track colors are optional. `InsertPlaylistTrack`, `Remov
 sharing source patterns, audio channels and automations; it does not duplicate instruments or effects.
 `crates/limeshot-core/tests/playlist_tracks.rs` covers index remapping, undo, save/reload and clone metadata.
 
+## Playlist clipboard
+
+The UI clipboard keeps complete `Clip` snapshots. `PasteClips` validates referenced sources and
+tracks through the same placement path, assigns fresh IDs and offsets each start from the earliest
+copied start to the destination. It retains mute, fades and extra metadata. Cached automatic
+crossfade envelopes restore their manual bases before `Document` recalculates destination overlaps.
+A failed paste leaves the document/history unchanged; the UI keeps its previous selection. The
+clipboard references current-project source entities and does not transfer assets across projects.
+
 ## Commands, undo and gestures
 
 Every mutation is a variant of `limeshot_core::Command` (serde-serialisable, including `Batch`).

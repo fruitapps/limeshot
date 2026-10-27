@@ -7185,7 +7185,7 @@
       "name": "Copy / cut / paste clips",
       "description": "Clipboard for clips.",
       "fl_reference": "Ctrl+C / X / V in the Playlist.",
-      "limeshot_behavior": "Cmd+C/X/V for every clip kind (source, offset and length are kept); in Song mode pasted clips start at the song position (snapped to the bar), otherwise at their original times; pasted clips are selected.",
+      "limeshot_behavior": "Cmd+C/X/V copies complete clip snapshots for every kind: linked source, track, relative timing, offset, length, mute, manual fades, curves and extra metadata. Song mode pastes the earliest clip at the transport position snapped to a bar; Pattern mode retains original times. Paste allocates fresh IDs, selects the new clips and undoes as one step. Automatic crossfades are recalculated for the destination. Invalid sources/tracks reject the entire paste and preserve selection.",
       "priority": "P1",
       "status": "IMPLEMENTED",
       "mvp": false,
@@ -7198,7 +7198,13 @@
       "acceptance_criteria": [
         "Copied clips paste with the same tracks, lengths and relative timing."
       ],
-      "tests": [],
+      "tests": [
+        "crates/limeshot-core/tests/clip_clipboard.rs",
+        "crates/limeshot-app/tests/ui.rs::playlist_clipboard_preserves_properties_and_undoes_once",
+        "crates/limeshot-app/tests/ui.rs::playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing",
+        "crates/limeshot-app/tests/ui.rs::playlist_failed_paste_keeps_selection_and_clipboard",
+        "crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7206,7 +7212,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "No automated test yet."
+      "notes": "2026-10-27: fixed paste losing mute, fades, curves and extra metadata. Core tests cover all clip kinds, new IDs, relative timing, serialization, undo/redo, invalid sources/tracks, empty paste, overflow and automatic overlap recalculation. UI tests cover real cut/paste shortcuts, Song placement and failure selection. Clipboard is internal and references current-project sources; cross-project asset transfer and live/other-platform runtime verification remain open. IMPLEMENTED is not VERIFIED."
     },
     {
       "id": "UI-009",

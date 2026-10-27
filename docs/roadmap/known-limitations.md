@@ -120,6 +120,10 @@ not imply complete FL Sampler parity.
   observations are recorded in the [control inventory](../research/sampler-controls-2026-10-27.md).
 
 ## Editing
+* Playlist paste preserves clip mute, fades, curves and extra metadata, with automatic crossfades recalculated
+  at the destination (PL-026). The clipboard references current-project sources; cross-project asset transfer
+  is unsupported. Automated tests cover local snapshot/UI behavior; live audio and other-platform runtime
+  checks remain open.
 * The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not
   available.
 * Quantize… has start and duration strength only (no swing templates). Swing is global (no per-channel mix).

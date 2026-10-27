@@ -779,3 +779,40 @@ Final rerun: **504 workspace tests passed**, including **174 app UI tests** and 
 hosted-native tests. Bridge tests ran with local-socket access. No test failures remained.
 Usage was 46% in the current primary window at the delivery check; ordinary usage remains
 allowed and no reset credit was used.
+
+## 2026-10-27 — Preserve Playlist clipboard properties (PL-026)
+
+Continued from #28 in the existing primary checkout/Cargo cache on
+`codex/preserve-clip-clipboard-properties`. The P1 clipboard workflow previously reconstructed
+clips from source/track/timing only, silently losing mute, manual fades, curves and extra metadata.
+The internal clipboard now retains full clip snapshots. `PasteClips` assigns fresh IDs through
+validated placement, retains properties and relative timing, and restores cached automatic fade
+bases before destination overlap recalculation. Document execution makes a mixed paste atomic
+and undoable as one action. A failed paste preserves selection/clipboard; an entirely stale copy
+selection leaves the clipboard intact. Sources remain linked current-project entities.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug, matching existing debug Lime bundles via
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`. **511 workspace tests passed**
+(including **177 UI tests**, four new core clipboard tests and 13 hosted-native tests), with bridge
+local-socket access. Targeted tests were rerun after strengthening selection count and unordered
+clipboard-origin assertions. Workspace build, strict all-target Clippy, formatting, feature inventories,
+repository references and whitespace checks pass. Rendered and inspected the Playlist and Edit
+menu with `ui_shot --audio --menu=Edit` (temporary `/tmp/limeshot-clipboard-playlist.png`). No layout,
+audio-thread or native/DSP production changes. Core coverage includes every clip kind, serialization,
+saved-state undo/redo, invalid sources/tracks, empty/extreme placement and automatic crossfades.
+Real Playlist shortcuts cover cut/paste properties and single undo; Song placement and failed-paste
+selection are also tested. PL-026 remains IMPLEMENTED: headless tests do not establish live audio,
+FL equivalence or other-platform runtime behavior. See human-verification and known limitations.
+
+Inspected #28: Codex review completed at `75c1ff0` with no findings; inline review threads empty.
+CodeRabbit skipped the feature-branch base, not a pass. #26 CI run 40590120668 at `18952da` is now
+all green (five native OS/architecture jobs, Windows ARM64 cross-build and rustfmt). #27 run
+40591035650 still has Intel macOS and Linux x64/ARM64 running; other jobs green. #28 CI
+40591729991 and native-plugin run 40591729889 remain running without reported failures at this
+check. Continue inspecting them and the new PR in the next local session. The #27 renamed-symlink
+review finding is already fixed in #28; its original thread remains unresolved on #27's branch.
+
+The owner's local-session chain remains authorized until this current 300-minute usage window
+is exhausted (reset Unix 1793153182); do not wait for reset or consume reset credits. At the latest
+check usage was 54%, ordinary usage allowed. Keep using the primary checkout and Cargo caches,
+push feature branches/stacked PRs only, never push main or merge automatically.

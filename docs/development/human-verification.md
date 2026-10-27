@@ -150,3 +150,14 @@ in Edit › History. Confirm the selected state, modified indicator, audible plu
 and sequential Undo/Redo. Make a new edit after jumping backward and check redo disappears.
 Repeat on Windows/Linux. Headless core/UI tests and the offscreen menu capture establish
 local snapshot behavior, not live audio/plugin or other-platform runtime verification.
+
+## Playlist clipboard properties (PL-026)
+
+With `live_check` and a disposable project, select pattern, audio and automation clips on several
+tracks with different offsets, lengths and relative times. Mute clips, set manual fades/curves,
+then Copy/Paste and Cut/Paste in Pattern and Song modes. Confirm fresh selected clips retain
+properties, Song placement uses the transport's bar, and one Undo reverses the whole paste.
+Enable automatic crossfades, paste a pair together and a single clip elsewhere, and listen/check
+that only destination overlaps get automatic envelopes while isolated copies retain manual fades.
+Save/reopen and repeat on Windows/Linux. Requires the platform GUI permissions and audible output;
+automated core/UI tests and an offscreen image do not establish live audio/platform behavior.
