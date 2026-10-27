@@ -45,8 +45,9 @@ Link the evidence from the relevant [feature record](../roadmap/features.json) a
   note-off/envelope/loop behavior, declick and source metadata. In Lime, change root through the native
   keyboard/parameter state and check host Root/audition, undo and reopen; replace/clear samples through
   native and host controls and check waveforms, preview, drag and clip fit-to-length. Test standalone
-  Lime Sampler in FL as well. Source-confirmed root synchronization gap and unverified source metadata
-  paths: [audit](../research/sampler-parity-audit.md). Computer-use app selection timed out twice in
+  Lime Sampler in FL as well. Host/native root, source, preset and undo synchronization (INS-021) is
+  implemented and covered by automated tests ([audit](../research/sampler-parity-audit.md)), awaiting
+  live GUI confirmation. Computer-use app selection timed out twice in
   this session; permissions were authorized, so their absence has not been established.
 * **MP3 export (EXP-005).** Listen to exported percussion, bass and polyphonic music at several
   bitrates; check duration/delay in additional gapless-aware players and on Windows/Linux. Automated

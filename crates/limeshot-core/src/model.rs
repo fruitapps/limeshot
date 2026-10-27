@@ -1009,6 +1009,7 @@ impl Project {
                 Instrument::Plugin(p) => p.sanitize(),
                 Instrument::Unsupported(_) => {}
             }
+            crate::lime::sync_sampler_metadata(c, None);
             max_id = max_id.max(c.id.0);
         }
         let channels: Vec<ChannelId> = self.channels.iter().map(|c| c.id).collect();

@@ -450,3 +450,44 @@ permission passes. Live GUI save-panel interaction, listening and other-platform
 Work uses `codex/mp3-export-sampler-audit` in the existing primary checkout
 (`~/Developer/limeshot`), reusing Cargo caches. Continue there without routine worktrees/clones;
 push only the feature branch and its PR, never main, and do not merge automatically.
+
+
+## 2026-10-27 — Sampler host and native control synchronization (INS-021)
+
+Implemented INS-021 to keep host and native Lime Sampler controls, metadata, presets and undo
+history synchronized:
+
+* `limeshot_core::lime::sync_sampler_metadata` updates `Channel.root_key` from `value_8` and
+  synchronizes `lime-sample-path`, `lime-sample-pending`, `lime-disk-unapproved` and
+  `lime-external-source` with `sample-v1` across `AddChannel`, `SetInstrument`, `SetPluginState`,
+  `Document::store_plugin_state`, `Project::sanitize` and `limeshot_project::load`. Explicit native
+  `Clear` removes stale host sample path hints so waveform/drag/preview fallbacks do not resurrect
+  cleared audio, while older embedded states without a `source` field retain their host path across
+  parameter-only edits.
+* Host sample imports (`browser::sampler_with_audio`, `lime::convert_project`) and `.lime`
+  save/load/recovery (`sample_source`, `set_sample_source`, `absolutize_samples`) preserve and
+  relocate `sample-v1.source` relative to the project folder without turning embedded PCM into disk
+  mode.
+* `ComponentHandler` tracks active VST3 `beginEdit`/`endEdit` parameter gestures
+  (`editor_gesture_active`), and `PluginHost::poll` / `store_states` captures completed native
+  Lime Sampler parameter gestures, `restartComponent` state changes (Load/Clear/Keep on disk) and
+  wrapper preset loads into single undoable `Command::SetPluginState` steps without serializing PCM
+  on every drag frame.
+* Applying a Channel Settings sampler preset (`presets_ui::apply`) updates controls through
+  `edited_values_state` and `Command::SetPluginState`, preserving embedded or disk-backed `sample-v1`
+  audio and `Channel.root_key` even if the original source file was moved or removed.
+* Fixed Playlist `clip_menu` so the opening pointer press does not dismiss the menu on the same pass
+  (matching `point_menu`).
+* Addressed PR #22 review feedback: MP3 atomic export preserves existing destination file permissions
+  and respects `umask` on Unix; `mp3-export.md` labels `VERIFIED`/`OBSERVED`/`UNKNOWN` confidence;
+  `audio-engine.md` and `features.json` (`PLG-022`) formatting notes are cleaned up.
+
+Local validation on macOS Apple Silicon: workspace test suite passes (471 passed, including 163 UI
+tests and 11 hosted VST3 tests across `limeshot-core`, `limeshot-plugins`, `limeshot-project`,
+`crates/limeshot-ui/tests/lime_vst3.rs` and `crates/limeshot-app/tests/ui.rs`), along with strict
+workspace Clippy, `cargo fmt`, `scripts/features.py check` and `scripts/check_repository.py`.
+Live GUI A/B verification with FL Studio and native editor interaction remains in
+`docs/development/human-verification.md`; INS-021 is marked `IMPLEMENTED`, not `VERIFIED`.
+
+Work remains on `codex/mp3-export-sampler-audit` in the primary checkout (`~/Developer/limeshot`),
+reusing Cargo caches without routine worktrees/clones, direct main pushes or automatic merges.

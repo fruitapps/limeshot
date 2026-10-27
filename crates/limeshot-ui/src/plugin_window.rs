@@ -365,8 +365,11 @@ impl PluginHost {
                 }
             },
         };
-        if loaded && let Some(w) = self.windows.get_mut(&target) {
-            w.preset = Some(index);
+        if loaded {
+            self.mark_preset_loaded(target);
+            if let Some(w) = self.windows.get_mut(&target) {
+                w.preset = Some(index);
+            }
         }
         loaded
     }
@@ -1048,6 +1051,9 @@ fn run(app: &mut LimeShotApp, target: Target, action: Action) {
         }
     };
     if changed {
+        for error in app.plugins.poll(&mut app.doc) {
+            app.toast_error(error);
+        }
         app.doc.mark_unsaved();
     }
 }

@@ -139,12 +139,39 @@ pub fn apply(app: &mut LimeShotApp, target: Target, content: Content) {
             }
         }
         (Target::Channel(channel), Content::Synth(s)) => {
+            let target = PluginTarget::Channel(channel);
+            if let Some(plugin) = app.project().plugin(target)
+                && LimePlugin::of(plugin) == Some(LimePlugin::SYNTH)
+            {
+                let mut plugin = plugin.clone();
+                if let Some(Ok(state)) = app.plugins.instance(target).map(|i| i.state()) {
+                    plugin.state = limeshot_core::PluginState::new(state);
+                    app.doc.store_plugin_state(target, plugin.state.clone());
+                }
+                if let Some(state) = limeshot_core::lime::edited_values_state(&plugin, &lime::synth_values(&s)) {
+                    app.exec(Command::SetPluginState { plugin: target, state });
+                    return;
+                }
+            }
             app.exec(Command::SetInstrument {
                 channel,
                 instrument: Instrument::Synth(s),
             });
         }
         (Target::Channel(channel), Content::Sampler(mut s)) => {
+            let target = PluginTarget::Channel(channel);
+            for error in app.plugins.poll(&mut app.doc) {
+                app.toast_error(error);
+            }
+            if let Some(ch) = app.project().channel(channel)
+                && let Instrument::Plugin(plugin) = &ch.instrument
+                && LimePlugin::of(plugin) == Some(LimePlugin::SAMPLER)
+                && let Some(state) =
+                    limeshot_core::lime::edited_values_state(plugin, &lime::sampler_values(&s, ch.root_key))
+            {
+                app.exec(Command::SetPluginState { plugin: target, state });
+                return;
+            }
             if let Some(cur) = app
                 .project()
                 .channel(channel)

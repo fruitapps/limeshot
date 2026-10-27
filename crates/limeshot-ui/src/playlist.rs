@@ -134,7 +134,7 @@ pub struct State {
     /// Screen rectangles of the markers' flags in the last frame.
     pub marker_rects: Vec<(MarkerId, Rect)>,
     drag: Option<Drag>,
-    menu: Option<(ClipId, Pos2)>,
+    menu: Option<(ClipId, Pos2, u64)>,
     /// The automation point menu (FL Studio's right-click on a point): automation, point index,
     /// where, and the frame it opened in.
     pub point_menu: Option<(AutomationId, usize, Pos2, u64)>,
@@ -2330,7 +2330,7 @@ fn grid_input(app: &mut LimeShotApp, ui: &mut Ui, view: &View, grid: Rect, clips
         } else {
             match hit(view, clips, p) {
                 Some((c, Part::Menu)) => {
-                    st.menu = Some((c.id, p));
+                    st.menu = Some((c.id, p, ui.ctx().cumulative_pass_nr()));
                 }
                 Some((c, part)) => {
                     if !st.selection.contains(&c.id) {
@@ -2816,7 +2816,9 @@ fn slice_at(app: &mut LimeShotApp, view: &View, from: Pos2, to: Pos2, snap: Snap
 }
 
 fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
-    let Some((id, pos)) = app.ui.playlist.menu else { return };
+    let Some((id, pos, opened)) = app.ui.playlist.menu else {
+        return;
+    };
     let Some(clip) = app.project().clip(id).cloned() else {
         app.ui.playlist.menu = None;
         return;
@@ -2948,7 +2950,8 @@ fn clip_menu(app: &mut LimeShotApp, ctx: &Context) {
                 }
             });
         });
-    let clicked_outside = ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer();
+    let fresh = ctx.cumulative_pass_nr() == opened;
+    let clicked_outside = !fresh && ctx.input(|i| i.pointer.any_pressed()) && !area.response.contains_pointer();
     if close || clicked_outside || ctx.input(|i| i.key_pressed(Key::Escape)) {
         app.ui.playlist.menu = None;
     }

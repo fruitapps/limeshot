@@ -1101,6 +1101,9 @@ impl LimeShotApp {
             self.toast_error(w);
         }
         self.player.collect_garbage();
+        for error in self.plugins.poll(&mut self.doc) {
+            self.toast_error(error);
+        }
         // A safety net: auditions end with their mouse button, whichever editor started them.
         if !self.auditions.is_empty() && !ctx.input(|i| i.pointer.any_down()) {
             for (c, k) in std::mem::take(&mut self.auditions) {
@@ -1132,9 +1135,6 @@ impl LimeShotApp {
             self.midi_event(e);
         }
         self.sync_engine();
-        if self.plugins.poll() {
-            self.doc.mark_unsaved();
-        }
         if self.ui.mode == PlayMode::Song && self.is_playing() {
             let tick = self.player.status().position();
             self.plugins.follow_automation(self.doc.project(), &self.snapshot, tick);
@@ -1341,14 +1341,24 @@ fn absolutize_samples(project: &Project, dir: Option<&Path>) -> Project {
         }
         if let limeshot_core::Instrument::Plugin(plugin) = &mut c.instrument
             && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
-            && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(serde_json::Value::as_str)
         {
-            let stored = limeshot_project::resolve_sample_path(stored, dir)
-                .to_string_lossy()
-                .into_owned();
-            plugin
-                .extra
-                .insert("lime-sample-path".into(), serde_json::json!(stored));
+            if let Some(stored) = plugin.extra.get("lime-sample-path").and_then(serde_json::Value::as_str) {
+                let stored = limeshot_project::resolve_sample_path(stored, dir)
+                    .to_string_lossy()
+                    .into_owned();
+                plugin
+                    .extra
+                    .insert("lime-sample-path".into(), serde_json::json!(stored));
+            }
+            if let Some(source) = limeshot_core::lime::sample_source(plugin) {
+                let resolved = limeshot_project::resolve_sample_path(&source, dir)
+                    .to_string_lossy()
+                    .into_owned();
+                limeshot_core::lime::set_sample_source(plugin, &resolved);
+                plugin
+                    .extra
+                    .insert("lime-sample-path".into(), serde_json::json!(resolved));
+            }
         }
     }
     p

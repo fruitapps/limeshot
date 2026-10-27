@@ -5,15 +5,15 @@
 ## Reference and encoder choice
 
 FL's [export manual](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/fformats_save_export.htm)
-documents bitrate selection, MPEG-1 sample rates 32/44.1/48 kHz and codec startup silence; WAV
-is preferred for aligned production assets. Existing live menu inventory records Cmd+Shift+R
-and the MP3 export entry. No new FL live observation was obtained in this session.
+(`OBSERVED`) documents bitrate selection, MPEG-1 sample rates 32/44.1/48 kHz and codec startup silence; WAV
+is preferred for aligned production assets. Existing live menu inventory (`VERIFIED`, session 15) records Cmd+Shift+R
+and the MP3 export entry. No new FL live observation was obtained in this session (`UNKNOWN` for any unrecorded live dialog details).
 
-The implementation pins [rusty_mp3 1.0.5](https://docs.rs/rusty_mp3/1.0.5/rusty_mp3/),
+The implementation (`VERIFIED`) pins [rusty_mp3 1.0.5](https://docs.rs/rusty_mp3/1.0.5/rusty_mp3/),
 Apache-2.0, with default features disabled and no runtime dependencies or C/FFI. Package metadata,
 LICENSE (Copyright 2026 Mata Network) and API/source were inspected. Shine-RS is LGPL-2.0;
 it was not selected for this permissive-dependency path. No FL encoder binary is loaded or copied.
-The encoder's own quality claims are not adopted as LimeShot verification.
+The encoder's own quality claims are not adopted as LimeShot verification (`UNKNOWN`).
 
 ## User workflow
 
@@ -48,22 +48,22 @@ files. Missing plugins still fail rather than producing an incomplete mix.
 
 ## Validation and limits
 
-Automated tests decode with the separate Symphonia decoder, covering all 42 rate/bitrate pairs,
+Automated tests (`VERIFIED` in unit, engine, CLI and headless UI suites) decode with the separate Symphonia decoder, covering all 42 rate/bitrate pairs,
 left/right tone frequencies and separation, MPEG header rate/bitrate and approximate CBR size,
 non-frame-aligned lengths, very short/silent/non-finite input, invalid settings, and write failure
 cleanup. Engine tests compare WAV/MP3 render reports/ranges/tails; CLI tests render the hosted demo,
 check nonzero finite stereo output and preserve an existing file on invalid options. Headless UI
 tests exercise shortcuts and format switching, including conversion of an unsupported WAV rate.
 The [MP3 dialog](../screenshots/current/export-mp3.png) was also rendered and visually inspected
-on macOS Apple Silicon. A hosted demo exported at 48 kHz / 192 kbps was decoded by Apple's
-AudioToolbox (`afconvert`): stereo, exactly 806,202 PCM frames matching the WAV reference,
+on macOS Apple Silicon (`OBSERVED`). A hosted demo exported at 48 kHz / 192 kbps was decoded by Apple's
+AudioToolbox (`afconvert`, `VERIFIED`): stereo, exactly 806,202 PCM frames matching the WAV reference,
 peak 0.64877 and 26.50 dB sample-difference SNR against 16-bit WAV. This is one deterministic
-music fixture, not a listening-quality certification. The first sandboxed system decode failed;
+music fixture, not a listening-quality certification (`UNKNOWN`). The first sandboxed system decode failed;
 the permitted decode succeeded.
 
 This is stereo CBR export, not full FL render-dialog parity: VBR, simultaneous formats, metadata,
 mono modes and export cancellation are not added. Gapless-aware players can use the tag; LimeShot's
-sample loader currently uses Symphonia's default format options and retains codec padding. MP3
+sample loader currently uses Symphonia's default format options and retains codec padding (`OBSERVED`). MP3
 reimport is therefore not sample-aligned and should not replace WAV in production loops.
-Listening quality, additional players and Windows/Linux runtime remain unverified. See the
+Listening quality, additional players and Windows/Linux runtime remain unverified (`UNKNOWN`). See the
 progress record for the exact local build/check results and the human verification queue.

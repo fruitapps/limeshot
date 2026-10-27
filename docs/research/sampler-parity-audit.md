@@ -42,21 +42,27 @@ The hosted P0 sampler records describe migration of LimeShot's former sampler fi
 
 ## Integration findings
 
-1. **Two root-key representations (source-confirmed; live impact inferred).**
-   `SetChannelRootKey` writes both `Channel.root_key` and Sampler parameter 7. Generic `SetPluginState`
-   writes the plugin state only. Thus a root change through the plugin's control/state can leave the
-   Channel Settings Root display and host preview key at the previous value. Saved plugin pitch may
-   remain correct while the host audition uses a different key. Unify the canonical value or synchronize
-   both paths with undo/redo, preset/state load and automation before calling this integrated parity.
-2. **Two source representations (requires live verification).** Host actions maintain plugin extras
-   such as `lime-sample-path`; native Load/Clear and Keep on disk update `sample-v1` through plugin
-   state. Audit source lookup precedence, drag payloads, fit-to-length and preview duration after native
-   replacement/clear, save/reopen and undo. Do not assume that a waveform displaying correctly proves
-   that host source metadata is current. Root cause and failures beyond the root case are unverified.
-   Native editor notifications also only mark the document dirty (`PluginHost::poll`);
-   `store_states` captures state on save without a document undo step. Native gestures therefore
-   do not have the same undo integration as host parameter-list commands. Test unrelated host
-   edits, presets and source changes before assuming the two editing surfaces remain synchronized.
+1. **Root-key synchronization (`INS-021`, implemented; live GUI A/B unverified).**
+   `SetChannelRootKey` writes both `Channel.root_key` and Sampler parameter 7 (`value_8`).
+   `limeshot_core::lime::sync_sampler_metadata` now also updates `Channel.root_key` whenever
+   `AddChannel`, `SetInstrument`, `SetPluginState`, `Document::store_plugin_state`, `Project::sanitize`
+   or `limeshot_project::load` applies a Lime Sampler component state, so host Root display,
+   Channel Settings keyboard audition and Piano Roll root markers stay aligned across host/native
+   edits, presets, undo/redo and reopen.
+2. **Source metadata and native undo synchronization (`INS-021`, implemented; live GUI A/B unverified).**
+   Host sample imports (`browser::sampler_with_audio`, `lime::convert_project`) and native loads both
+   populate `sample-v1.source` alongside `lime-sample-path`, and `.lime` save/load/recovery relocates
+   `sample-v1.source` relative to the project folder without converting embedded PCM into disk mode.
+   `sync_sampler_metadata` updates `lime-sample-path` on native source replacement, retains legacy
+   host paths across parameter-only edits on older embedded states, and removes `lime-sample-path`,
+   `lime-sample-pending`, `lime-disk-unapproved` and `lime-external-source` when `sample-v1` is
+   explicitly cleared (`!keep_on_disk && pcm.is_empty()`). `ComponentHandler` tracks active VST3
+   `beginEdit`/`endEdit` gestures (`editor_gesture_active`), and `PluginHost::poll` commits completed
+   native Lime Sampler gestures, `restartComponent` state changes and wrapper preset loads as undoable
+   `Command::SetPluginState` steps without serializing embedded PCM on every drag frame. Applying a
+   Channel Settings sampler preset updates plugin controls via `SetPluginState`, preserving embedded
+   or disk-backed sample state and `Channel.root_key`. Hands-on live GUI verification remains queued in
+   `docs/development/human-verification.md`.
 3. **Sampler and Audio Clip share a channel.** Both use the same Lime Sampler instance/state and mixer
    route. Reusing the source can therefore couple settings between note playback and Playlist clips.
    FL's Audio Clip is a distinct generator. Stretch must explicitly separate source settings, channel

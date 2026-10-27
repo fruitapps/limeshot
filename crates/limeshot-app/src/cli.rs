@@ -158,7 +158,7 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     let rep =
         limeshot_engine::export_audio_with(snap, &settings, format, out, processors).map_err(|e| e.to_string())?;
     drop(instances);
-    plugins.poll();
+    plugins.collect_returned();
     println!(
         "rendered {} — {:.2} s ({} frames at {} Hz), peak {:.1} dBFS",
         out.display(),

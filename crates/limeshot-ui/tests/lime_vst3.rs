@@ -906,3 +906,101 @@ fn loaded_modules_survive_last_client_and_concurrent_reloads() {
         }
     });
 }
+
+#[test]
+fn hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo() {
+    if !bundles_or_skip(&["lime:Lime Sampler.vst3"]) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.wav");
+    let second = dir.path().join("second.wav");
+    limeshot_dsp::write_wav(&first, SR, &vec![0.4; 2 * SR as usize], limeshot_dsp::BitDepth::Float32).unwrap();
+    limeshot_dsp::write_wav(&second, SR, &vec![0.6; SR as usize], limeshot_dsp::BitDepth::Float32).unwrap();
+    let mut app = limeshot_ui::LimeShotApp::new_silent(limeshot_ui::Settings::default(), None);
+    app.samples.load_blocking(&first.to_string_lossy()).unwrap();
+    let channel = limeshot_ui::browser::new_sampler_channel(&mut app, &first).unwrap();
+    let target = PluginTarget::Channel(channel);
+    app.sync_engine();
+    assert!(app.plugins.is_loaded(target));
+    let plugin = app.project().plugin(target).unwrap();
+    assert_eq!(
+        lime::sample_source(plugin).as_deref(),
+        Some(first.to_string_lossy().as_ref()),
+        "host-loaded embedded sampler also populates sample-v1.source"
+    );
+
+    // Applying a Sampler preset preserves the embedded sample and root key even after the source file is removed.
+    std::fs::remove_file(&first).unwrap();
+    app.exec(Command::SetChannelRootKey { channel, key: 64 });
+    let before_preset = app.project().plugin(target).unwrap().state.clone();
+    limeshot_ui::presets_ui::apply(
+        &mut app,
+        limeshot_ui::presets_ui::Target::Channel(channel),
+        limeshot_project::preset::Content::Sampler(SamplerParams {
+            attack_ms: 175.0,
+            cutoff_hz: 1200.0,
+            ..Default::default()
+        }),
+    );
+    assert_eq!(app.project().channel(channel).unwrap().root_key, 64);
+    let after_preset = lime::sampler_params(&app.project().channel(channel).unwrap().instrument).unwrap();
+    assert!((after_preset.attack_ms - 175.0).abs() < 0.01);
+    assert!((after_preset.cutoff_hz - 1200.0).abs() < 1.0);
+    assert!(
+        app.sampler_source(channel).is_some(),
+        "embedded sample survives preset application without re-reading the missing file"
+    );
+    assert!(app.doc.undo());
+    assert_eq!(app.project().plugin(target).unwrap().state, before_preset);
+    assert!(app.doc.redo());
+
+    // Apply a native state replacement with a different root key and sample source, and verify
+    // that the running instance, host root key, sampler_source, and undo/redo all agree.
+    let mut native_ref = LimePlugin::SAMPLER.with_values(
+        &lime::sampler_values(
+            &SamplerParams {
+                end: 0.5,
+                ..Default::default()
+            },
+            72,
+        ),
+        false,
+        Some(&lime::EmbeddedAudio {
+            name: "second.wav".into(),
+            sample_rate: SR,
+            stereo: vec![0.6; SR as usize],
+        }),
+    );
+    assert!(lime::set_sample_source(&mut native_ref, &second.to_string_lossy()));
+    app.exec(Command::SetPluginState {
+        plugin: target,
+        state: native_ref.state.clone(),
+    });
+    app.sync_engine();
+    assert_eq!(app.project().channel(channel).unwrap().root_key, 72);
+    assert_eq!(
+        lime::sampler_params(&app.project().channel(channel).unwrap().instrument)
+            .unwrap()
+            .sample
+            .unwrap()
+            .path,
+        second.to_string_lossy(),
+        "native source replacement updates the host's sample path metadata"
+    );
+    let cached = app.sampler_source(channel).expect("embedded sample cached");
+    assert!(matches!(
+        app.samples.status_of_path(&cached),
+        Some(limeshot_audio::assets::SampleStatus::Ready(s)) if s.frames() == SR as usize / 2
+    ));
+    let revision_after_replace = app.doc.revision();
+    app.plugins.store_states(&mut app.doc);
+    assert_eq!(
+        app.doc.revision(),
+        revision_after_replace,
+        "saving without a new native edit does not add a redundant undo step"
+    );
+    assert!(app.doc.undo());
+    app.sync_engine();
+    assert_eq!(app.project().channel(channel).unwrap().root_key, 64);
+}

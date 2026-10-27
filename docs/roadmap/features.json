@@ -3520,7 +3520,7 @@
           "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "Pitch is coupled to playback speed, not independent time stretch; ADSR release is not FL declick-mode parity. Native/plugin-state root synchronization with the host remains INS-021."
+      "notes": "Pitch is coupled to playback speed, not independent time stretch; ADSR release is not FL declick-mode parity. Host/native root and source synchronization is implemented under INS-021 (live GUI A/B verification remains open)."
     },
     {
       "id": "INS-003",
@@ -9244,7 +9244,7 @@
           "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": " 2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. Root changes through SetPluginState can leave Channel.root_key and host preview/display stale; reverse synchronization is pending. Native source actions also need host metadata consistency verification."
+      "notes": "2026-10-27: source/documentation parity audit in docs/research/sampler-parity-audit.md; this does not establish live FL or other-DAW equivalence. Host/native root, source, preset and undo synchronization is implemented under INS-021; live GUI verification remains open."
     },
     {
       "id": "PLG-023",
@@ -9673,18 +9673,30 @@
       "name": "Sampler host and native control synchronization",
       "description": "Keep host root/source displays, preview and clip helpers consistent with native state.",
       "fl_reference": "Keep host root/source displays, preview and clip helpers consistent with native state.",
-      "limeshot_behavior": "Host root writes parameter 7; generic plugin-state edits do not update Channel.root_key. Native source-action metadata consistency needs live verification. Native editor edits mark the document dirty; state capture on save does not create an undo step.",
+      "limeshot_behavior": "sync_sampler_metadata keeps Channel.root_key, lime-sample-path and sample-v1.source aligned across host/native root and source edits, native Clear, presets, undo/redo and project relocation/reopen. ComponentHandler tracks active beginEdit/endEdit gestures so PluginHost::poll commits completed native Lime Sampler parameter gestures, state restarts and preset loads as single undoable SetPluginState commands without per-frame PCM serialization.",
       "priority": "P1",
-      "status": "RESEARCHED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "PLG-022"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-core",
+        "limeshot-plugins",
+        "limeshot-project",
+        "limeshot-ui"
+      ],
       "acceptance_criteria": [
         "Host/native root and source edits, presets, undo/redo and reopen agree in display, audition, drag and clip duration."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-core lime::sampler_metadata_tests::plugin_state_root_source_and_clear_keep_channel_metadata_consistent",
+        "limeshot-core lime::sampler_metadata_tests::legacy_embedded_sampler_retains_host_path_on_parameter_edits",
+        "limeshot-plugins host::gesture_tests::overlapping_native_gestures_finish_only_after_all_controls_end",
+        "limeshot-project tests::native_embedded_sources_relocate_without_changing_audio",
+        "crates/limeshot-ui/tests/lime_vst3.rs::hosted_sampler_synchronizes_host_and_native_state_across_presets_and_undo",
+        "crates/limeshot-app/tests/ui.rs::sampler_host_and_native_edits_presets_undo_and_reopen_stay_synchronized"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -9692,7 +9704,7 @@
           "docs/research/sampler-parity-audit.md"
         ]
       },
-      "notes": "2026-10-27 audit: documented FL behavior/source inspection; fresh live A/B remains unverified."
+      "notes": "2026-10-27: implemented host/native root and source metadata synchronization, project-relative embedded source relocation, preset sample preservation and gesture-coalesced undoable native sampler state capture. Automated unit, project, hosted VST3 and UI tests pass; live GUI A/B verification remains in human-verification.md."
     },
     {
       "id": "INS-022",

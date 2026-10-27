@@ -142,14 +142,16 @@ impl Document {
     /// not an edit: it makes no undo step and does not change the revision, because the sound
     /// does not change. Returns false if `target` has no plugin.
     pub fn store_plugin_state(&mut self, target: PluginTarget, state: crate::PluginState) -> bool {
-        self.plugin_mut(target)
-            .map(|p| {
-                p.state = state;
-                if let Some(source) = crate::lime::disk_source(p) {
-                    p.extra.insert("lime-sample-path".into(), serde_json::json!(source));
-                }
-            })
-            .is_some()
+        let Some(plugin) = self.plugin_mut(target) else {
+            return false;
+        };
+        let previous = std::mem::replace(&mut plugin.state, state);
+        if let PluginTarget::Channel(id) = target
+            && let Some(channel) = self.project.channels.iter_mut().find(|c| c.id == id)
+        {
+            crate::lime::sync_sampler_metadata(channel, Some(&previous));
+        }
+        true
     }
 
     /// Store where a plugin's window is (before saving). Like [`Document::store_plugin_state`]

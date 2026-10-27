@@ -87,9 +87,9 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   100 % the wrapper can be larger than a fixed-size editor, and keyboard focus may stay in a clicked plugin view
   until the host window is clicked again.
 * Presets: factory programs and `.vstpreset` files (no FL `.fst`, no preset browser in the Browser); some plugins
-  name programs only by number; loading a preset is not an undo step.
+  name programs only by number; loading a `.vstpreset` or factory program on a third-party or non-sampler plugin is not an undo step.
 * The keyboard toggle forwards typed characters only (not arrows or function keys).
-* Native-editor and third-party parameter changes are not undo steps; known Lime host controls are.
+* Native-editor and third-party parameter changes on non-sampler plugins mark the project dirty rather than creating undo steps; known Lime host controls and completed native Lime Sampler edits are undo steps.
 * Delay compensation covers up to about 340 ms per path and 64 delayed paths; export trimming cannot be turned off.
 * No custom plugin folders; a crashing plugin takes LimeShot down unless it runs in a separate process (macOS and
   Linux). No CLAP or Audio Units.
@@ -106,10 +106,10 @@ not imply complete FL Sampler parity.
   sample processing, extended declick modes, metadata-driven sampler setup or interpolation quality
   selection. Sampler has volume ADSR and one low-pass, without extended envelopes, sampler LFOs,
   filter selection/tracking, configurable polyphony/mono/porta or cross-channel cut groups.
-* Native/plugin-state root edits can leave the host Root field and preview key stale (INS-021).
-  Native edits mark the project dirty but do not create document undo steps.
-  Host-native source replacement/clear metadata consistency needs live verification. Audio clips
-  share sampler channel state; FL uses a distinct Audio Clip generator.
+* Host and native root/source synchronization, preset sample preservation and gesture-coalesced undoable
+  native sampler state capture are implemented and covered by headless/hosted tests (INS-021), but live
+  GUI interaction verification remains open. Audio clips share sampler channel state; FL uses a distinct
+  Audio Clip generator.
 * FLP import defaults advanced sampler settings, including root/pitch, loops, envelopes, filter,
   stretch, declick and precomputed processing, without detailed per-setting warnings (APP-022).
 * FL live A/B and Lime Sampler in other DAWs remain unverified. The current computer-use FL

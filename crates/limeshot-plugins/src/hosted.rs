@@ -77,6 +77,14 @@ impl PluginInstance {
         each!(self, p => p.take_restart())
     }
 
+    pub fn editor_gesture_active(&self) -> bool {
+        match self {
+            Self::Local(p) => p.editor_gesture_active(),
+            #[cfg(unix)]
+            Self::Bridged(_) => false, // Bridged plugins have no native editor here.
+        }
+    }
+
     pub fn latency_samples(&self) -> u32 {
         each!(self, p => p.latency_samples())
     }

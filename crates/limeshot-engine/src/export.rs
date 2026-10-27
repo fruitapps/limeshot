@@ -252,6 +252,7 @@ pub fn export_audio_with(
     Ok(report)
 }
 
+/// Encode stereo `audio` as constant-bitrate MP3 and atomically replace `path`.
 fn write_mp3(path: &Path, sample_rate: u32, bitrate_kbps: u32, audio: &mut [f32]) -> Result<(), ExportError> {
     use std::io::{BufWriter, Write};
     // Do not feed non-finite plugin output or overs into the encoder's quantizer.
@@ -275,7 +276,15 @@ fn write_mp3(path: &Path, sample_rate: u32, bitrate_kbps: u32, audio: &mut [f32]
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
+    #[cfg(unix)]
+    let mut temporary = tempfile::Builder::new()
+        .permissions(std::os::unix::fs::PermissionsExt::from_mode(0o666))
+        .tempfile_in(parent)?;
+    #[cfg(not(unix))]
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    if let Ok(meta) = std::fs::metadata(path) {
+        let _ = temporary.as_file().set_permissions(meta.permissions());
+    }
     {
         let mut writer = BufWriter::new(temporary.as_file_mut());
         loop {
@@ -380,6 +389,13 @@ mod tests {
         std::fs::create_dir(&target).unwrap();
         assert!(write_mp3(&target, 44100, 128, &mut [0.0; 2]).is_err());
         assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
+            write_mp3(&path, 44100, 128, &mut [0.0; 2]).unwrap();
+            assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o640);
+        }
     }
 
     #[test]
