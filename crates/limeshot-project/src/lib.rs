@@ -73,14 +73,18 @@ pub fn to_json(project: &Project, project_dir: Option<&Path>) -> Result<String, 
             }
             if let Instrument::Plugin(plugin) = &mut c.instrument
                 && limeshot_core::LimePlugin::of(plugin) == Some(limeshot_core::LimePlugin::SAMPLER)
-                && let Some(stored) = plugin.extra.get("lime-sample-path").and_then(Value::as_str)
             {
                 let native_source = limeshot_core::lime::sample_source(plugin);
-                let stored = relative_path(Path::new(native_source.as_deref().unwrap_or(stored)), dir);
-                if native_source.is_some() {
-                    limeshot_core::lime::set_sample_source(plugin, &stored);
+                let source = native_source
+                    .as_deref()
+                    .or_else(|| plugin.extra.get("lime-sample-path").and_then(Value::as_str));
+                if let Some(source) = source {
+                    let stored = relative_path(Path::new(source), dir);
+                    if native_source.is_some() {
+                        limeshot_core::lime::set_sample_source(plugin, &stored);
+                    }
+                    plugin.extra.insert("lime-sample-path".into(), json!(stored));
                 }
-                plugin.extra.insert("lime-sample-path".into(), json!(stored));
             }
         }
     }
