@@ -2670,15 +2670,15 @@ fn clone_pattern(p: &mut Project, i: usize) -> PatternId {
     new_id
 }
 
-/// Restore the manual fades before recalculating automatic overlap envelopes.
+/// Restore manual fades within current clip bounds before recalculating automatic overlap envelopes.
 pub(crate) fn clear_auto_crossfades(project: &mut Project) {
     for c in project.all_playlists_mut().flat_map(|a| a.clips.iter_mut()) {
         if let Some(saved) = c.extra.remove("auto-crossfade-base-v1")
             && let Ok((fade_in, fade_out, smooth)) =
                 serde_json::from_value::<(Tick, Tick, Option<serde_json::Value>)>(saved)
         {
-            c.fade_in = fade_in;
-            c.fade_out = fade_out;
+            c.fade_in = fade_in.min(c.length);
+            c.fade_out = fade_out.min(c.length - c.fade_in);
             if let Some(smooth) = smooth {
                 c.extra.insert("fade-smooth-v1".into(), smooth);
             } else {

@@ -951,3 +951,24 @@ formatting, feature inventories, repository references and whitespace checks pas
 No visual UI or native DSP behavior changed. Live audio/GUI and other-platform
 runtime verification remain separate. Push the feature branch/PR only; never push
 main or merge automatically. Continue using the primary checkout and Cargo caches.
+
+## 2026-10-28 — PR #31 outside-diff crossfade restoration
+
+Fixed CodeRabbit's remaining outside-diff finding in clear_auto_crossfades: restoring
+saved manual fade bases now clamps fade-in to the current clip length and fade-out
+to the remaining duration. Resizing an automatically crossfaded clip can retain a
+manual base longer than its new length; the earlier PasteClips clamp ran before
+restoration and did not cover that case. The regression creates an overlapping pair,
+enables automatic crossfades, shortens a clip, pastes it isolated at tick zero and
+checks restored fades, safe fade-handle subtraction and undo/redo. It failed with
+the old restoration and passes with the fix. Updated PL-023/PL-026 evidence and
+existing limitations; no status promotion.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug in the existing primary checkout and
+Cargo caches. All core tests and **519 workspace tests pass**, using local socket
+access and the previously rebuilt twelve debug Lime VST3 bundles. Strict workspace
+all-target Clippy, formatting, feature inventories, repository references and
+whitespace checks pass. No visual UI or audio scheduling/native DSP changes; live
+GUI/listening and other-platform runtime verification remain separate. Push the
+feature branch/PR only, never main or an automatic merge. Continue using the primary
+checkout and its Cargo caches.

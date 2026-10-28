@@ -154,6 +154,50 @@ fn paste_clamps_fades_to_final_length_and_undoes_the_normalized_snapshot() {
     }
 }
 
+/// Restoring saved manual fades after resizing and pasting at tick zero keeps handle arithmetic bounded.
+#[test]
+fn shortened_automatic_clip_pasted_at_zero_clamps_restored_manual_fades() {
+    let mut p = fixture();
+    let mut audio = p.playlist.clips[1].clone();
+    audio.muted = false;
+    audio.start = 0;
+    audio.track = 0;
+    audio.fade_in = PPQ / 4;
+    audio.fade_out = PPQ * 3 / 2;
+    let mut second = audio.clone();
+    second.id = ClipId(p.alloc_id());
+    second.start = PPQ;
+    p.playlist.clips = vec![audio.clone(), second];
+    let mut doc = Document::new(p);
+    doc.execute(Command::SetAutoCrossfades(true)).unwrap();
+    doc.execute(Command::ResizeClip {
+        clip: audio.id,
+        length: PPQ * 5 / 4,
+    })
+    .unwrap();
+    let mut copied = doc.project().clip(audio.id).unwrap().clone();
+    assert!(copied.extra.contains_key("auto-crossfade-base-v1"));
+    assert!(audio.fade_out > copied.length);
+    // Keep the destination isolated so its restored manual fades remain visible.
+    copied.track = 1;
+    let before = doc.project().clone();
+    doc.execute(Command::PasteClips {
+        clips: vec![copied],
+        start: 0,
+    })
+    .unwrap();
+    let pasted = doc.project().playlist.clips.last().unwrap();
+    assert_eq!(pasted.start, 0);
+    assert_eq!((pasted.fade_in, pasted.fade_out), (PPQ / 4, PPQ));
+    assert_eq!(pasted.end() - pasted.fade_out, PPQ / 4);
+    assert!(!pasted.extra.contains_key("auto-crossfade-base-v1"));
+    let after = doc.project().clone();
+    assert!(doc.undo());
+    assert_eq!(doc.project(), &before);
+    assert!(doc.redo());
+    assert_eq!(doc.project(), &after);
+}
+
 /// Copied automatic fades restore their manual bases before destination overlap recalculation.
 #[test]
 fn paste_restores_manual_fades_then_recalculates_automatic_destination_overlaps() {

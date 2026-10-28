@@ -123,7 +123,7 @@ not imply complete FL Sampler parity.
 
 ## Editing
 * Playlist paste preserves clip mute, fades, curves and extra metadata, with automatic crossfades recalculated
-  at the destination (PL-026). Copied fades are clamped to the final placed clip length. The clipboard references current-project sources; cross-project asset transfer
+  at the destination (PL-026). Copied fades and restored automatic-crossfade manual bases are clamped to the current clip length. The clipboard references current-project sources; cross-project asset transfer
   is unsupported. Automated tests cover local snapshot/UI behavior; live audio and other-platform runtime
   checks remain open.
 * The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not
