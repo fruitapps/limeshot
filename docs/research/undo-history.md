@@ -2,7 +2,7 @@
 
 ## Reference
 
-**DOCUMENTED:** the [FL Studio Browser manual](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm)
+**VERIFIED (public manual only):** the [FL Studio Browser manual](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/browser.htm)
 describes Current project › History as a list of undo points that can be selected with a
 left-click, alongside sequential Edit › Undo/Redo. This is public documentation research,
 not a fresh live observation of exact selection semantics or ordering preferences.

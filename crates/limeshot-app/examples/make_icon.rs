@@ -89,6 +89,7 @@ fn write_ico(path: &Path) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    /// Reject a bundled Windows icon that no longer matches the generated artwork.
     #[test]
     fn bundled_windows_icon_matches_generated_artwork() {
         let dir = tempfile::tempdir().unwrap();

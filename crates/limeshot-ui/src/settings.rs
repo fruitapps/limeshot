@@ -118,6 +118,7 @@ impl Settings {
 mod tests {
     use super::*;
 
+    /// Preferences retain custom search roots across JSON round trips and bound the recent-file list.
     #[test]
     fn round_trip_and_recent_list() {
         let dir = tempfile::tempdir().expect("tempdir");

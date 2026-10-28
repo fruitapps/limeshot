@@ -495,6 +495,7 @@ fn general(app: &mut LimeShotApp, ui: &mut Ui) {
 
 // ----- File -----
 
+/// Edit backup and search-folder preferences, saving changes without modifying the project.
 fn file(app: &mut LimeShotApp, ui: &mut Ui) {
     let t = Theme::current();
     section(ui, "Backup", |ui| {

@@ -5412,7 +5412,8 @@
         "limeshot-plugins scan::tests::a_shallower_extra_root_can_reach_beyond_an_earlier_depth_limit",
         "limeshot-ui plugins::tests::custom_roots_are_discovered_on_worker_and_failures_finish_the_scan",
         "limeshot-ui settings::tests::round_trip_and_recent_list",
-        "limeshot-app tests/ui.rs::custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project"
+        "limeshot-app tests/ui.rs::custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project",
+        "limeshot-plugins scan::tests::suffixless_aliases_find_external_bundles_without_descending_into_them"
       ],
       "reference": {
         "application": "FL Studio",
@@ -5423,7 +5424,7 @@
           "docs/research/custom-vst3-folders.md"
         ]
       },
-      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion. PR #27 review follow-up: discovery returns canonical bundle paths so renamed symlink aliases cannot hide loadable Linux/Windows bundles; alias-first discovery is covered on Unix."
+      "notes": "The scan child was run on installed bundles (Surge XT, Vital, OTT) and prints their classes; the full Find plugins… flow in the live window has not been exercised yet. 2026-10-27: custom VST3 search folders persist in application settings; missing roots are skipped, overlapping roots/symlink aliases scan once, and discovery runs off the UI thread. Changing folders requires Find plugins to refresh the database; it does not unload project instances. Live picker/rescan and other-platform runtime verification remain pending. CI regression (2026-10-22): discovery tests compare relative PathBuf values so native Windows separators do not fail the assertion. PR #27 review follow-up: discovery returns canonical bundle paths so renamed symlink aliases cannot hide loadable Linux/Windows bundles; alias-first discovery is covered on Unix. 2026-10-28 PR #31 review: suffixless symlink aliases also discover canonical VST3 bundles and single-file modules without traversing bundle contents; covered on Unix."
     },
     {
       "id": "PLG-005",
@@ -7153,7 +7154,7 @@
           "docs/development/principles.md (Cross-platform honesty)"
         ]
       },
-      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1. 2026-10-27: embedded Windows executable icons and version metadata implemented. Local macOS generation/build checks pass; native resource checks are integrated in Windows x64/ARM64 CI and staged packaging. Explorer/taskbar appearance remains unverified; see human-verification.md."
+      "notes": "See docs/development/release-packaging.md and D40. Unsigned on Windows (SmartScreen warns) and ad-hoc signed on macOS (Developer ID and notarisation pending). The macOS PKG/DMG and Linux .deb/tarball are tested on CI runners and await hardware verification. Debian asset filenames keep the 0.1.0-alpha.1 spelling (GitHub renames tildes); the control metadata uses 0.1.0~alpha.1. 2026-10-27: embedded Windows executable icons and version metadata implemented. Local macOS generation/build checks pass; native resource checks are integrated in Windows x64/ARM64 CI and staged packaging. Explorer/taskbar appearance remains unverified; see human-verification.md. 2026-10-28 PR #31 review: packaging checks generated ICO artwork before staging even with -SkipBuild; the artwork test passes locally, while Windows packaging execution remains a platform check."
     },
     {
       "id": "PL-025",
@@ -7212,7 +7213,8 @@
         "crates/limeshot-app/tests/ui.rs::playlist_clipboard_preserves_properties_and_undoes_once",
         "crates/limeshot-app/tests/ui.rs::playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing",
         "crates/limeshot-app/tests/ui.rs::playlist_failed_paste_keeps_selection_and_clipboard",
-        "crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor"
+        "crates/limeshot-app/tests/ui.rs::the_edit_menu_undoes_redoes_and_cuts_copies_pastes_in_the_focused_editor",
+        "limeshot-core tests/clip_clipboard.rs::paste_clamps_fades_to_final_length_and_undoes_the_normalized_snapshot"
       ],
       "reference": {
         "application": "FL Studio",
@@ -7221,7 +7223,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "2026-10-27: fixed paste losing mute, fades, curves and extra metadata. Core tests cover all clip kinds, new IDs, relative timing, serialization, undo/redo, invalid sources/tracks, empty paste, overflow and automatic overlap recalculation. UI tests cover real cut/paste shortcuts, Song placement and failure selection. Clipboard is internal and references current-project sources; cross-project asset transfer and live/other-platform runtime verification remain open. IMPLEMENTED is not VERIFIED."
+      "notes": "2026-10-27: fixed paste losing mute, fades, curves and extra metadata. Core tests cover all clip kinds, new IDs, relative timing, serialization, undo/redo, invalid sources/tracks, empty paste, overflow and automatic overlap recalculation. UI tests cover real cut/paste shortcuts, Song placement and failure selection. Clipboard is internal and references current-project sources; cross-project asset transfer and live/other-platform runtime verification remain open. IMPLEMENTED is not VERIFIED. 2026-10-28 PR #31 review: paste clamps copied fades to the final placed length, including zero-length snapshots; regression covers excessive fades and undo/redo."
     },
     {
       "id": "UI-009",
@@ -9070,7 +9072,7 @@
           "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. Loop enable/range edits update held voices without retriggering. 2026-10-27: ping-pong and filter type append zero-based sampler control indices 16/17. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
+      "notes": "Equivalence test with a 0.1–0.3 loop renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. Loop points are not drawn on the waveform. Loop enable/range edits update held voices without retriggering. 2026-10-27: ping-pong and filter type append zero-based indices 16/17 for sampler controls. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
     },
     {
       "id": "PLG-016",
@@ -9105,7 +9107,7 @@
           "docs/research/sampler-controls-2026-10-27.md"
         ]
       },
-      "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. 2026-10-27: ping-pong and filter type append zero-based sampler control indices 16/17. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
+      "notes": "Equivalence test with cutoff 1.5 kHz, resonance 0.5 renders bit-identically. Editor rendered offscreen and inspected; not tried in a DAW. 2026-10-27: ping-pong and filter type append zero-based indices 16/17 for sampler controls. Defaults keep the previously verified legacy subset; see INS-007/INS-020 for expanded scope and live gaps."
     },
     {
       "id": "PLG-017",

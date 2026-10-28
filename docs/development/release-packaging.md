@@ -49,6 +49,10 @@ including with `-SkipBuild`, so a stale binary without the current artwork fails
 The Rust example test checks regeneration against the bundled ICO. Resource presence does not
 establish Explorer icon-cache behavior or taskbar appearance; see human verification.
 
+Windows packaging runs the generated-artwork test before staging, including with `-SkipBuild`,
+then compares the staged executable resources against the bundled ICO. Reusing binaries therefore
+still requires a working Rust toolchain and rejects artwork that needs regeneration.
+
 ## Release workflow
 
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) runs the three scripts on Windows x86-64,

@@ -920,3 +920,34 @@ sampler preparation with `ui_shot` (`/tmp/limeshot-pr31-history.png`,
 Windows icon appearance and other-platform runtime behavior remain unverified.
 Only the feature branch and PR are updated; main is never pushed or merged
 automatically. Continue using the primary checkout and its Cargo caches.
+
+## 2026-10-28 — PR #31 CodeRabbit follow-up
+
+Addressed the four inline findings on `codex/sampler-preview-fade-fixes` in the
+primary checkout with its existing Cargo caches. PasteClips now clamps copied fades
+using the final placed length and remaining fade duration, matching SetClipFades.
+A regression covers zero-length and excessive-fade snapshots, including undo/redo.
+VST3 discovery recognizes canonical bundle identities for suffixless aliases; its
+Unix regression covers external directory/file modules, duplicate aliases, explicit
+alias roots and opaque bundle contents. Windows packaging runs the generated-artwork
+test before staging even with -SkipBuild, so matching stale resources cannot bypass
+artwork validation. The source/artwork test passes locally; PowerShell/Windows
+packaging execution remains a platform check.
+
+Replaced the unsupported research label with VERIFIED (public manual only), after
+checking the linked manual, while retaining the explicit absence of live selection
+observations. Rephrased both sampler-index notes in canonical features.json and
+regenerated the inventories. Added documentation for affected build, scan, settings,
+clipboard and history functions/tests in response to the docstring-coverage warning.
+The external coverage percentage awaits CodeRabbit's next run; it is not measured
+locally. Updated feature evidence, packaging prerequisites and existing limitations
+without promoting statuses.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug. **518 workspace tests passed** with
+local socket access and the twelve debug Lime VST3 bundles rebuilt during the
+preceding integration. Targeted clipboard/discovery regressions and the generated
+Windows ICO test pass. Workspace all-target build, strict all-target Clippy,
+formatting, feature inventories, repository references and whitespace checks pass.
+No visual UI or native DSP behavior changed. Live audio/GUI and other-platform
+runtime verification remain separate. Push the feature branch/PR only; never push
+main or merge automatically. Continue using the primary checkout and Cargo caches.

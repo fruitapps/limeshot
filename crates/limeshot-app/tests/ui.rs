@@ -3378,6 +3378,7 @@ fn playlist_clipboard_preserves_properties_and_undoes_once() {
     assert_eq!(h.state().project(), &before);
 }
 
+/// Song-mode paste anchors the earliest copied clip at the transport bar without changing spacing.
 #[test]
 fn playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing() {
     use limeshot_ui::app::ClipOp;
@@ -3409,6 +3410,7 @@ fn playlist_song_paste_moves_earliest_clip_to_transport_and_keeps_spacing() {
     }
 }
 
+/// A rejected paste preserves the selection and clipboard for a later retry.
 #[test]
 fn playlist_failed_paste_keeps_selection_and_clipboard() {
     use limeshot_ui::app::{ClipOp, Clipboard};
@@ -7914,6 +7916,7 @@ fn embedded_preview_budget_refuses_source_fallback_and_recovers_after_unpinning(
     assert_eq!(sample.data, audio.stereo);
 }
 
+/// Removing a VST3 search folder changes preferences without adding a project edit.
 #[test]
 fn custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project() {
     let mut h = harness(true);

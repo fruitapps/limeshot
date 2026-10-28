@@ -1,5 +1,6 @@
 use limeshot_core::*;
 
+/// Build linked clips of every source kind with fades and unknown metadata for clipboard checks.
 fn fixture() -> Project {
     let mut doc = Document::default();
     doc.execute(Command::AddChannel {
@@ -48,6 +49,7 @@ fn fixture() -> Project {
     p
 }
 
+/// Pasting round-tripped commands preserves properties and timing across undo, redo and serialization.
 #[test]
 fn paste_keeps_all_clip_kinds_properties_relative_timing_and_fresh_ids() {
     let p = fixture();
@@ -79,6 +81,7 @@ fn paste_keeps_all_clip_kinds_properties_relative_timing_and_fresh_ids() {
     assert_eq!(reopened, after);
 }
 
+/// Invalid sources or tracks reject the entire paste without consuming IDs or changing history.
 #[test]
 fn invalid_paste_leaves_document_ids_history_and_saved_state_unchanged() {
     for source in [
@@ -104,6 +107,7 @@ fn invalid_paste_leaves_document_ids_history_and_saved_state_unchanged() {
     assert_eq!(doc.project(), &p);
 }
 
+/// Empty pastes do not edit the document, and extreme destination ticks saturate safely.
 #[test]
 fn empty_paste_is_a_noop_and_extreme_destination_does_not_overflow() {
     let mut doc = Document::new(fixture());
@@ -118,6 +122,39 @@ fn empty_paste_is_a_noop_and_extreme_destination_does_not_overflow() {
     assert!(doc.project().playlist.clips[3..].iter().all(|c| c.start == u64::MAX));
 }
 
+/// Hostile fade lengths are bounded after placement normalizes zero-length clips, including undo/redo.
+#[test]
+fn paste_clamps_fades_to_final_length_and_undoes_the_normalized_snapshot() {
+    for (length, fade_in, fade_out, expected) in [
+        (0, u64::MAX, u64::MAX, (1, 0)),
+        (0, 0, u64::MAX, (0, 1)),
+        (PPQ, u64::MAX, u64::MAX, (PPQ, 0)),
+        (PPQ, PPQ / 4, u64::MAX, (PPQ / 4, 3 * PPQ / 4)),
+    ] {
+        let before = fixture();
+        let mut clip = before.playlist.clips[1].clone();
+        clip.length = length;
+        clip.fade_in = fade_in;
+        clip.fade_out = fade_out;
+        let mut doc = Document::new(before.clone());
+        doc.execute(Command::PasteClips {
+            clips: vec![clip],
+            start: 0,
+        })
+        .unwrap();
+        let pasted = doc.project().playlist.clips.last().unwrap();
+        assert_eq!(pasted.length, length.max(1));
+        assert_eq!((pasted.fade_in, pasted.fade_out), expected);
+        assert!(pasted.fade_in + pasted.fade_out <= pasted.length);
+        let after = doc.project().clone();
+        assert!(doc.undo());
+        assert_eq!(doc.project(), &before);
+        assert!(doc.redo());
+        assert_eq!(doc.project(), &after);
+    }
+}
+
+/// Copied automatic fades restore their manual bases before destination overlap recalculation.
 #[test]
 fn paste_restores_manual_fades_then_recalculates_automatic_destination_overlaps() {
     let mut p = fixture();

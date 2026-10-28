@@ -49,6 +49,7 @@ pub fn find_bundles(dirs: &[PathBuf]) -> Vec<PathBuf> {
     out
 }
 
+/// Collect canonical bundles once, revisiting directories only through a shallower search path.
 fn walk(
     path: &Path,
     depth: usize,
@@ -62,7 +63,7 @@ fn walk(
     let Ok(identity) = std::fs::canonicalize(path) else {
         return;
     };
-    if is_bundle(path) {
+    if is_bundle(path) || is_bundle(&identity) {
         if bundles.insert(identity.clone()) {
             out.push(identity);
         }
@@ -84,6 +85,7 @@ fn walk(
     }
 }
 
+/// Recognize the VST3 extension for directory bundles and single-file modules.
 pub fn is_bundle(p: &Path) -> bool {
     p.extension().is_some_and(|e| e.eq_ignore_ascii_case("vst3"))
 }
@@ -97,6 +99,7 @@ pub fn scan_bundle(path: &Path) -> Result<Vec<PluginInfo>, PluginError> {
 mod tests {
     use super::*;
 
+    /// Discovery includes nested vendors and file modules while treating bundle contents as opaque.
     #[test]
     fn finds_bundles_but_not_inside_them() {
         let temp = tempfile::tempdir().unwrap();
@@ -122,6 +125,7 @@ mod tests {
         );
     }
 
+    /// Overlapping directories and explicit bundle roots yield one canonical bundle each.
     #[test]
     fn overlapping_custom_roots_and_bundle_roots_scan_once() {
         let temp = tempfile::tempdir().unwrap();
@@ -139,6 +143,7 @@ mod tests {
         assert_eq!(find_bundles(std::slice::from_ref(&bundle)), [bundle]);
     }
 
+    /// Symlink cycles terminate, and renamed aliases retain the real bundle path needed for loading.
     #[cfg(unix)]
     #[test]
     fn symlink_aliases_and_cycles_do_not_duplicate_bundles() {
@@ -156,6 +161,27 @@ mod tests {
         assert_eq!(find_bundles(&[bundle_alias, bundle.clone()]), [bundle]);
     }
 
+    /// Suffixless aliases discover external directory and file modules without exposing bundle contents.
+    #[test]
+    #[cfg(unix)]
+    fn suffixless_aliases_find_external_bundles_without_descending_into_them() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().canonicalize().unwrap();
+        let root = dir.join("Search");
+        let bundle = dir.join("Vendor/Real.vst3");
+        let module = dir.join("Vendor/Single.vst3");
+        std::fs::create_dir_all(bundle.join("Contents/Hidden.vst3")).unwrap();
+        std::fs::write(&module, b"").unwrap();
+        std::fs::create_dir_all(&root).unwrap();
+        let alias = root.join("Alias");
+        std::os::unix::fs::symlink(&bundle, &alias).unwrap();
+        std::os::unix::fs::symlink(&bundle, root.join("Other alias")).unwrap();
+        std::os::unix::fs::symlink(&module, root.join("Single alias")).unwrap();
+        assert_eq!(find_bundles(&[root]), [bundle.clone(), module]);
+        assert_eq!(find_bundles(&[alias]), [bundle]);
+    }
+
+    /// A later shallow root can discover plugins hidden by an earlier root's recursion limit.
     #[test]
     fn a_shallower_extra_root_can_reach_beyond_an_earlier_depth_limit() {
         let temp = tempfile::tempdir().unwrap();

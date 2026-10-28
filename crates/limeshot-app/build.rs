@@ -1,3 +1,4 @@
+/// Embed Windows icon and version resources; propagate resource compiler failures.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../packaging/windows/LimeShot.ico");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {

@@ -178,6 +178,7 @@ fn scan_one(exe: &Path, bundle: &Path) -> Result<Vec<Entry>, String> {
 }
 
 impl Scan {
+    /// Discover bundles and scan child processes on a worker, reporting progress through the channel.
     fn start(exe: PathBuf, dirs: Vec<PathBuf>) -> Self {
         let (tx, rx) = channel();
         let spawned = std::thread::Builder::new()
@@ -417,6 +418,7 @@ impl PluginHost {
         }
     }
 
+    /// Report whether background bundle discovery or scanning is still active.
     pub fn is_scanning(&self) -> bool {
         self.scan.is_some()
     }
@@ -1418,6 +1420,7 @@ mod tests {
         assert_eq!(Database::load(&dir.path().join("missing.json")), Database::default());
     }
 
+    /// Worker discovery publishes totals and completes even when a scan child cannot start.
     #[test]
     fn custom_roots_are_discovered_on_worker_and_failures_finish_the_scan() {
         let dir = tempfile::tempdir().unwrap();

@@ -1877,8 +1877,8 @@ impl Command {
                     )?;
                     if let Some(clip) = p.playlist.clips.last_mut() {
                         clip.muted = c.muted;
-                        clip.fade_in = c.fade_in;
-                        clip.fade_out = c.fade_out;
+                        clip.fade_in = c.fade_in.min(clip.length);
+                        clip.fade_out = c.fade_out.min(clip.length - clip.fade_in);
                         clip.extra = c.extra;
                     }
                 }

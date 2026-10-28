@@ -346,6 +346,7 @@ mod tests {
         (d, ChannelId(id), pat)
     }
 
+    /// History jumps preserve saved-state identity and redo until a new edit branches the timeline.
     #[test]
     fn history_navigation_retains_redo_saved_state_and_branches() {
         let mut d = Document::default();
@@ -380,6 +381,7 @@ mod tests {
         assert!(!d.seek_history(1));
     }
 
+    /// Retained-history bounds and gesture boundaries stay valid when seeking older states.
     #[test]
     fn history_navigation_respects_retention_and_ends_compound_gestures() {
         let mut d = Document::default();

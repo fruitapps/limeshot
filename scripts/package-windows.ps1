@@ -48,6 +48,9 @@ if (-not $SkipBuild) {
     try { Invoke-Checked 'native-plugins/build.py' { python build.py } } finally { Pop-Location }
 }
 
+# Check source artwork even when reusing existing binaries with -SkipBuild.
+Invoke-Checked 'generated Windows icon' { cargo test --locked -p limeshot-app --example make_icon }
+
 Write-Host "Staging LimeShot $Version in $stage"
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force $stage, "$stage\plugins", "$stage\licenses\fonts", "$stage\licenses\plugins" | Out-Null
