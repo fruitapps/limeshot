@@ -299,6 +299,7 @@ mod tests {
         assert!(!c.remove_failed(&path));
         assert!(matches!(c.status_of_path(&path), Some(SampleStatus::Ready(s)) if Arc::ptr_eq(s, &sample)));
     }
+    /// Keep published audio pinned while reclaiming unreferenced buffers at the cache limit.
     #[test]
     fn embedded_preview_budget_pins_active_audio_and_collects_unused_buffers() {
         let mut cache = SampleCache::new();

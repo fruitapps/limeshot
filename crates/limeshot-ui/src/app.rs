@@ -865,6 +865,7 @@ impl LimeShotApp {
 
     pub fn new_project(&mut self) {
         self.send(Msg::Stop);
+        self.preparation = Default::default();
         self.doc.replace(Project::new());
         self.path = None;
         self.samples.set_project_dir(None);
@@ -888,6 +889,7 @@ impl LimeShotApp {
                 let mut project = absolutize_samples(&project, path.parent());
                 crate::lime::restrict_loaded_sources(&mut project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.path = Some(path.to_path_buf());
                 self.ui = self.fresh_ui_state();
@@ -994,6 +996,7 @@ impl LimeShotApp {
                 self.send(Msg::Stop);
                 let mut project = absolutize_samples(&project, self.autosave.dir.as_deref());
                 crate::lime::restrict_loaded_sources(&mut project, info.original.as_deref().and_then(Path::parent));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = info.original.clone();
@@ -1023,6 +1026,7 @@ impl LimeShotApp {
                 self.send(Msg::Stop);
                 let project = absolutize_samples(&project, path.parent());
                 self.samples.set_project_dir(path.parent().map(Path::to_path_buf));
+                self.preparation = Default::default();
                 self.doc.replace(project);
                 self.doc.mark_unsaved();
                 self.path = None;

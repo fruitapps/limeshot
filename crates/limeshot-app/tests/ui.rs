@@ -7933,3 +7933,55 @@ fn custom_vst3_folders_are_visible_removable_and_do_not_edit_the_project() {
     );
     assert!(!h.state().doc.is_modified());
 }
+
+/// Pressing a smooth curve handle without moving it is not an edit.
+#[test]
+fn smooth_fade_handle_click_preserves_curve_and_undo_history() {
+    let mut h = harness(false);
+    h.state_mut().ui.workspace.close(Win::ChannelRack);
+    h.state_mut().ui.playlist.zoom_x = 100.;
+    let channel = ChannelId(
+        h.state_mut()
+            .exec(Command::AddChannel {
+                name: "Audio".into(),
+                instrument: Instrument::Sampler(SamplerParams::default()),
+            })
+            .unwrap(),
+    );
+    let clip = ClipId(
+        h.state_mut()
+            .exec(Command::PlaceClip {
+                source: ClipSource::Audio(channel),
+                track: 0,
+                start: 0,
+                length: 4 * PPQ,
+                offset: 0,
+            })
+            .unwrap(),
+    );
+    h.state_mut().exec(Command::SetClipFades {
+        clip,
+        fade_in: PPQ,
+        fade_out: PPQ,
+    });
+    h.state_mut().exec(Command::SetClipSmoothFade { clip, smooth: true });
+    h.step();
+    h.step();
+    let g = h.state().ui.playlist.geometry.unwrap();
+    let top = g.grid.top() - g.scroll.y;
+    for tick in [PPQ / 2, 4 * PPQ - PPQ / 2] {
+        let handle = egui::pos2(g.pos(tick, 0).x, top + (g.track_h + 17.) / 2.);
+        let revision = h.state().doc.revision();
+        click(&mut h, handle, PointerButton::Primary);
+        assert_eq!(h.state().project().clip(clip).unwrap().fade_curve(false), 2.);
+        assert_eq!(h.state().project().clip(clip).unwrap().fade_curve(true), 2.);
+        assert_eq!(h.state().doc.revision(), revision);
+        drag(&mut h, handle, handle - vec2(0., 20.));
+        assert!(
+            h.state().doc.revision() > revision,
+            "moving the same handle still edits"
+        );
+        assert!(h.state_mut().doc.undo());
+        h.step();
+    }
+}

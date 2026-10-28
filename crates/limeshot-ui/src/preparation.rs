@@ -4,7 +4,7 @@ use limeshot_core::{ChannelId, ClipId, Command, Instrument, PluginState, PluginT
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
-    mpsc::{Receiver, channel},
+    mpsc::{Receiver, TryRecvError, channel},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,6 +59,7 @@ impl Drop for State {
         }
     }
 }
+/// Resolve a channel or clip target only when it still hosts Lime Sampler.
 fn plugin(app: &LimeShotApp, target: Target) -> Option<&limeshot_core::PluginRef> {
     let channel = match target {
         Target::Channel(id) => id,
@@ -69,6 +70,7 @@ fn plugin(app: &LimeShotApp, target: Target) -> Option<&limeshot_core::PluginRef
     };
     (lime::LimePlugin::of(p) == Some(lime::LimePlugin::SAMPLER)).then_some(p)
 }
+/// Recall the target recipe and initialize duration controls for a new dialog.
 pub fn open(app: &mut LimeShotApp, target: Target) {
     if app.preparation.job.is_none() && plugin(app, target).is_some() {
         app.preparation.target = Some(target);
@@ -98,6 +100,9 @@ pub fn open(app: &mut LimeShotApp, target: Target) {
                 )
             })
             .unwrap_or(0.);
+        app.preparation.use_beats = false;
+        app.preparation.beats =
+            app.preparation.source_seconds * app.preparation.ratio * app.project().tempo.bpm() / 60.;
         if let Target::Clip(id) = target
             && let Some(c) = app.project().clip(id)
         {
@@ -107,8 +112,13 @@ pub fn open(app: &mut LimeShotApp, target: Target) {
         }
     }
 }
+/// Finish a worker on the UI thread, rejecting cancelled or stale results.
 pub fn poll(app: &mut LimeShotApp) {
-    let result = app.preparation.job.as_ref().and_then(|j| j.rx.try_recv().ok());
+    let result = app.preparation.job.as_ref().and_then(|j| match j.rx.try_recv() {
+        Ok(result) => Some(result),
+        Err(TryRecvError::Empty) => None,
+        Err(TryRecvError::Disconnected) => Some(Err("Sample preparation worker stopped; retry".into())),
+    });
     if let Some(result) = result {
         let Some(job) = app.preparation.job.take() else { return };
         if job.cancel.load(Ordering::Relaxed) {
@@ -151,6 +161,7 @@ pub fn poll(app: &mut LimeShotApp) {
         }
     }
 }
+/// Capture the sampler state and launch cancellable preparation or restoration.
 pub fn start(app: &mut LimeShotApp, restore: bool) {
     if app.preparation.job.is_some() {
         return;
@@ -227,6 +238,7 @@ pub fn start(app: &mut LimeShotApp, restore: bool) {
     });
     app.preparation.status = "Preparing…".into();
 }
+/// Draw the preparation dialog and dispatch its worker actions.
 pub fn show(app: &mut LimeShotApp, ctx: &egui::Context) {
     if app.preparation.target.is_none() {
         return;
@@ -328,6 +340,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &egui::Context) {
 mod tests {
     use super::*;
     use limeshot_core::*;
+    /// Build an embedded sampler and an offset clip for preparation workflow tests.
     fn app() -> (LimeShotApp, ClipId, ChannelId) {
         let mut app = LimeShotApp::new_silent(crate::settings::Settings::default(), None);
         let p = LimePlugin::SAMPLER.with_values(
@@ -358,6 +371,7 @@ mod tests {
         );
         (app, clip, channel)
     }
+    /// Poll until a test worker completes, failing if it exceeds the deadline.
     fn finish(app: &mut LimeShotApp) {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
         while app.preparation.job.is_some() && std::time::Instant::now() < deadline {
@@ -366,6 +380,99 @@ mod tests {
         }
         assert!(app.preparation.job.is_none());
     }
+    /// Clip beat fitting must not override a channel's recalled preparation recipe.
+    #[test]
+    fn opening_channel_resets_clip_beats_and_recalls_multiplier() {
+        let (mut app, clip, channel) = app();
+        app.exec(Command::ResizeClip { clip, length: 2 * 960 });
+        open(&mut app, Target::Clip(clip));
+        assert!(app.preparation.use_beats);
+        app.preparation.beats = 100.;
+        open(&mut app, Target::Channel(channel));
+        assert!(!app.preparation.use_beats);
+        assert_eq!(app.preparation.ratio, 1.);
+        assert!((app.preparation.beats - app.project().tempo.bpm() / 60.).abs() < 1e-6);
+        app.preparation.ratio = 1.5;
+        start(&mut app, false);
+        finish(&mut app);
+        assert_eq!(app.preparation.status, "Sample prepared.");
+        open(&mut app, Target::Clip(clip));
+        open(&mut app, Target::Channel(channel));
+        assert!(!app.preparation.use_beats);
+        assert_eq!(app.preparation.ratio, 1.5);
+        assert!((app.preparation.beats - 1.5 * app.project().tempo.bpm() / 60.).abs() < 1e-6);
+    }
+
+    /// Every successful project replacement closes the old target and cancels its worker.
+    #[test]
+    fn replacing_project_cancels_preparation_and_clears_target() {
+        for replacement in 0..4 {
+            for busy in [false, true] {
+                let (mut app, clip, _) = app();
+                let dir = tempfile::tempdir().unwrap();
+                let saved = dir.path().join("other.lime");
+                limeshot_project::save(&Project::new(), &saved).unwrap();
+                app.autosave = crate::autosave::Autosave::new(Some(dir.path().join("autosave")));
+                app.autosave.write(&Project::new(), None, 0).unwrap();
+                let recovery = app.autosave.find().unwrap();
+                open(&mut app, Target::Clip(clip));
+                let cancel = if busy {
+                    start(&mut app, false);
+                    Some(app.preparation.job.as_ref().unwrap().cancel.clone())
+                } else {
+                    None
+                };
+                match replacement {
+                    0 => app.new_project(),
+                    1 => app.open_path(&saved),
+                    2 => assert!(app.recover(&recovery)),
+                    _ => assert!(
+                        app.import_flp(
+                            &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                                .join("../limeshot-project/tests/fixtures/flp/empty.flp")
+                        )
+                    ),
+                }
+                assert!(app.preparation.target.is_none());
+                assert!(app.preparation.job.is_none());
+                assert!(cancel.is_none_or(|c| c.load(Ordering::Relaxed)));
+                let expected = app.project().clone();
+                poll(&mut app);
+                assert_eq!(app.project(), &expected);
+            }
+        }
+    }
+
+    /// An abnormal worker exit releases the busy state without changing the document.
+    #[test]
+    fn disconnected_worker_reports_failure_and_allows_retry() {
+        let (mut app, _, channel) = app();
+        open(&mut app, Target::Channel(channel));
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.preparation.job = Some(Job {
+            rx,
+            cancel: Arc::new(AtomicBool::new(false)),
+            target: Target::Channel(channel),
+            expected: plugin(&app, Target::Channel(channel)).unwrap().state.clone(),
+            revision: app.doc.revision(),
+            generation: app.doc.generation(),
+            fit: None,
+            restore: false,
+        });
+        let expected = app.project().clone();
+        poll(&mut app);
+        assert!(app.preparation.job.is_some(), "empty channel is still busy");
+        drop(tx);
+        poll(&mut app);
+        assert!(app.preparation.job.is_none());
+        assert!(app.preparation.status.contains("worker stopped"));
+        assert_eq!(app.project(), &expected);
+        start(&mut app, false);
+        finish(&mut app);
+        assert_eq!(app.preparation.status, "Sample prepared.");
+    }
+
+    /// Verify clip isolation, recipe recall, persistence, undo and arrangement sharing.
     #[test]
     fn clip_worker_isolates_notes_preserves_controls_reopens_and_undoes() {
         let (mut app, clip, channel) = app();
@@ -431,6 +538,7 @@ mod tests {
         );
         assert_ne!(app.project().clip(clip).unwrap().audio_channel(), Some(unique));
     }
+    /// Reject cancelled work and results captured before another document edit.
     #[test]
     fn cancel_and_concurrent_edits_never_overwrite_the_document() {
         for cancel in [true, false] {
@@ -457,6 +565,7 @@ mod tests {
 #[cfg(test)]
 mod arrangement_tests {
     use limeshot_core::*;
+    /// Recalculate overlap fades and restore manual values through moves and undo.
     #[test]
     fn automatic_crossfades_follow_moves_and_restore_manual_fades_with_undo() {
         let mut doc = Document::default();

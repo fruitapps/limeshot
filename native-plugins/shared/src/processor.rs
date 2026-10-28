@@ -836,6 +836,7 @@ mod tests {
         }
     }
 
+    /// Reuse decoded prepared PCM and render seeks without allocating on the audio thread.
     #[test]
     fn prepared_audio_is_shared_and_renders_without_allocating_after_seek() {
         let dir = tempfile::tempdir().unwrap();

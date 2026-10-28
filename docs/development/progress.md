@@ -854,3 +854,69 @@ primary checkout/cache, push feature branches only and never merge automatically
 The owner explicitly requested stopping after this session, superseding the earlier ongoing
 local-session chain. Do not create another session or automation. Usage at the latest check was
 63% in the same authorized window; no reset credit was used.
+## 2026-10-28 — Address all remaining PR #25 review findings
+
+Audited the full PR #25 discussion, seven inline threads, and seven outside-diff findings
+on `codex/prepared-sampling-arrangement` in the existing primary checkout/Cargo cache.
+Fast-forwarded to `da9c654` before editing. The two preview-eviction threads already have
+an implemented fix: published sampler source mappings retain strong PCM references, and
+capacity refusal cannot substitute a source-file hint. The existing 40-source pressure,
+replacement/removal and full-budget recovery regressions pass. The disabled Smooth S fades
+checkbox, research confidence labels/menu name, duplicate limitation phrase and stale
+ping-pong note are also already addressed; no duplicate implementation was added.
+
+Fixed the still-valid outside-diff findings: stationary fade-curve handle clicks preserve
+smooth fades and history; zero-crossing searches map through reverse playback from the high
+trim endpoint, including pitch; New/Open/Recover/FLP import cancel preparation and reset its
+target; channel preparation recalls its multiplier and derives fresh beats instead of reusing
+clip beat mode. New regression tests cover both fade handles, forward/reverse snapping,
+recipe recall and all four project replacement paths with idle/busy preparation. Both host
+and native completion pollers now release busy state on worker disconnection, with tests;
+ordinary empty channels remain pending and stale/cancelled results remain rejected.
+
+Corrected the remaining limitation text (only the Smooth S fades checkbox is disabled for
+an automatic pair; manual curve handles still exist), qualified the realtime stretching gap,
+removed leading spaces from PL-018/020/025 notes and clarified zero-based sampler indices
+in PLG-015/016. Regenerated the roadmap, recorded new evidence for INS-007/PL-023 and added
+API/helper/test documentation in response to the docstring warning. No feature status was
+promoted; the external reviewer's coverage percentage has not been rerun locally.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug. **501 workspace tests passed**, including
+173 app UI tests and 13 hosted-native tests; **28 native library tests passed**. Rebuilt all
+twelve debug Lime VST3 bundles and used them through
+`LIMESHOT_LIME_PLUGINS=$PWD/native-plugins/target/debug-bundled`. Workspace build, strict
+workspace/native all-target Clippy, both formatting checks, feature inventories, repository
+references and whitespace checks pass. Rendered and visually inspected the preparation
+dialog with `ui_shot --audio --prepare` (`/tmp/limeshot-pr25-preparation.png`). No audio-thread
+or DSP behavior was changed. Live listening/FL equivalence and Windows/Linux behavior remain
+in human verification. Continue using the primary checkout and its Cargo caches; push only
+the feature branch and its PR, never directly to main or merge automatically.
+
+## 2026-10-28 — Recover stacked PRs #27–#30 through PR #31
+
+Audited the merged PR history: #26 was merged into the preparation branch before
+#27–#30 were merged into its source branch. Consequently #25 delivered the original
+preview/fade fixes to main, but custom VST3 folders, navigable undo history, full
+Playlist clipboard properties and Windows executable icons remained on
+`codex/sampler-preview-fade-fixes`. PR #31 brings those four changes to main.
+
+Merged current main (`adb0c85`) into that feature branch in the existing primary
+checkout `/Users/sebastian/Developer/limeshot`, reusing its Cargo caches. Retained
+both UI regression tests at the conflicting insertion point and both progress
+histories; regenerated `features.md` from the combined canonical records. The newer
+preparation/fade fixes from main are preserved, including all existing UI test/helper
+functions. No feature status was promoted. Existing limitations and human checks
+remain applicable.
+
+Validation: macOS 26.6.2 (25G83), arm64, debug. Rebuilt all twelve debug Lime VST3
+bundles. **516 workspace tests passed**, including 178 app UI tests and 13
+hosted-native tests; **28 native tests passed**. The first sandboxed workspace run
+could not bind the plugin bridge's local socket; the full rerun with local socket
+access passed. Workspace all-target build, strict all-target Clippy in both
+workspaces, both formatting checks, feature inventories, repository references and
+whitespace checks pass. Rendered and visually inspected history, File settings and
+sampler preparation with `ui_shot` (`/tmp/limeshot-pr31-history.png`,
+`/tmp/limeshot-pr31-folders.png`, `/tmp/limeshot-pr31-prepare.png`). Live GUI/audio,
+Windows icon appearance and other-platform runtime behavior remain unverified.
+Only the feature branch and PR are updated; main is never pushed or merged
+automatically. Continue using the primary checkout and its Cargo caches.

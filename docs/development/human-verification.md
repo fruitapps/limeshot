@@ -127,7 +127,11 @@ preview budget leaves existing mapped previews available, without substituting s
 Enable automatic crossfades for an overlapping audio pair: Smooth S fades is disabled with a
 hint, becomes editable when automatic crossfades are turned off, and remains editable for
 nonoverlapping clips. Automated UI/cache tests and the rendered menu cover local behavior;
-physical GUI/audio and Windows/Linux checks remain open. Requires an audible output and the
+physical GUI/audio and Windows/Linux checks remain open. Also check a stationary click on each
+smooth-fade curve handle, reverse/trim/pitch zero-crossing edits, clip-to-channel preparation dialog
+switching and New/Open/Recover/FLP import with preparation idle or busy. Automated regressions
+cover these paths locally; standalone/native worker-failure recovery remains a live-host check.
+Requires an audible output and the
 platform's GUI input/observation permissions. See [prepared sampling](../research/prepared-sampling.md).
 
 ## Custom VST3 search folders (PLG-004)

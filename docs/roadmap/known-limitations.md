@@ -70,8 +70,9 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * Automation runs in Song mode. Effect automation from projects older than the Lime VST3 switch follows the plugin
   closely but not bit for bit (smoothing and interpolation); automation of the old compressor sidechain selector
   warns instead of converting.
-* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, time
-  stretching or multisampling. Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
+* Sampler: ADSR, loop points and a low-pass filter; no delay/hold stages, extra modulation envelopes, realtime
+  tempo-following stretch or multisampling. Fixed-duration Resample/Stretch preparation is available; see
+  [prepared sampling](../research/prepared-sampling.md). Linear interpolation aliases when pitched far up. LimeSynth: low/band/high-pass at
   12 dB/oct and key tracking; its LFO restarts per voice; no mono/glide.
 * Each Lime instrument has 128 voices and steals the oldest abruptly. Third-party plugins without Lime telemetry
   contribute zero to the voice count.
@@ -216,7 +217,8 @@ state/undo/reopen and standalone hosting still need live checks. See the
   captures the current tempo once. Host embedded previews cap at 4096 buffers/256 MiB and may be
   unavailable when mapped channel sources or active voices pin that budget. Existing mapped
   previews retain their PCM; replacing/removing sources releases their pins. Embedded states
-  never use external reload hints as a fallback for unavailable previews. Active automatic pairs disable manual curve selection until automatic crossfades are turned off.
+  never use external reload hints as a fallback for unavailable previews. Active automatic pairs disable only the Smooth S fades checkbox; curve handles remain available,
+  but automatic crossfades must be turned off before editing the saved manual curve.
   Automatic crossfades use complementary gain, not
   equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.
 
