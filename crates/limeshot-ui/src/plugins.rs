@@ -128,6 +128,7 @@ pub fn scan_child(bundle: &str) -> i32 {
 }
 
 enum ScanMsg {
+    Discovered(usize),
     Bundle(String, Result<Vec<Entry>, String>),
     Done,
 }
@@ -135,7 +136,7 @@ enum ScanMsg {
 /// A scan running in the background.
 pub struct Scan {
     rx: Receiver<ScanMsg>,
-    pub total: usize,
+    pub total: Option<usize>,
     pub done: usize,
     found: Database,
 }
@@ -177,12 +178,16 @@ fn scan_one(exe: &Path, bundle: &Path) -> Result<Vec<Entry>, String> {
 }
 
 impl Scan {
-    fn start(exe: PathBuf, bundles: Vec<PathBuf>) -> Self {
+    /// Discover bundles and scan child processes on a worker, reporting progress through the channel.
+    fn start(exe: PathBuf, dirs: Vec<PathBuf>) -> Self {
         let (tx, rx) = channel();
-        let total = bundles.len();
         let spawned = std::thread::Builder::new()
             .name("limeshot-plugin-scan".into())
             .spawn(move || {
+                let bundles = limeshot_plugins::scan::find_bundles(&dirs);
+                if tx.send(ScanMsg::Discovered(bundles.len())).is_err() {
+                    return;
+                }
                 for b in bundles {
                     let r = scan_one(&exe, &b);
                     if tx.send(ScanMsg::Bundle(b.to_string_lossy().into_owned(), r)).is_err() {
@@ -196,7 +201,7 @@ impl Scan {
         }
         Self {
             rx,
-            total,
+            total: None,
             done: 0,
             found: Database::default(),
         }
@@ -206,6 +211,7 @@ impl Scan {
     fn poll(&mut self) -> Option<Database> {
         loop {
             match self.rx.try_recv() {
+                Ok(ScanMsg::Discovered(total)) => self.total = Some(total),
                 Ok(ScanMsg::Bundle(path, r)) => {
                     self.done += 1;
                     match r {
@@ -412,17 +418,19 @@ impl PluginHost {
         }
     }
 
+    /// Report whether background bundle discovery or scanning is still active.
     pub fn is_scanning(&self) -> bool {
         self.scan.is_some()
     }
 
-    /// Scan the standard VST3 folders with `exe --scan-vst3` per bundle.
-    pub fn start_scan(&mut self, exe: PathBuf) {
+    /// Discover standard and custom VST3 folders on a worker, then scan each bundle in a child.
+    pub fn start_scan(&mut self, exe: PathBuf, extra_dirs: &[PathBuf]) {
         if self.scan.is_some() {
             return;
         }
-        let bundles = limeshot_plugins::scan::find_bundles(&limeshot_plugins::scan::default_dirs());
-        self.scan = Some(Scan::start(exe, bundles));
+        let mut dirs = limeshot_plugins::scan::default_dirs();
+        dirs.extend_from_slice(extra_dirs);
+        self.scan = Some(Scan::start(exe, dirs));
     }
 
     /// Advance a running scan. Returns a summary when it finished.
@@ -983,16 +991,23 @@ pub fn menu(app: &mut LimeShotApp, ui: &mut Ui, instruments: bool) -> Option<Ent
 /// "Find plugins…", or the progress of a running scan.
 pub fn scan_button(app: &mut LimeShotApp, ui: &mut Ui) {
     if let Some(s) = &app.plugins.scan {
-        ui.label(format!("Scanning plugins… {}/{}", s.done, s.total));
+        match s.total {
+            Some(total) => {
+                ui.label(format!("Scanning plugins… {}/{total}", s.done));
+            }
+            None => {
+                ui.label("Finding VST3 bundles…");
+            }
+        }
         return;
     }
     let r = ui
         .button("Find plugins…")
-        .hint("Scan the standard VST3 folders (each plugin is checked in a separate process)");
+        .hint("Scan standard and custom VST3 folders (each plugin is checked in a separate process)");
     if r.clicked() {
         match std::env::current_exe() {
             Ok(exe) => {
-                app.plugins.start_scan(exe);
+                app.plugins.start_scan(exe, &app.settings.vst3_folders);
                 app.toast("Scanning for VST3 plugins…");
             }
             Err(e) => app.toast_error(format!("cannot start the scan: {e}")),
@@ -1403,6 +1418,32 @@ mod tests {
             ["Lime Test Gain"]
         );
         assert_eq!(Database::load(&dir.path().join("missing.json")), Database::default());
+    }
+
+    /// Worker discovery publishes totals and completes even when a scan child cannot start.
+    #[test]
+    fn custom_roots_are_discovered_on_worker_and_failures_finish_the_scan() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle = dir.path().join("Custom.vst3");
+        std::fs::create_dir(&bundle).unwrap();
+        let mut scan = Scan::start(
+            dir.path().join("missing-executable"),
+            vec![dir.path().to_owned(), bundle.clone()],
+        );
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let db = loop {
+            if let Some(db) = scan.poll() {
+                break db;
+            }
+            assert!(Instant::now() < deadline, "scan did not complete");
+            std::thread::sleep(Duration::from_millis(5));
+        };
+        assert_eq!(scan.total, Some(1));
+        assert_eq!(scan.done, 1);
+        assert!(db.entries.is_empty());
+        assert_eq!(db.failed.len(), 1);
+        assert_eq!(Path::new(&db.failed[0].0), bundle.canonicalize().unwrap());
+        assert!(!db.failed[0].1.is_empty());
     }
 
     #[test]

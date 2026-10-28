@@ -376,13 +376,25 @@ pub fn menu_bar(app: &mut LimeShotApp, ui: &mut Ui) -> f32 {
                 }
                 ui.separator();
                 ui.menu_button("History", |ui| {
-                    let h = app.doc.history();
-                    if h.is_empty() {
-                        ui.label("Nothing to undo");
-                    }
-                    for (i, l) in h.iter().enumerate().rev().take(30) {
-                        ui.label(format!("{}. {l}", i + 1));
-                    }
+                    let h = app.doc.history_timeline();
+                    let current = app.doc.history_position();
+                    ui.label("Return to the state after an edit");
+                    egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+                        for (i, label) in h.iter().enumerate().rev() {
+                            let position = i + 1;
+                            if ui
+                                .selectable_label(current == position, format!("{position}. {label}"))
+                                .clicked()
+                            {
+                                app.doc.seek_history(position);
+                                ui.close();
+                            }
+                        }
+                        if ui.selectable_label(current == 0, "0. Oldest retained state").clicked() {
+                            app.doc.seek_history(0);
+                            ui.close();
+                        }
+                    });
                 });
             });
             ui.menu_button("Add", |ui| {

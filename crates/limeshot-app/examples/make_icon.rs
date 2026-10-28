@@ -86,3 +86,19 @@ fn write_ico(path: &Path) -> Result<(), String> {
     }
     write(path, &out)
 }
+
+#[cfg(test)]
+mod tests {
+    /// Reject a bundled Windows icon that no longer matches the generated artwork.
+    #[test]
+    fn bundled_windows_icon_matches_generated_artwork() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("LimeShot.ico");
+        super::write_ico(&path).unwrap();
+        assert_eq!(
+            std::fs::read(path).unwrap(),
+            include_bytes!("../../../packaging/windows/LimeShot.ico"),
+            "regenerate with cargo run -p limeshot-app --example make_icon -- packaging/windows/LimeShot.ico"
+        );
+    }
+}

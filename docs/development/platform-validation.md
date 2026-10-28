@@ -39,3 +39,11 @@ nonzero PCM and no writer drop warning. Preferences/autosave were disabled; moni
 Off before exit. See [progress](progress.md) and [research](../research/recording-monitoring-and-count-in.md).
 Audible monitoring, latency alignment, sustained drift/device loss, hardware MIDI and Windows/
 Linux/Intel macOS behavior remain unverified; REC-003 and REC-007 remain IMPLEMENTED.
+
+## 2026-10-27 — Stacked preview/fade follow-up CI (`18952da`, #26)
+
+[CI run 40590120668](https://github.com/fruitapps/limeshot/actions/runs/40590120668) passed all
+jobs: macOS arm64/Intel, Linux x86-64/ARM64 and Windows x86-64 Clippy/build/tests with Lime
+bundles, demo render and inventories; Windows ARM64 cross-build; rustfmt. This applies to #26's
+commit only. Subsequent #27/#28 runs were still in progress during the clipboard session.
+Hands-on GUI/audio-device verification remains separate.

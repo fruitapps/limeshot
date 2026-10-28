@@ -64,6 +64,13 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Build
         run: cargo build --workspace --all-targets
+      - name: Check Windows executable icons
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo test -p limeshot-app --example make_icon
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/check-windows-icons.ps1 -Executables @('target/debug/limeshot.exe', 'target/debug/limeshot-cli.exe')
       # CI runners have no sound card: the audio tests use the offline renderer and the silent
       # clock; the UI tests render without a window. The offscreen-screenshot example (wgpu) is
       # only built, not run, because hosted runners may lack a GPU adapter.
@@ -103,3 +110,6 @@ jobs:
           targets: aarch64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --workspace --target aarch64-pc-windows-msvc
+      - name: Check ARM64 executable icons without executing them
+        shell: pwsh
+        run: ./scripts/check-windows-icons.ps1 -Executables @('target/aarch64-pc-windows-msvc/debug/limeshot.exe', 'target/aarch64-pc-windows-msvc/debug/limeshot-cli.exe')

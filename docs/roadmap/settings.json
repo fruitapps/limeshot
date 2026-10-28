@@ -1497,10 +1497,10 @@
       "fl_default": "",
       "fl_reference": "Options › File settings › Plugins › Plugin search folders",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "settings.vst3_folders",
+      "status": "IMPLEMENTED",
       "feature": "APP-021",
-      "notes": "'Manage plugins' opens the Plugin Manager (page 'Plugin Manager')."
+      "notes": "Settings › File › VST3 plugin search folders: add/remove extra roots; platform defaults always searched. Find plugins refreshes the database via background discovery and per-bundle child scans. VST3 only; no per-root enable switch, format selection or separate Plugin Manager. Settings round-trip, discovery/worker and headless removal tests cover local behavior; live picker/rescan and platform checks pending."
     },
     {
       "id": "SET-120",
@@ -2435,10 +2435,10 @@
       "fl_default": "VST3, VST, CLAP, FL folders",
       "fl_reference": "Options › Manage plugins (separate app 'FL Studio Plugin Manager') › Options › Plugin search paths",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "settings.vst3_folders",
+      "status": "IN_PROGRESS",
       "feature": "PLG-004",
-      "notes": "Default: /Library/Audio/Plug-Ins/VST3, ~/Library/Audio/Plug-Ins/VST3, /Library/Audio/Plug-Ins/VST, /Library/Audio/Plug-Ins/CLAP and FL's own folders; add/remove folder buttons."
+      "notes": "Settings › File › VST3 plugin search folders: add/remove extra roots; platform defaults always searched. Find plugins refreshes the database via background discovery and per-bundle child scans. VST3 only; no per-root enable switch, format selection or separate Plugin Manager. Settings round-trip, discovery/worker and headless removal tests cover local behavior; live picker/rescan and platform checks pending."
     },
     {
       "id": "SET-180",

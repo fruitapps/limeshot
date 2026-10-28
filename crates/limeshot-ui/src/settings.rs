@@ -15,6 +15,8 @@ pub struct Settings {
     pub recent: Vec<PathBuf>,
     /// Extra folders shown in the Browser.
     pub browser_folders: Vec<PathBuf>,
+    /// Extra VST3 search roots, in addition to the platform defaults.
+    pub vst3_folders: Vec<PathBuf>,
     pub ui_scale: f32,
     /// Options / toolbar: keep the active editor's playhead visible while playing.
     pub auto_scroll: bool,
@@ -42,6 +44,7 @@ impl Default for Settings {
             audio: AudioConfig::default(),
             recent: Vec::new(),
             browser_folders: Vec::new(),
+            vst3_folders: Vec::new(),
             ui_scale: 1.0,
             auto_scroll: false,
             auto_keep_long_audio_on_disk: true,
@@ -115,6 +118,7 @@ impl Settings {
 mod tests {
     use super::*;
 
+    /// Preferences retain custom search roots across JSON round trips and bound the recent-file list.
     #[test]
     fn round_trip_and_recent_list() {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -136,6 +140,8 @@ mod tests {
                 .expect("old settings")
                 .auto_zip_empty_channels
         );
+        assert!(serde_json::from_str::<Settings>("{}").unwrap().vst3_folders.is_empty());
+        s.vst3_folders = vec![dir.path().join("Custom VST3"), dir.path().join("Missing")];
         s.auto_scroll = true;
         s.auto_zip_empty_channels = true;
         s.save_to(&f).expect("save");

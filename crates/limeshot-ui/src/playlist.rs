@@ -4157,20 +4157,17 @@ pub const TRACK_H: (f32, f32) = (12.0, 640.0);
 pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
     let sel = app.ui.playlist.selection.clone();
     if matches!(op, ClipOp::Cut | ClipOp::Copy) && !sel.is_empty() {
-        let clips: Vec<crate::app::CopiedClip> = app
+        let clips: Vec<_> = app
             .project()
             .playlist
             .clips
             .iter()
             .filter(|c| sel.contains(&c.id))
-            .map(|c| crate::app::CopiedClip {
-                source: c.source,
-                track: c.track,
-                start: c.start,
-                length: c.length,
-                offset: c.offset,
-            })
+            .cloned()
             .collect();
+        if clips.is_empty() {
+            return;
+        }
         app.clipboard = Some(crate::app::Clipboard::Clips(clips));
         if op == ClipOp::Cut {
             app.exec(Command::RemoveClips(sel.clone()));
@@ -4188,17 +4185,9 @@ pub fn clipboard(app: &mut LimeShotApp, op: ClipOp) {
             origin
         };
         let before: Vec<ClipId> = app.project().playlist.clips.iter().map(|c| c.id).collect();
-        let cmds = clips
-            .iter()
-            .map(|c| Command::PlaceClip {
-                source: c.source,
-                track: c.track,
-                start: c.start - origin + target,
-                length: c.length,
-                offset: c.offset,
-            })
-            .collect();
-        app.exec(Command::Batch(cmds));
+        if app.exec(Command::PasteClips { clips, start: target }).is_none() {
+            return;
+        }
         app.ui.playlist.selection = app
             .project()
             .playlist

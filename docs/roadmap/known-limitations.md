@@ -28,8 +28,9 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * Packages ([release packaging](../development/release-packaging.md)) are unsigned on Windows (SmartScreen warns)
   and signed ad hoc on macOS (Gatekeeper blocks them until allowed; no Developer ID or notarisation).
   Double-clicking a `.lime` file in Finder starts LimeShot without opening the file. No AppImage, MSI, Flatpak or
-  Windows ARM64 package exists, and the Windows executables carry no embedded icon (shortcuts and the installer use
-  `LimeShot.ico`). The macOS PKG/DMG and the Linux `.deb`/tarball have been tested on CI runners, not on hardware.
+  Windows ARM64 package exists. Windows executables now embed the six-size `LimeShot.ico`; native resource
+  checks are wired into CI and packaging, but Explorer/taskbar appearance still needs a Windows desktop check.
+  The macOS PKG/DMG and the Linux `.deb`/tarball have been tested on CI runners, not on hardware.
 
 ## Audio
 * Loaded VST3 module code stays resident until LimeShot exits, to keep framework callbacks valid; closing
@@ -92,8 +93,11 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
 * The keyboard toggle forwards typed characters only (not arrows or function keys).
 * Native-editor and third-party parameter changes on non-sampler plugins mark the project dirty rather than creating undo steps; known Lime host controls and completed native Lime Sampler edits are undo steps.
 * Delay compensation covers up to about 340 ms per path and 64 delayed paths; export trimming cannot be turned off.
-* No custom plugin folders; a crashing plugin takes LimeShot down unless it runs in a separate process (macOS and
-  Linux). No CLAP or Audio Units.
+* Custom VST3 folders are managed in Settings › File; run Find plugins after changes to replace the saved
+  database. Standard folders stay enabled; there is no per-root enable switch or separate Plugin Manager.
+  Missing/unreadable roots are skipped and recursion is limited to eight levels. Loaded project instances
+  remain active after a folder is removed. Live picker/rescan and Windows/Linux runtime checks remain pending.
+  A crashing plugin takes LimeShot down unless it runs in a separate process (macOS and Linux). No CLAP or Audio Units.
 * Value menus cover channel/mixer volume and pan and known Lime controls; third-party controls have the generic
   automation menu only.
 
@@ -118,6 +122,10 @@ not imply complete FL Sampler parity.
   observations are recorded in the [control inventory](../research/sampler-controls-2026-10-27.md).
 
 ## Editing
+* Playlist paste preserves clip mute, fades, curves and extra metadata, with automatic crossfades recalculated
+  at the destination (PL-026). Copied fades and restored automatic-crossfade manual bases are clamped to the current clip length. The clipboard references current-project sources; cross-project asset transfer
+  is unsupported. Automated tests cover local snapshot/UI behavior; live audio and other-platform runtime
+  checks remain open.
 * The clipboard is app-internal (not the system clipboard). Edit events, Init song and controller linking are not
   available.
 * Quantize… has start and duration strength only (no swing templates). Swing is global (no per-channel mix).
@@ -213,3 +221,11 @@ state/undo/reopen and standalone hosting still need live checks. See the
   but automatic crossfades must be turned off before editing the saved manual curve.
   Automatic crossfades use complementary gain, not
   equal-power gain, and affect adjacent two-clip overlaps on the same Playlist track only.
+
+## Undo history
+
+Edit › History navigates the session’s retained undo/redo snapshots (up to 200 edits),
+with the current state selected. It stays in Edit rather than FL’s Browser; configurable
+depth, sorting preferences and persistence are absent. New/open clears history, and a new
+edit after navigation discards redo. Headless tests and an offscreen capture cover the
+workflow; live/platform checks remain pending. See [design and evidence](../research/undo-history.md).

@@ -1,6 +1,6 @@
 //! Render the LimeShot window offscreen to a PNG (no window, no screen-recording permission).
 //!
-//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--crossfade-menu] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--count-in] [--prefs=Audio]`
+//! `cargo run -p limeshot-app --example ui_shot -- out.png [--empty] [--piano] [--mixer] [--fx] [--settings] [--melody] [--detach] [--audio] [--crossfade-menu] [--history] [--automation] [--synth] [--markers] [--tools] [--eq] [--sidechain] [--graph] [--zip] [--auto-zip] [--scrub] [--plugin-window] [--missing-sample] [--menu=Tools | --menu=⏵/Tools] [--tool=strum] [--scale] [--note-pan] [--record] [--count-in] [--prefs=Audio]`
 
 use egui_kittest::Harness;
 use limeshot_ui::workspace::Win;
@@ -483,6 +483,17 @@ fn main() {
                 harness.step();
             }
         }
+    }
+    if args.iter().any(|a| a == "--history") {
+        harness
+            .state_mut()
+            .exec(limeshot_core::Command::SetTitle("History example".into()));
+        harness
+            .state_mut()
+            .exec(limeshot_core::Command::SetTempo(limeshot_core::Tempo::from_bpm(120.0)));
+        harness.state_mut().exec(limeshot_core::Command::AddPlaylistTrack);
+        harness.state_mut().doc.undo();
+        harness.step();
     }
     if let Some(menu) = args.iter().find_map(|a| a.strip_prefix("--menu=")) {
         // Open a menu, to look at its items; "⏵/Tools" opens an editor's menu (with --piano, the

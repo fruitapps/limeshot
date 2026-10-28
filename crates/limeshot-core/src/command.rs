@@ -337,6 +337,11 @@ pub enum Command {
     },
     /// Delete an automation and all its clips.
     RemoveAutomation(AutomationId),
+    /// Paste snapshots with fresh IDs, preserving properties and relative timing.
+    PasteClips {
+        clips: Vec<Clip>,
+        start: Tick,
+    },
     RemoveClips(Vec<ClipId>),
     MoveClips {
         clips: Vec<ClipId>,
@@ -816,6 +821,7 @@ impl Command {
             ResizeClip { .. } | ResizeClipStart { .. } => "Resize clip",
             SlipClip { .. } => "Slip clip",
             SliceClips { .. } => "Slice clips",
+            PasteClips { .. } => "Paste clips",
             DuplicateClipsBy { .. } | DuplicateClips(_) => "Duplicate clips",
             MakeClipUnique(_) => "Make unique",
             PrepareAudioClip { .. } => "Prepare audio clip",
@@ -1855,6 +1861,32 @@ impl Command {
                     pl.clips.retain(|c| c.automation() != Some(id));
                 }
             }
+            PasteClips { clips, start } => {
+                let Some(origin) = clips.iter().map(|c| c.start).min() else {
+                    return ok();
+                };
+                let mut created = Created(None);
+                for c in clips {
+                    created = place_clip(
+                        p,
+                        c.source,
+                        c.track,
+                        start.saturating_add(c.start - origin),
+                        c.length,
+                        c.offset,
+                    )?;
+                    if let Some(clip) = p.playlist.clips.last_mut() {
+                        clip.muted = c.muted;
+                        clip.fade_in = c.fade_in.min(clip.length);
+                        clip.fade_out = c.fade_out.min(clip.length - clip.fade_in);
+                        clip.extra = c.extra;
+                    }
+                }
+                // Copied automatic envelopes belong to the old overlap. Restore the manual
+                // fades before Document recalculates overlaps at the destination.
+                clear_auto_crossfades(p);
+                return Ok(created);
+            }
             RemoveClips(ids) => p.playlist.clips.retain(|c| !ids.contains(&c.id)),
             MoveClips { clips, dt, dtrack } => {
                 let max_track = p.playlist.tracks.len().saturating_sub(1) as i64;
@@ -2638,15 +2670,15 @@ fn clone_pattern(p: &mut Project, i: usize) -> PatternId {
     new_id
 }
 
-/// Restore the manual fades before recalculating automatic overlap envelopes.
+/// Restore manual fades within current clip bounds before recalculating automatic overlap envelopes.
 pub(crate) fn clear_auto_crossfades(project: &mut Project) {
     for c in project.all_playlists_mut().flat_map(|a| a.clips.iter_mut()) {
         if let Some(saved) = c.extra.remove("auto-crossfade-base-v1")
             && let Ok((fade_in, fade_out, smooth)) =
                 serde_json::from_value::<(Tick, Tick, Option<serde_json::Value>)>(saved)
         {
-            c.fade_in = fade_in;
-            c.fade_out = fade_out;
+            c.fade_in = fade_in.min(c.length);
+            c.fade_out = fade_out.min(c.length - c.fade_in);
             if let Some(smooth) = smooth {
                 c.extra.insert("fade-smooth-v1".into(), smooth);
             } else {

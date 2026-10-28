@@ -48,6 +48,9 @@ if (-not $SkipBuild) {
     try { Invoke-Checked 'native-plugins/build.py' { python build.py } } finally { Pop-Location }
 }
 
+# Check source artwork even when reusing existing binaries with -SkipBuild.
+Invoke-Checked 'generated Windows icon' { cargo test --locked -p limeshot-app --example make_icon }
+
 Write-Host "Staging LimeShot $Version in $stage"
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force $stage, "$stage\plugins", "$stage\licenses\fonts", "$stage\licenses\plugins" | Out-Null
@@ -66,7 +69,8 @@ Copy-Item native-plugins\dist\licenses\* "$stage\licenses\plugins" -Recurse
 $now = Get-Date
 Get-ChildItem $stage -Recurse -File | Where-Object { $_.LastWriteTime.Year -lt 1980 } | ForEach-Object { $_.LastWriteTime = $now }
 Copy-Item packaging\windows\README.txt "$stage\README.txt"
-Invoke-Checked 'make_icon' { cargo run --release --locked -q -p limeshot-app --example make_icon -- "$stage\LimeShot.ico" }
+Copy-Item packaging\windows\LimeShot.ico "$stage\LimeShot.ico"
+& "$PSScriptRoot\check-windows-icons.ps1" -Executables @("$stage\limeshot.exe", "$stage\limeshot-cli.exe")
 
 # Smoke test: the staged CLI renders the demo through the staged bundles.
 $check = Join-Path $dist 'windows\check'
