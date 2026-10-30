@@ -1027,6 +1027,9 @@ impl Project {
             self.mixer = Mixer::default();
         }
         self.swing = finite(self.swing, 0.0).clamp(0.0, 1.0);
+        // Both deserialize without their constructors' clamping; a zero tempo reaches plugins as 0 BPM.
+        self.tempo = Tempo::from_milli_bpm(self.tempo.milli_bpm());
+        self.time_signature = TimeSignature::new(self.time_signature.numerator, self.time_signature.denominator);
         self.mixer.tracks.truncate(Mixer::MAX_TRACKS);
         let tracks = self.mixer.tracks.len();
         let mut max_id = 0;
@@ -1067,7 +1070,7 @@ impl Project {
                     && !self.mixer.would_cycle(from16, r.to);
                 if valid {
                     let level = finite(r.level, 1.0).clamp(0.0, 2.0);
-                    self.mixer.tracks[from].routes.push(Route::new(r.to, level));
+                    self.mixer.tracks[from].routes.push(Route { level, ..r });
                 }
             }
         }
@@ -1149,10 +1152,17 @@ impl Project {
             sanitize_playlist(playlist, &patterns, &channels, &automations, &mut max_id);
         }
         self.next_id = self.next_id.max(max_id.saturating_add(1));
-        // A pattern id of 0 can only come from the repair above; give it a real id.
+        // Ids start at 1, so a pattern id of 0 comes from the repair above or a hand-edited file;
+        // give it a real id and keep any clips that played it.
         if let Some(p) = self.patterns.iter_mut().find(|p| p.id.0 == 0) {
-            p.id = PatternId(self.next_id);
+            let id = PatternId(self.next_id);
+            p.id = id;
             self.next_id = self.next_id.saturating_add(1);
+            for c in self.all_playlists_mut().flat_map(|a| a.clips.iter_mut()) {
+                if c.source == ClipSource::Pattern(PatternId(0)) {
+                    c.source = ClipSource::Pattern(id);
+                }
+            }
         }
     }
 }
@@ -1349,6 +1359,71 @@ mod tests {
             };
             assert_eq!((p.attack_ms, p.decay_ms, p.sustain), expected);
         }
+    }
+
+    #[test]
+    fn sanitize_keeps_pre_fader_sends() {
+        let mut p = Project::new();
+        p.mixer.tracks[1].routes = vec![
+            Route::new(0, 1.0),
+            Route {
+                to: 2,
+                level: 0.5,
+                pre: true,
+            },
+        ];
+        p.sanitize();
+        assert_eq!(
+            p.mixer.tracks[1].routes,
+            vec![
+                Route::new(0, 1.0),
+                Route {
+                    to: 2,
+                    level: 0.5,
+                    pre: true
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn sanitize_clamps_tempo_and_time_signature() {
+        let mut p: Project = serde_json::from_value({
+            let mut v = serde_json::to_value(Project::new()).unwrap();
+            v["tempo"] = serde_json::json!(0);
+            v["time_signature"] = serde_json::json!({"numerator": 0, "denominator": 3});
+            v
+        })
+        .unwrap();
+        p.sanitize();
+        assert_eq!(p.tempo.milli_bpm(), Tempo::MIN_MILLI_BPM);
+        assert_eq!(p.time_signature, TimeSignature::new(1, 4));
+    }
+
+    #[test]
+    fn sanitize_renumbers_pattern_zero_with_its_clips() {
+        let mut p = Project::new();
+        p.patterns[0].id = PatternId(0);
+        let clip = Clip {
+            id: ClipId(5),
+            source: ClipSource::Pattern(PatternId(0)),
+            track: 0,
+            start: 0,
+            length: 3840,
+            offset: 0,
+            muted: false,
+            fade_in: 0,
+            fade_out: 0,
+            extra: Extra::new(),
+        };
+        p.playlist.clips.push(clip.clone());
+        p.arrangements.push(Playlist::new("Second", 1));
+        p.arrangements[0].clips.push(clip);
+        p.sanitize();
+        let id = p.patterns[0].id;
+        assert_ne!(id.0, 0);
+        assert_eq!(p.playlist.clips[0].source, ClipSource::Pattern(id));
+        assert_eq!(p.arrangements[0].clips[0].source, ClipSource::Pattern(id));
     }
 
     #[test]
