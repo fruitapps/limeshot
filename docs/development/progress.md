@@ -973,6 +973,28 @@ GUI/listening and other-platform runtime verification remain separate. Push the
 feature branch/PR only, never main or an automatic merge. Continue using the primary
 checkout and its Cargo caches.
 
+## 2026-10-30 — Code audit: project repair and arrangement fixes
+
+Audited the renderer, sequencer compile, `Project::sanitize`, `Document` history and
+project I/O in the primary checkout with its Cargo cache, and rendered the main, Mixer,
+Piano Roll and Channel Settings views with `ui_shot` (no visual defects found). Fixed:
+
+* `Project::sanitize` rebuilt mixer routes with `Route::new`, so every reopened project
+  turned pre-fader sends into post-fader sends (MIX-008).
+* `Project::sanitize` left a file's tempo and time signature unclamped; `"tempo": 0`
+  reached plugins as 0 BPM. Both now go through their clamping constructors.
+* A pattern with id 0 (empty-pattern repair or a hand-edited file) was renumbered without
+  its clips, leaving them dangling; clips in every arrangement now follow the new id.
+* Pattern clips followed pattern length changes only in the active arrangement; clips in
+  other arrangements kept the old length and then stopped following for good (PL-020).
+
+Each fix has a regression test that fails without it. No feature status was promoted.
+
+Validation: macOS 26.6.2, arm64, debug, with the twelve existing debug Lime VST3 bundles.
+**523 workspace tests passed** (local socket access for the plugin bridge). Strict
+all-target Clippy, formatting, feature inventories, repository references and whitespace
+checks pass. No audio-thread or UI behavior changed; live and other-platform checks are
+unaffected. Push the feature branch/PR only, never main; keep using the primary checkout.
 ## 2026-10-30 — Piano Roll time selection loops Pattern playback (PR-031)
 
 Owner decision recorded in human verification: Pattern playback loops the Piano Roll's

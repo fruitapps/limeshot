@@ -2785,7 +2785,8 @@
         "Has an automated test or a documented manual test procedure."
       ],
       "tests": [
-        "crates/limeshot-core/tests/arrangements.rs::arrangements_clone_switch_merge_delete_and_roundtrip"
+        "crates/limeshot-core/tests/arrangements.rs::arrangements_clone_switch_merge_delete_and_roundtrip",
+        "limeshot-core document::tests::pattern_clips_follow_content_in_inactive_arrangements"
       ],
       "reference": {
         "application": "FL Studio",
@@ -2794,7 +2795,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/playlist.htm"
         ]
       },
-      "notes": "2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Merge currently overlays at the start on matching track indices; FL merge position/track policies and importing additional FLP arrangements remain open."
+      "notes": "2026-10-27 alpha.1 Rev 1: see docs/research/alpha1-rev1.md; live interaction and other-platform checks remain pending. Merge currently overlays at the start on matching track indices; FL merge position/track policies and importing additional FLP arrangements remain open. 2026-10-30 audit: pattern clips in inactive arrangements now follow pattern length changes like those in the active one."
     },
     {
       "id": "PL-021",
@@ -3200,7 +3201,8 @@
         "limeshot-engine tests/audio.rs::mixer_routes_through_buses",
         "limeshot-app tests/ui.rs::mixer_route_buttons_route_the_selected_track",
         "limeshot-app tests/ui.rs::send_knob_covers_the_send_range",
-        "limeshot-engine tests/audio.rs::pre_fader_sends_ignore_the_fader"
+        "limeshot-engine tests/audio.rs::pre_fader_sends_ignore_the_fader",
+        "limeshot-core model::tests::sanitize_keeps_pre_fader_sends"
       ],
       "reference": {
         "application": "FL Studio",
@@ -3209,7 +3211,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/mixer.htm"
         ]
       },
-      "notes": "Session 16: pre-fader sends (Route::pre); the delay-compensation rings now hold each track's pre-fader signal and the fader is applied per route, so a fader move reaches a delayed route at once rather than after the delay. routes are summed with no latency compensation (not needed until effects report latency). Session 9: the route button's send knob covers the whole send range (to +6 dB, 0 dB at about 80 %, as the faders)."
+      "notes": "Session 16: pre-fader sends (Route::pre); the delay-compensation rings now hold each track's pre-fader signal and the fader is applied per route, so a fader move reaches a delayed route at once rather than after the delay. routes are summed with no latency compensation (not needed until effects report latency). Session 9: the route button's send knob covers the whole send range (to +6 dB, 0 dB at about 80 %, as the faders). 2026-10-30 audit: reopening a project no longer turns pre-fader sends into post-fader sends (Project::sanitize rebuilt routes without the flag)."
     },
     {
       "id": "MIX-009",

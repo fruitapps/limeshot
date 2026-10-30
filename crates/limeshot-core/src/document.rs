@@ -202,18 +202,24 @@ impl Document {
             let ids = next.playlist.clips.iter().map(|c| c.id).collect::<Vec<_>>();
             crate::command::apply_crossfades(&mut next, &ids, true);
         }
-        for clip in &mut next.playlist.clips {
+        // Pattern clips in every arrangement follow their pattern's length; a clip in an inactive
+        // arrangement left at the old length would stop following for good.
+        let (patterns, sig) = (&next.patterns, next.time_signature);
+        let playlists = std::iter::once(&mut next.playlist).chain(next.arrangements.iter_mut());
+        for clip in playlists.flat_map(|a| a.clips.iter_mut()) {
             if clip.offset != 0 || clip.extra.get("length-manual").and_then(serde_json::Value::as_bool) == Some(true) {
                 continue;
             }
             let Some(pattern) = clip.pattern() else { continue };
-            if let (Some(before), Some(after)) = (
-                self.project.pattern(pattern),
-                next.patterns.iter().find(|p| p.id == pattern),
-            ) {
+            if let (Some(before), Some(after)) =
+                (self.project.pattern(pattern), patterns.iter().find(|p| p.id == pattern))
+            {
                 let previous = before.length(self.project.time_signature);
-                if self.project.clip(clip.id).is_some_and(|c| c.length == previous) {
-                    clip.length = after.length(next.time_signature);
+                let was = std::iter::once(&self.project.playlist)
+                    .chain(&self.project.arrangements)
+                    .find_map(|a| a.clips.iter().find(|c| c.id == clip.id));
+                if was.is_some_and(|c| c.length == previous) {
+                    clip.length = after.length(sig);
                 }
             }
         }
@@ -457,6 +463,43 @@ mod tests {
         })
         .unwrap();
         assert_eq!(d.project().clip(clip).unwrap().length, 3840);
+    }
+
+    #[test]
+    fn pattern_clips_follow_content_in_inactive_arrangements() {
+        let mut d = Document::default();
+        let pattern = d.project().patterns[0].id;
+        let channel = crate::ChannelId(
+            d.execute(Command::AddChannel {
+                name: "Synth".into(),
+                instrument: crate::Instrument::Synth(Default::default()),
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        let clip = crate::ClipId(
+            d.execute(Command::AddClip {
+                pattern,
+                track: 0,
+                start: 0,
+                length: None,
+            })
+            .unwrap()
+            .0
+            .unwrap(),
+        );
+        d.execute(Command::AddArrangement { name: String::new() }).unwrap();
+        let note = crate::NewNote {
+            channel,
+            key: 60,
+            start: 3600,
+            length: 480,
+            velocity: 1.0,
+        };
+        d.execute(Command::AddNote { pattern, note }).unwrap();
+        d.execute(Command::SelectArrangement { index: 0 }).unwrap();
+        assert_eq!(d.project().clip(clip).unwrap().length, 7680);
     }
 
     #[test]
