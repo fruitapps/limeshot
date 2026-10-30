@@ -3,6 +3,8 @@
 //! ```text
 //! limeshot-cli info   <project.lime>
 //! limeshot-cli render <project.lime> <out.wav|out.mp3> [--pattern] [--rate 48000] [--bits 16|24|32f] [--bitrate 320]
+//!                     [--dither] [--split] [--tail cut|leave|wrap]
+//!                     (WAV: TPDF dither; one more WAV per sounding mixer insert; FL's render Tail)
 //! limeshot-cli run    <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]
 //! limeshot-cli demo   <out.lime> [--render out.wav]
 //! limeshot-cli play   <project.lime> [--pattern] [--seconds 5]   (realtime, through the audio device)
@@ -20,7 +22,7 @@ use std::sync::Arc;
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav|out.mp3> [--pattern] [--rate N] [--bits 16|24|32f] [--bitrate N]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
+        "usage:\n  limeshot-cli info <project.lime>\n  limeshot-cli render <project.lime> <out.wav|out.mp3> [--pattern] [--rate N] [--bits 16|24|32f] [--bitrate N] [--dither] [--split] [--tail cut|leave|wrap]\n  limeshot-cli run <commands.json> [--project in.lime] [--save out.lime] [--render out.wav]\n  limeshot-cli demo <out.lime> [--render out.wav]\n  limeshot-cli play <project.lime> [--pattern] [--seconds N]\n  limeshot-cli midi <project.lime> <out.mid> [--pattern]\n  limeshot-cli import-midi <in.mid> <out.lime>\n  limeshot-cli import-flp <in.flp> [out.lime]"
     );
     eprintln!("  --allow-external-samples: explicitly allow embedding audio outside the loaded project folder");
     ExitCode::from(2)
@@ -33,6 +35,9 @@ struct Opts {
     rate: u32,
     depth: BitDepth,
     bitrate_kbps: u32,
+    dither: bool,
+    split: bool,
+    tail: limeshot_engine::Tail,
     project: Option<PathBuf>,
     save: Option<PathBuf>,
     render: Option<PathBuf>,
@@ -47,6 +52,9 @@ fn parse(args: &[String]) -> Result<Opts, String> {
         rate: 44_100,
         depth: BitDepth::Int24,
         bitrate_kbps: 320,
+        dither: false,
+        tail: limeshot_engine::Tail::Leave,
+        split: false,
         project: None,
         save: None,
         render: None,
@@ -57,6 +65,16 @@ fn parse(args: &[String]) -> Result<Opts, String> {
         let mut val = || it.next().cloned().ok_or_else(|| format!("{a} needs a value"));
         match a.as_str() {
             "--pattern" => o.pattern = true,
+            "--dither" => o.dither = true,
+            "--split" => o.split = true,
+            "--tail" => {
+                o.tail = match val()?.as_str() {
+                    "cut" => limeshot_engine::Tail::Cut,
+                    "leave" => limeshot_engine::Tail::Leave,
+                    "wrap" => limeshot_engine::Tail::Wrap,
+                    other => return Err(format!("unknown --tail {other} (cut, leave or wrap)")),
+                }
+            }
             "--allow-external-samples" => o.allow_external_samples = true,
             "--rate" => o.rate = val()?.parse().map_err(|_| "bad --rate".to_string())?,
             "--bitrate" => o.bitrate_kbps = val()?.parse().map_err(|_| "bad --bitrate".to_string())?,
@@ -150,13 +168,23 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
     let settings = RenderSettings {
         sample_rate: o.rate,
         range,
+        dither: o.dither,
+        tail: o.tail,
         ..RenderSettings::default()
     };
     // Plugin channels and inserts get instances of their own, restored from the saved state.
     let mut plugins = limeshot_ui::plugins::PluginHost::new(None);
     let (processors, instances) = plugins.offline(project, o.rate)?;
-    let rep =
-        limeshot_engine::export_audio_with(snap, &settings, format, out, processors).map_err(|e| e.to_string())?;
+    let (rep, stems) = if o.split {
+        let names: Vec<String> = project.mixer.tracks.iter().map(|t| t.name.clone()).collect();
+        let r = limeshot_engine::export_stems_with(snap, &settings, format, out, &names, processors)
+            .map_err(|e| e.to_string())?;
+        (r.master, r.stems)
+    } else {
+        let r =
+            limeshot_engine::export_audio_with(snap, &settings, format, out, processors).map_err(|e| e.to_string())?;
+        (r, Vec::new())
+    };
     drop(instances);
     plugins.collect_returned();
     println!(
@@ -167,6 +195,9 @@ fn render(project: &Project, out: &Path, o: &Opts) -> Result<(), String> {
         rep.sample_rate,
         limeshot_dsp::gain_to_db(rep.peak)
     );
+    for stem in stems {
+        println!("  mixer track: {}", stem.display());
+    }
     Ok(())
 }
 

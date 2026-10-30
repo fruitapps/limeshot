@@ -993,3 +993,46 @@ Roll time selection as missing.
 Validation: macOS 26.6.2, arm64, debug, existing debug Lime VST3 bundles. **521 workspace
 tests passed**; strict all-target Clippy, formatting, feature inventories, repository
 references and whitespace checks pass. Live listening is still to do. Feature branch/PR only.
+## 2026-10-30 — Export dithering and split mixer tracks (EXP-007, EXP-009)
+
+FL's observed render dialog has Quality › Dithering and Miscellaneous › Split mixer tracks
+(both off by default) but no Normalize switch, so EXP-008 stays NOT_STARTED with a note.
+
+* `limeshot-dsp::WavStream` writes stereo WAV block by block; with a seed, integer formats
+  get TPDF dither (±1 LSB, xorshift-seeded, so a render is reproducible). `write_wav` is
+  unchanged in output; `write_wav_dithered` adds the option.
+* The offline render is now one loop (`render_blocks`) feeding a sink. `export_stems_with`
+  writes the master and, per mixer insert that makes a sound, its post-fader output to
+  `<name> - NN <insert>.wav`. `Renderer::track_output`/`track_latency` expose each insert's
+  block and latency; `Aligned` drops each stem's own latency and holds back the rest so stems
+  line up with the PDC-trimmed master and match its length. Stems go to temporary files and
+  replace existing ones only after the render.
+* Export dialog: Options › Dithering (16/24-bit WAV) and Split mixer tracks (WAV); CLI
+  `render --dither --split`. Inspected with `ui_shot --dialog=export` and `--dialog=mp3`
+  (options disabled for MP3).
+
+Tests: dither keeps a quarter-LSB sine (plain rounding writes silence), is unbiased,
+bounded and reproducible; stems at block sizes 64/333/1024 with 1000- and 300-frame plugin
+latencies land on the master's frame and length (fails without alignment); safe stem names;
+CLI demo split + 16-bit dither writes the five sounding inserts. Statuses IMPLEMENTED; no
+listening check yet.
+
+Validation: macOS 26.6.2, arm64, debug, existing debug Lime VST3 bundles. **523 workspace
+tests passed**; strict all-target Clippy, formatting, inventories, repository references and
+whitespace checks pass. Feature branch/PR only; primary checkout and Cargo cache.
+
+## 2026-10-30 — Export Tail: cut, leave or wrap the remainder (EXP-013)
+
+FL's render dialog has Project type › Tail (Cut / Leave / Wrap remainder, Leave by default).
+`RenderSettings::tail` (`Tail`): Cut skips the ring-out; Leave keeps the earlier behavior;
+Wrap renders the ring-out and mixes it onto the start (`wrap_tail`), so the file is exactly
+the music's length and loops seamlessly. Split mixer tracks with Wrap render stems as float
+and write them in the chosen format and dither after folding. Export dialog › Tail and CLI
+`render --tail cut|leave|wrap`; inspected with `ui_shot --dialog=export`.
+
+Tests: `tail_modes_cut_leave_or_wrap_the_ring_out` (block sizes 1/64/333/1024; Cut equals
+Leave's music, Wrap equals it plus the folded ring-out, sample for sample) and
+`cli_wrapped_split_export_keeps_every_file_at_the_music_length`. Builds on the dithering and
+split export branch (PR #34). IMPLEMENTED; not listened to.
+Validation: macOS 26.6.2, arm64, debug: **525 workspace tests passed**; strict Clippy,
+formatting, inventories, repository references and whitespace checks pass.

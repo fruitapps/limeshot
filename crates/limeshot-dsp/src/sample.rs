@@ -301,50 +301,152 @@ impl BitDepth {
     }
 }
 
-/// Write interleaved stereo f32 as a WAV file. Integer formats are clipped to full scale
-/// (no dithering yet).
+/// Write interleaved stereo f32 as a WAV file. Integer formats are clipped to full scale,
+/// without dither (see [`write_wav_dithered`]).
 pub fn write_wav(path: &Path, sample_rate: u32, interleaved: &[f32], depth: BitDepth) -> Result<(), SampleError> {
+    write_wav_dithered(path, sample_rate, interleaved, depth, None)
+}
+
+/// Write interleaved stereo f32 as a WAV file; integer formats get TPDF dither when `dither`
+/// holds a seed (see [`WavStream`]).
+pub fn write_wav_dithered(
+    path: &Path,
+    sample_rate: u32,
+    interleaved: &[f32],
+    depth: BitDepth,
+    dither: Option<u64>,
+) -> Result<(), SampleError> {
     let err = |source| SampleError::Write {
         path: path.to_path_buf(),
         source,
     };
-    let (bits, format) = match depth {
-        BitDepth::Int16 => (16, hound::SampleFormat::Int),
-        BitDepth::Int24 => (24, hound::SampleFormat::Int),
-        BitDepth::Float32 => (32, hound::SampleFormat::Float),
-    };
-    let spec = hound::WavSpec {
-        channels: 2,
-        sample_rate,
-        bits_per_sample: bits,
-        sample_format: format,
-    };
-    let mut w = hound::WavWriter::create(path, spec).map_err(err)?;
-    match depth {
-        BitDepth::Float32 => {
-            for &s in interleaved {
-                w.write_sample(s).map_err(err)?;
-            }
-        }
-        BitDepth::Int16 => {
-            for &s in interleaved {
-                w.write_sample((s.clamp(-1.0, 1.0) * 32767.0).round() as i16)
-                    .map_err(err)?;
-            }
-        }
-        BitDepth::Int24 => {
-            for &s in interleaved {
-                w.write_sample((s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32)
-                    .map_err(err)?;
-            }
-        }
-    }
+    let file = std::fs::File::create(path).map_err(|e| err(hound::Error::IoError(e)))?;
+    let mut w = WavStream::new(std::io::BufWriter::new(file), sample_rate, depth, dither).map_err(err)?;
+    w.write(interleaved).map_err(err)?;
     w.finalize().map_err(err)
+}
+
+/// A stereo WAV written block by block (long renders, one file per mixer track).
+///
+/// Integer formats clip to full scale. With a dither seed they add TPDF dither first:
+/// triangular noise of ±1 LSB (the sum of two uniform ±½ LSB values), which turns the
+/// quantization error into signal-independent noise so quiet passages and fades do not distort.
+/// The noise comes from a seeded generator, so the same render writes the same file. Float
+/// output is never dithered.
+pub struct WavStream<W: std::io::Write + std::io::Seek> {
+    writer: hound::WavWriter<W>,
+    depth: BitDepth,
+    rng: Option<u64>,
+}
+
+impl<W: std::io::Write + std::io::Seek> WavStream<W> {
+    pub fn new(out: W, sample_rate: u32, depth: BitDepth, dither: Option<u64>) -> Result<Self, hound::Error> {
+        let (bits, format) = match depth {
+            BitDepth::Int16 => (16, hound::SampleFormat::Int),
+            BitDepth::Int24 => (24, hound::SampleFormat::Int),
+            BitDepth::Float32 => (32, hound::SampleFormat::Float),
+        };
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate,
+            bits_per_sample: bits,
+            sample_format: format,
+        };
+        Ok(Self {
+            writer: hound::WavWriter::new(out, spec)?,
+            depth,
+            // A zero state would make xorshift return zeros for ever.
+            rng: dither.map(|seed| seed | 1),
+        })
+    }
+
+    /// Append interleaved stereo frames.
+    pub fn write(&mut self, interleaved: &[f32]) -> Result<(), hound::Error> {
+        let full = match self.depth {
+            BitDepth::Float32 => {
+                for &s in interleaved {
+                    self.writer.write_sample(s)?;
+                }
+                return Ok(());
+            }
+            BitDepth::Int16 => 32_767.0,
+            BitDepth::Int24 => 8_388_607.0,
+        };
+        for &s in interleaved {
+            let x = f64::from(s.clamp(-1.0, 1.0)) * full;
+            let v = match &mut self.rng {
+                None => x.round(),
+                Some(state) => (x + uniform(state) + uniform(state) - 1.0)
+                    .round()
+                    .clamp(-full - 1.0, full),
+            };
+            // NaN clamps to NaN and converts to 0.
+            self.writer.write_sample(v as i32)?;
+        }
+        Ok(())
+    }
+
+    pub fn finalize(self) -> Result<(), hound::Error> {
+        self.writer.finalize()
+    }
+}
+
+/// A uniform value in `0..1` (xorshift64*).
+fn uniform(state: &mut u64) -> f64 {
+    *state ^= *state >> 12;
+    *state ^= *state << 25;
+    *state ^= *state >> 27;
+    (state.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 11) as f64 / (1u64 << 53) as f64
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tpdf_dither_keeps_signal_below_one_lsb_and_is_reproducible() {
+        let dir = tempfile::tempdir().unwrap();
+        let lsb = 1.0 / 32_767.0;
+        // A sine of a quarter LSB: plain rounding writes digital silence.
+        let n = 48_000;
+        let data: Vec<f32> = (0..2 * n)
+            .map(|i| 0.25 * lsb * ((i / 2) as f32 * 1000.0 * std::f32::consts::TAU / 48_000.0).sin())
+            .collect();
+        let read = |name: &str, dither: Option<u64>| {
+            let p = dir.path().join(name);
+            write_wav_dithered(&p, 48_000, &data, BitDepth::Int16, dither).unwrap();
+            let mut r = hound::WavReader::open(&p).unwrap();
+            r.samples::<i32>().map(|v| v.unwrap()).collect::<Vec<_>>()
+        };
+        assert!(read("plain.wav", None).iter().all(|&v| v == 0));
+        let a = read("a.wav", Some(7));
+        assert_eq!(a, read("b.wav", Some(7)), "a seed gives the same file");
+        assert_ne!(a, read("c.wav", Some(8)));
+        assert!(a.iter().all(|v| v.abs() <= 2), "TPDF stays within ±1 LSB of the signal");
+        // The signal survives in the noise: correlate the left channel with the sine.
+        let corr: f64 = a
+            .iter()
+            .step_by(2)
+            .enumerate()
+            .map(|(i, &v)| f64::from(v) * (i as f64 * 1000.0 * std::f64::consts::TAU / 48_000.0).sin())
+            .sum::<f64>()
+            / (n as f64 / 2.0);
+        assert!((corr - 0.25).abs() < 0.05, "{corr}");
+        let mean = a.iter().map(|&v| f64::from(v)).sum::<f64>() / a.len() as f64;
+        assert!(mean.abs() < 0.02, "unbiased: {mean}");
+        // Full scale stays in range, and float output is untouched.
+        write_wav_dithered(
+            &dir.path().join("loud.wav"),
+            48_000,
+            &[1.0, -1.0, 2.0, f32::NAN],
+            BitDepth::Int24,
+            Some(1),
+        )
+        .unwrap();
+        let p = dir.path().join("float.wav");
+        write_wav_dithered(&p, 48_000, &data, BitDepth::Float32, Some(7)).unwrap();
+        assert_eq!(load_wav(&p).unwrap().data, data);
+    }
 
     #[test]
     fn wav_round_trip_all_depths() {

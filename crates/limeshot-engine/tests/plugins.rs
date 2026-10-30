@@ -116,6 +116,8 @@ fn plugin_notes_start_and_stop_on_their_samples_at_any_block_size() {
             range: ExportRange::Pattern,
             max_tail_secs: 0.1,
             block,
+            dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         let (audio, _) = render_offline_with(snap.clone(), &settings, processors).unwrap();
         assert_eq!(*log.lock().unwrap(), expected, "block {block}");
@@ -357,6 +359,8 @@ fn plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames(
             range: ExportRange::Song,
             max_tail_secs: 0.0,
             block,
+            dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         render_offline_with(snap.clone(), &settings, processors).unwrap();
         for (log, id, rising) in [(inst_log, 7, true), (fx_log, 3, false)] {
@@ -432,13 +436,11 @@ impl limeshot_dsp::effects::Effect for Lag {
     }
 }
 
-#[test]
-fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
-    // Three plugin channels play one note together at tick 960 (frame 24 000): A on insert 1
-    // through a 1000-frame look-ahead insert, B on insert 2 with nothing, and C on insert 2 with
-    // a 300-frame instrument latency. Insert 3 routes into insert 1 (through its lag) and has
-    // channel D. Every impulse must reach the master on the same frame, and the export starts
-    // where the music starts.
+/// Three plugin channels play one note together at tick 960 (frame 24 000): A on insert 1
+/// through a 1000-frame look-ahead insert, B on insert 2 with nothing, and C on insert 2 with
+/// a 300-frame instrument latency. Insert 3 routes into insert 1 (through its lag) and has
+/// channel D. Returns the document, the pattern, the channels and the lag effect's id.
+fn latency_project() -> (Document, PatternId, Vec<ChannelId>, u32) {
     let mut doc = Document::default();
     doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
     let pat = doc.project().patterns[0].id;
@@ -488,14 +490,239 @@ fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
         level: Some(1.0),
     })
     .unwrap();
+    (doc, pat, channels, lag)
+}
+
+/// Fresh processors for [`latency_project`].
+fn latency_processors(channels: &[ChannelId], lag: u32) -> Processors {
+    let click = |latency| {
+        Box::new(Click {
+            latency,
+            due: Vec::new(),
+            frame: 0,
+        }) as Box<dyn PluginInstrument>
+    };
+    Processors {
+        effects: vec![(
+            lag,
+            Box::new(Lag {
+                line: vec![0.0; 2 * 1000],
+                pos: 0,
+            }),
+        )],
+        instruments: vec![
+            (channels[0].0, click(0)),
+            (channels[1].0, click(0)),
+            (channels[2].0, click(300)),
+            (channels[3].0, click(0)),
+        ],
+    }
+}
+
+/// Frames with a sound.
+fn hits(audio: &[f32]) -> Vec<usize> {
+    audio
+        .chunks(2)
+        .enumerate()
+        .filter(|(_, f)| f[0].abs() > 1e-6)
+        .map(|(i, _)| i)
+        .collect()
+}
+
+#[test]
+fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
+    // Every impulse must reach the master on the same frame, and the export starts where the
+    // music starts.
+    let (doc, pat, channels, lag) = latency_project();
     let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
     for block in [64, 333, 1024] {
-        let click = |latency| {
-            Box::new(Click {
-                latency,
-                due: Vec::new(),
-                frame: 0,
-            }) as Box<dyn PluginInstrument>
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 0.0,
+            block,
+            dither: false,
+            tail: limeshot_engine::Tail::Leave,
+        };
+        let (audio, report) = render_offline_with(snap.clone(), &settings, latency_processors(&channels, lag)).unwrap();
+        assert_eq!(
+            hits(&audio),
+            [24_000],
+            "block {block}: every path lines up on the note's frame"
+        );
+        assert_eq!(
+            audio.len() / 2,
+            report.music_frames,
+            "the compensation delay is trimmed"
+        );
+    }
+}
+
+#[test]
+fn split_mixer_tracks_write_aligned_stems_of_the_masters_length() {
+    let (doc, pat, channels, lag) = latency_project();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let names: Vec<String> = doc.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("song.wav");
+    for block in [64, 333, 1024] {
+        // An earlier export's stem of insert 4, which is silent now.
+        std::fs::write(stem_path(&path, 4, &names[4]), b"old").unwrap();
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 0.0,
+            block,
+            dither: false,
+            tail: limeshot_engine::Tail::Leave,
+        };
+        let report = export_stems_with(
+            snap.clone(),
+            &settings,
+            ExportFormat::Wav(BitDepth::Float32),
+            &path,
+            &names,
+            latency_processors(&channels, lag),
+        )
+        .unwrap();
+        // Inserts 1-3 sounded; the other inserts stayed silent and are not written.
+        let expected: Vec<_> = (1..=3).map(|t| stem_path(&path, t, &names[t])).collect();
+        assert_eq!(report.stems, expected, "block {block}");
+        assert!(!stem_path(&path, 4, &names[4]).exists(), "a stale stem is removed");
+        let master = limeshot_dsp::load_wav(&path).unwrap();
+        assert_eq!(hits(&master.data), [24_000]);
+        assert_eq!(master.frames(), report.master.frames);
+        for stem in &report.stems {
+            let audio = limeshot_dsp::load_wav(stem).unwrap();
+            assert_eq!(
+                audio.frames(),
+                master.frames(),
+                "{} has the master's length",
+                stem.display()
+            );
+            assert_eq!(
+                hits(&audio.data),
+                [24_000],
+                "{} lines up with the master",
+                stem.display()
+            );
+        }
+        // Insert 1 holds A and, through the route, D; insert 2 holds B and C.
+        let peak = |t: usize| {
+            let audio = limeshot_dsp::load_wav(&report.stems[t - 1]).unwrap();
+            audio.data[2 * 24_000]
+        };
+        assert!((peak(1) - 2.0 * peak(3)).abs() < 1e-4, "{} vs {}", peak(1), peak(3));
+        assert!((peak(2) - 2.0 * peak(3)).abs() < 1e-4);
+    }
+    // MP3 cannot be split, and nothing is written.
+    let mp3 = dir.path().join("song.mp3");
+    assert!(matches!(
+        export_stems_with(
+            snap,
+            &RenderSettings::default(),
+            ExportFormat::Mp3 { bitrate_kbps: 320 },
+            &mp3,
+            &names,
+            Processors::default()
+        ),
+        Err(ExportError::StemsNeedWav)
+    ));
+    assert!(!mp3.exists());
+}
+
+/// An insert that rings on after its input stops: a leaky integrator, as a reverb tail decays.
+struct Decay {
+    state: [f32; 2],
+}
+
+impl limeshot_dsp::effects::Effect for Decay {
+    fn set_params(&mut self, _params: &[f32]) {}
+    fn process(&mut self, buf: &mut [f32]) {
+        for f in buf.as_chunks_mut::<2>().0 {
+            for (s, v) in self.state.iter_mut().zip(f.iter_mut()) {
+                *s = *v + 0.999 * *s;
+                *v = *s;
+            }
+        }
+    }
+    fn reset(&mut self) {}
+}
+
+/// One plugin channel on insert 1 with a plugin effect there, playing one note `before` ticks
+/// before the pattern's end. Returns the document, the pattern, the channel and the effect id.
+fn one_insert_project(before: Tick) -> (Document, PatternId, ChannelId, u32) {
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let pat = doc.project().patterns[0].id;
+    let ch = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "A".into(),
+            instrument: Instrument::Plugin(PluginRef::vst3("/x.vst3", "00", "A")),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    doc.execute(Command::SetChannelMixerTrack { channel: ch, track: 1 })
+        .unwrap();
+    let length = compile(doc.project(), pat, &NoSamples).pattern.length;
+    doc.execute(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: ch,
+            key: 60,
+            start: length - before,
+            length: before,
+            velocity: 1.0,
+        },
+    })
+    .unwrap();
+    let fx = doc
+        .execute(Command::AddPluginEffect {
+            track: 1,
+            plugin: PluginRef::vst3("/fx.vst3", "01", "Fx"),
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    (doc, pat, ch, fx)
+}
+
+fn click(channel: ChannelId) -> (u32, Box<dyn PluginInstrument>) {
+    (
+        channel.0,
+        Box::new(Click {
+            latency: 0,
+            due: Vec::new(),
+            frame: 0,
+        }),
+    )
+}
+
+#[test]
+fn split_export_flushes_the_latency_of_an_insert_that_does_not_reach_the_master() {
+    // Insert 1 has a 1000-frame look-ahead but no route to the zero-latency master; its note
+    // sounds 250 frames before the end, so its sound comes out only after the master's.
+    let (mut doc, pat, ch, lag) = one_insert_project(10);
+    doc.execute(Command::SetRoute {
+        from: 1,
+        to: 0,
+        level: None,
+    })
+    .unwrap();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let names: Vec<String> = doc.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("song.wav");
+    for block in [64, 333, 1024] {
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 0.0,
+            block,
+            dither: false,
+            tail: limeshot_engine::Tail::Cut,
         };
         let processors = Processors {
             effects: vec![(
@@ -505,33 +732,100 @@ fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
                     pos: 0,
                 }),
             )],
-            instruments: vec![
-                (channels[0].0, click(0)),
-                (channels[1].0, click(0)),
-                (channels[2].0, click(300)),
-                (channels[3].0, click(0)),
-            ],
+            instruments: vec![click(ch)],
         };
+        let report = export_stems_with(
+            snap.clone(),
+            &settings,
+            ExportFormat::Wav(BitDepth::Float32),
+            &path,
+            &names,
+            processors,
+        )
+        .unwrap();
+        assert_eq!(report.stems, [stem_path(&path, 1, &names[1])], "block {block}");
+        let music = report.master.music_frames;
+        assert_eq!(report.master.frames, music, "block {block}");
+        let stem = limeshot_dsp::load_wav(&report.stems[0]).unwrap();
+        assert_eq!(stem.frames(), music, "block {block}: the stem has the master's length");
+        assert_eq!(
+            hits(&stem.data),
+            [music - 250],
+            "block {block}: the stem keeps its last note"
+        );
+    }
+}
+
+#[test]
+fn split_export_lets_an_insert_ring_out_while_the_master_is_muted() {
+    let (mut doc, pat, ch, decay) = one_insert_project(10);
+    doc.execute(Command::SetMixerMute { track: 0, muted: true }).unwrap();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let names: Vec<String> = doc.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("song.wav");
+    let render = |tail| {
         let settings = RenderSettings {
             sample_rate: SR,
             range: ExportRange::Pattern,
-            max_tail_secs: 0.0,
-            block,
+            max_tail_secs: 1.0,
+            block: 512,
+            dither: false,
+            tail,
         };
-        let (audio, report) = render_offline_with(snap.clone(), &settings, processors).unwrap();
-        let hits: Vec<usize> = audio
-            .chunks(2)
-            .enumerate()
-            .filter(|(_, f)| f[0].abs() > 1e-6)
-            .map(|(i, _)| i)
-            .collect();
-        assert_eq!(hits, [24_000], "block {block}: every path lines up on the note's frame");
-        assert_eq!(
-            audio.len() / 2,
-            report.music_frames,
-            "the compensation delay is trimmed"
-        );
-    }
+        let processors = Processors {
+            effects: vec![(decay, Box::new(Decay { state: [0.0; 2] }))],
+            instruments: vec![click(ch)],
+        };
+        let report = export_stems_with(
+            snap.clone(),
+            &settings,
+            ExportFormat::Wav(BitDepth::Float32),
+            &path,
+            &names,
+            processors,
+        )
+        .unwrap();
+        let stem = limeshot_dsp::load_wav(&report.stems[0]).unwrap();
+        (report.master, stem)
+    };
+    // The decay falls below the ringing threshold after about 9 200 frames.
+    let (master, stem) = render(limeshot_engine::Tail::Leave);
+    assert_eq!(stem.frames(), master.frames);
+    assert!(
+        master.frames > master.music_frames + 8_000,
+        "the stem rang out: {} after {}",
+        master.frames,
+        master.music_frames
+    );
+    let last = stem.data[2 * (stem.frames() - 1)];
+    assert!(last.abs() < 1e-3, "rang out to near silence: {last}");
+    // Wrapped, the ring-out sounds over the stem's start.
+    let (master, stem) = render(limeshot_engine::Tail::Wrap);
+    assert_eq!(stem.frames(), master.music_frames);
+    assert!(
+        stem.data[0].abs() > 1e-3,
+        "the tail wrapped onto the start: {}",
+        stem.data[0]
+    );
+}
+
+#[test]
+fn stem_names_are_safe_file_names() {
+    let path = std::path::Path::new("/out/My song.wav");
+    assert_eq!(
+        stem_path(path, 3, "Bass"),
+        std::path::Path::new("/out/My song - 03 Bass.wav")
+    );
+    assert_eq!(
+        stem_path(path, 12, " a/b:c? "),
+        std::path::Path::new("/out/My song - 12 a_b_c_.wav")
+    );
+    assert_eq!(stem_path(path, 7, ".."), std::path::Path::new("/out/My song - 07.wav"));
+    assert_eq!(
+        stem_path(path, 1, "\u{7}"),
+        std::path::Path::new("/out/My song - 01.wav")
+    );
 }
 
 #[test]
@@ -726,6 +1020,8 @@ fn tempo_ramps_preserve_each_tick_once_and_the_integrated_song_length() {
                 range: ExportRange::Song,
                 max_tail_secs: 0.0,
                 block,
+                dither: false,
+                tail: limeshot_engine::Tail::Leave,
             },
             processors,
         )

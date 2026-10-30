@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **302**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 75, RESEARCHED 5, IN_PROGRESS 13, IMPLEMENTED 61, VERIFIED 144, DEFERRED 4
+- By status: NOT_STARTED 72, RESEARCHED 5, IN_PROGRESS 13, IMPLEMENTED 63, VERIFIED 144, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -25,7 +25,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Recording | 11 | 1 | 3 | 0 | 7 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 29 | 5 | 21 | 0 | 3 |
-| Export | 18 | 6 | 1 | 0 | 11 |
+| Export | 18 | 6 | 4 | 0 | 8 |
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 9 | 2 | 1 | 6 |
@@ -330,13 +330,13 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-004 | Pattern export | P1 |  | VERIFIED | Export range: current pattern (one pass). | `limeshot-engine tests/audio.rs::steps_sound_exactly_on_the_grid` |
 | EXP-005 | MP3 export | P1 |  | IMPLEMENTED | File › Export MP3… / Cmd+Shift+R opens Export audio with MP3 selected. Stereo CBR at 32/44.1/48 kHz, 32–320 kbps (default 320), with the same Song/Pattern/time-selection render and up-to-4-second tail as WAV. CLI chooses WAV or MP3 by output extension; --bitrate selects MP3 kbps. Encoding is offline, pure Rust (rusty_mp3 1.0.5, Apache-2.0), with no external encoder installation.<br>*CBR stereo only; no VBR, simultaneous formats or MP3 metadata. Encoder writes a final Info/LAME delay/padding tag, but LimeShot sample import currently retains codec padding; use WAV for aligned production assets. Encoder quality/listening and other-platform runtime checks remain open. Offline export retains the rendered PCM and encoder buffers in memory. See docs/research/mp3-export.md.* | `limeshot-engine export::tests::mp3_encodes_stereo_at_each_rate_and_bitrate`<br>`limeshot-engine export::tests::mp3_short_silent_and_nonfinite_inputs_and_write_failures`<br>`limeshot-engine export::tests::invalid_mp3_settings_preserve_existing_output`<br>`limeshot-engine tests/audio.rs::mp3_and_wav_share_range_tail_and_render_report`<br>`crates/limeshot-app/tests/cli.rs::cli_mp3_export_uses_hosted_mix_and_rejects_invalid_settings`<br>`crates/limeshot-app/tests/ui.rs::export_shortcuts_and_format_controls_select_mp3_or_wav` |
 | EXP-006 | FLAC / OGG export | P2 |  | NOT_STARTED | — | — |
-| EXP-007 | Dithering | P2 |  | NOT_STARTED | TPDF dither for 16/24-bit. | — |
-| EXP-008 | Normalization | P2 |  | NOT_STARTED | — | — |
-| EXP-009 | Stem export (per mixer track) | P2 |  | NOT_STARTED | — | — |
+| EXP-007 | Dithering | P2 |  | IMPLEMENTED | Export dialog › Options › Dithering (off by default; WAV 16/24-bit only, disabled for 32-bit float and MP3) and `limeshot-cli render --dither`: TPDF dither of ±1 LSB from a seeded generator before rounding, so the same render writes the same file. Applies to the master and split mixer-track files.<br>*2026-10-30. FL's dither algorithm (noise shape, amplitude) is not observed; LimeShot uses unshaped TPDF. Not listened to; awaiting a live export check.* | `limeshot-dsp sample::tests::tpdf_dither_keeps_signal_below_one_lsb_and_is_reproducible`<br>`crates/limeshot-app/tests/cli.rs::cli_split_export_writes_dithered_mixer_tracks_beside_the_master` |
+| EXP-008 | Normalization | P2 |  | NOT_STARTED | —<br>*2026-10-30: FL Studio's observed render dialog (fl-studio-analysis.md) has no Normalize switch; confirm whether FL offers normalization anywhere in rendering before implementing.* | — |
+| EXP-009 | Stem export (per mixer track) | P2 |  | IMPLEMENTED | Export dialog › Options › Split mixer tracks (WAV only) and `limeshot-cli render --split`: one render writes the master to the chosen file and each mixer insert that makes a sound to `<name> - NN <insert>.wav` beside it. Stems are the inserts' post-fader outputs (effects, fader and incoming routes included), aligned with the master under plugin delay compensation and of its length; silent inserts are not written. Stem files replace existing ones only after the render succeeds.<br>*2026-10-30. FL's stem file naming and whether it skips silent inserts are INFERRED (not observed). MP3 output cannot be split yet. Summed stems differ from the master when inserts route into other inserts (each stem holds its own output). Not checked live.* | `limeshot-engine tests/plugins.rs::split_mixer_tracks_write_aligned_stems_of_the_masters_length`<br>`limeshot-engine tests/plugins.rs::stem_names_are_safe_file_names`<br>`crates/limeshot-app/tests/cli.rs::cli_split_export_writes_dithered_mixer_tracks_beside_the_master` |
 | EXP-010 | Export ranges (time selection, loop) | P2 |  | VERIFIED | With a Playlist time selection, File › Export offers (and starts on) Time selection: the song's span from its start to its end, with clips that began earlier already sounding, then the usual tail.<br>*Session 16. No loop-count option or export of the loop markers' range.* | `limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span`<br>`crates/limeshot-engine/tests/audio.rs::exporting_a_selection_past_the_song_end_is_bounded` |
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
 | EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
-| EXP-013 | Wrap the tail into the loop | P3 |  | NOT_STARTED | Planned. | — |
+| EXP-013 | Wrap the tail into the loop | P3 |  | IMPLEMENTED | Export dialog › Tail and `limeshot-cli render --tail cut\|leave\|wrap`. Cut stops at the end; Leave lets notes and effects ring out for up to 4 s (the previous behaviour, still the default); Wrap mixes that ring-out onto the start (repeatedly if longer than the music), so the file has the music's exact length and loops seamlessly. Applies to the master and split mixer-track files (wrapped stems are rendered in float and written in the chosen format afterwards).<br>*2026-10-30. FL's exact Leave remainder length and how it wraps a tail longer than the music are not observed. Not checked by listening.* | `limeshot-engine tests/audio.rs::tail_modes_cut_leave_or_wrap_the_ring_out`<br>`crates/limeshot-app/tests/cli.rs::cli_wrapped_split_export_keeps_every_file_at_the_music_length` |
 | EXP-014 | Export playlist tracks or track groups | P2 |  | NOT_STARTED | Not implemented. | — |
 | EXP-015 | Export in the last used format(s) | P2 |  | NOT_STARTED | Not implemented. | — |
 | EXP-016 | Video export | P3 |  | NOT_STARTED | Not implemented. | — |
