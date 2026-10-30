@@ -6971,6 +6971,35 @@ fn browser_file_drag_creates_a_rack_sampler_from_real_pointer_events() {
 }
 
 #[test]
+fn piano_roll_time_selection_loops_pattern_playback() {
+    let (mut h, _, _) = melody_piano_roll();
+    let g = h.state().ui.piano.geometry.unwrap();
+    // Cmd+drag on the ruler from beat 2 to beat 4.
+    let from = egui::pos2(g.pos(PPQ, 60).x + 1.0, g.ruler.center().y);
+    let to = egui::pos2(g.pos(3 * PPQ, 60).x + 1.0, g.ruler.center().y);
+    drag_with(&mut h, from, to, Modifiers::COMMAND);
+    assert_eq!(h.state().ui.piano.time_sel, Some((PPQ, 3 * PPQ)));
+    assert_eq!(h.state().ui.mode, limeshot_engine::PlayMode::Pattern);
+    wait_for(&mut h, "the locate to the selection's start", |a| {
+        a.player.status().position() == PPQ
+    });
+    // As for the Playlist, check the UI -> player range near its end rather than waiting for
+    // full loops in wall-clock time; the engine tests cover whole loops at every block size.
+    let near_end = 3 * PPQ - PPQ / 4;
+    h.state_mut().locate(near_end);
+    wait_for(&mut h, "the locate near the selection's end", |a| {
+        a.player.status().position() == near_end
+    });
+    h.state_mut().toggle_play();
+    wait_for(&mut h, "playback to loop to the selection's start", |a| {
+        let pos = a.player.status().position();
+        assert!((PPQ..3 * PPQ).contains(&pos), "{pos} left the selection");
+        a.is_playing() && pos < near_end
+    });
+    h.state_mut().stop();
+}
+
+#[test]
 fn ruler_ranges_select_contents_and_duplicate_by_the_range_length() {
     let (mut h, pid, cid) = melody_piano_roll();
     let g = h.state().ui.piano.geometry.unwrap();

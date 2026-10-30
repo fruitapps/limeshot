@@ -57,10 +57,8 @@ Link the evidence from the relevant [feature record](../roadmap/features.json) a
 
 ## Decisions for the owner
 
-* **Piano Roll range looping.** Pattern mode ignores loop ranges, yet the UI still sends the Piano Roll's range to
-  the renderer, where it has no effect. Either loop Pattern playback over the Piano Roll range only, or stop sending
-  it and document FL's behaviour. Record the owner's choice before changing that behavior; continue other features
-  while awaiting the decision.
+* **Piano Roll range looping (decided 2026-10-30).** The owner chose: Pattern playback loops the Piano Roll's time
+  selection over the whole pattern, not only the notes of the selected channel. Implemented; no open decisions.
 
 ## Alpha.1 follow-up (2026-10-26)
 

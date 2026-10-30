@@ -150,6 +150,7 @@ pub fn render_offline_with(
     });
     r.set_song_loop(false);
     r.set_loop_range(None);
+    r.set_pattern_loop_range(None);
     r.locate(start);
     r.play();
     let tl = Timeline::new(tempo, sample_rate);

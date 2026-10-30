@@ -55,6 +55,9 @@ pub enum Msg {
     SongLoop(bool),
     /// Song mode loops this range (the Playlist's time selection); `None` loops the whole song.
     LoopRange(Option<(Tick, Tick)>),
+    /// Pattern mode loops this range of the pattern (the Piano Roll's time selection) over every
+    /// channel; `None` loops the whole pattern.
+    PatternLoopRange(Option<(Tick, Tick)>),
     Metronome(bool),
     NoteOn {
         channel: u16,
@@ -237,6 +240,7 @@ impl AudioState {
                 Msg::Mode(m) => r.set_mode(m),
                 Msg::SongLoop(b) => r.set_song_loop(b),
                 Msg::LoopRange(range) => r.set_loop_range(range),
+                Msg::PatternLoopRange(range) => r.set_pattern_loop_range(range),
                 Msg::Metronome(b) => r.set_metronome(b),
                 Msg::NoteOn { channel, key, velocity } => r.preview_note_on(channel, key, velocity),
                 Msg::NoteFor {
