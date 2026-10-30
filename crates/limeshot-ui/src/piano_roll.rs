@@ -767,10 +767,16 @@ fn ruler_ui(app: &mut LimeShotApp, ui: &mut Ui, view: &View, ruler: Rect, sig: T
         app.set_mode(limeshot_engine::PlayMode::Pattern);
         app.locate(tick);
     }
-    if !ui.input(|i| i.pointer.primary_down()) {
-        app.ui.piano.time_anchor = None;
+    // Like the Playlist's, a finished selection moves the playhead to its start so Play begins there;
+    // Pattern playback then loops it.
+    if !ui.input(|i| i.pointer.primary_down())
+        && app.ui.piano.time_anchor.take().is_some()
+        && let Some((from, _)) = app.ui.piano.time_sel
+    {
+        app.set_mode(limeshot_engine::PlayMode::Pattern);
+        app.locate(from);
     }
-    resp.hint("Click: move playhead · Ctrl/Cmd+drag: select time and notes");
+    resp.hint("Click: move playhead · Ctrl/Cmd+drag: select time and notes (Pattern playback loops it)");
 }
 
 /// Draw the piano keys and audition the channel while the pointer is held, releasing on key changes or release.

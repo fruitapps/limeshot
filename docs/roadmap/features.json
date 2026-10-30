@@ -2665,7 +2665,7 @@
           "docs/research/evidence/screenshots/fl-playlist-time-markers-menu.png"
         ]
       },
-      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), selecting time in the Piano Roll, saving the time selection with the project. CI regression (2026-10-22): the UI loop test locates near the selection end and waits for audio-clock progress rather than requiring a full loop in 4.5 wall-clock seconds; deterministic engine tests retain full-loop coverage across buffer sizes."
+      "notes": "Observed live in FL 2026.1.1 (session 7, fl-playlist-time-selection.png, fl-playlist-time-markers-menu.png). FL names an auto marker \"Auto\"; LimeShot numbers them. Not implemented: loop/key/time-signature/jump markers, Place loop (Shift+T), saving the time selection with the project. CI regression (2026-10-22): the UI loop test locates near the selection end and waits for audio-clock progress rather than requiring a full loop in 4.5 wall-clock seconds; deterministic engine tests retain full-loop coverage across buffer sizes. 2026-10-30: the Piano Roll's own time selection is PR-031."
     },
     {
       "id": "PL-017",
@@ -9616,6 +9616,44 @@
         ]
       },
       "notes": "Manual-based subset; live FL defaults/fallbacks not verified. No scale falls back to C roots/all highlighted pitches. Key height below 11 pixels hides labels. Custom key names, presets and keyboard styles remain pending."
+    },
+    {
+      "id": "PR-031",
+      "category": "Piano Roll",
+      "name": "Time selection loops Pattern playback",
+      "description": "A ruler time selection in the Piano Roll selects its notes and loops Pattern playback.",
+      "fl_reference": "Ctrl+drag on the Piano Roll ruler makes a time selection; Pattern playback loops the whole pattern over it (owner-confirmed, 2026-10-30; not observed live by an agent).",
+      "limeshot_behavior": "Cmd+drag on the Piano Roll ruler selects a snapped time range and the selected channel's notes in it, and moves the playhead to its start in Pattern mode. Pattern playback loops the range over every channel of the pattern, not only the selected one (owner decision, 2026-10-30); Song mode keeps the Playlist's own selection. Cmd+B duplicates the range.",
+      "priority": "P2",
+      "status": "IMPLEMENTED",
+      "mvp": false,
+      "dependencies": [
+        "PR-007",
+        "PL-016"
+      ],
+      "modules": [
+        "limeshot-ui",
+        "limeshot-engine",
+        "limeshot-audio"
+      ],
+      "acceptance_criteria": [
+        "Behaves as described under 'LimeShot intended behaviour'.",
+        "Has an automated test or a documented manual test procedure."
+      ],
+      "tests": [
+        "limeshot-engine tests/audio.rs::pattern_loops_the_piano_roll_selection",
+        "limeshot-engine tests/audio.rs::pattern_ignores_the_song_time_selection_at_any_block_size",
+        "crates/limeshot-app/tests/ui.rs::piano_roll_time_selection_loops_pattern_playback",
+        "crates/limeshot-app/tests/ui.rs::ruler_ranges_select_contents_and_duplicate_by_the_range_length"
+      ],
+      "reference": {
+        "application": "FL Studio",
+        "version": "FL Studio 2026 (26.1.1.5313)",
+        "evidence": [
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/pianoroll.htm"
+        ]
+      },
+      "notes": "2026-10-30: looping behavior chosen by the owner; deterministic engine tests cover block sizes 1–1024. Awaiting a live listening pass before VERIFIED. The selection is not saved with the project."
     },
     {
       "id": "INS-016",

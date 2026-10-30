@@ -88,9 +88,12 @@ errors, not per buffer.
    gated notes. One-shot samples keep ringing across the loop. Song mode with loop off stops and sets `finished`.
    With a loop range (`Msg::LoopRange`, the Playlist's time selection) Song mode ends each pass at the range end and
    re-anchors at the range start with a chase, looping even when song loop is off; locating past the end lands at
-   the range start. Pattern mode ignores the loop range (`Renderer::active_loop`): it always loops the whole
-   pattern. The UI still sends the Piano Roll's time selection in Pattern mode, but it currently has no audible
-   effect (test: `pattern_ignores_time_selection_at_any_block_size`).
+   the range start. Pattern mode has its own range (`Msg::PatternLoopRange`, the Piano Roll's time selection;
+   `Renderer::active_loop` picks the one for the mode): every channel of the pattern plays and loops over it, not
+   only the channel shown in the Piano Roll (owner decision, 2026-10-30). Without one, Pattern mode loops the whole
+   pattern. The UI sends both ranges whenever either changes and after an audio restart, so a mode switch never
+   plays the other editor's range (tests: `pattern_loops_the_piano_roll_selection`,
+   `pattern_ignores_the_song_time_selection_at_any_block_size`).
 5. Note-offs: each sequenced voice stores `release_at` (an absolute sample) and is released at that exact frame inside
    the voice loop.
 

@@ -162,8 +162,9 @@ pub struct LimeShotApp {
     pub bundled_samples: Option<PathBuf>,
     pub export_job: Option<dialogs::ExportJob>,
     compiled: Option<(u64, PatternId)>,
-    /// The Song loop range last sent to the engine (`None`: nothing sent yet).
-    loop_sent: Option<Option<(Tick, Tick)>>,
+    /// The Song and Pattern loop ranges last sent to the engine (`None`: nothing sent yet).
+    #[allow(clippy::type_complexity)]
+    loop_sent: Option<(Option<(Tick, Tick)>, Option<(Tick, Tick)>)>,
     /// Effect processors already handed to the audio thread, and for which document generation.
     effects_generation: u64,
     snapshot: Arc<Snapshot>,
@@ -1133,6 +1134,8 @@ impl LimeShotApp {
         self.send(Msg::SongLoop(lp));
         self.send(Msg::Metronome(met));
         self.compiled = None;
+        // Re-send the loop ranges to the new renderer next frame.
+        self.loop_sent = None;
         self.save_settings();
     }
 
@@ -1201,14 +1204,13 @@ impl LimeShotApp {
         if self.plugins.is_scanning() {
             ctx.request_repaint_after(Duration::from_millis(250));
         }
-        let range = if self.ui.mode == PlayMode::Song {
-            self.ui.playlist.time_sel
-        } else {
-            self.ui.piano.time_sel
-        };
-        if self.loop_sent != Some(range) {
-            self.send(Msg::LoopRange(range));
-            self.loop_sent = Some(range);
+        // Each mode keeps its own loop: the Playlist's selection in Song mode, the Piano Roll's
+        // in Pattern mode, so switching modes never plays the other editor's range.
+        let ranges = (self.ui.playlist.time_sel, self.ui.piano.time_sel);
+        if self.loop_sent != Some(ranges) {
+            self.send(Msg::LoopRange(ranges.0));
+            self.send(Msg::PatternLoopRange(ranges.1));
+            self.loop_sent = Some(ranges);
         }
         crate::browser::poll_preview(self, ctx);
         crate::autosave::tick(self);
