@@ -164,7 +164,7 @@ pub fn render_offline_with(
 ) -> Result<(Vec<f32>, RenderReport), ExportError> {
     let mut out = Vec::new();
     let mut master: Option<Aligned> = None;
-    let (music, sample_rate) = render_blocks(snapshot, settings, processors, |r, block| {
+    let (music, sample_rate) = render_blocks(snapshot, settings, processors, false, |r, block| {
         let master = master.get_or_insert_with(|| {
             let latency = r.latency() as usize;
             Aligned::new(latency, latency)
@@ -210,12 +210,15 @@ fn render_span(snapshot: &Snapshot, settings: &RenderSettings) -> (Tick, Tick) {
 
 /// Run an offline render, handing every block to `sink` with the renderer that made it (so the
 /// sink can read the mixer tracks' outputs). Blocks are untrimmed: they include the plugin delay
-/// compensation's leading silence and its flush (see [`Aligned`]). Returns the music's frames
-/// (without flush and tail) and the sample rate.
+/// compensation's leading silence and its flush (see [`Aligned`]). With `split` the flush covers
+/// every mixer track's latency ([`Renderer::max_track_latency`]) and the tail runs while any
+/// track rings, so every stem finishes; otherwise only the master counts. Returns the music's
+/// frames (without flush and tail) and the sample rate.
 fn render_blocks(
     snapshot: Arc<Snapshot>,
     settings: &RenderSettings,
     processors: Processors,
+    split: bool,
     mut sink: impl FnMut(&Renderer, &[f32]) -> Result<(), ExportError>,
 ) -> Result<(usize, u32), ExportError> {
     let (start, length) = render_span(&snapshot, settings);
@@ -243,7 +246,7 @@ fn render_blocks(
     let tail_max = (settings.max_tail_secs.max(0.0) * sample_rate as f32) as usize;
     let block = settings.block.clamp(1, crate::MAX_BLOCK);
     let mut buf = vec![0.0f32; 2 * block];
-    let latency = r.latency() as usize;
+    let latency = if split { r.max_track_latency() } else { r.latency() } as usize;
     let mut rendered = 0;
     // The music itself: transport until the end tick, at the tempo playing. The frames left
     // are re-read every block (tempo automation changes them); once a block reaches the end the
@@ -274,7 +277,14 @@ fn render_blocks(
     // The tail: until every voice has finished or the limit is reached (none when cut).
     let tail_max = if settings.tail == Tail::Cut { 0 } else { tail_max };
     let mut tail = 0;
-    while tail < tail_max && (r.active_voices() > 0 || r.is_ringing()) {
+    let ringing = |r: &Renderer| {
+        if split {
+            r.is_any_track_ringing()
+        } else {
+            r.is_ringing()
+        }
+    };
+    while tail < tail_max && (r.active_voices() > 0 || ringing(&r)) {
         let n = block.min(tail_max - tail);
         r.render(&mut buf[..2 * n]);
         sink(&r, &buf[..2 * n])?;
@@ -285,9 +295,10 @@ fn render_blocks(
 
 /// Lines a stream up with the master under plugin delay compensation. The master lags the
 /// transport by the total latency, whose first frames are silence and left out (FL Studio's
-/// "Trim PDC silence"); a mixer track lags by its own, smaller latency. Dropping a source's
-/// first `lag` frames and holding back its last `total - lag` (dropped at the end) gives every
-/// stream the master's start and length.
+/// "Trim PDC silence"); a mixer track lags by its own latency. The render flushes `total`
+/// frames after the music (the longest latency of the streams kept); dropping a source's first
+/// `lag` frames and holding back its last `total - lag` (dropped at the end) gives every stream
+/// the transport's start and the same length.
 struct Aligned {
     skip: usize,
     hold: usize,
@@ -391,11 +402,12 @@ pub fn export_stems_with(
     let mut master: Option<Aligned> = None;
     let mut master_audio = Vec::new();
     let mut stems: Vec<Stem> = Vec::new();
-    let (music, sample_rate) = render_blocks(snapshot, settings, processors, |r, block| {
+    let (music, sample_rate) = render_blocks(snapshot, settings, processors, true, |r, block| {
         let frames = block.len() / 2;
-        let total = r.latency() as usize;
+        // The flush: an insert that does not reach the master can lag it by more.
+        let total = r.max_track_latency() as usize;
         if master.is_none() {
-            master = Some(Aligned::new(total, total));
+            master = Some(Aligned::new(r.latency() as usize, total));
             stems = (0..tracks)
                 .map(|t| Stem {
                     align: Aligned::new(r.track_latency(t) as usize, total),

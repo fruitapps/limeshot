@@ -628,6 +628,185 @@ fn split_mixer_tracks_write_aligned_stems_of_the_masters_length() {
     assert!(!mp3.exists());
 }
 
+/// An insert that rings on after its input stops: a leaky integrator, as a reverb tail decays.
+struct Decay {
+    state: [f32; 2],
+}
+
+impl limeshot_dsp::effects::Effect for Decay {
+    fn set_params(&mut self, _params: &[f32]) {}
+    fn process(&mut self, buf: &mut [f32]) {
+        for f in buf.as_chunks_mut::<2>().0 {
+            for (s, v) in self.state.iter_mut().zip(f.iter_mut()) {
+                *s = *v + 0.999 * *s;
+                *v = *s;
+            }
+        }
+    }
+    fn reset(&mut self) {}
+}
+
+/// One plugin channel on insert 1 with a plugin effect there, playing one note `before` ticks
+/// before the pattern's end. Returns the document, the pattern, the channel and the effect id.
+fn one_insert_project(before: Tick) -> (Document, PatternId, ChannelId, u32) {
+    let mut doc = Document::default();
+    doc.execute(Command::SetTempo(Tempo::from_bpm(120.0))).unwrap();
+    let pat = doc.project().patterns[0].id;
+    let ch = ChannelId(
+        doc.execute(Command::AddChannel {
+            name: "A".into(),
+            instrument: Instrument::Plugin(PluginRef::vst3("/x.vst3", "00", "A")),
+        })
+        .unwrap()
+        .0
+        .unwrap(),
+    );
+    doc.execute(Command::SetChannelMixerTrack { channel: ch, track: 1 })
+        .unwrap();
+    let length = compile(doc.project(), pat, &NoSamples).pattern.length;
+    doc.execute(Command::AddNote {
+        pattern: pat,
+        note: NewNote {
+            channel: ch,
+            key: 60,
+            start: length - before,
+            length: before,
+            velocity: 1.0,
+        },
+    })
+    .unwrap();
+    let fx = doc
+        .execute(Command::AddPluginEffect {
+            track: 1,
+            plugin: PluginRef::vst3("/fx.vst3", "01", "Fx"),
+        })
+        .unwrap()
+        .0
+        .unwrap();
+    (doc, pat, ch, fx)
+}
+
+fn click(channel: ChannelId) -> (u32, Box<dyn PluginInstrument>) {
+    (
+        channel.0,
+        Box::new(Click {
+            latency: 0,
+            due: Vec::new(),
+            frame: 0,
+        }),
+    )
+}
+
+#[test]
+fn split_export_flushes_the_latency_of_an_insert_that_does_not_reach_the_master() {
+    // Insert 1 has a 1000-frame look-ahead but no route to the zero-latency master; its note
+    // sounds 250 frames before the end, so its sound comes out only after the master's.
+    let (mut doc, pat, ch, lag) = one_insert_project(10);
+    doc.execute(Command::SetRoute {
+        from: 1,
+        to: 0,
+        level: None,
+    })
+    .unwrap();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let names: Vec<String> = doc.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("song.wav");
+    for block in [64, 333, 1024] {
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 0.0,
+            block,
+            dither: false,
+            tail: limeshot_engine::Tail::Cut,
+        };
+        let processors = Processors {
+            effects: vec![(
+                lag,
+                Box::new(Lag {
+                    line: vec![0.0; 2 * 1000],
+                    pos: 0,
+                }),
+            )],
+            instruments: vec![click(ch)],
+        };
+        let report = export_stems_with(
+            snap.clone(),
+            &settings,
+            ExportFormat::Wav(BitDepth::Float32),
+            &path,
+            &names,
+            processors,
+        )
+        .unwrap();
+        assert_eq!(report.stems, [stem_path(&path, 1, &names[1])], "block {block}");
+        let music = report.master.music_frames;
+        assert_eq!(report.master.frames, music, "block {block}");
+        let stem = limeshot_dsp::load_wav(&report.stems[0]).unwrap();
+        assert_eq!(stem.frames(), music, "block {block}: the stem has the master's length");
+        assert_eq!(
+            hits(&stem.data),
+            [music - 250],
+            "block {block}: the stem keeps its last note"
+        );
+    }
+}
+
+#[test]
+fn split_export_lets_an_insert_ring_out_while_the_master_is_muted() {
+    let (mut doc, pat, ch, decay) = one_insert_project(10);
+    doc.execute(Command::SetMixerMute { track: 0, muted: true }).unwrap();
+    let snap = Arc::new(compile(doc.project(), pat, &NoSamples));
+    let names: Vec<String> = doc.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("song.wav");
+    let render = |tail| {
+        let settings = RenderSettings {
+            sample_rate: SR,
+            range: ExportRange::Pattern,
+            max_tail_secs: 1.0,
+            block: 512,
+            dither: false,
+            tail,
+        };
+        let processors = Processors {
+            effects: vec![(decay, Box::new(Decay { state: [0.0; 2] }))],
+            instruments: vec![click(ch)],
+        };
+        let report = export_stems_with(
+            snap.clone(),
+            &settings,
+            ExportFormat::Wav(BitDepth::Float32),
+            &path,
+            &names,
+            processors,
+        )
+        .unwrap();
+        let stem = limeshot_dsp::load_wav(&report.stems[0]).unwrap();
+        (report.master, stem)
+    };
+    // The decay falls below the ringing threshold after about 9 200 frames.
+    let (master, stem) = render(limeshot_engine::Tail::Leave);
+    assert_eq!(stem.frames(), master.frames);
+    assert!(
+        master.frames > master.music_frames + 8_000,
+        "the stem rang out: {} after {}",
+        master.frames,
+        master.music_frames
+    );
+    let last = stem.data[2 * (stem.frames() - 1)];
+    assert!(last.abs() < 1e-3, "rang out to near silence: {last}");
+    // Wrapped, the ring-out sounds over the stem's start.
+    let (master, stem) = render(limeshot_engine::Tail::Wrap);
+    assert_eq!(stem.frames(), master.music_frames);
+    assert!(
+        stem.data[0].abs() > 1e-3,
+        "the tail wrapped onto the start: {}",
+        stem.data[0]
+    );
+}
+
 #[test]
 fn stem_names_are_safe_file_names() {
     let path = std::path::Path::new("/out/My song.wav");
