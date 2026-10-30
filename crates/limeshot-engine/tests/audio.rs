@@ -96,6 +96,7 @@ fn render(snap: Arc<support::Snapshot>, range: ExportRange, block: usize, sr: u3
             range,
             max_tail_secs: 1.0,
             block,
+            dither: false,
         },
     )
     .unwrap()
@@ -1680,6 +1681,7 @@ fn exporting_a_time_selection_renders_that_span() {
             range: ExportRange::Selection { from: 100, to: 100 },
             max_tail_secs: 0.0,
             block: 256,
+            dither: false,
         },
     );
     assert!(empty.is_err(), "an empty selection is an error");
@@ -1710,7 +1712,8 @@ fn exporting_a_selection_past_the_song_end_is_bounded() {
                         to: snap.song.length + 3840
                     },
                     max_tail_secs: 0.0,
-                    block
+                    block,
+                    dither: false,
                 }
             )
             .is_err()

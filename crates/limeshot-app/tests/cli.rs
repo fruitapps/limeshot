@@ -207,3 +207,60 @@ fn cli_mp3_export_uses_hosted_mix_and_rejects_invalid_settings() {
     assert!(!output.status.success());
     assert!(!invalid.exists());
 }
+
+#[test]
+fn cli_split_export_writes_dithered_mixer_tracks_beside_the_master() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("demo.lime");
+    let wav = dir.path().join("demo.wav");
+    let run = |args: &[&std::ffi::OsStr]| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_limeshot-cli"))
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let output = run(&["demo".as_ref(), project.as_os_str()]);
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let output = run(&[
+        "render".as_ref(),
+        project.as_os_str(),
+        wav.as_os_str(),
+        "--bits".as_ref(),
+        "16".as_ref(),
+        "--dither".as_ref(),
+        "--split".as_ref(),
+    ]);
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let master = limeshot_dsp::load_wav(&wav).unwrap();
+    assert!(master.peak() > 0.01);
+    let mut stems: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with("demo - "))
+        .collect();
+    stems.sort();
+    // The demo's five channels play through their own inserts.
+    let project_data = limeshot_project::load(&project).unwrap();
+    let expected: Vec<_> = (1..=5)
+        .map(|t| limeshot_engine::stem_path(&wav, t, &project_data.mixer.tracks[t].name))
+        .collect();
+    assert_eq!(stems, expected);
+    for stem in &stems {
+        let audio = limeshot_dsp::load_wav(stem).unwrap();
+        assert_eq!(audio.frames(), master.frames(), "{}", stem.display());
+        assert!(audio.peak() > 0.001, "{} has sound", stem.display());
+        let spec = limeshot_dsp::hound::WavReader::open(stem).unwrap().spec();
+        assert_eq!(spec.bits_per_sample, 16);
+    }
+    // MP3 cannot be split; nothing is written.
+    let mp3 = dir.path().join("demo.mp3");
+    let output = run(&[
+        "render".as_ref(),
+        project.as_os_str(),
+        mp3.as_os_str(),
+        "--split".as_ref(),
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("WAV"));
+    assert!(!mp3.exists());
+}

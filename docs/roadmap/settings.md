@@ -5,7 +5,7 @@
 
 page = the settings tab or dialog; section = the header inside it; control = the widget; fl_default = the value seen on a default project. limeshot_setting names the field: settings.* = application settings (settings.json in the config folder), ui.* = per-session UI state, project.* = saved in the project, dialog.* = an option of a LimeShot dialog (not saved). Confidence as in keybindings.json.
 
-Tracked: **193** — IMPLEMENTED 30, IN_PROGRESS 3, NOT_STARTED 145, NOT_PLANNED 15
+Tracked: **193** — IMPLEMENTED 32, IN_PROGRESS 3, NOT_STARTED 143, NOT_PLANNED 15
 
 ## MIDI
 
@@ -221,12 +221,12 @@ Tracked: **193** — IMPLEMENTED 30, IN_PROGRESS 3, NOT_STARTED 145, NOT_PLANNED
 | SET-162 | Quality | Resampling | dropdown | 32-point sinc | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › Resampling | OBSERVED | — | NOT_STARTED | EXP-001 | Low quality / fastest: 2-point linear, 6-point Hermite; Average: 16-, 24-, 32-point sinc; High quality / slowest: 64-, 128-, 256-point sinc … |
 | SET-163 | Quality | HQ for all plugins | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › HQ for all plugins | OBSERVED | — | NOT_STARTED | PLG-002 |  |
 | SET-164 | Quality | Disable maximum polyphony | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › Disable maximum polyphony | OBSERVED | — | NOT_STARTED | INS-005 |  |
-| SET-165 | Quality | Dithering | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › Dithering | OBSERVED | — | NOT_STARTED | EXP-007 |  |
+| SET-165 | Quality | Dithering | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › Dithering | OBSERVED | `dialog.dither` | IMPLEMENTED | EXP-007 | Off by default. TPDF for 16/24-bit WAV; disabled for 32-bit float and MP3. Per export, not saved. |
 | SET-166 | Miscellaneous | Save playlist markers | switch | on (disabled) | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Save playlist markers | OBSERVED | — | NOT_STARTED | PL-016 |  |
 | SET-167 | Miscellaneous | Save loop markers | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Save loop markers | OBSERVED | — | NOT_STARTED | PL-016 |  |
 | SET-168 | Miscellaneous | Save note markers | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Save note markers | OBSERVED | — | NOT_STARTED | PR-022 |  |
 | SET-169 | Miscellaneous | Save tempo information | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Save tempo information | OBSERVED | — | NOT_STARTED | EXP-011 |  |
-| SET-170 | Miscellaneous | Split mixer tracks | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Split mixer tracks | OBSERVED | — | NOT_STARTED | EXP-009 |  |
+| SET-170 | Miscellaneous | Split mixer tracks | switch | off | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Split mixer tracks | OBSERVED | `dialog.split_mixer_tracks` | IMPLEMENTED | EXP-009 | Off by default. WAV only; silent inserts are skipped. Per export, not saved. |
 | SET-171 | Miscellaneous | Trim PDC silence | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Trim PDC silence | OBSERVED | — | NOT_STARTED | MIX-012 | LimeShot always trims the compensation delay from exports (no switch). |
 | SET-172 | Miscellaneous | Enable insert effects | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Enable insert effects | OBSERVED | — | NOT_STARTED | FX-001 |  |
 | SET-173 | Miscellaneous | Enable master effects | switch | on | File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Enable master effects | OBSERVED | — | NOT_STARTED | FX-001 |  |

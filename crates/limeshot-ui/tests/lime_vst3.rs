@@ -119,6 +119,7 @@ fn render(project: &Project, pat: PatternId, processors: Processors) -> Vec<f32>
         range: limeshot_engine::ExportRange::Pattern,
         max_tail_secs: 0.5,
         block: 256,
+        dither: false,
     };
     let lookup = |p: &str| limeshot_dsp::load_audio(std::path::Path::new(p)).ok().map(Arc::new);
     let snap = Arc::new(compile(project, pat, &lookup));
@@ -153,6 +154,7 @@ fn converted_projects_sound_the_same_through_the_lime_vst3s() {
             range: limeshot_engine::ExportRange::Pattern,
             max_tail_secs: 0.5,
             block: 256,
+            dither: false,
         },
     )
     .unwrap()
@@ -241,6 +243,7 @@ fn effect_automation_follows_the_converted_lime_plugin() {
             range: limeshot_engine::ExportRange::Song,
             max_tail_secs: 0.5,
             block: 256,
+            dither: false,
         };
         if lime::needs_conversion(p) {
             let snap = Arc::new(reference::compile(p, pat, &limeshot_sequencer::NoSamples));
@@ -369,6 +372,7 @@ fn hosted_sampler_clips_offset_chase_overlap_gate_and_fade() {
                     range: limeshot_engine::ExportRange::Selection { from, to: 1200 },
                     max_tail_secs: 0.0,
                     block,
+                    dither: false,
                 },
                 processors,
             )
@@ -458,6 +462,7 @@ fn hosted_disk_sampler_offline_seeks_wait_for_read_ahead() {
                 range: limeshot_engine::ExportRange::Selection { from: PPQ, to: 4 * PPQ },
                 max_tail_secs: 0.0,
                 block,
+                dither: false,
             },
             processors,
         )
@@ -550,6 +555,7 @@ fn hosted_instruments_keep_independent_note_pan() {
                     range: limeshot_engine::ExportRange::Pattern,
                     max_tail_secs: 0.0,
                     block,
+                    dither: false,
                 },
                 processors,
             )
@@ -861,6 +867,7 @@ fn converted_delay_uses_project_and_automated_tempo_after_enabling() {
                     range: limeshot_engine::ExportRange::Song,
                     max_tail_secs: 0.0,
                     block,
+                    dither: false,
                 },
                 processors,
             )
@@ -1118,6 +1125,7 @@ fn prepared_clips_crossfade_reopen_and_chase_at_every_block_size() {
                 range: limeshot_engine::ExportRange::Selection { from, to: 4800 },
                 max_tail_secs: 0.,
                 block,
+                dither: false,
             },
             processors,
         )
@@ -1215,6 +1223,7 @@ fn hosted_ping_pong_and_filter_modes_match_reference_across_rates_and_blocks() {
                     block,
                     range: limeshot_engine::ExportRange::Pattern,
                     max_tail_secs: 0.0,
+                    dither: false,
                 };
                 let expected = reference::render_offline(
                     Arc::new(reference::compile(d.project(), pat, &|_: &str| Some(sample.clone()))),

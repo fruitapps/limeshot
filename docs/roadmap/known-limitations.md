@@ -45,11 +45,12 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   output callback clocks are not compensated; sample-exact playback count-in does not establish physical input
   alignment. No automation/clip recording, punch or loop takes. A recorded note appears when it ends. Physical
   input/platform checks remain open; see [recording research](../research/recording-monitoring-and-count-in.md).
-* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV or MP3, stereo only, without
-  stems. MP3 is CBR at 32/44.1/48 kHz; no VBR, metadata tags or simultaneous formats. The Info/LAME gapless tag is written, but LimeShot reimport retains
+* Samples can be WAV, MP3, FLAC, Ogg Vorbis or AIFF (not AAC/M4A); exports are WAV or MP3, stereo only. MP3 is CBR at 32/44.1/48 kHz; no VBR, metadata tags or simultaneous formats. The Info/LAME gapless tag is written, but LimeShot reimport retains
   codec padding; use WAV for aligned loops. MP3 quality/listening and other-platform runtime checks
   remain open ([implementation and tests](../research/mp3-export.md)).
-  Integer WAV export is clipped, not dithered.
+  Integer WAV export is clipped; optional dither is unshaped TPDF (no noise shaping). Split mixer tracks
+  (stems) is WAV only; its file naming and skipping of silent inserts are LimeShot's (FL's are not observed).
+  No normalization. Neither dithered nor split exports have been checked by listening.
 * Instruments and inserts are the twelve Lime Native VST3s. Missing bundles abort export and show errors in the GUI;
   missing realtime channels stay silent and report load errors.
 * Clip playback is a Lime Sampler extension (bounded, versioned SysEx); third-party samplers do not understand it.

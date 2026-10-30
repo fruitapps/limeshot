@@ -5880,18 +5880,26 @@
       "category": "Export",
       "name": "Dithering",
       "description": "Dither integer output.",
-      "fl_reference": "Dither option.",
-      "limeshot_behavior": "TPDF dither for 16/24-bit.",
+      "fl_reference": "Render dialog › Quality › Dithering (switch, off by default; observed, fl-studio-analysis.md).",
+      "limeshot_behavior": "Export dialog › Options › Dithering (off by default; WAV 16/24-bit only, disabled for 32-bit float and MP3) and `limeshot-cli render --dither`: TPDF dither of ±1 LSB from a seeded generator before rounding, so the same render writes the same file. Applies to the master and split mixer-track files.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-dsp",
+        "limeshot-engine",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-dsp sample::tests::tpdf_dither_keeps_signal_below_one_lsb_and_is_reproducible",
+        "crates/limeshot-app/tests/cli.rs::cli_split_export_writes_dithered_mixer_tracks_beside_the_master"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5900,7 +5908,7 @@
           "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-30. FL's dither algorithm (noise shape, amplitude) is not observed; LimeShot uses unshaped TPDF. Not listened to; awaiting a live export check."
     },
     {
       "id": "EXP-008",
@@ -5927,25 +5935,33 @@
           "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-30: FL Studio's observed render dialog (fl-studio-analysis.md) has no Normalize switch; confirm whether FL offers normalization anywhere in rendering before implementing."
     },
     {
       "id": "EXP-009",
       "category": "Export",
       "name": "Stem export (per mixer track)",
       "description": "Split tracks.",
-      "fl_reference": "Split mixer tracks.",
-      "limeshot_behavior": "—",
+      "fl_reference": "Render dialog › Miscellaneous › Split mixer tracks (switch, off by default; observed, fl-studio-analysis.md).",
+      "limeshot_behavior": "Export dialog › Options › Split mixer tracks (WAV only) and `limeshot-cli render --split`: one render writes the master to the chosen file and each mixer insert that makes a sound to `<name> - NN <insert>.wav` beside it. Stems are the inserts' post-fader outputs (effects, fader and incoming routes included), aligned with the master under plugin delay compensation and of its length; silent inserts are not written. Stem files replace existing ones only after the render succeeds.",
       "priority": "P2",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/plugins.rs::split_mixer_tracks_write_aligned_stems_of_the_masters_length",
+        "limeshot-engine tests/plugins.rs::stem_names_are_safe_file_names",
+        "crates/limeshot-app/tests/cli.rs::cli_split_export_writes_dithered_mixer_tracks_beside_the_master"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -5954,7 +5970,7 @@
           "Shared/libmp3lame, EasyFLAC, liboggio (rea-findings.md)"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-30. FL's stem file naming and whether it skips silent inserts are INFERRED (not observed). MP3 output cannot be split yet. Summed stems differ from the master when inserts route into other inserts (each stem holds its own output). Not checked live."
     },
     {
       "id": "EXP-010",

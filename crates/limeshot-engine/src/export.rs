@@ -1,10 +1,11 @@
 //! Offline rendering (bounce) and audio export. Uses the same [`Renderer`] as realtime playback.
 
 use crate::renderer::{PlayMode, Renderer};
-use limeshot_core::{Tick, Timeline};
-use limeshot_dsp::{BitDepth, SampleError, write_wav};
+use limeshot_core::Tick;
+use limeshot_dsp::{BitDepth, SampleError, WavStream, write_wav_dithered};
 use limeshot_sequencer::Snapshot;
-use std::path::Path;
+use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -27,6 +28,8 @@ pub struct RenderSettings {
     pub max_tail_secs: f32,
     /// Block size used for rendering (results do not depend on it; tests vary it).
     pub block: usize,
+    /// TPDF-dither 16- and 24-bit WAV output (FL Studio's Quality › Dithering, off by default).
+    pub dither: bool,
 }
 
 impl Default for RenderSettings {
@@ -36,6 +39,7 @@ impl Default for RenderSettings {
             range: ExportRange::Song,
             max_tail_secs: 4.0,
             block: 512,
+            dither: false,
         }
     }
 }
@@ -54,6 +58,10 @@ pub enum ExportError {
     Mp3(String),
     #[error("could not write audio: {0}")]
     Io(#[from] std::io::Error),
+    #[error("could not write audio: {0}")]
+    Wav(#[from] limeshot_dsp::hound::Error),
+    #[error("splitting mixer tracks needs WAV output")]
+    StemsNeedWav,
 }
 
 /// MPEG-1 constant bitrates; reject unsupported values instead of silently rounding them.
@@ -126,15 +134,51 @@ pub fn render_offline_with(
     settings: &RenderSettings,
     processors: Processors,
 ) -> Result<(Vec<f32>, RenderReport), ExportError> {
-    let (start, length) = match settings.range {
+    let mut out = Vec::new();
+    let mut master: Option<Aligned> = None;
+    let (music, sample_rate) = render_blocks(snapshot, settings, processors, |r, block| {
+        let master = master.get_or_insert_with(|| {
+            let latency = r.latency() as usize;
+            Aligned::new(latency, latency)
+        });
+        master.push(block, |frames| {
+            out.extend_from_slice(frames);
+            Ok(())
+        })
+    })?;
+    let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+    let report = RenderReport {
+        frames: out.len() / 2,
+        sample_rate,
+        music_frames: music,
+        peak,
+    };
+    Ok((out, report))
+}
+
+/// The first and length ticks `settings` render.
+fn render_span(snapshot: &Snapshot, settings: &RenderSettings) -> (Tick, Tick) {
+    match settings.range {
         ExportRange::Song => (0, snapshot.song.length),
         ExportRange::Pattern => (0, snapshot.pattern.length),
         ExportRange::Selection { from, to } => (from, to.min(snapshot.song.length).saturating_sub(from)),
-    };
+    }
+}
+
+/// Run an offline render, handing every block to `sink` with the renderer that made it (so the
+/// sink can read the mixer tracks' outputs). Blocks are untrimmed: they include the plugin delay
+/// compensation's leading silence and its flush (see [`Aligned`]). Returns the music's frames
+/// (without flush and tail) and the sample rate.
+fn render_blocks(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    processors: Processors,
+    mut sink: impl FnMut(&Renderer, &[f32]) -> Result<(), ExportError>,
+) -> Result<(usize, u32), ExportError> {
+    let (start, length) = render_span(&snapshot, settings);
     if length == 0 {
         return Err(ExportError::EmptySong);
     }
-    let tempo = snapshot.tempo;
     let mut r = Renderer::new(settings.sample_rate, snapshot.clone());
     let sample_rate = r.sample_rate();
     for (id, fx) in processors.effects {
@@ -152,19 +196,11 @@ pub fn render_offline_with(
     r.set_loop_range(None);
     r.locate(start);
     r.play();
-    let tl = Timeline::new(tempo, sample_rate);
-    // Without tempo automation this is the music's exact length; with it, the estimate only
-    // sizes the buffer and the loop below runs to the end at whatever tempo plays.
-    let estimate = (tl.sample_of_tick(start + length) - tl.sample_of_tick(start)) as usize;
     let end = start + length;
     let tail_max = (settings.max_tail_secs.max(0.0) * sample_rate as f32) as usize;
     let block = settings.block.clamp(1, crate::MAX_BLOCK);
-    let mut out = Vec::with_capacity(2 * (estimate + tail_max.min(sample_rate as usize)));
     let mut buf = vec![0.0f32; 2 * block];
-    // Plugin delay compensation delays the whole mix; its first frames are silence, left out as
-    // FL Studio's "Trim PDC silence" does, and the music ends that much later.
     let latency = r.latency() as usize;
-    let mut skip = latency;
     let mut rendered = 0;
     // The music itself: transport until the end tick, at the tempo playing. The frames left
     // are re-read every block (tempo automation changes them); once a block reaches the end the
@@ -176,9 +212,7 @@ pub fn render_offline_with(
         }
         let n = block.min(left);
         r.render(&mut buf[..2 * n]);
-        let s = skip.min(n);
-        skip -= s;
-        out.extend_from_slice(&buf[2 * s..2 * n]);
+        sink(&r, &buf[..2 * n])?;
         rendered += n;
         if n == left {
             break;
@@ -191,9 +225,7 @@ pub fn render_offline_with(
     while flush > 0 {
         let n = block.min(flush);
         r.render(&mut buf[..2 * n]);
-        let s = skip.min(n);
-        skip -= s;
-        out.extend_from_slice(&buf[2 * s..2 * n]);
+        sink(&r, &buf[..2 * n])?;
         flush -= n;
     }
     // The tail: until every voice has finished or the limit is reached.
@@ -201,17 +233,204 @@ pub fn render_offline_with(
     while tail < tail_max && (r.active_voices() > 0 || r.is_ringing()) {
         let n = block.min(tail_max - tail);
         r.render(&mut buf[..2 * n]);
-        out.extend_from_slice(&buf[..2 * n]);
+        sink(&r, &buf[..2 * n])?;
         tail += n;
     }
-    let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+    Ok((music, sample_rate))
+}
+
+/// Lines a stream up with the master under plugin delay compensation. The master lags the
+/// transport by the total latency, whose first frames are silence and left out (FL Studio's
+/// "Trim PDC silence"); a mixer track lags by its own, smaller latency. Dropping a source's
+/// first `lag` frames and holding back its last `total - lag` (dropped at the end) gives every
+/// stream the master's start and length.
+struct Aligned {
+    skip: usize,
+    hold: usize,
+    held: VecDeque<f32>,
+}
+
+impl Aligned {
+    fn new(lag: usize, total: usize) -> Self {
+        let hold = total.saturating_sub(lag);
+        Self {
+            skip: lag,
+            hold,
+            held: VecDeque::with_capacity(2 * hold),
+        }
+    }
+
+    /// Pass `block`'s aligned frames to `emit`.
+    fn push(
+        &mut self,
+        block: &[f32],
+        mut emit: impl FnMut(&[f32]) -> Result<(), ExportError>,
+    ) -> Result<(), ExportError> {
+        let s = self.skip.min(block.len() / 2);
+        self.skip -= s;
+        let block = &block[2 * s..];
+        if self.hold == 0 {
+            return emit(block);
+        }
+        self.held.extend(block);
+        let ready = self.held.len().saturating_sub(2 * self.hold);
+        if ready > 0 {
+            let frames: Vec<f32> = self.held.drain(..ready).collect();
+            emit(&frames)?;
+        }
+        Ok(())
+    }
+}
+
+/// What a split export wrote.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StemReport {
+    /// The master mix, written to the chosen path.
+    pub master: RenderReport,
+    /// One file per mixer track that made a sound, in track order.
+    pub stems: Vec<PathBuf>,
+}
+
+/// The file for mixer track `track` (named `name`) next to the master file `path`:
+/// `song - 03 Bass.wav` beside `song.wav`. Characters file systems reject become `_`; control
+/// characters are dropped.
+pub fn stem_path(path: &Path, track: usize, name: &str) -> PathBuf {
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "LimeShot export".into());
+    let clean: String = name
+        .trim()
+        .chars()
+        .filter(|c| !c.is_control())
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            c => c,
+        })
+        .collect();
+    let clean = clean.trim_matches(|c: char| c == '.' || c.is_whitespace());
+    let label = if clean.is_empty() {
+        format!("{track:02}")
+    } else {
+        format!("{track:02} {clean}")
+    };
+    let extension = path.extension().map(|e| e.to_string_lossy().into_owned());
+    path.with_file_name(match extension {
+        Some(e) => format!("{stem} - {label}.{e}"),
+        None => format!("{stem} - {label}"),
+    })
+}
+
+/// FL Studio's "Split mixer tracks": in one render, write the master mix to `path` and each
+/// insert's post-fader output (what it sends on, effects and fader included) to its own WAV
+/// beside it ([`stem_path`], named from `track_names`). Stems are aligned with the master under
+/// plugin delay compensation and have its length; inserts that stay silent are not written.
+/// Stems are written to temporary files and only replace existing ones once the render is done.
+pub fn export_stems_with(
+    snapshot: Arc<Snapshot>,
+    settings: &RenderSettings,
+    format: ExportFormat,
+    path: &Path,
+    track_names: &[String],
+    processors: Processors,
+) -> Result<StemReport, ExportError> {
+    let ExportFormat::Wav(depth) = format else {
+        return Err(ExportError::StemsNeedWav);
+    };
+    let dir = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."))
+        .to_path_buf();
+    let tracks = snapshot.mixer.len();
+    let mut master: Option<Aligned> = None;
+    let mut master_audio = Vec::new();
+    let mut stems: Vec<Stem> = Vec::new();
+    let (music, sample_rate) = render_blocks(snapshot, settings, processors, |r, block| {
+        let frames = block.len() / 2;
+        let total = r.latency() as usize;
+        if master.is_none() {
+            master = Some(Aligned::new(total, total));
+            stems = (0..tracks)
+                .map(|t| Stem {
+                    align: Aligned::new(r.track_latency(t) as usize, total),
+                    silent_frames: 0,
+                    writer: None,
+                })
+                .collect();
+        }
+        if let Some(master) = &mut master {
+            master.push(block, |f| {
+                master_audio.extend_from_slice(f);
+                Ok(())
+            })?;
+        }
+        for (t, stem) in stems.iter_mut().enumerate().skip(1) {
+            let Some(output) = r.track_output(t, frames) else {
+                continue;
+            };
+            let Stem {
+                align,
+                silent_frames,
+                writer,
+            } = stem;
+            align.push(output, |f| {
+                if writer.is_none() {
+                    if f.iter().all(|&v| v == 0.0) {
+                        *silent_frames += f.len() / 2;
+                        return Ok(());
+                    }
+                    // The first sound: open the file and write the silence before it.
+                    let file = tempfile::NamedTempFile::new_in(&dir)?;
+                    let seed = settings.dither.then_some(t as u64 + 2);
+                    let handle = std::io::BufWriter::new(file.reopen()?);
+                    let mut w = WavStream::new(handle, r.sample_rate(), depth, seed)?;
+                    let zeros = [0.0f32; 2 * 256];
+                    let mut left = *silent_frames;
+                    while left > 0 {
+                        let n = left.min(256);
+                        w.write(&zeros[..2 * n])?;
+                        left -= n;
+                    }
+                    *writer = Some((file, w));
+                }
+                if let Some((_, w)) = writer {
+                    w.write(f)?;
+                }
+                Ok(())
+            })?;
+        }
+        Ok(())
+    })?;
+    let peak = master_audio.iter().fold(0.0f32, |m, v| m.max(v.abs()));
     let report = RenderReport {
-        frames: out.len() / 2,
+        frames: master_audio.len() / 2,
         sample_rate,
         music_frames: music,
         peak,
     };
-    Ok((out, report))
+    write_wav_dithered(path, sample_rate, &master_audio, depth, settings.dither.then_some(1))?;
+    let mut written = Vec::new();
+    for (t, stem) in stems.into_iter().enumerate() {
+        let Some((file, w)) = stem.writer else { continue };
+        w.finalize()?;
+        file.as_file().sync_all()?;
+        let target = stem_path(path, t, track_names.get(t).map_or("", String::as_str));
+        file.persist(&target).map_err(|e| e.error)?;
+        written.push(target);
+    }
+    Ok(StemReport {
+        master: report,
+        stems: written,
+    })
+}
+
+/// One mixer track's file while a split export runs.
+struct Stem {
+    align: Aligned,
+    /// Leading silence not yet written (the file opens at the first sound).
+    silent_frames: usize,
+    writer: Option<(tempfile::NamedTempFile, WavStream<std::io::BufWriter<std::fs::File>>)>,
 }
 
 /// Render and write a stereo WAV file.
@@ -246,7 +465,9 @@ pub fn export_audio_with(
     format.validate(settings.sample_rate)?;
     let (mut audio, report) = render_offline_with(snapshot, settings, processors)?;
     match format {
-        ExportFormat::Wav(depth) => write_wav(path, report.sample_rate, &audio, depth)?,
+        ExportFormat::Wav(depth) => {
+            write_wav_dithered(path, report.sample_rate, &audio, depth, settings.dither.then_some(1))?
+        }
         ExportFormat::Mp3 { bitrate_kbps } => write_mp3(path, report.sample_rate, bitrate_kbps, &mut audio)?,
     }
     Ok(report)

@@ -35,6 +35,11 @@ pub struct ExportOptions {
     pub depth: BitDepth,
     pub mp3: bool,
     pub bitrate_kbps: u32,
+    /// TPDF dither for 16- and 24-bit WAV (FL Studio's Quality › Dithering, off by default).
+    pub dither: bool,
+    /// Also write each mixer insert to its own WAV (FL Studio's Miscellaneous › Split mixer
+    /// tracks, off by default).
+    pub split_mixer_tracks: bool,
 }
 
 impl ExportOptions {
@@ -99,6 +104,8 @@ impl Dialog {
             depth: BitDepth::Int24,
             mp3: false,
             bitrate_kbps: 320,
+            dither: false,
+            split_mixer_tracks: false,
         })
     }
 
@@ -213,7 +220,8 @@ impl Dialog {
 pub struct ExportJob {
     pub path: PathBuf,
     pub started: Instant,
-    rx: Receiver<Result<RenderReport, String>>,
+    /// The master's report and how many insert files were written beside it.
+    rx: Receiver<Result<(RenderReport, usize), String>>,
     /// The control halves of the export's own plugin instances, dropped on this thread when the
     /// job ends.
     _plugins: Vec<limeshot_plugins::PluginInstance>,
@@ -229,9 +237,12 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
     let settings = RenderSettings {
         sample_rate: opts.sample_rate,
         range: opts.range,
+        dither: opts.dither && !opts.mp3,
         ..RenderSettings::default()
     };
     let format = opts.format();
+    let split = opts.split_mixer_tracks && !opts.mp3;
+    let names: Vec<String> = app.project().mixer.tracks.iter().map(|t| t.name.clone()).collect();
     let (processors, plugins) = match app.plugins.offline(app.project(), opts.sample_rate) {
         Ok(prepared) => prepared,
         Err(error) => {
@@ -244,8 +255,13 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
     let spawned = std::thread::Builder::new()
         .name("limeshot-export".into())
         .spawn(move || {
-            let r =
-                limeshot_engine::export_audio_with(snap, &settings, format, &p, processors).map_err(|e| e.to_string());
+            let r = if split {
+                limeshot_engine::export_stems_with(snap, &settings, format, &p, &names, processors)
+                    .map(|r| (r.master, r.stems.len()))
+            } else {
+                limeshot_engine::export_audio_with(snap, &settings, format, &p, processors).map(|r| (r, 0))
+            }
+            .map_err(|e| e.to_string());
             let _ = tx.send(r);
         });
     match spawned {
@@ -264,7 +280,7 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
 pub fn poll_export(app: &mut LimeShotApp) {
     let Some(job) = &app.export_job else { return };
     match job.rx.try_recv() {
-        Ok(Ok(rep)) => {
+        Ok(Ok((rep, stems))) => {
             let path = job.path.clone();
             app.export_job = None;
             let clip = if rep.peak > 1.0 {
@@ -275,7 +291,16 @@ pub fn poll_export(app: &mut LimeShotApp) {
             } else {
                 String::new()
             };
-            app.toast(format!("Exported {} ({:.1} s){clip}", path.display(), rep.seconds()));
+            let stems = match stems {
+                0 => String::new(),
+                1 => " and 1 mixer track".into(),
+                n => format!(" and {n} mixer tracks"),
+            };
+            app.toast(format!(
+                "Exported {}{stems} ({:.1} s){clip}",
+                path.display(),
+                rep.seconds()
+            ));
         }
         Ok(Err(e)) => {
             app.export_job = None;
@@ -466,6 +491,24 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                                 });
                         }
                         ui.end_row();
+                        ui.label("Options");
+                        ui.vertical(|ui| {
+                            let wav = !opts.mp3;
+                            let integer = wav && opts.depth != BitDepth::Float32;
+                            ui.add_enabled(integer, egui::Checkbox::new(&mut opts.dither, "Dithering"))
+                                .hint(if integer {
+                                    "Add TPDF noise before reducing to 16 or 24 bits, so quiet passages and fades do not distort"
+                                } else {
+                                    "Only 16- and 24-bit WAV is dithered"
+                                });
+                            ui.add_enabled(wav, egui::Checkbox::new(&mut opts.split_mixer_tracks, "Split mixer tracks"))
+                                .hint(if wav {
+                                    "Also write each mixer insert that makes a sound to its own WAV beside the file"
+                                } else {
+                                    "Splitting mixer tracks needs WAV output"
+                                });
+                        });
+                        ui.end_row();
                     });
                 if matches!(opts.range, ExportRange::Song | ExportRange::Selection { .. })
                     && app.project().playlist.clips.is_empty()
@@ -479,7 +522,7 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                     RichText::new(if opts.mp3 {
                         "Stereo MP3 (CBR, lossy). Notes ring out for up to 4 s. Use WAV for production loops."
                     } else {
-                        "Stereo WAV. Notes ring out for up to 4 s after the end. No dithering."
+                        "Stereo WAV. Notes ring out for up to 4 s after the end."
                     })
                     .small()
                     .color(Theme::current().text_dim),

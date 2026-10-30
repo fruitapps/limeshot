@@ -1005,6 +1005,26 @@ impl Renderer {
         self.pdc.total()
     }
 
+    /// How far mixer track `track`'s own output lags the transport, in frames (at most
+    /// [`Renderer::latency`]; the master's equals it).
+    pub fn track_latency(&self, track: usize) -> u32 {
+        if track == 0 {
+            self.pdc.total()
+        } else {
+            self.pdc.track_out(track)
+        }
+    }
+
+    /// Mixer track `track`'s post-fader output (interleaved stereo) for the first `frames` frames
+    /// of the last rendered block: what it sends on to the master. `None` for the master (read
+    /// the block itself) and tracks the snapshot does not have.
+    pub fn track_output(&self, track: usize, frames: usize) -> Option<&[f32]> {
+        if track == 0 || track >= self.snapshot.mixer.len() {
+            return None;
+        }
+        self.buses.get(track)?.get(..2 * frames.min(MAX_BLOCK))
+    }
+
     /// Take ownership of the plugin instrument of channel `channel` (its id), built on the
     /// control thread. It plays from the next snapshot or [`Renderer::rearrange`]; it replaces
     /// any instrument adopted for the channel before.

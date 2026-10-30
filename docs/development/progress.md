@@ -972,3 +972,31 @@ whitespace checks pass. No visual UI or audio scheduling/native DSP changes; liv
 GUI/listening and other-platform runtime verification remain separate. Push the
 feature branch/PR only, never main or an automatic merge. Continue using the primary
 checkout and its Cargo caches.
+
+## 2026-10-30 — Export dithering and split mixer tracks (EXP-007, EXP-009)
+
+FL's observed render dialog has Quality › Dithering and Miscellaneous › Split mixer tracks
+(both off by default) but no Normalize switch, so EXP-008 stays NOT_STARTED with a note.
+
+* `limeshot-dsp::WavStream` writes stereo WAV block by block; with a seed, integer formats
+  get TPDF dither (±1 LSB, xorshift-seeded, so a render is reproducible). `write_wav` is
+  unchanged in output; `write_wav_dithered` adds the option.
+* The offline render is now one loop (`render_blocks`) feeding a sink. `export_stems_with`
+  writes the master and, per mixer insert that makes a sound, its post-fader output to
+  `<name> - NN <insert>.wav`. `Renderer::track_output`/`track_latency` expose each insert's
+  block and latency; `Aligned` drops each stem's own latency and holds back the rest so stems
+  line up with the PDC-trimmed master and match its length. Stems go to temporary files and
+  replace existing ones only after the render.
+* Export dialog: Options › Dithering (16/24-bit WAV) and Split mixer tracks (WAV); CLI
+  `render --dither --split`. Inspected with `ui_shot --dialog=export` and `--dialog=mp3`
+  (options disabled for MP3).
+
+Tests: dither keeps a quarter-LSB sine (plain rounding writes silence), is unbiased,
+bounded and reproducible; stems at block sizes 64/333/1024 with 1000- and 300-frame plugin
+latencies land on the master's frame and length (fails without alignment); safe stem names;
+CLI demo split + 16-bit dither writes the five sounding inserts. Statuses IMPLEMENTED; no
+listening check yet.
+
+Validation: macOS 26.6.2, arm64, debug, existing debug Lime VST3 bundles. **523 workspace
+tests passed**; strict all-target Clippy, formatting, inventories, repository references and
+whitespace checks pass. Feature branch/PR only; primary checkout and Cargo cache.
