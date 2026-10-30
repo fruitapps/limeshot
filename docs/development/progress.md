@@ -973,6 +973,26 @@ GUI/listening and other-platform runtime verification remain separate. Push the
 feature branch/PR only, never main or an automatic merge. Continue using the primary
 checkout and its Cargo caches.
 
+## 2026-10-30 — Piano Roll time selection loops Pattern playback (PR-031)
+
+Owner decision recorded in human verification: Pattern playback loops the Piano Roll's
+time selection over the whole pattern, not only the selected channel's notes. The
+renderer now keeps separate Song and Pattern loop ranges (`set_pattern_loop_range`,
+`Msg::PatternLoopRange`); the UI sends both whenever either changes, so switching modes
+never plays the other editor's range. Finishing a Piano Roll ruler selection moves the
+playhead to its start in Pattern mode, matching the Playlist. Also fixed: restarting audio
+(device change) built a new renderer but never re-sent the loop range.
+
+New tests: `pattern_loops_the_piano_roll_selection` (block sizes 1–1024) and the UI test
+`piano_roll_time_selection_loops_pattern_playback`; both fail with the old Pattern-mode
+behavior. The former `pattern_ignores_time_selection_at_any_block_size` is renamed
+`pattern_ignores_the_song_time_selection_at_any_block_size` (unchanged assertions).
+PR-031 is IMPLEMENTED pending a live listening pass; PL-016's note no longer lists Piano
+Roll time selection as missing.
+
+Validation: macOS 26.6.2, arm64, debug, existing debug Lime VST3 bundles. **521 workspace
+tests passed**; strict all-target Clippy, formatting, feature inventories, repository
+references and whitespace checks pass. Live listening is still to do. Feature branch/PR only.
 ## 2026-10-30 — Export dithering and split mixer tracks (EXP-007, EXP-009)
 
 FL's observed render dialog has Quality › Dithering and Miscellaneous › Split mixer tracks

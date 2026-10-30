@@ -138,8 +138,8 @@ not imply complete FL Sampler parity.
 * Piano Roll Target control edits velocity and pan only (no release, fine pitch, Mod X/Y or note-properties dialog,
   PR-016). Keyboard-label modes are session-local and hide below an 11-pixel key height. Ghost notes only show
   other channels in the same pattern.
-* Pattern mode ignores time selections: the Piano Roll's ruler range selects and duplicates (Cmd+B) but does not
-  loop Pattern playback.
+* Time selections (the Piano Roll's, which loops Pattern playback, and the Playlist's) are not saved with the
+  project.
 * Playlist: FL's nine tools, but Slip has no ripple edit (Shift+S) and Slice cuts only vertically (no diagonal or
   Shift+click slicing; zero-cross snapping requires decoded PCM). The ⏵ menu lacks Merge similar pattern clips, Merge automation clips,
   audio clip pitch/reverse, automatic crossfades, Consolidate, picker options and performance mode. Track modes,

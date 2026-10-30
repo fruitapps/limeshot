@@ -240,6 +240,7 @@ fn render_blocks(
     });
     r.set_song_loop(false);
     r.set_loop_range(None);
+    r.set_pattern_loop_range(None);
     r.locate(start);
     r.play();
     let end = start + length;

@@ -487,7 +487,7 @@ fn song_stops_at_the_end_without_loop() {
 }
 
 #[test]
-fn pattern_ignores_time_selection_at_any_block_size() {
+fn pattern_ignores_the_song_time_selection_at_any_block_size() {
     let mut f = fixture();
     f.doc
         .execute(Command::SetStep {
@@ -525,6 +525,54 @@ fn pattern_ignores_time_selection_at_any_block_size() {
             r.locate(10 * 3840);
             assert_eq!(r.position(), range.0, "Song mode retains the selection");
         }
+    }
+}
+
+#[test]
+fn pattern_loops_the_piano_roll_selection() {
+    let mut f = fixture();
+    // A hit on step 0 and on step 8 (half a bar); the selection covers the second half bar.
+    for step in [0, 8] {
+        f.doc
+            .execute(Command::SetStep {
+                pattern: f.pat,
+                channel: f.drum,
+                step,
+                on: true,
+            })
+            .unwrap();
+    }
+    let half = 48_000;
+    for block in [1, 64, 480, 1000, MAX_BLOCK] {
+        let mut r = Renderer::new(SR, snapshot(&f));
+        r.set_mode(PlayMode::Pattern);
+        r.set_loop_range(Some((0, 3840)));
+        r.set_pattern_loop_range(Some((1920, 3840)));
+        r.locate(1920);
+        r.play();
+        let mut audio = Vec::new();
+        let mut buf = vec![0.0; 2 * block];
+        while audio.len() < 2 * 3 * half {
+            r.render(&mut buf);
+            audio.extend_from_slice(&buf);
+        }
+        assert_eq!(
+            onsets(&audio[..2 * 3 * half], 0.1),
+            vec![0, half, 2 * half],
+            "block {block}: only the selected half bar, looped"
+        );
+        let pos = r.position();
+        assert!((1920..3840).contains(&pos), "{pos}");
+        r.locate(10 * 3840);
+        assert_eq!(r.position(), 1920, "locating past the selection lands at its start");
+        // Song mode keeps its own range; clearing the pattern range loops the whole pattern.
+        r.set_mode(PlayMode::Song);
+        r.locate(10 * 3840);
+        assert_eq!(r.position(), 0);
+        r.set_mode(PlayMode::Pattern);
+        r.set_pattern_loop_range(None);
+        r.locate(3000);
+        assert_eq!(r.position(), 3000);
     }
 }
 

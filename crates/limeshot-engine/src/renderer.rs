@@ -81,6 +81,8 @@ pub struct Renderer {
     song_loop: bool,
     /// Song mode: a time selection that playback loops (FL Studio's Playlist time selection).
     loop_range: Option<(Tick, Tick)>,
+    /// Pattern mode: the Piano Roll's time selection, looped across every channel of the pattern.
+    pattern_loop_range: Option<(Tick, Tick)>,
     metronome: bool,
     count_in: Option<CountIn>,
     /// Engine sample counter (advances whether or not the transport plays).
@@ -133,6 +135,7 @@ impl Renderer {
             mode: PlayMode::Pattern,
             song_loop: true,
             loop_range: None,
+            pattern_loop_range: None,
             metronome: false,
             count_in: None,
             now: 0,
@@ -232,10 +235,16 @@ impl Renderer {
         self.loop_range = range.filter(|(a, b)| a < b);
     }
 
+    /// Loop `start..end` of the pattern in Pattern mode (`None` or an empty range: the whole
+    /// pattern). Every channel plays, not only the one shown in the Piano Roll.
+    pub fn set_pattern_loop_range(&mut self, range: Option<(Tick, Tick)>) {
+        self.pattern_loop_range = range.filter(|(a, b)| a < b);
+    }
+
     fn active_loop(&self) -> Option<(Tick, Tick)> {
         match self.mode {
             PlayMode::Song => self.loop_range,
-            PlayMode::Pattern => None,
+            PlayMode::Pattern => self.pattern_loop_range,
         }
     }
 
