@@ -50,7 +50,8 @@ Hands-on checks and prerequisites are tracked in [human verification needed](../
   remain open ([implementation and tests](../research/mp3-export.md)).
   Integer WAV export is clipped; optional dither is unshaped TPDF (no noise shaping). Split mixer tracks
   (stems) is WAV only; its file naming and skipping of silent inserts are LimeShot's (FL's are not observed).
-  No normalization. Neither dithered nor split exports have been checked by listening.
+  No normalization. Tail wrapping folds a ring-out longer than the music repeatedly (FL's handling is not
+  observed). Dithered, split and wrapped exports have not been checked by listening.
 * Instruments and inserts are the twelve Lime Native VST3s. Missing bundles abort export and show errors in the GUI;
   missing realtime channels stay silent and report load errors.
 * Clip playback is a Lime Sampler extension (bounded, versioned SysEx); third-party samplers do not understand it.

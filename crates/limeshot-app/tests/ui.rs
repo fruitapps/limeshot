@@ -3946,6 +3946,7 @@ fn a_plugin_instrument_from_the_add_menu_plays_saves_and_reopens() {
         max_tail_secs: 0.0,
         block: 512,
         dither: false,
+        tail: limeshot_engine::Tail::Leave,
     };
     let (audio, report) = limeshot_engine::render_offline_with(snap, &settings, processors).expect("render");
     assert!(

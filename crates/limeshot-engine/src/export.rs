@@ -20,6 +20,31 @@ pub enum ExportRange {
     Selection { from: Tick, to: Tick },
 }
 
+/// What happens to the sound that rings on after the end: FL Studio's render Tail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Tail {
+    /// Stop at the end; notes and effect tails are cut off.
+    Cut,
+    /// Let notes and effects ring out after the end (up to `max_tail_secs`).
+    #[default]
+    Leave,
+    /// Mix the ring-out onto the start, so the file is exactly the music's length and loops
+    /// seamlessly (a pattern's reverb tail sounds over its own beginning).
+    Wrap,
+}
+
+impl Tail {
+    pub const ALL: [Tail; 3] = [Tail::Cut, Tail::Leave, Tail::Wrap];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Tail::Cut => "Cut remainder",
+            Tail::Leave => "Leave remainder",
+            Tail::Wrap => "Wrap remainder",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RenderSettings {
     pub sample_rate: u32,
@@ -30,6 +55,8 @@ pub struct RenderSettings {
     pub block: usize,
     /// TPDF-dither 16- and 24-bit WAV output (FL Studio's Quality › Dithering, off by default).
     pub dither: bool,
+    /// The sound after the end (FL Studio's Tail, Leave remainder by default).
+    pub tail: Tail,
 }
 
 impl Default for RenderSettings {
@@ -40,6 +67,7 @@ impl Default for RenderSettings {
             max_tail_secs: 4.0,
             block: 512,
             dither: false,
+            tail: Tail::Leave,
         }
     }
 }
@@ -146,6 +174,9 @@ pub fn render_offline_with(
             Ok(())
         })
     })?;
+    if settings.tail == Tail::Wrap {
+        wrap_tail(&mut out, music);
+    }
     let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
     let report = RenderReport {
         frames: out.len() / 2,
@@ -154,6 +185,18 @@ pub fn render_offline_with(
         peak,
     };
     Ok((out, report))
+}
+
+/// Mix everything after the first `music` frames of interleaved stereo `audio` back onto its
+/// start (again and again if the tail is longer than the music) and drop it.
+fn wrap_tail(audio: &mut Vec<f32>, music: usize) {
+    if music == 0 || audio.len() <= 2 * music {
+        return;
+    }
+    let tail = audio.split_off(2 * music);
+    for (i, s) in tail.into_iter().enumerate() {
+        audio[i % (2 * music)] += s;
+    }
 }
 
 /// The first and length ticks `settings` render.
@@ -228,7 +271,8 @@ fn render_blocks(
         sink(&r, &buf[..2 * n])?;
         flush -= n;
     }
-    // The tail: until every voice has finished or the limit is reached.
+    // The tail: until every voice has finished or the limit is reached (none when cut).
+    let tail_max = if settings.tail == Tail::Cut { 0 } else { tail_max };
     let mut tail = 0;
     while tail < tail_max && (r.active_voices() > 0 || r.is_ringing()) {
         let n = block.min(tail_max - tail);
@@ -343,6 +387,7 @@ pub fn export_stems_with(
         .unwrap_or(Path::new("."))
         .to_path_buf();
     let tracks = snapshot.mixer.len();
+    let wrap = settings.tail == Tail::Wrap;
     let mut master: Option<Aligned> = None;
     let mut master_audio = Vec::new();
     let mut stems: Vec<Stem> = Vec::new();
@@ -382,7 +427,12 @@ pub fn export_stems_with(
                     }
                     // The first sound: open the file and write the silence before it.
                     let file = tempfile::NamedTempFile::new_in(&dir)?;
-                    let seed = settings.dither.then_some(t as u64 + 2);
+                    // A wrapped stem is finished after the render (see below): keep it exact.
+                    let (depth, seed) = if wrap {
+                        (BitDepth::Float32, None)
+                    } else {
+                        (depth, settings.dither.then_some(t as u64 + 2))
+                    };
                     let handle = std::io::BufWriter::new(file.reopen()?);
                     let mut w = WavStream::new(handle, r.sample_rate(), depth, seed)?;
                     let zeros = [0.0f32; 2 * 256];
@@ -402,6 +452,9 @@ pub fn export_stems_with(
         }
         Ok(())
     })?;
+    if wrap {
+        wrap_tail(&mut master_audio, music);
+    }
     let peak = master_audio.iter().fold(0.0f32, |m, v| m.max(v.abs()));
     let report = RenderReport {
         frames: master_audio.len() / 2,
@@ -412,8 +465,21 @@ pub fn export_stems_with(
     write_wav_dithered(path, sample_rate, &master_audio, depth, settings.dither.then_some(1))?;
     let mut written = Vec::new();
     for (t, stem) in stems.into_iter().enumerate() {
-        let Some((file, w)) = stem.writer else { continue };
+        let Some((mut file, w)) = stem.writer else { continue };
         w.finalize()?;
+        if wrap {
+            // Fold the float stem's tail onto its start and write it in the chosen format.
+            let mut audio = limeshot_dsp::hound::WavReader::new(std::io::BufReader::new(file.reopen()?))?
+                .into_samples::<f32>()
+                .collect::<Result<Vec<f32>, _>>()?;
+            wrap_tail(&mut audio, music);
+            let wrapped = tempfile::NamedTempFile::new_in(&dir)?;
+            let handle = std::io::BufWriter::new(wrapped.reopen()?);
+            let mut w = WavStream::new(handle, sample_rate, depth, settings.dither.then_some(t as u64 + 2))?;
+            w.write(&audio)?;
+            w.finalize()?;
+            file = wrapped;
+        }
         file.as_file().sync_all()?;
         let target = stem_path(path, t, track_names.get(t).map_or("", String::as_str));
         file.persist(&target).map_err(|e| e.error)?;

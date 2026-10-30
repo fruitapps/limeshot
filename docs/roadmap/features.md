@@ -10,7 +10,7 @@ automated tests or recorded manual verification. Everything else is not done.
 
 - Features tracked: **301**
 - MVP features: **69** — 69 implemented or verified, 66 verified
-- By status: NOT_STARTED 73, RESEARCHED 5, IN_PROGRESS 13, IMPLEMENTED 62, VERIFIED 144, DEFERRED 4
+- By status: NOT_STARTED 72, RESEARCHED 5, IN_PROGRESS 13, IMPLEMENTED 63, VERIFIED 144, DEFERRED 4
 
 | Category | Total | Verified | Implemented | In progress | Not started / other |
 |---|---|---|---|---|---|
@@ -25,7 +25,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | Recording | 11 | 1 | 3 | 0 | 7 |
 | Browser | 11 | 5 | 1 | 0 | 5 |
 | Plugins | 29 | 5 | 21 | 0 | 3 |
-| Export | 18 | 6 | 3 | 0 | 9 |
+| Export | 18 | 6 | 4 | 0 | 8 |
 | Transport & Time | 13 | 10 | 2 | 0 | 1 |
 | Workflow | 13 | 2 | 1 | 2 | 8 |
 | UI | 18 | 9 | 2 | 1 | 6 |
@@ -335,7 +335,7 @@ automated tests or recorded manual verification. Everything else is not done.
 | EXP-010 | Export ranges (time selection, loop) | P2 |  | VERIFIED | With a Playlist time selection, File › Export offers (and starts on) Time selection: the song's span from its start to its end, with clips that began earlier already sounding, then the usual tail.<br>*Session 16. No loop-count option or export of the loop markers' range.* | `limeshot-engine tests/audio.rs::exporting_a_time_selection_renders_that_span`<br>`crates/limeshot-engine/tests/audio.rs::exporting_a_selection_past_the_song_end_is_bounded` |
 | EXP-011 | File metadata | P3 |  | NOT_STARTED | — | — |
 | EXP-012 | MIDI export | P1 |  | VERIFIED | File › Export MIDI file (pattern / song)… writes a format-1 file at 960 PPQ from the compiled program, so it matches playback (swing included): a conductor track with tempo and time signature, then one named track per channel. Audio clips are skipped. CLI: limeshot-cli midi project.lime out.mid [--pattern]. | `limeshot-project midi::tests::write_then_read_round_trips`<br>`limeshot-app tests/ui.rs::midi_export_and_import_round_trip_through_the_app` |
-| EXP-013 | Wrap the tail into the loop | P3 |  | NOT_STARTED | Planned. | — |
+| EXP-013 | Wrap the tail into the loop | P3 |  | IMPLEMENTED | Export dialog › Tail and `limeshot-cli render --tail cut\|leave\|wrap`. Cut stops at the end; Leave lets notes and effects ring out for up to 4 s (the previous behaviour, still the default); Wrap mixes that ring-out onto the start (repeatedly if longer than the music), so the file has the music's exact length and loops seamlessly. Applies to the master and split mixer-track files (wrapped stems are rendered in float and written in the chosen format afterwards).<br>*2026-10-30. FL's exact Leave remainder length and how it wraps a tail longer than the music are not observed. Not checked by listening.* | `limeshot-engine tests/audio.rs::tail_modes_cut_leave_or_wrap_the_ring_out`<br>`crates/limeshot-app/tests/cli.rs::cli_wrapped_split_export_keeps_every_file_at_the_music_length` |
 | EXP-014 | Export playlist tracks or track groups | P2 |  | NOT_STARTED | Not implemented. | — |
 | EXP-015 | Export in the last used format(s) | P2 |  | NOT_STARTED | Not implemented. | — |
 | EXP-016 | Video export | P3 |  | NOT_STARTED | Not implemented. | — |

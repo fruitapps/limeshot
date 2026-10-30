@@ -117,6 +117,7 @@ fn plugin_notes_start_and_stop_on_their_samples_at_any_block_size() {
             max_tail_secs: 0.1,
             block,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         let (audio, _) = render_offline_with(snap.clone(), &settings, processors).unwrap();
         assert_eq!(*log.lock().unwrap(), expected, "block {block}");
@@ -359,6 +360,7 @@ fn plugin_parameter_automation_reaches_channel_and_insert_plugins_at_its_frames(
             max_tail_secs: 0.0,
             block,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         render_offline_with(snap.clone(), &settings, processors).unwrap();
         for (log, id, rising) in [(inst_log, 7, true), (fx_log, 3, false)] {
@@ -540,6 +542,7 @@ fn plugin_latency_is_compensated_so_parallel_paths_line_up() {
             max_tail_secs: 0.0,
             block,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         let (audio, report) = render_offline_with(snap.clone(), &settings, latency_processors(&channels, lag)).unwrap();
         assert_eq!(
@@ -569,6 +572,7 @@ fn split_mixer_tracks_write_aligned_stems_of_the_masters_length() {
             max_tail_secs: 0.0,
             block,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         };
         let report = export_stems_with(
             snap.clone(),
@@ -835,6 +839,7 @@ fn tempo_ramps_preserve_each_tick_once_and_the_integrated_song_length() {
                 max_tail_secs: 0.0,
                 block,
                 dither: false,
+                tail: limeshot_engine::Tail::Leave,
             },
             processors,
         )

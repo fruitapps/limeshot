@@ -264,3 +264,57 @@ fn cli_split_export_writes_dithered_mixer_tracks_beside_the_master() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("WAV"));
     assert!(!mp3.exists());
 }
+
+#[test]
+fn cli_wrapped_split_export_keeps_every_file_at_the_music_length() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("demo.lime");
+    let run = |args: &[&std::ffi::OsStr]| {
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_limeshot-cli"))
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    };
+    run(&["demo".as_ref(), project.as_os_str()]);
+    let cut = dir.path().join("cut.wav");
+    let wrap = dir.path().join("wrap.wav");
+    run(&[
+        "render".as_ref(),
+        project.as_os_str(),
+        cut.as_os_str(),
+        "--tail".as_ref(),
+        "cut".as_ref(),
+    ]);
+    run(&[
+        "render".as_ref(),
+        project.as_os_str(),
+        wrap.as_os_str(),
+        "--tail".as_ref(),
+        "wrap".as_ref(),
+        "--split".as_ref(),
+        "--bits".as_ref(),
+        "24".as_ref(),
+    ]);
+    let music = limeshot_dsp::load_wav(&cut).unwrap().frames();
+    assert_eq!(limeshot_dsp::load_wav(&wrap).unwrap().frames(), music);
+    let stems: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with("wrap - "))
+        .collect();
+    assert_eq!(stems.len(), 5);
+    for stem in stems {
+        assert_eq!(
+            limeshot_dsp::load_wav(&stem).unwrap().frames(),
+            music,
+            "{}",
+            stem.display()
+        );
+        let spec = limeshot_dsp::hound::WavReader::open(&stem).unwrap().spec();
+        assert_eq!(
+            spec.bits_per_sample, 24,
+            "wrapped stems are written in the chosen format"
+        );
+    }
+}

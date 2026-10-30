@@ -97,6 +97,7 @@ fn render(snap: Arc<support::Snapshot>, range: ExportRange, block: usize, sr: u3
             max_tail_secs: 1.0,
             block,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         },
     )
     .unwrap()
@@ -1682,6 +1683,7 @@ fn exporting_a_time_selection_renders_that_span() {
             max_tail_secs: 0.0,
             block: 256,
             dither: false,
+            tail: limeshot_engine::Tail::Leave,
         },
     );
     assert!(empty.is_err(), "an empty selection is an error");
@@ -1714,6 +1716,7 @@ fn exporting_a_selection_past_the_song_end_is_bounded() {
                     max_tail_secs: 0.0,
                     block,
                     dither: false,
+                    tail: limeshot_engine::Tail::Leave,
                 }
             )
             .is_err()
@@ -2157,5 +2160,56 @@ fn browser_scrub_offset_and_replacement_are_independent_of_block_size() {
         let mut silent = [0.0; 128];
         scrub.render(&mut silent);
         assert!(silent.iter().all(|x| *x == 0.0));
+    }
+}
+
+#[test]
+fn tail_modes_cut_leave_or_wrap_the_ring_out() {
+    // A synth note runs to the pattern's end; its 20 ms release rings on after it.
+    let mut f = fixture();
+    f.doc
+        .execute(Command::AddNote {
+            pattern: f.pat,
+            note: NewNote {
+                channel: f.synth,
+                key: 69,
+                start: 3840 - 480,
+                length: 480,
+                velocity: 1.0,
+            },
+        })
+        .unwrap();
+    let snap = snapshot(&f);
+    for block in [1, 64, 333, 1024] {
+        let render = |tail| {
+            render_offline(
+                snap.clone(),
+                &RenderSettings {
+                    sample_rate: SR,
+                    range: ExportRange::Pattern,
+                    max_tail_secs: 1.0,
+                    block,
+                    dither: false,
+                    tail,
+                },
+            )
+            .unwrap()
+        };
+        let (leave, rep) = render(Tail::Leave);
+        let music = rep.music_frames;
+        assert_eq!(music, 96_000);
+        assert!(rep.frames > music, "block {block}: the release rings on");
+        let ring_out = &leave[2 * music..];
+        assert!(ring_out.iter().any(|v| v.abs() > 1e-3));
+        let (cut, rep) = render(Tail::Cut);
+        assert_eq!(rep.frames, music);
+        assert_eq!(cut, leave[..2 * music], "block {block}: cut stops at the end");
+        let (wrap, rep) = render(Tail::Wrap);
+        assert_eq!(rep.frames, music);
+        let mut expected = leave[..2 * music].to_vec();
+        for (i, v) in ring_out.iter().enumerate() {
+            expected[i] += v;
+        }
+        assert_eq!(wrap, expected, "block {block}: the ring-out sounds over the start");
     }
 }

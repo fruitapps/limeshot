@@ -7741,20 +7741,27 @@
       "category": "Export",
       "name": "Wrap the tail into the loop",
       "description": "Seamless loop export.",
-      "fl_reference": "Export option “Wrap remainder” adds the effect tail to the start of the file.",
-      "limeshot_behavior": "Planned.",
+      "fl_reference": "Render dialog › Project type › Tail: Cut remainder / Leave remainder (default) / Wrap remainder (observed, fl-studio-analysis.md).",
+      "limeshot_behavior": "Export dialog › Tail and `limeshot-cli render --tail cut|leave|wrap`. Cut stops at the end; Leave lets notes and effects ring out for up to 4 s (the previous behaviour, still the default); Wrap mixes that ring-out onto the start (repeatedly if longer than the music), so the file has the music's exact length and loops seamlessly. Applies to the master and split mixer-track files (wrapped stems are rendered in float and written in the chosen format afterwards).",
       "priority": "P3",
-      "status": "NOT_STARTED",
+      "status": "IMPLEMENTED",
       "mvp": false,
       "dependencies": [
         "EXP-001"
       ],
-      "modules": [],
+      "modules": [
+        "limeshot-engine",
+        "limeshot-ui",
+        "limeshot-app"
+      ],
       "acceptance_criteria": [
         "Behaves as described under 'LimeShot intended behaviour'.",
         "Has an automated test or a documented manual test procedure."
       ],
-      "tests": [],
+      "tests": [
+        "limeshot-engine tests/audio.rs::tail_modes_cut_leave_or_wrap_the_ring_out",
+        "crates/limeshot-app/tests/cli.rs::cli_wrapped_split_export_keeps_every_file_at_the_music_length"
+      ],
       "reference": {
         "application": "FL Studio",
         "version": "FL Studio 2026 (26.1.1.5313)",
@@ -7762,7 +7769,7 @@
           "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/fformats_save_wav.htm"
         ]
       },
-      "notes": ""
+      "notes": "2026-10-30. FL's exact Leave remainder length and how it wraps a tail longer than the music are not observed. Not checked by listening."
     },
     {
       "id": "APP-024",

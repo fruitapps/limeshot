@@ -40,6 +40,8 @@ pub struct ExportOptions {
     /// Also write each mixer insert to its own WAV (FL Studio's Miscellaneous › Split mixer
     /// tracks, off by default).
     pub split_mixer_tracks: bool,
+    /// The sound after the end (FL Studio's Tail).
+    pub tail: limeshot_engine::Tail,
 }
 
 impl ExportOptions {
@@ -106,6 +108,7 @@ impl Dialog {
             bitrate_kbps: 320,
             dither: false,
             split_mixer_tracks: false,
+            tail: limeshot_engine::Tail::Leave,
         })
     }
 
@@ -238,6 +241,7 @@ pub fn start_export(app: &mut LimeShotApp, opts: &ExportOptions, path: PathBuf) 
         sample_rate: opts.sample_rate,
         range: opts.range,
         dither: opts.dither && !opts.mp3,
+        tail: opts.tail,
         ..RenderSettings::default()
     };
     let format = opts.format();
@@ -457,6 +461,23 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                             }
                         });
                         ui.end_row();
+                        ui.label("Tail");
+                        ComboBox::from_id_salt("export_tail")
+                            .selected_text(opts.tail.label())
+                            .show_ui(ui, |ui| {
+                                for tail in limeshot_engine::Tail::ALL {
+                                    ui.selectable_value(&mut opts.tail, tail, tail.label());
+                                }
+                            })
+                            .response
+                            .hint(match opts.tail {
+                                limeshot_engine::Tail::Cut => "Stop at the end: notes and effect tails are cut off",
+                                limeshot_engine::Tail::Leave => "Let notes and effects ring out for up to 4 s after the end",
+                                limeshot_engine::Tail::Wrap => {
+                                    "Mix the ring-out onto the start: the file loops seamlessly at the music's length"
+                                }
+                            });
+                        ui.end_row();
                         ui.label("Sample rate");
                         ComboBox::from_id_salt("export_sr")
                             .selected_text(format!("{} Hz", opts.sample_rate))
@@ -520,9 +541,9 @@ pub fn show(app: &mut LimeShotApp, ctx: &Context) {
                 }
                 ui.label(
                     RichText::new(if opts.mp3 {
-                        "Stereo MP3 (CBR, lossy). Notes ring out for up to 4 s. Use WAV for production loops."
+                        "Stereo MP3 (CBR, lossy). Use WAV for production loops."
                     } else {
-                        "Stereo WAV. Notes ring out for up to 4 s after the end."
+                        "Stereo WAV."
                     })
                     .small()
                     .color(Theme::current().text_dim),

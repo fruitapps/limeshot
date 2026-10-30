@@ -1000,3 +1000,19 @@ listening check yet.
 Validation: macOS 26.6.2, arm64, debug, existing debug Lime VST3 bundles. **523 workspace
 tests passed**; strict all-target Clippy, formatting, inventories, repository references and
 whitespace checks pass. Feature branch/PR only; primary checkout and Cargo cache.
+
+## 2026-10-30 — Export Tail: cut, leave or wrap the remainder (EXP-013)
+
+FL's render dialog has Project type › Tail (Cut / Leave / Wrap remainder, Leave by default).
+`RenderSettings::tail` (`Tail`): Cut skips the ring-out; Leave keeps the earlier behavior;
+Wrap renders the ring-out and mixes it onto the start (`wrap_tail`), so the file is exactly
+the music's length and loops seamlessly. Split mixer tracks with Wrap render stems as float
+and write them in the chosen format and dither after folding. Export dialog › Tail and CLI
+`render --tail cut|leave|wrap`; inspected with `ui_shot --dialog=export`.
+
+Tests: `tail_modes_cut_leave_or_wrap_the_ring_out` (block sizes 1/64/333/1024; Cut equals
+Leave's music, Wrap equals it plus the folded ring-out, sample for sample) and
+`cli_wrapped_split_export_keeps_every_file_at_the_music_length`. Builds on the dithering and
+split export branch (PR #34). IMPLEMENTED; not listened to.
+Validation: macOS 26.6.2, arm64, debug: **525 workspace tests passed**; strict Clippy,
+formatting, inventories, repository references and whitespace checks pass.

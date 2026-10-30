@@ -2071,10 +2071,10 @@
       "fl_default": "Leave remainder",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Project type › Tail",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.tail",
+      "status": "IMPLEMENTED",
       "feature": "EXP-013",
-      "notes": "Cut remainder / Leave remainder / Wrap remainder."
+      "notes": "Cut remainder / Leave remainder (default) / Wrap remainder. Per export, not saved."
     },
     {
       "id": "SET-154",
