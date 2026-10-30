@@ -19,13 +19,14 @@ pub mod stretch;
 pub mod voice;
 
 pub use envelope::{Adsr, Envelope};
+pub use hound;
 pub use instrument::{
     CLIP_MESSAGE_LEN, ClipMessage, ClipPlayback, Instrument, NoteEvent, NoteEventKind, PluginTelemetry, Transport,
 };
 pub use osc::Oscillator;
 pub use sample::{
-    AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, is_audio_file, load_audio, load_audio_bounded, load_wav,
-    write_wav,
+    AUDIO_EXTENSIONS, BitDepth, SampleData, SampleError, WavStream, is_audio_file, load_audio, load_audio_bounded,
+    load_wav, write_wav, write_wav_dithered,
 };
 
 /// Decibels to linear gain. −120 dB and below is silence.

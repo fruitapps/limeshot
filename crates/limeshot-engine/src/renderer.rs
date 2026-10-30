@@ -1005,6 +1005,35 @@ impl Renderer {
         self.pdc.total()
     }
 
+    /// How far mixer track `track`'s own output lags the transport, in frames (the master's is
+    /// [`Renderer::latency`]; only an insert that does not reach the master can exceed it).
+    pub fn track_latency(&self, track: usize) -> u32 {
+        if track == 0 {
+            self.pdc.total()
+        } else {
+            self.pdc.track_out(track)
+        }
+    }
+
+    /// The longest output latency of any mixer track, in frames (at least
+    /// [`Renderer::latency`]): an insert that does not reach the master can lag it by more.
+    pub fn max_track_latency(&self) -> u32 {
+        (0..self.snapshot.mixer.len())
+            .map(|t| self.track_latency(t))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Mixer track `track`'s post-fader output (interleaved stereo) for the first `frames` frames
+    /// of the last rendered block: what it sends on to the master. `None` for the master (read
+    /// the block itself) and tracks the snapshot does not have.
+    pub fn track_output(&self, track: usize, frames: usize) -> Option<&[f32]> {
+        if track == 0 || track >= self.snapshot.mixer.len() {
+            return None;
+        }
+        self.buses.get(track)?.get(..2 * frames.min(MAX_BLOCK))
+    }
+
     /// Take ownership of the plugin instrument of channel `channel` (its id), built on the
     /// control thread. It plays from the next snapshot or [`Renderer::rearrange`]; it replaces
     /// any instrument adopted for the channel before.
@@ -1033,6 +1062,13 @@ impl Renderer {
     /// Whether effects may still be producing sound (delay and reverb tails).
     pub fn is_ringing(&self) -> bool {
         (self.fx.has_effects() || self.instruments.has_instruments()) && self.last_peak > 1e-4
+    }
+
+    /// Whether effects may still be producing sound on any mixer track, the master included
+    /// (an insert can ring on while the master is muted or the insert does not reach it).
+    pub fn is_any_track_ringing(&self) -> bool {
+        (self.fx.has_effects() || self.instruments.has_instruments())
+            && self.peaks().iter().any(|p| p.left.max(p.right) > 1e-4)
     }
 
     /// Track `i`'s hosted insert effects over its bus. A sidechained effect reads the
