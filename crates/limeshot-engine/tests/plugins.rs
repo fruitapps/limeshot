@@ -566,6 +566,8 @@ fn split_mixer_tracks_write_aligned_stems_of_the_masters_length() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("song.wav");
     for block in [64, 333, 1024] {
+        // An earlier export's stem of insert 4, which is silent now.
+        std::fs::write(stem_path(&path, 4, &names[4]), b"old").unwrap();
         let settings = RenderSettings {
             sample_rate: SR,
             range: ExportRange::Pattern,
@@ -586,6 +588,7 @@ fn split_mixer_tracks_write_aligned_stems_of_the_masters_length() {
         // Inserts 1-3 sounded; the other inserts stayed silent and are not written.
         let expected: Vec<_> = (1..=3).map(|t| stem_path(&path, t, &names[t])).collect();
         assert_eq!(report.stems, expected, "block {block}");
+        assert!(!stem_path(&path, 4, &names[4]).exists(), "a stale stem is removed");
         let master = limeshot_dsp::load_wav(&path).unwrap();
         assert_eq!(hits(&master.data), [24_000]);
         assert_eq!(master.frames(), report.master.frames);

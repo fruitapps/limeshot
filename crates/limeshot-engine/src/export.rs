@@ -379,7 +379,8 @@ pub fn stem_path(path: &Path, track: usize, name: &str) -> PathBuf {
 /// FL Studio's "Split mixer tracks": in one render, write the master mix to `path` and each
 /// insert's post-fader output (what it sends on, effects and fader included) to its own WAV
 /// beside it ([`stem_path`], named from `track_names`). Stems are aligned with the master under
-/// plugin delay compensation and have its length; inserts that stay silent are not written.
+/// plugin delay compensation and have its length; inserts that stay silent are not written (and
+/// a stem an earlier export wrote for them is removed).
 /// Stems are written to temporary files and only replace existing ones once the render is done.
 pub fn export_stems_with(
     snapshot: Arc<Snapshot>,
@@ -476,8 +477,15 @@ pub fn export_stems_with(
     };
     write_wav_dithered(path, sample_rate, &master_audio, depth, settings.dither.then_some(1))?;
     let mut written = Vec::new();
-    for (t, stem) in stems.into_iter().enumerate() {
-        let Some((mut file, w)) = stem.writer else { continue };
+    // Stems a silent insert would have had: removed once the new ones are in place, so a
+    // re-export leaves no stale file from an earlier one.
+    let mut stale = Vec::new();
+    for (t, stem) in stems.into_iter().enumerate().skip(1) {
+        let target = stem_path(path, t, track_names.get(t).map_or("", String::as_str));
+        let Some((mut file, w)) = stem.writer else {
+            stale.push(target);
+            continue;
+        };
         w.finalize()?;
         if wrap {
             // Fold the float stem's tail onto its start and write it in the chosen format.
@@ -493,9 +501,14 @@ pub fn export_stems_with(
             file = wrapped;
         }
         file.as_file().sync_all()?;
-        let target = stem_path(path, t, track_names.get(t).map_or("", String::as_str));
         file.persist(&target).map_err(|e| e.error)?;
         written.push(target);
+    }
+    for target in stale {
+        match std::fs::remove_file(&target) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
+            _ => {}
+        }
     }
     Ok(StemReport {
         master: report,
