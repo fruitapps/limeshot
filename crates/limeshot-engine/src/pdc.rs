@@ -123,6 +123,11 @@ impl Pdc {
         self.total
     }
 
+    /// How far track `t`'s output lags the transport, in frames (`out(t)`).
+    pub(crate) fn track_out(&self, t: usize) -> u32 {
+        self.out.get(t).copied().unwrap_or(0)
+    }
+
     /// Make the plan for `snapshot` with the given latencies (`inserts(track)`, and
     /// `channel(index)` for plugin channels). Keeps everything as it is when nothing changed.
     pub(crate) fn plan(

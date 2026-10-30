@@ -2071,10 +2071,10 @@
       "fl_default": "Leave remainder",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Project type › Tail",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.tail",
+      "status": "IMPLEMENTED",
       "feature": "EXP-013",
-      "notes": "Cut remainder / Leave remainder / Wrap remainder."
+      "notes": "Cut remainder / Leave remainder (default) / Wrap remainder. Per export, not saved."
     },
     {
       "id": "SET-154",
@@ -2239,10 +2239,10 @@
       "fl_default": "off",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Quality › Dithering",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.dither",
+      "status": "IMPLEMENTED",
       "feature": "EXP-007",
-      "notes": ""
+      "notes": "Off by default. TPDF for 16/24-bit WAV; disabled for 32-bit float and MP3. Per export, not saved."
     },
     {
       "id": "SET-166",
@@ -2309,10 +2309,10 @@
       "fl_default": "off",
       "fl_reference": "File › Export › <format> file… (save panel, then 'Rendering to <file>') › Miscellaneous › Split mixer tracks",
       "confidence": "OBSERVED",
-      "limeshot_setting": "",
-      "status": "NOT_STARTED",
+      "limeshot_setting": "dialog.split_mixer_tracks",
+      "status": "IMPLEMENTED",
       "feature": "EXP-009",
-      "notes": ""
+      "notes": "Off by default. WAV only; silent inserts are skipped. Per export, not saved."
     },
     {
       "id": "SET-171",
